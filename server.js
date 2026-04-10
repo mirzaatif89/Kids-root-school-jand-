@@ -28,7 +28,11 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.static(__dirname));
 
 app.get('/', (req, res) => {
-    res.send('Server is running! Access the app via index.html');
+    res.json({
+        success: true,
+        message: 'Server is running.',
+        app: 'School Management System API'
+    });
 });
 
 let sequelize;
@@ -963,6 +967,35 @@ app.delete('/api/staff/:id', async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+app.all('/api', (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `API route not found: ${req.method} ${req.originalUrl}`
+    });
+});
+
+app.all('/api/*', (req, res) => {
+    res.status(404).json({
+        success: false,
+        message: `API route not found: ${req.method} ${req.originalUrl}`
+    });
+});
+
+app.use((err, req, res, next) => {
+    if (res.headersSent) {
+        return next(err);
+    }
+
+    if (req.originalUrl && req.originalUrl.startsWith('/api')) {
+        return res.status(err.status || 500).json({
+            success: false,
+            message: err.message || 'Internal server error.'
+        });
+    }
+
+    return next(err);
 });
 
 function defineStudentModel(db) {

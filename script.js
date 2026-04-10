@@ -47,6 +47,20 @@ if (typeof io !== 'undefined') {
     });
 }
 
+async function parseJsonResponse(response, fallbackMessage = 'The server returned an unexpected response.') {
+    const responseText = await response.text();
+    let result = null;
+
+    try {
+        result = responseText ? JSON.parse(responseText) : null;
+    } catch (parseError) {
+        const bodyPreview = responseText.trim().slice(0, 160);
+        throw new Error(bodyPreview || fallbackMessage);
+    }
+
+    return result;
+}
+
 // Helper to sync local data to SQL
 async function syncToSQL(endpoint, data) {
     try {
@@ -56,18 +70,10 @@ async function syncToSQL(endpoint, data) {
             body: JSON.stringify(data)
         });
 
-        if (!response.ok) {
-            const responseText = await response.text();
-            let message = 'Server sync failed.';
+        const result = await parseJsonResponse(response, 'Server sync failed.');
 
-            try {
-                const result = responseText ? JSON.parse(responseText) : null;
-                message = result?.message || result?.error || message;
-            } catch (parseError) {
-                message = responseText || message;
-            }
-
-            throw new Error(message);
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || result?.error || 'Server sync failed.');
         }
 
         return true;
@@ -229,7 +235,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify({ username, password })
                 });
 
-                const result = await response.json();
+                const responseText = await response.text();
+                let result = null;
+
+                try {
+                    result = responseText ? JSON.parse(responseText) : null;
+                } catch (parseError) {
+                    throw new Error(responseText || 'The server returned an unexpected response.');
+                }
 
                 if (response.ok && result.success) {
                     console.log("Login Success:", result.user.role);
@@ -1005,14 +1018,10 @@ async function handleBranchRegistrationSubmit(event) {
             body: JSON.stringify({ id: recordId || undefined, campusName, fullName, username, password })
         });
 
-        const responseText = await response.text();
-        let result = null;
-
-        try {
-            result = responseText ? JSON.parse(responseText) : null;
-        } catch (parseError) {
-            throw new Error('The server is still running an older version. Restart it with `node server.js` and try again.');
-        }
+        const result = await parseJsonResponse(
+            response,
+            'The server is still running an older version. Restart it with `node server.js` and try again.'
+        );
 
         if (!response.ok || !result.success) {
             throw new Error(result.message || result.error || 'Branch registration failed.');
@@ -1163,7 +1172,7 @@ async function loadEmailStatus() {
 
     try {
         const response = await fetch(`${API_BASE_URL}/email/status`);
-        const result = await response.json();
+        const result = await parseJsonResponse(response, 'SMTP status could not be loaded.');
 
         if (!response.ok || !result.success) {
             throw new Error(result.message || 'SMTP status could not be loaded.');
@@ -1205,7 +1214,7 @@ async function handleEmailComposerSubmit(event) {
             })
         });
 
-        const result = await response.json();
+        const result = await parseJsonResponse(response, 'Email could not be sent.');
         if (!response.ok || !result.success) {
             throw new Error(result.message || 'Email could not be sent.');
         }

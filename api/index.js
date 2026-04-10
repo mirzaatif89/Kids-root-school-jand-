@@ -1,6 +1,10 @@
-const { app, startServer } = require('../server');
+const { app, startServer } = require('../server.js');
 
 module.exports = async (req, res) => {
-    await startServer();
+    try {
+        await startServer();
+    } catch (error) {
+        console.error('Serverless startup warning:', error.message);
+    }
     return app(req, res);
 };
