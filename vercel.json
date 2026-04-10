@@ -1,19 +1,6 @@
 {
   "version": 2,
-  "functions": {
-    "api/index.js": {
-      "maxDuration": 30,
-      "includeFiles": [
-        "server.js",
-        "permissions.json"
-      ]
-    }
-  },
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
-    },
     {
       "source": "/",
       "destination": "/index.html"

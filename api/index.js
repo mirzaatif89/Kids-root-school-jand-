@@ -1,10 +1,10 @@
-const { app, startServer } = require('../server.js');
+const { createHandler, sendJson } = require('./_lib/http');
 
-module.exports = async (req, res) => {
-    try {
-        await startServer();
-    } catch (error) {
-        console.error('Serverless startup warning:', error.message);
+module.exports = createHandler({
+    GET: async ({ res }) => {
+        sendJson(res, 200, {
+            success: true,
+            message: 'Vercel serverless API is running.'
+        });
     }
-    return app(req, res);
-};
+});
