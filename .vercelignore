@@ -1,9 +1,6 @@
-server.js
 test-connection.js
 start-server.bat
 .env
 node_modules
-package.json
-package-lock.json
 README_DATABASE_SETUP.md
 SETUP_INSTRUCTIONS.md
