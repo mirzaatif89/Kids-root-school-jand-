@@ -99,6 +99,102 @@
         .teacher-cell-compact {
             line-height: 1.45;
         }
+
+        .schedule-modal-content {
+            width: min(980px, calc(100vw - 2rem));
+            max-width: 980px;
+            max-height: 90vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: clamp(1rem, 2.5vw, 1.5rem);
+        }
+
+        .schedule-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 0.75rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .schedule-form-grid .input-group {
+            margin-bottom: 0;
+            min-width: 0;
+        }
+
+        .schedule-form-grid input,
+        .schedule-form-grid select {
+            width: 100%;
+            min-width: 0;
+        }
+
+        .schedule-form-grid .btn {
+            width: 100%;
+            min-height: 42px;
+            white-space: nowrap;
+        }
+
+        .schedule-secondary-grid {
+            grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr) minmax(110px, auto);
+        }
+
+        .schedule-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .schedule-row {
+            display: grid;
+            grid-template-columns: 1fr 1.3fr 1.2fr 1fr auto;
+            gap: 0.75rem;
+            align-items: center;
+            padding: 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .schedule-row strong {
+            color: var(--text-primary);
+        }
+
+        .schedule-row span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .schedule-empty {
+            padding: 1rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            .schedule-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .schedule-modal-content {
+                width: calc(100vw - 1rem);
+                max-height: calc(100vh - 1rem);
+                border-radius: 8px;
+            }
+
+            .schedule-form-grid,
+            .schedule-secondary-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .schedule-modal-content .form-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+        }
     </style>
 </head>
 
@@ -108,7 +204,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
 
             <nav class="nav-links">
@@ -254,6 +350,10 @@
                         <div class="input-group">
                             <label>Father's Name</label>
                             <input type="text" id="tFatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="tDob" required>
                         </div>
                         <div class="input-group">
                             <label>CNIC</label>
@@ -404,6 +504,91 @@
                 </div>
             </div>
 
+            <!-- Teacher Schedule Modal -->
+            <div id="teacherScheduleModal" class="modal-overlay">
+                <div class="modal-content schedule-modal-content">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem;">
+                        <div>
+                            <h3 id="scheduleModalTitle">Teacher Schedule</h3>
+                            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Assign lectures by day and time.</p>
+                        </div>
+                        <button onclick="closeTeacherScheduleModal()" style="background:none; border:none; cursor:pointer;">
+                            <i data-lucide="x"></i>
+                        </button>
+                    </div>
+
+                    <input type="hidden" id="scheduleTeacherId">
+                    <datalist id="scheduleClassOptions">
+                        <option value="Play Group">
+                        <option value="Nursery">
+                        <option value="Prep">
+                        <option value="Class One">
+                        <option value="Class Two">
+                        <option value="Class Three">
+                        <option value="Class Four">
+                        <option value="Class Five">
+                        <option value="Class Six">
+                        <option value="Class Seven">
+                        <option value="Class Eight">
+                        <option value="Class Nine">
+                        <option value="Class Ten">
+                    </datalist>
+
+                    <div class="schedule-form-grid">
+                        <div class="input-group">
+                            <label>Day</label>
+                            <select id="scheduleDay">
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Class</label>
+                            <input type="text" id="scheduleClass" list="scheduleClassOptions" placeholder="Class Five">
+                        </div>
+                        <div class="input-group">
+                            <label>Lecture / Subject</label>
+                            <input type="text" id="scheduleSubject" placeholder="Math">
+                        </div>
+                        <div class="input-group">
+                            <label>Start Time</label>
+                            <input type="time" id="scheduleStartTime">
+                        </div>
+                        <div class="input-group">
+                            <label>End Time</label>
+                            <input type="time" id="scheduleEndTime">
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="addTeacherScheduleItem()">
+                            <i data-lucide="plus"></i> Add
+                        </button>
+                    </div>
+
+                    <div class="schedule-form-grid schedule-secondary-grid">
+                        <div class="input-group">
+                            <label>Room</label>
+                            <input type="text" id="scheduleRoom" placeholder="Room 2">
+                        </div>
+                        <div class="input-group">
+                            <label>Note</label>
+                            <input type="text" id="scheduleNote" placeholder="Optional note">
+                        </div>
+                        <button type="button" class="btn btn-outline" onclick="clearTeacherScheduleDraft()">Clear</button>
+                    </div>
+
+                    <div class="schedule-list" id="teacherScheduleList"></div>
+
+                    <div class="form-actions" style="margin-top: 1rem;">
+                        <button type="button" class="btn btn-outline" onclick="closeTeacherScheduleModal()">Cancel</button>
+                        <button type="button" class="btn btn-primary" onclick="saveTeacherSchedule()">Save Schedule</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Teachers List -->
             <div class="table-container">
                 <table id="teachersTable">
@@ -411,6 +596,7 @@
                         <tr>
                             <th>Name</th>
                             <th>Father's Name</th>
+                            <th>DOB</th>
                             <th>Campus</th>
                             <th>Subject</th>
                             <th>Bank Details</th>

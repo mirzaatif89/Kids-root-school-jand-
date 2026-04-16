@@ -134,6 +134,30 @@
             gap: 0.4rem;
         }
 
+        .status-pending-badge {
+            background: #fef3c7;
+            color: #92400e;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .status-late-badge {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
         .month-row {
             display: flex;
             justify-content: space-between;
@@ -150,6 +174,24 @@
             transform: scale(1.01);
             border-color: var(--primary-color);
             box-shadow: var(--shadow-md);
+        }
+
+        .month-row.current-month {
+            border: 2px solid #f59e0b;
+            background: linear-gradient(135deg, #fff7ed 0%, #fffbeb 100%);
+            box-shadow: 0 8px 20px rgba(245, 158, 11, 0.14);
+        }
+
+        .month-row.current-month .month-name::after {
+            content: "Current Month";
+            margin-left: 0.75rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #b45309;
+            background: rgba(245, 158, 11, 0.15);
+            padding: 0.2rem 0.55rem;
+            border-radius: 999px;
+            vertical-align: middle;
         }
 
         .month-name {
@@ -223,6 +265,14 @@
             display: none;
         }
 
+        .fee-status-highlight {
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+        }
+
+        .fee-status-highlight.status-failed {
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
+        }
+
         @keyframes slideIn {
             from {
                 opacity: 0;
@@ -253,7 +303,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
 
             <nav class="nav-links">
@@ -368,6 +418,8 @@
                                 <th>Roll No</th>
                                 <th>Student Name</th>
                                 <th>Father Name</th>
+                                <th>Monthly Fee</th>
+                                <th>Paid / Pending</th>
                                 <th>Current Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -413,8 +465,98 @@
     <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+        const monthsList = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
+        const CURRENT_MONTH_NAME = monthsList[new Date().getMonth()];
 
-        document.addEventListener('DOMContentLoaded', () => {
+        function getCurrentMonthFeeStatus(student) {
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+            const studentMonthly = monthlyFees[student.id] || {};
+            const savedMonthStatus = studentMonthly[CURRENT_MONTH_NAME];
+
+            if (savedMonthStatus === 'Paid') {
+                return {
+                    label: `Paid (${CURRENT_MONTH_NAME})`,
+                    className: 'status-paid fee-status-highlight',
+                    icon: 'check-circle'
+                };
+            }
+
+            if ((student.feesStatus || '').toLowerCase() === 'late') {
+                return {
+                    label: `Late (${CURRENT_MONTH_NAME})`,
+                    className: 'status-failed fee-status-highlight',
+                    icon: 'alert-triangle'
+                };
+            }
+
+            return {
+                label: `Pending (${CURRENT_MONTH_NAME})`,
+                className: 'status-pending fee-status-highlight',
+                icon: 'clock'
+            };
+        }
+
+        function getStudentFeeSummary(student) {
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+            const studentMonthly = monthlyFees[student.id] || {};
+            const paidMonths = monthsList.filter(month => studentMonthly[month] === 'Paid');
+            const pendingMonths = monthsList.filter(month => studentMonthly[month] !== 'Paid');
+            return {
+                paidCount: paidMonths.length,
+                pendingCount: pendingMonths.length,
+                pendingAmount: pendingMonths.length * (parseInt(student.monthlyFee || 0, 10) || 0)
+            };
+        }
+
+        function getLongMonthName(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const parsed = new Date(raw.replace(',', ' 1,'));
+            if (!Number.isNaN(parsed.getTime())) return monthsList[parsed.getMonth()];
+            const lower = raw.toLowerCase();
+            return monthsList.find(month => lower.includes(month.toLowerCase()) || lower.includes(month.slice(0, 3).toLowerCase())) || raw;
+        }
+
+        async function mergeFeePaymentsIntoMonthlyStore() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/fees/payments`);
+                if (!response.ok) return;
+                const result = await response.json();
+                const payments = Array.isArray(result.payments) ? result.payments : [];
+                const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
+
+                payments.forEach((payment) => {
+                    if (payment.status !== 'Paid' || !payment.studentId) return;
+                    const month = getLongMonthName(payment.feeMonth);
+                    if (!month) return;
+                    monthlyFees[payment.studentId] = monthlyFees[payment.studentId] || {};
+                    monthlyFees[payment.studentId][month] = 'Paid';
+                });
+
+                localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
+            } catch (error) {
+                console.warn('Fee payments could not be loaded:', error.message);
+            }
+        }
+
+        async function loadFeesStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                if (!response.ok) throw new Error('Students could not be loaded.');
+                const data = await response.json();
+                const students = typeof mergeStudentRecords === 'function' ? mergeStudentRecords(data) : data;
+                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
+            } catch (error) {
+                console.warn('Using cached students for fees:', error.message);
+            }
+            await mergeFeePaymentsIntoMonthlyStore();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadFeesStudents();
             renderFeesClassGrid();
 
             // Search implementation
@@ -475,15 +617,28 @@
             { id: '10', name: 'Class Ten', icon: 'flask-conical', keywords: ['10', 'ten', '10th', 'class 10', 'class ten'] },
         ];
 
-        const monthsList = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        ];
-
         function renderFeesClassGrid() {
             const grid = document.getElementById('feesClassGrid');
             const students = getData(STORAGE_KEY_STUDENTS);
             grid.innerHTML = '';
+
+            const allCard = document.createElement('div');
+            allCard.className = 'fee-card';
+            allCard.onclick = () => {
+                document.getElementById('feesGridView').style.display = 'none';
+                const tableView = document.getElementById('feesTableView');
+                tableView.classList.add('active');
+                tableView.dataset.classId = 'all';
+                document.getElementById('selectedClassTitle').innerText = 'All Students';
+                document.getElementById('selectedClassSubtitle').innerText = 'All fee paid, pending, and monthly records';
+                document.getElementById('pageTitle').innerText = 'Fees: All Students';
+                renderClassStudentList('all');
+            };
+            allCard.innerHTML = `
+                <div class="class-name">All Students</div>
+                ${students.length > 0 ? `<div class="class-badge">${students.length}</div>` : ''}
+            `;
+            grid.appendChild(allCard);
 
             feeClasses.forEach(cls => {
                 const classStudents = students.filter(s => {
@@ -565,14 +720,8 @@
                 tr.onclick = () => showStudentFeeRecord(s.id);
 
                 // Get current month status
-                const currentMonthIdx = new Date().getMonth();
-                const currentMonthName = monthsList[currentMonthIdx];
-                const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
-                const studentMonthly = monthlyFees[s.id] || {};
-                const isPaidThisMonth = studentMonthly[currentMonthName] === 'Paid';
-
-                const statusClass = isPaidThisMonth ? 'status-paid' : 'status-pending';
-                const statusLabel = isPaidThisMonth ? 'Paid (' + currentMonthName + ')' : 'Unpaid (' + currentMonthName + ')';
+                const currentMonthStatus = getCurrentMonthFeeStatus(s);
+                const feeSummary = getStudentFeeSummary(s);
 
                 tr.innerHTML = `
                     <td><strong>#${s.rollNo}</strong></td>
@@ -585,7 +734,14 @@
                         </div>
                     </td>
                     <td>${s.fatherName || '-'}</td>
-                    <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                    <td><strong>PKR ${(parseInt(s.monthlyFee || 0, 10) || 0).toLocaleString('en-PK')}</strong></td>
+                    <td>
+                        <div style="font-size:0.85rem;line-height:1.5;">
+                            <div><strong>${feeSummary.paidCount}</strong> paid / <strong>${feeSummary.pendingCount}</strong> pending</div>
+                            <div style="color:var(--text-secondary);">Pending: PKR ${feeSummary.pendingAmount.toLocaleString('en-PK')}</div>
+                        </div>
+                    </td>
+                    <td><span class="status-badge ${currentMonthStatus.className}"><i data-lucide="${currentMonthStatus.icon}" size="14"></i> ${currentMonthStatus.label}</span></td>
                     <td>
                         <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.5rem;">View Record</button>
                     </td>
@@ -618,20 +774,39 @@
             const container = document.getElementById('monthListContainer');
             const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const studentRecord = monthlyFees[studentId] || {};
+            const students = getData(STORAGE_KEY_STUDENTS);
+            const student = students.find(s => s.id === studentId);
 
             container.innerHTML = '';
 
             monthsList.forEach(month => {
                 const isPaid = studentRecord[month] === 'Paid';
+                const isCurrentMonth = month === CURRENT_MONTH_NAME;
                 const row = document.createElement('div');
-                row.className = 'month-row';
+                row.className = `month-row${isCurrentMonth ? ' current-month' : ''}`;
+
+                let badgeClass = isPaid ? 'status-paid-badge' : 'status-unpaid-badge';
+                let badgeIcon = isPaid ? 'check-circle' : 'clock';
+                let badgeLabel = isPaid ? 'Paid' : 'Unpaid';
+
+                if (isCurrentMonth && !isPaid) {
+                    if ((student?.feesStatus || '').toLowerCase() === 'late') {
+                        badgeClass = 'status-late-badge';
+                        badgeIcon = 'alert-triangle';
+                        badgeLabel = 'Late';
+                    } else {
+                        badgeClass = 'status-pending-badge';
+                        badgeIcon = 'clock';
+                        badgeLabel = 'Pending';
+                    }
+                }
 
                 row.innerHTML = `
                     <div class="month-name">${month}</div>
                     <div class="month-status">
-                        <span class="${isPaid ? 'status-paid-badge' : 'status-unpaid-badge'}">
-                            <i data-lucide="${isPaid ? 'check-circle' : 'clock'}"></i>
-                            ${isPaid ? 'Paid' : 'Unpaid'}
+                        <span class="${badgeClass}">
+                            <i data-lucide="${badgeIcon}"></i>
+                            ${badgeLabel}
                         </span>
                         <button class="toggle-fee-btn ${isPaid ? 'btn-mark-unpaid' : 'btn-mark-paid'}" onclick="toggleMonthFee('${studentId}', '${month}')">
                             ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
@@ -655,8 +830,7 @@
             localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
 
             // Sync with global student status if it's the current month
-            const currentMonthName = monthsList[new Date().getMonth()];
-            if (month === currentMonthName) {
+            if (month === CURRENT_MONTH_NAME) {
                 const students = getData(STORAGE_KEY_STUDENTS);
                 const idx = students.findIndex(s => s.id === studentId);
                 if (idx !== -1) {
@@ -687,6 +861,8 @@
             if (classId === 'search_results') {
                 document.getElementById('pageTitle').innerText = 'Searching Results...';
                 document.getElementById('searchResultsInfo').style.display = 'block';
+            } else if (classId === 'all') {
+                document.getElementById('pageTitle').innerText = 'Fees: All Students';
             } else {
                 const cls = feeClasses.find(c => c.id === classId);
                 document.getElementById('pageTitle').innerText = 'Fees: ' + (cls ? cls.name : '');

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .notification-layout {
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .birthday-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 1rem;
+        }
+
+        .birthday-stat {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .birthday-stat span {
+            display: block;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .birthday-stat strong {
+            font-size: 1.8rem;
+            line-height: 1;
+        }
+
+        .notification-toolbar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .notification-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .notification-tab {
+            border: 1px solid var(--border-color);
+            background: #fff;
+            color: var(--text-primary);
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .notification-tab.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .notification-search {
+            min-width: min(100%, 320px);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            font: inherit;
+        }
+
+        .birthday-list {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .birthday-card {
+            display: grid;
+            grid-template-columns: 58px 1fr auto;
+            gap: 0.9rem;
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.9rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .birthday-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: rgba(32, 176, 164, 0.12);
+            color: var(--primary-dark);
+            font-weight: 800;
+            overflow: hidden;
+        }
+
+        .birthday-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .birthday-main h3 {
+            margin: 0 0 0.25rem;
+            font-size: 1rem;
+        }
+
+        .birthday-main p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .birthday-date-pill {
+            text-align: right;
+            min-width: 120px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+        .birthday-date-pill span {
+            display: block;
+            margin-top: 0.2rem;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .fee-alert-list {
+            display: grid;
+            gap: 0.8rem;
+        }
+
+        .fee-alert-card {
+            display: grid;
+            grid-template-columns: 58px 1fr auto;
+            gap: 0.9rem;
+            align-items: center;
+            background: #fff;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 0.9rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .fee-alert-icon {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #fff7ed;
+            color: #c2410c;
+            font-weight: 800;
+        }
+
+        .fee-alert-main h3 {
+            margin: 0 0 0.25rem;
+            font-size: 1rem;
+        }
+
+        .fee-alert-main p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .fee-alert-amount {
+            text-align: right;
+            min-width: 150px;
+            font-weight: 800;
+            color: #9a3412;
+        }
+
+        .fee-alert-amount span {
+            display: block;
+            margin-top: 0.2rem;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            background: #fff;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 640px) {
+            .birthday-card {
+                grid-template-columns: 48px 1fr;
+            }
+
+            .birthday-avatar {
+                width: 48px;
+                height: 48px;
+            }
+
+            .birthday-date-pill {
+                grid-column: 1 / -1;
+                text-align: left;
+            }
+
+            .fee-alert-card {
+                grid-template-columns: 48px 1fr;
+            }
+
+            .fee-alert-icon {
+                width: 48px;
+                height: 48px;
+            }
+
+            .fee-alert-amount {
+                grid-column: 1 / -1;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums School System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="fee_challan.html" class="nav-item">
+                    <i data-lucide="file-text"></i>
+                    <span>Fee Challan</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="exams.html" class="nav-item">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Exams</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="notifications.html" class="nav-item active" data-notifications-link="true">
+                    <i data-lucide="bell-ring"></i>
+                    <span>Notifications</span>
+                </a>
+                <a href="permissions.html" class="nav-item">
+                    <i data-lucide="shield"></i>
+                    <span>Permissions</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Notifications</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Student birthdays and upcoming alerts.</p>
+                </div>
+            </header>
+
+            <section class="notification-layout">
+                <div class="birthday-summary">
+                    <div class="birthday-stat">
+                        <span>Birthdays Today</span>
+                        <strong id="todayBirthdayCount">0</strong>
+                    </div>
+                    <div class="birthday-stat">
+                        <span>Upcoming 30 Days</span>
+                        <strong id="upcomingBirthdayCount">0</strong>
+                    </div>
+                    <div class="birthday-stat">
+                        <span>Students With DOB</span>
+                        <strong id="dobStudentCount">0</strong>
+                    </div>
+                    <div class="birthday-stat">
+                        <span>Pending Fee Students</span>
+                        <strong id="pendingFeeCount">0</strong>
+                    </div>
+                    <div class="birthday-stat">
+                        <span>Total Pending Fee</span>
+                        <strong id="pendingFeeAmount">PKR 0</strong>
+                    </div>
+                </div>
+
+                <section class="table-container">
+                    <div class="notification-toolbar">
+                        <div class="notification-tabs" role="tablist" aria-label="Birthday filters">
+                            <button type="button" class="notification-tab active" data-filter="today">Today</button>
+                            <button type="button" class="notification-tab" data-filter="upcoming">Next 30 Days</button>
+                            <button type="button" class="notification-tab" data-filter="all">All Birthdays</button>
+                        </div>
+                        <input class="notification-search" id="birthdaySearchInput" type="search" placeholder="Search student, class, roll no...">
+                    </div>
+
+                    <div class="birthday-list" id="birthdayList" style="margin-top: 1rem;"></div>
+                    <div class="empty-state" id="birthdayEmptyState" style="display: none;">
+                        No birthday notifications found.
+                    </div>
+                </section>
+
+                <section class="table-container">
+                    <div class="notification-toolbar">
+                        <div>
+                            <h3 style="margin: 0;">Pending Fee Notifications</h3>
+                            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Students with unpaid monthly fee records.</p>
+                        </div>
+                        <input class="notification-search" id="feeSearchInput" type="search" placeholder="Search pending fee student...">
+                    </div>
+
+                    <div class="fee-alert-list" id="feeAlertList" style="margin-top: 1rem;"></div>
+                    <div class="empty-state" id="feeAlertEmptyState" style="display: none;">
+                        No pending fee notifications found.
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let birthdayFilter = 'today';
+        let birthdayStudents = [];
+        let notificationStudents = [];
+        let feeAlertStudents = [];
+        const NOTIFICATION_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
+        const NOTIFICATION_MONTHS = [
+            'January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'
+        ];
+
+        function parseBirthdayDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+
+            const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (isoMatch) {
+                return {
+                    year: Number(isoMatch[1]),
+                    month: Number(isoMatch[2]),
+                    day: Number(isoMatch[3])
+                };
+            }
+
+            const slashMatch = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+            if (slashMatch) {
+                const first = Number(slashMatch[1]);
+                const second = Number(slashMatch[2]);
+                const year = Number(String(slashMatch[3]).padStart(4, '20'));
+                return {
+                    year,
+                    month: first > 12 ? second : first,
+                    day: first > 12 ? first : second
+                };
+            }
+
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) return null;
+            return {
+                year: parsed.getFullYear(),
+                month: parsed.getMonth() + 1,
+                day: parsed.getDate()
+            };
+        }
+
+        function getBirthdayInfo(student) {
+            const birth = parseBirthdayDate(student.dob);
+            if (!birth || !birth.month || !birth.day) return null;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            let nextDate = new Date(today.getFullYear(), birth.month - 1, birth.day);
+            if (nextDate < today) {
+                nextDate = new Date(today.getFullYear() + 1, birth.month - 1, birth.day);
+            }
+
+            const daysUntil = Math.round((nextDate - today) / 86400000);
+            return {
+                birth,
+                nextDate,
+                daysUntil,
+                ageTurning: birth.year ? nextDate.getFullYear() - birth.year : null,
+                isToday: daysUntil === 0
+            };
+        }
+
+        function formatBirthdayDate(date) {
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        }
+
+        function getStudentInitials(name) {
+            return String(name || 'Student').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase() || 'ST';
+        }
+
+        function escapeNotificationHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function getNotificationLongMonthName(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) return NOTIFICATION_MONTHS[parsed.getMonth()];
+            const lower = raw.toLowerCase();
+            return NOTIFICATION_MONTHS.find((month) => lower.includes(month.toLowerCase()) || lower.includes(month.slice(0, 3).toLowerCase())) || raw;
+        }
+
+        async function mergeNotificationFeePayments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/fees/payments`);
+                if (!response.ok) return;
+                const result = await response.json();
+                const payments = Array.isArray(result.payments) ? result.payments : [];
+                const monthlyFees = JSON.parse(localStorage.getItem(NOTIFICATION_MONTHLY_FEES_KEY) || '{}');
+
+                payments.forEach((payment) => {
+                    if (payment.status !== 'Paid' || !payment.studentId) return;
+                    const month = getNotificationLongMonthName(payment.feeMonth);
+                    if (!month) return;
+                    monthlyFees[payment.studentId] = monthlyFees[payment.studentId] || {};
+                    monthlyFees[payment.studentId][month] = 'Paid';
+                });
+
+                localStorage.setItem(NOTIFICATION_MONTHLY_FEES_KEY, JSON.stringify(monthlyFees));
+            } catch (error) {
+                console.warn('Fee payments could not be loaded for notifications:', error.message);
+            }
+        }
+
+        function getStudentFeeAlertSummary(student) {
+            const monthlyFees = JSON.parse(localStorage.getItem(NOTIFICATION_MONTHLY_FEES_KEY) || '{}');
+            const studentMonthly = monthlyFees[student.id] || {};
+            const paidMonths = NOTIFICATION_MONTHS.filter((month) => studentMonthly[month] === 'Paid');
+            let pendingMonths = NOTIFICATION_MONTHS.filter((month) => studentMonthly[month] !== 'Paid');
+
+            if (!pendingMonths.length && String(student.feesStatus || '').toLowerCase() !== 'paid') {
+                pendingMonths = [NOTIFICATION_MONTHS[new Date().getMonth()]];
+            }
+
+            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            return {
+                monthlyFee,
+                paidMonths,
+                pendingMonths,
+                pendingAmount: pendingMonths.length * monthlyFee,
+                currentMonthPending: studentMonthly[NOTIFICATION_MONTHS[new Date().getMonth()]] !== 'Paid'
+            };
+        }
+
+        function normalizeBirthdayStudents(students) {
+            const loggedInUser = getLoggedInUser();
+            const campusScope = loggedInUser?.role === 'Branch' ? String(loggedInUser.campusName || '').trim().toLowerCase() : '';
+
+            return (students || [])
+                .filter((student) => !campusScope || String(student.campusName || '').trim().toLowerCase() === campusScope)
+                .map((student) => ({ ...student, birthday: getBirthdayInfo(student) }))
+                .filter((student) => student.birthday)
+                .sort((a, b) => a.birthday.daysUntil - b.birthday.daysUntil || String(a.fullName || '').localeCompare(String(b.fullName || '')));
+        }
+
+        async function loadNotificationStudents() {
+            let students = [];
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                if (!response.ok) throw new Error('Students API failed');
+                students = await response.json();
+                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
+            } catch (error) {
+                students = getData(STORAGE_KEY_STUDENTS);
+            }
+
+            await mergeNotificationFeePayments();
+            notificationStudents = students;
+            birthdayStudents = normalizeBirthdayStudents(notificationStudents);
+            feeAlertStudents = normalizeFeeAlertStudents(notificationStudents);
+            renderBirthdayNotifications();
+            renderFeeNotifications();
+        }
+
+        function normalizeFeeAlertStudents(students) {
+            const loggedInUser = getLoggedInUser();
+            const campusScope = loggedInUser?.role === 'Branch' ? String(loggedInUser.campusName || '').trim().toLowerCase() : '';
+
+            return (students || [])
+                .filter((student) => !campusScope || String(student.campusName || '').trim().toLowerCase() === campusScope)
+                .map((student) => ({ ...student, feeAlert: getStudentFeeAlertSummary(student) }))
+                .filter((student) => student.feeAlert.pendingMonths.length > 0 && student.feeAlert.pendingAmount > 0)
+                .sort((a, b) => b.feeAlert.pendingAmount - a.feeAlert.pendingAmount || String(a.fullName || '').localeCompare(String(b.fullName || '')));
+        }
+
+        function getFilteredBirthdayStudents() {
+            const search = document.getElementById('birthdaySearchInput').value.trim().toLowerCase();
+            return birthdayStudents.filter((student) => {
+                const matchesFilter = birthdayFilter === 'today'
+                    ? student.birthday.isToday
+                    : birthdayFilter === 'upcoming'
+                        ? student.birthday.daysUntil <= 30
+                        : true;
+                const haystack = [
+                    student.fullName,
+                    student.fatherName,
+                    student.classGrade,
+                    student.rollNo,
+                    student.studentCode,
+                    student.campusName
+                ].join(' ').toLowerCase();
+                return matchesFilter && (!search || haystack.includes(search));
+            });
+        }
+
+        function renderBirthdayNotifications() {
+            const list = document.getElementById('birthdayList');
+            const empty = document.getElementById('birthdayEmptyState');
+            const rows = getFilteredBirthdayStudents();
+
+            document.getElementById('todayBirthdayCount').textContent = birthdayStudents.filter((student) => student.birthday.isToday).length;
+            document.getElementById('upcomingBirthdayCount').textContent = birthdayStudents.filter((student) => student.birthday.daysUntil <= 30).length;
+            document.getElementById('dobStudentCount').textContent = birthdayStudents.length;
+
+            list.innerHTML = rows.map((student) => {
+                const studentName = escapeNotificationHtml(student.fullName || 'Unnamed Student');
+                const image = student.profileImage ? `<img src="${escapeNotificationHtml(student.profileImage)}" alt="${studentName}">` : getStudentInitials(student.fullName);
+                const dueText = student.birthday.isToday ? 'Birthday today' : `${student.birthday.daysUntil} day(s) left`;
+                const ageText = student.birthday.ageTurning ? `Turning ${student.birthday.ageTurning}` : 'Age not available';
+                return `
+                    <article class="birthday-card">
+                        <div class="birthday-avatar">${image}</div>
+                        <div class="birthday-main">
+                            <h3>${studentName}</h3>
+                            <p>${escapeNotificationHtml(student.classGrade || 'No class')} | Roll: ${escapeNotificationHtml(student.rollNo || '-')} | Campus: ${escapeNotificationHtml(student.campusName || '-')}</p>
+                            <p>Father: ${escapeNotificationHtml(student.fatherName || '-')}</p>
+                        </div>
+                        <div class="birthday-date-pill">
+                            ${formatBirthdayDate(student.birthday.nextDate)}
+                            <span>${dueText} | ${ageText}</span>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            empty.style.display = rows.length ? 'none' : 'block';
+        }
+
+        function getFilteredFeeAlertStudents() {
+            const search = document.getElementById('feeSearchInput').value.trim().toLowerCase();
+            return feeAlertStudents.filter((student) => {
+                const haystack = [
+                    student.fullName,
+                    student.fatherName,
+                    student.classGrade,
+                    student.rollNo,
+                    student.studentCode,
+                    student.campusName
+                ].join(' ').toLowerCase();
+                return !search || haystack.includes(search);
+            });
+        }
+
+        function renderFeeNotifications() {
+            const list = document.getElementById('feeAlertList');
+            const empty = document.getElementById('feeAlertEmptyState');
+            const rows = getFilteredFeeAlertStudents();
+            const totalPendingAmount = feeAlertStudents.reduce((sum, student) => sum + student.feeAlert.pendingAmount, 0);
+
+            document.getElementById('pendingFeeCount').textContent = feeAlertStudents.length;
+            document.getElementById('pendingFeeAmount').textContent = `PKR ${totalPendingAmount.toLocaleString('en-PK')}`;
+
+            list.innerHTML = rows.map((student) => {
+                const summary = student.feeAlert;
+                const visibleMonths = summary.pendingMonths.slice(0, 4).join(', ');
+                const extraMonths = summary.pendingMonths.length > 4 ? ` +${summary.pendingMonths.length - 4} more` : '';
+                return `
+                    <article class="fee-alert-card">
+                        <div class="fee-alert-icon"><i data-lucide="wallet-cards"></i></div>
+                        <div class="fee-alert-main">
+                            <h3>${escapeNotificationHtml(student.fullName || 'Unnamed Student')}</h3>
+                            <p>${escapeNotificationHtml(student.classGrade || 'No class')} | Roll: ${escapeNotificationHtml(student.rollNo || '-')} | Campus: ${escapeNotificationHtml(student.campusName || '-')}</p>
+                            <p>Pending Months: <strong>${escapeNotificationHtml(visibleMonths || 'None')}${escapeNotificationHtml(extraMonths)}</strong></p>
+                        </div>
+                        <div class="fee-alert-amount">
+                            PKR ${summary.pendingAmount.toLocaleString('en-PK')}
+                            <span>${summary.pendingMonths.length} pending month(s)</span>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            empty.style.display = rows.length ? 'none' : 'block';
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.notification-tab').forEach((button) => {
+                button.addEventListener('click', () => {
+                    birthdayFilter = button.dataset.filter;
+                    document.querySelectorAll('.notification-tab').forEach((item) => item.classList.toggle('active', item === button));
+                    renderBirthdayNotifications();
+                });
+            });
+
+            document.getElementById('birthdaySearchInput').addEventListener('input', renderBirthdayNotifications);
+            document.getElementById('feeSearchInput').addEventListener('input', renderFeeNotifications);
+            loadNotificationStudents();
+            if (window.lucide) window.lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>

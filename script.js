@@ -11,6 +11,7 @@ const STORAGE_KEY_STAFF = 'eduCore_staff';
 const STORAGE_KEY_TEACHER_SALARIES = 'eduCore_teacher_salaries';
 const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher credentials
 const STORAGE_KEY_PROMOTION_HISTORY = 'eduCore_promotion_history';
+let teacherScheduleDraft = [];
 
 // === REAL-TIME SQL CONFIGURATION ===
 // Auto-detect environment: Use localhost for development, or environment variable for production
@@ -237,8 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Perform initial sync from SQL Server
     initialSQLSync();
     ensureBranchRegistrationNav();
-    ensureEmailNav();
     ensureAttendanceNav();
+    ensureNotificationsNav();
     applyBranchScopedStudentsView();
 
     // === INIT ICONS ===
@@ -405,6 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const studentSearch = document.getElementById('studentSearchInput');
         const genderFilter = document.getElementById('genderFilter');
         const campusFilter = document.getElementById('campusFilter');
+        const ageFilter = document.getElementById('ageFilter');
         if (studentSearch) {
             studentSearch.addEventListener('input', renderStudents);
         }
@@ -413,6 +415,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (campusFilter) {
             campusFilter.addEventListener('change', renderStudents);
+        }
+        if (ageFilter) {
+            ageFilter.addEventListener('change', renderStudents);
         }
     }
 
@@ -474,28 +479,12 @@ document.addEventListener('DOMContentLoaded', () => {
         branchRegistrationForm.addEventListener('submit', handleBranchRegistrationSubmit);
     }
 
-    const emailForm = document.getElementById('emailComposerForm');
-    if (emailForm) {
-        renderEmailRecipientOptions();
-        loadEmailStatus();
-        emailForm.addEventListener('submit', handleEmailComposerSubmit);
-
-        const recipientSource = document.getElementById('emailRecipientSource');
-        if (recipientSource) {
-            recipientSource.addEventListener('change', renderEmailRecipientOptions);
-        }
-
-        const recipientSelect = document.getElementById('emailRecipientSelect');
-        if (recipientSelect) {
-            recipientSelect.addEventListener('change', appendSelectedRecipientEmail);
-        }
-    }
-
     // === DASHBOARD HOME LOGIC ===
     const dashStudentCount = document.getElementById('dashStudentCount');
     if (dashStudentCount) {
         // We are on the dashboard
         updateDashboardStats();
+        window.setInterval(updateActivePortalLogins, 30000);
         // renderDashboardTable(); // Table removed by user request
 
         const dSearch = document.getElementById('dashSearch');
@@ -530,6 +519,24 @@ function isHashedPassword(value) {
     return typeof value === 'string' && /^\$2[aby]\$/.test(value);
 }
 
+function normalizeTeacherSchedule(schedule) {
+    if (Array.isArray(schedule)) return schedule;
+    if (typeof schedule === 'string' && schedule.trim()) {
+        try {
+            const parsed = JSON.parse(schedule);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            return [];
+        }
+    }
+    return [];
+}
+
+function formatScheduleTime(startTime = '', endTime = '') {
+    if (!startTime && !endTime) return '-';
+    return `${startTime || '-'} - ${endTime || '-'}`;
+}
+
 function mergeStudentRecords(incomingStudents) {
     const existingStudents = getData(STORAGE_KEY_STUDENTS);
     const incomingList = Array.isArray(incomingStudents) ? incomingStudents : [];
@@ -558,6 +565,7 @@ function mergeStudentRecords(incomingStudents) {
             ...student,
             studentCode,
             profileImage: student.profileImage || localStudent.profileImage || '',
+            admissionDate: student.admissionDate || localStudent.admissionDate || '',
             gender: student.gender || localStudent.gender || '',
         campusName: student.campusName || localStudent.campusName || 'Main Campus',
             plainPassword: student.plainPassword || localStudent.plainPassword ||
@@ -585,6 +593,7 @@ function mergeTeacherRecords(incomingTeachers) {
             ...localTeacher,
             ...teacher,
             profileImage: teacher.profileImage || localTeacher.profileImage || '',
+            schedule: normalizeTeacherSchedule(teacher.schedule || localTeacher.schedule),
             plainPassword: teacher.plainPassword || localTeacher.plainPassword ||
                 (localTeacher.password && !isHashedPassword(localTeacher.password) ? localTeacher.password : '')
         };
@@ -675,6 +684,36 @@ function getVisibleStudentPassword(student) {
     if (student.plainPassword) return student.plainPassword;
     if (student.password && !isHashedPassword(student.password)) return student.password;
     return 'Reset required';
+}
+
+function formatDateForDisplay(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '-';
+
+    const parsed = new Date(raw);
+    if (Number.isNaN(parsed.getTime())) {
+        return raw;
+    }
+
+    return parsed.toLocaleDateString('en-GB');
+}
+
+function isStudentBelowAge(student, maxAgeYears) {
+    const rawDob = String(student?.dob || '').trim();
+    if (!rawDob) return false;
+
+    const dob = new Date(rawDob);
+    if (Number.isNaN(dob.getTime())) return false;
+
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const monthDiff = today.getMonth() - dob.getMonth();
+
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+        age -= 1;
+    }
+
+    return age < maxAgeYears;
 }
 
 function saveData(key, data, options = {}) {
@@ -992,28 +1031,6 @@ function ensureBranchRegistrationNav() {
     if (window.lucide) window.lucide.createIcons();
 }
 
-function ensureEmailNav() {
-    const navLinks = document.querySelector('.nav-links');
-    const loggedInUser = getLoggedInUser();
-    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
-    if (navLinks.querySelector('[data-email-link]')) return;
-
-    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
-    const emailLink = document.createElement('a');
-    emailLink.href = 'email.html';
-    emailLink.className = `nav-item${window.location.pathname.toLowerCase().includes('email.html') ? ' active' : ''}`;
-    emailLink.dataset.emailLink = 'true';
-    emailLink.innerHTML = '<i data-lucide="mail"></i><span>Email</span>';
-
-    if (permissionsLink) {
-        permissionsLink.insertAdjacentElement('beforebegin', emailLink);
-    } else {
-        navLinks.appendChild(emailLink);
-    }
-
-    if (window.lucide) window.lucide.createIcons();
-}
-
 function ensureAttendanceNav() {
     const navLinks = document.querySelector('.nav-links');
     const loggedInUser = getLoggedInUser();
@@ -1071,6 +1088,45 @@ function ensureAttendanceNav() {
         permissionsLink.insertAdjacentElement('beforebegin', wrapper);
     } else {
         navLinks.appendChild(wrapper);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureNotificationsNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser) return;
+    if (navLinks.querySelector('[data-notifications-link]')) return;
+
+    const permissions = (() => {
+        try {
+            return JSON.parse(sessionStorage.getItem('eduCore_permissions_config') || '{}');
+        } catch (error) {
+            return {};
+        }
+    })();
+    const canAccessNotifications = loggedInUser.role === 'Admin' ||
+        loggedInUser.role === 'Principal' ||
+        (window.eduCoreAuth && window.eduCoreAuth.canAccessPage(loggedInUser, permissions, 'notifications.html'));
+
+    if (!canAccessNotifications) return;
+
+    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
+    const revenueLink = navLinks.querySelector('a[href="revenue.html"]');
+    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
+    const notificationLink = document.createElement('a');
+    notificationLink.href = 'notifications.html';
+    notificationLink.className = `nav-item${currentPage === 'notifications.html' ? ' active' : ''}`;
+    notificationLink.dataset.notificationsLink = 'true';
+    notificationLink.innerHTML = '<i data-lucide="bell-ring"></i><span>Notifications</span>';
+
+    if (revenueLink) {
+        revenueLink.insertAdjacentElement('afterend', notificationLink);
+    } else if (permissionsLink) {
+        permissionsLink.insertAdjacentElement('beforebegin', notificationLink);
+    } else {
+        navLinks.appendChild(notificationLink);
     }
 
     if (window.lucide) window.lucide.createIcons();
@@ -1257,143 +1313,6 @@ async function deleteBranch(branchId) {
         pushNotification('Branch Deleted', 'The branch login was removed successfully.', 'user');
     } catch (error) {
         alert(error.message);
-    }
-}
-
-function getEmailContactsBySource(source) {
-    if (source === 'students') {
-        return getData(STORAGE_KEY_STUDENTS)
-            .filter(student => student.email)
-            .map(student => ({
-                value: student.email,
-                label: `${student.fullName || 'Student'} (${student.email})`
-            }));
-    }
-
-    if (source === 'teachers') {
-        return getData(STORAGE_KEY_TEACHERS)
-            .filter(teacher => teacher.email)
-            .map(teacher => ({
-                value: teacher.email,
-                label: `${teacher.fullName || 'Teacher'} (${teacher.email})`
-            }));
-    }
-
-    if (source === 'staff') {
-        return getData(STORAGE_KEY_STAFF)
-            .filter(member => member.email)
-            .map(member => ({
-                value: member.email,
-                label: `${member.fullName || 'Staff'} (${member.email})`
-            }));
-    }
-
-    return [];
-}
-
-function renderEmailRecipientOptions() {
-    const sourceSelect = document.getElementById('emailRecipientSource');
-    const recipientSelect = document.getElementById('emailRecipientSelect');
-    if (!sourceSelect || !recipientSelect) return;
-
-    const source = sourceSelect.value;
-    const contacts = getEmailContactsBySource(source);
-    recipientSelect.innerHTML = '<option value="">Select recipient email</option>';
-
-    contacts.forEach(contact => {
-        const option = document.createElement('option');
-        option.value = contact.value;
-        option.textContent = contact.label;
-        recipientSelect.appendChild(option);
-    });
-
-    recipientSelect.disabled = source === 'custom' || contacts.length === 0;
-}
-
-function appendSelectedRecipientEmail() {
-    const recipientSelect = document.getElementById('emailRecipientSelect');
-    const toField = document.getElementById('emailTo');
-    if (!recipientSelect || !toField || !recipientSelect.value) return;
-
-    const selectedEmails = toField.value
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean);
-
-    if (!selectedEmails.includes(recipientSelect.value)) {
-        selectedEmails.push(recipientSelect.value);
-        toField.value = selectedEmails.join(', ');
-    }
-
-    recipientSelect.value = '';
-}
-
-async function loadEmailStatus() {
-    const statusEl = document.getElementById('emailSmtpStatus');
-    const senderEl = document.getElementById('emailSenderIdentity');
-    if (!statusEl || !senderEl) return;
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/email/status`);
-        const result = await parseJsonResponse(response, 'SMTP status could not be loaded.');
-
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'SMTP status could not be loaded.');
-        }
-
-        statusEl.textContent = result.configured ? 'SMTP Connected' : 'SMTP Not Configured';
-        statusEl.className = `status-pill ${result.configured ? 'smtp-live' : 'smtp-offline'}`;
-        senderEl.textContent = result.configured
-            ? `${result.fromName || 'Apexiueum'} <${result.fromEmail}>`
-            : 'Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM_EMAIL in .env';
-    } catch (error) {
-        statusEl.textContent = 'SMTP Check Failed';
-        statusEl.className = 'status-pill smtp-offline';
-        senderEl.textContent = error.message;
-    }
-}
-
-async function handleEmailComposerSubmit(event) {
-    event.preventDefault();
-
-    const submitButton = event.target.querySelector('button[type="submit"]');
-    const originalLabel = submitButton ? submitButton.innerHTML : '';
-    if (submitButton) {
-        submitButton.disabled = true;
-        submitButton.innerHTML = '<i data-lucide="loader"></i> Sending...';
-        if (window.lucide) window.lucide.createIcons();
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/email/send`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                to: document.getElementById('emailTo')?.value || '',
-                cc: document.getElementById('emailCc')?.value || '',
-                bcc: document.getElementById('emailBcc')?.value || '',
-                subject: document.getElementById('emailSubject')?.value || '',
-                message: document.getElementById('emailMessage')?.value || ''
-            })
-        });
-
-        const result = await parseJsonResponse(response, 'Email could not be sent.');
-        if (!response.ok || !result.success) {
-            throw new Error(result.message || 'Email could not be sent.');
-        }
-
-        pushNotification('Email Sent', result.message || 'SMTP email sent successfully.', 'info');
-        alert(result.message || 'Email sent successfully.');
-        event.target.reset();
-        renderEmailRecipientOptions();
-    } catch (error) {
-        alert(error.message);
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = originalLabel;
-            if (window.lucide) window.lucide.createIcons();
-        }
     }
 }
 
@@ -1853,6 +1772,46 @@ function updateDashboardStats() {
         }, 0);
         document.getElementById('dashRevenue').innerText = 'PKR ' + totalRevenue.toLocaleString();
     }
+
+    updateActivePortalLogins();
+}
+
+async function updateActivePortalLogins() {
+    const countEl = document.getElementById('dashActiveLogins');
+    const detailEl = document.getElementById('dashActiveLoginsDetail');
+    if (!countEl || !detailEl) return;
+
+    const token = sessionStorage.getItem('eduCore_token');
+    if (!token) {
+        countEl.innerText = '0';
+        detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> No active admin token';
+        if (window.lucide) window.lucide.createIcons();
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/active-sessions`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const result = await parseJsonResponse(response, 'Active sessions load failed.');
+
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Active sessions load failed.');
+        }
+
+        const roleCounts = Object.entries(result.byRole || {})
+            .map(([role, count]) => `${role}: ${count}`)
+            .join(' | ');
+
+        countEl.innerText = String(result.totalActiveLogins || 0);
+        detailEl.title = roleCounts;
+        detailEl.innerHTML = `<i data-lucide="monitor-up" size="16"></i> ${result.uniqueActiveUsers || 0} users active now`;
+    } catch (error) {
+        countEl.innerText = '0';
+        detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> Live sessions unavailable';
+    }
+
+    if (window.lucide) window.lucide.createIcons();
 }
 // =======================================================
 // ==================== STUDENT LOGIC ====================
@@ -1909,6 +1868,8 @@ function toggleStudentForm(editMode = false) {
             document.getElementById('studentId').value = '';
             const studentCodeField = document.getElementById('studentCode');
             if (studentCodeField) studentCodeField.value = generateStudentCode();
+            const admissionDateField = document.getElementById('admissionDate');
+            if (admissionDateField) admissionDateField.value = new Date().toISOString().split('T')[0];
             title.innerText = 'Add New Student';
         } else {
             title.innerText = 'Edit Student Details';
@@ -1932,6 +1893,13 @@ function generateStudentCode() {
     });
 
     return `STD-${String(maxNumber + 1).padStart(4, '0')}`;
+}
+
+function normalizeDateInputValue(value) {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value).slice(0, 10);
+    return parsed.toISOString().split('T')[0];
 }
 
 async function handleStudentFormSubmit(e) {
@@ -1977,6 +1945,8 @@ async function handleStudentFormSubmit(e) {
         fullName: document.getElementById('fullName').value,
         profileImage: existingStudent?.profileImage || '',
         fatherName: document.getElementById('fatherName').value,
+        dob: document.getElementById('studentDob').value,
+        admissionDate: document.getElementById('admissionDate') ? document.getElementById('admissionDate').value : (existingStudent?.admissionDate || ''),
         classGrade: document.getElementById('classGrade').value,
         campusName: document.getElementById('campusName').value,
         parentPhone: document.getElementById('parentPhone').value,
@@ -2026,6 +1996,7 @@ function renderStudents(term = '') {
     const searchInput = document.getElementById('studentSearchInput');
     const genderFilter = document.getElementById('genderFilter');
     const campusFilter = document.getElementById('campusFilter');
+    const ageFilter = document.getElementById('ageFilter');
     const loggedInUser = getLoggedInUser();
 
     if (typeof term !== 'string') {
@@ -2035,6 +2006,7 @@ function renderStudents(term = '') {
     }
 
     const selectedGender = genderFilter ? genderFilter.value : 'All';
+    const selectedAge = ageFilter ? ageFilter.value : 'All';
     const selectedCampus = loggedInUser?.role === 'Branch'
         ? (loggedInUser.campusName || 'All')
         : (campusFilter ? campusFilter.value : 'All');
@@ -2048,6 +2020,7 @@ function renderStudents(term = '') {
             (s.studentCode && s.studentCode.toLowerCase().includes(term))
         ) &&
         (selectedGender === 'All' || (s.gender || '').toLowerCase() === selectedGender.toLowerCase()) &&
+        (selectedAge === 'All' || (selectedAge === 'below5' && isStudentBelowAge(s, 5))) &&
         (selectedCampus === 'All' || (s.campusName || 'Main Campus').toLowerCase() === selectedCampus.toLowerCase())
     );
 
@@ -2074,6 +2047,7 @@ function renderStudents(term = '') {
                     <div class="student-name-text">${s.fullName}</div>
                 </div></td>
                 <td class="cell-compact">${s.fatherName || '-'}</td>
+                <td>${formatDateForDisplay(s.dob)}</td>
                 <td class="cell-compact">${s.classGrade}</td>
                     <td class="cell-compact">${s.campusName || 'Main Campus'}</td>
                 <td>${s.gender || '-'}</td>
@@ -2101,6 +2075,8 @@ function editStudent(s) {
     document.getElementById('studentCode').value = s.studentCode || '';
     document.getElementById('fullName').value = s.fullName;
     document.getElementById('fatherName').value = s.fatherName || '';
+    if (document.getElementById('studentDob')) document.getElementById('studentDob').value = s.dob || '';
+    if (document.getElementById('admissionDate')) document.getElementById('admissionDate').value = normalizeDateInputValue(s.admissionDate || s.createdAt || '');
     document.getElementById('classGrade').value = s.classGrade;
     document.getElementById('campusName').value = s.campusName || 'Main Campus';
     document.getElementById('parentPhone').value = s.parentPhone;
@@ -2241,6 +2217,7 @@ async function handleTeacherFormSubmit(e) {
         employeeCode: document.getElementById('teacherCode').value || generateEntityCode(STORAGE_KEY_TEACHERS, 'TCH'),
         fullName: document.getElementById('tFullName').value,
         fatherName: document.getElementById('tFatherName').value,
+        dob: document.getElementById('tDob').value,
         cnic: document.getElementById('tCnic').value,
         profileImage,
         phone: document.getElementById('tPhone').value,
@@ -2261,6 +2238,7 @@ async function handleTeacherFormSubmit(e) {
         bankAccountTitle: document.getElementById('tBankAccountTitle').value.trim(),
         bankAccountNumber: document.getElementById('tBankAccountNumber').value.trim(),
         bankBranch: document.getElementById('tBankBranch').value.trim(),
+        schedule: normalizeTeacherSchedule(existingTeacher?.schedule),
         role: 'Teacher'
     };
 
@@ -2282,6 +2260,131 @@ async function handleTeacherFormSubmit(e) {
     toggleTeacherForm();
     renderTeachers();
     showSuccessModal('Teacher Registered!', `Professor ${newTeacher.fullName}'s account is active. They can now access their portal.`);
+}
+
+function getTeacherScheduleSummary(teacher) {
+    const schedule = normalizeTeacherSchedule(teacher.schedule);
+    if (!schedule.length) {
+        return '<div style="font-size:0.75rem;color:var(--text-secondary);">No lectures assigned</div>';
+    }
+
+    const uniqueDays = [...new Set(schedule.map(item => item.day).filter(Boolean))];
+    return `<div style="font-size:0.75rem;color:var(--text-secondary);">${schedule.length} lectures ${uniqueDays.length ? `on ${uniqueDays.length} days` : ''}</div>`;
+}
+
+function openTeacherSchedule(teacherId) {
+    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teacher = teachers.find(item => item.id === teacherId);
+    const modal = document.getElementById('teacherScheduleModal');
+    if (!teacher || !modal) return;
+
+    teacherScheduleDraft = normalizeTeacherSchedule(teacher.schedule).map(item => ({ ...item }));
+    document.getElementById('scheduleTeacherId').value = teacher.id;
+    document.getElementById('scheduleModalTitle').innerText = `Schedule: ${teacher.fullName}`;
+    clearTeacherScheduleDraft();
+    renderTeacherScheduleDraft();
+    modal.style.display = 'flex';
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function closeTeacherScheduleModal() {
+    const modal = document.getElementById('teacherScheduleModal');
+    if (modal) modal.style.display = 'none';
+    teacherScheduleDraft = [];
+}
+
+function clearTeacherScheduleDraft() {
+    ['scheduleClass', 'scheduleSubject', 'scheduleStartTime', 'scheduleEndTime', 'scheduleRoom', 'scheduleNote'].forEach((id) => {
+        const field = document.getElementById(id);
+        if (field) field.value = '';
+    });
+}
+
+function addTeacherScheduleItem() {
+    const day = document.getElementById('scheduleDay').value;
+    const classGrade = document.getElementById('scheduleClass').value.trim();
+    const subject = document.getElementById('scheduleSubject').value.trim();
+    const startTime = document.getElementById('scheduleStartTime').value;
+    const endTime = document.getElementById('scheduleEndTime').value;
+    const room = document.getElementById('scheduleRoom').value.trim();
+    const note = document.getElementById('scheduleNote').value.trim();
+
+    if (!day || !classGrade || !subject || !startTime || !endTime) {
+        alert('Please add day, class, lecture, start time, and end time.');
+        return;
+    }
+
+    if (startTime >= endTime) {
+        alert('End time must be after start time.');
+        return;
+    }
+
+    teacherScheduleDraft.push({
+        id: generateUniqueRecordId('SCH'),
+        day,
+        classGrade,
+        subject,
+        startTime,
+        endTime,
+        room,
+        note
+    });
+    teacherScheduleDraft.sort(compareScheduleItems);
+    clearTeacherScheduleDraft();
+    renderTeacherScheduleDraft();
+}
+
+function compareScheduleItems(a, b) {
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+    if (dayDiff !== 0) return dayDiff;
+    return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+}
+
+function removeTeacherScheduleItem(scheduleId) {
+    teacherScheduleDraft = teacherScheduleDraft.filter(item => item.id !== scheduleId);
+    renderTeacherScheduleDraft();
+}
+
+function renderTeacherScheduleDraft() {
+    const list = document.getElementById('teacherScheduleList');
+    if (!list) return;
+
+    if (!teacherScheduleDraft.length) {
+        list.innerHTML = '<div class="schedule-empty">No lectures assigned yet.</div>';
+        return;
+    }
+
+    list.innerHTML = teacherScheduleDraft.map((item) => `
+        <div class="schedule-row">
+            <div><strong>${item.day}</strong><br><span>${formatScheduleTime(item.startTime, item.endTime)}</span></div>
+            <div><strong>${item.subject}</strong><br><span>${item.classGrade}</span></div>
+            <div><strong>${item.room || '-'}</strong><br><span>${item.note || 'No note'}</span></div>
+            <div><span>Lecture</span></div>
+            <button type="button" class="action-btn btn-delete" onclick="removeTeacherScheduleItem('${item.id}')">
+                <i data-lucide="trash-2" width="14"></i> Remove
+            </button>
+        </div>
+    `).join('');
+    if (window.lucide) window.lucide.createIcons();
+}
+
+async function saveTeacherSchedule() {
+    const teacherId = document.getElementById('scheduleTeacherId').value;
+    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teacher = teachers.find(item => item.id === teacherId);
+    if (!teacher) return;
+
+    teacher.schedule = teacherScheduleDraft.map(item => ({ ...item }));
+    saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+    const syncResult = await syncToSQLDetailed('teachers', [teacher]);
+    if (!syncResult.success) {
+        alert(syncResult.error || 'Schedule saved locally, but database sync failed.');
+    }
+
+    pushNotification('Teacher Schedule', `Lecture schedule updated for ${teacher.fullName}.`, 'calendar');
+    closeTeacherScheduleModal();
+    renderTeachers((document.getElementById('teacherSearchInput')?.value || '').toLowerCase());
 }
 
 function renderTeachers(term = '') {
@@ -2353,8 +2456,12 @@ function renderTeachers(term = '') {
                     </div>
                 </div></td>
                 <td class="teacher-cell-compact">${t.fatherName || '-'}</td>
+                <td>${formatDateForDisplay(t.dob)}</td>
                 <td class="teacher-cell-compact">${t.campusName || '-'}</td>
-                <td class="teacher-cell-compact">${t.subject}</td>
+                <td class="teacher-cell-compact">
+                    <div>${t.subject}</div>
+                    ${getTeacherScheduleSummary(t)}
+                </td>
                 <td>${getBankDetailsMarkup(t)}</td>
                 <td>${getDocumentBadgesMarkup(t, true)}</td>
                 <td class="teacher-login-details">
@@ -2368,6 +2475,9 @@ function renderTeachers(term = '') {
                 <td>
                     <button class="action-btn btn-view" onclick='viewTeacherAttendance(${JSON.stringify(t)})' title="View Attendance">
                         <i data-lucide="eye" width="14"></i>
+                    </button>
+                    <button class="action-btn btn-edit" onclick="openTeacherSchedule('${t.id}')" title="Assign Lectures">
+                        <i data-lucide="calendar-clock" width="14"></i> Schedule
                     </button>
                     <button class="action-btn btn-edit" onclick='editTeacher(${JSON.stringify(t)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
                     <button class="action-btn btn-delete" onclick="deleteTeacher('${t.id}')"><i data-lucide="trash-2" width="14"></i></button>
@@ -2385,6 +2495,7 @@ function editTeacher(t) {
     document.getElementById('teacherCode').value = t.employeeCode || '';
     document.getElementById('tFullName').value = t.fullName;
     document.getElementById('tFatherName').value = t.fatherName || '';
+    if (document.getElementById('tDob')) document.getElementById('tDob').value = t.dob || '';
     document.getElementById('tCnic').value = t.cnic || '';
     document.getElementById('tPhone').value = t.phone;
     if (document.getElementById('tEmail')) document.getElementById('tEmail').value = t.email || '';
@@ -2431,7 +2542,7 @@ function deleteTeacher(id) {
                 }
 
                 if (response.status === 404) {
-                    pushNotification('Teacher Deleted', 'Teacher local list aur database dono se remove ho chuka hai.', 'book');
+                    pushNotification('Teacher Deleted', 'The teacher has been removed from both the local list and the database.', 'book');
                     return;
                 }
 
@@ -2639,6 +2750,7 @@ async function handleStaffFormSubmit(e) {
         employeeCode: document.getElementById('staffCode').value || generateEntityCode(STORAGE_KEY_STAFF, 'STF'),
         fullName: document.getElementById('sFullName').value,
         fatherName: document.getElementById('sFatherName').value,
+        dob: document.getElementById('sDob').value,
         designation: document.getElementById('sDesignation').value,
         cnic: document.getElementById('sCnic').value,
         phone: document.getElementById('sPhone').value,
@@ -2727,6 +2839,7 @@ function renderStaff(term = '') {
                     </div>
                 </div></td>
                 <td>${s.fatherName || '-'}</td>
+                <td>${formatDateForDisplay(s.dob)}</td>
                 <td>${s.designation}</td>
                 <td>${getBankDetailsMarkup(s)}</td>
                 <td>${getDocumentBadgesMarkup(s)}</td>
@@ -2750,6 +2863,7 @@ function editStaff(s) {
     document.getElementById('staffCode').value = s.employeeCode || '';
     document.getElementById('sFullName').value = s.fullName;
     document.getElementById('sFatherName').value = s.fatherName || '';
+    if (document.getElementById('sDob')) document.getElementById('sDob').value = s.dob || '';
     document.getElementById('sDesignation').value = s.designation || '';
     document.getElementById('sCnic').value = s.cnic || '';
     document.getElementById('sPhone').value = s.phone;
@@ -2771,7 +2885,7 @@ function deleteStaff(id) {
     if (confirm('Delete this staff member?')) {
         const existingStaff = getData(STORAGE_KEY_STAFF);
         const updatedStaff = existingStaff.filter(s => s.id !== id);
-        saveData(STORAGE_KEY_STAFF, updatedStaff);
+        saveData(STORAGE_KEY_STAFF, updatedStaff, { skipSync: true });
         renderStaff();
 
         fetch(`${API_BASE_URL}/staff/${id}`, {
@@ -2790,6 +2904,11 @@ function deleteStaff(id) {
                     result = responseText ? JSON.parse(responseText) : null;
                 } catch (parseError) {
                     throw new Error('The server is still running an older version. Restart it with `node server.js` and try deleting again.');
+                }
+
+                if (response.status === 404) {
+                    pushNotification('Staff Deleted', 'The staff member has been removed from both the local list and the database.', 'user');
+                    return;
                 }
 
                 if (!response.ok || !result.success) {

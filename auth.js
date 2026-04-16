@@ -14,12 +14,12 @@
         'teacher_attendance.html': { moduleKey: 'teacher_attendance', defaultHome: 'dashboard.html' },
         'student_attendance_report.html': { moduleKey: 'student_attendance_report', defaultHome: 'dashboard.html' },
         'teacher_attendance_report.html': { moduleKey: 'teacher_attendance_report', defaultHome: 'dashboard.html' },
+        'notifications.html': { moduleKey: 'notifications', defaultHome: 'dashboard.html' },
         'exams.html': { moduleKey: 'exams', defaultHome: 'dashboard.html' },
         'revenue.html': { moduleKey: 'revenue', defaultHome: 'dashboard.html' },
         'settings.html': { moduleKey: 'settings', defaultHome: 'dashboard.html' },
         'permissions.html': { moduleKey: 'permissions', defaultHome: 'dashboard.html' },
         'branch_registration.html': { moduleKey: 'branch_registration', defaultHome: 'dashboard.html' },
-        'email.html': { moduleKey: 'email', defaultHome: 'dashboard.html' },
         'aboutme.html': { moduleKey: 'aboutme', defaultHome: 'dashboard.html' },
         'student_portal.html': { moduleKey: 'student_portal', defaultHome: 'student_portal.html' },
         'teacher_portal.html': { moduleKey: 'teacher_portal', defaultHome: 'teacher_portal.html' },
@@ -65,6 +65,28 @@
 
     function normalizePermissionsConfig(input = {}) {
         const raw = input && typeof input === 'object' ? input : {};
+        const moduleKeys = [...new Set(Object.values(pageRegistry).map((entry) => entry.moduleKey).filter(Boolean))];
+        const rawGroups = raw.groups && typeof raw.groups === 'object'
+            ? raw.groups
+            : defaultPermissions.groups;
+        const groups = Object.entries(rawGroups).reduce((acc, [groupKey, group]) => {
+            const nextGroup = group && typeof group === 'object' ? group : {};
+            const permissions = { ...(nextGroup.permissions || {}) };
+            moduleKeys.forEach((moduleKey) => {
+                if (!permissions[moduleKey]) permissions[moduleKey] = groupKey === 'admin' ? 'manage' : 'none';
+            });
+            if (groupKey === 'principal' && !nextGroup.permissions?.notifications) {
+                permissions.notifications = 'view';
+            }
+            acc[groupKey] = {
+                ...nextGroup,
+                name: nextGroup.name || groupKey,
+                homePage: nextGroup.homePage || (groupKey === 'admin' ? 'dashboard.html' : 'dashboard.html'),
+                permissions
+            };
+            return acc;
+        }, {});
+
         return {
             loginAccess: {
                 ...defaultPermissions.loginAccess,
@@ -74,9 +96,7 @@
                 ...defaultPermissions.roleGroups,
                 ...(raw.roleGroups || {})
             },
-            groups: raw.groups && typeof raw.groups === 'object'
-                ? raw.groups
-                : defaultPermissions.groups
+            groups
         };
     }
 
@@ -189,6 +209,24 @@
         });
     }
 
+    function startActiveSessionTracking() {
+        if (!loggedInUser || !authToken || publicPages.has(currentPage)) return;
+
+        const sendHeartbeat = () => {
+            fetch(`${getApiBaseUrl()}/session/heartbeat`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ page: currentPage })
+            }).catch(() => {});
+        };
+
+        sendHeartbeat();
+        window.setInterval(sendHeartbeat, 30000);
+    }
+
     window.eduCoreAuth = {
         pageRegistry,
         defaultPermissions,
@@ -218,11 +256,31 @@
         if (!canAccessPage(loggedInUser, permissions, currentPage)) {
             redirectToAllowedHome(loggedInUser, permissions);
         }
+
+        startActiveSessionTracking();
     })();
 })();
 
 function logoutUser(event) {
     if (event) event.preventDefault();
+    const token = sessionStorage.getItem('eduCore_token');
+    if (token) {
+        const isLocalhost = window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname.startsWith('192.168.') ||
+            window.location.hostname.startsWith('10.') ||
+            window.location.hostname.startsWith('172.') ||
+            window.location.protocol === 'file:';
+        const backendUrl = isLocalhost
+            ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
+            : (window.ENV_BACKEND_URL || window.location.origin);
+
+        fetch(`${backendUrl}/api/session/end`, {
+            method: 'POST',
+            keepalive: true,
+            headers: { 'Authorization': `Bearer ${token}` }
+        }).catch(() => {});
+    }
     sessionStorage.removeItem('loggedInUser');
     sessionStorage.removeItem('eduCore_token');
     sessionStorage.removeItem('eduCore_student_profile');

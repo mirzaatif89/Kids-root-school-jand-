@@ -83,6 +83,60 @@
             cursor: pointer;
             backdrop-filter: blur(4px);
         }
+
+        .schedule-card {
+            margin-top: 2rem;
+            background: white;
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .schedule-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .schedule-item {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr 1fr;
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .schedule-time {
+            font-weight: 700;
+            color: #be185d;
+        }
+
+        .schedule-meta {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .empty-schedule {
+            padding: 1rem;
+            color: var(--text-secondary);
+            border: 1px dashed #e5e7eb;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        @media (max-width: 720px) {
+            .user-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .schedule-item {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -143,6 +197,20 @@
                 </div>
             </div>
         </div>
+
+        <div class="schedule-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                <div>
+                    <h3>Assigned Lectures</h3>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Your latest class timetable.</p>
+                </div>
+                <div class="credential-badge" style="background: #fce7f3; color: #be185d;">
+                    <i data-lucide="calendar-clock" width="16"></i>
+                    <span id="lectureCount">0 Lectures</span>
+                </div>
+            </div>
+            <div class="schedule-list" id="teacherScheduleList"></div>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -153,6 +221,7 @@
         const API_BASE_URL = `${BACKEND_URL}/api`;
         const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
         if (!loggedInUser || loggedInUser.role !== 'Teacher') {
             window.location.href = 'index.html';
@@ -180,6 +249,59 @@
             }
         }
 
+        function normalizeTeacherSchedule(schedule) {
+            if (Array.isArray(schedule)) return schedule;
+            if (typeof schedule === 'string' && schedule.trim()) {
+                try {
+                    const parsed = JSON.parse(schedule);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        function formatScheduleTime(startTime = '', endTime = '') {
+            if (!startTime && !endTime) return '-';
+            return `${startTime || '-'} - ${endTime || '-'}`;
+        }
+
+        function compareScheduleItems(a, b) {
+            const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+            if (dayDiff !== 0) return dayDiff;
+            return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+        }
+
+        function renderTeacherSchedule(teacher) {
+            const scheduleList = document.getElementById('teacherScheduleList');
+            const lectureCount = document.getElementById('lectureCount');
+            const schedule = normalizeTeacherSchedule(teacher?.schedule).sort(compareScheduleItems);
+            lectureCount.innerText = `${schedule.length} ${schedule.length === 1 ? 'Lecture' : 'Lectures'}`;
+
+            if (!schedule.length) {
+                scheduleList.innerHTML = '<div class="empty-schedule">No lectures assigned yet.</div>';
+                return;
+            }
+
+            scheduleList.innerHTML = schedule.map((item) => `
+                <div class="schedule-item">
+                    <div>
+                        <div class="schedule-time">${item.day || '-'}</div>
+                        <div class="schedule-meta">${formatScheduleTime(item.startTime, item.endTime)}</div>
+                    </div>
+                    <div>
+                        <strong>${item.subject || '-'}</strong>
+                        <div class="schedule-meta">${item.classGrade || '-'}</div>
+                    </div>
+                    <div>
+                        <strong>${item.room || '-'}</strong>
+                        <div class="schedule-meta">${item.note || ''}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function loadData() {
             const teachers = JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS)) || [];
             const teacher = teachers.find(t => t.id === loggedInUser.id);
@@ -194,12 +316,14 @@
                 document.getElementById('gender').innerText = teacher.gender || '-';
                 document.getElementById('phone').innerText = teacher.phone || '-';
                 document.getElementById('address').innerText = teacher.address || '-';
+                renderTeacherSchedule(teacher);
+            } else {
+                renderTeacherSchedule(null);
             }
         }
 
         function logout() {
-            sessionStorage.removeItem('loggedInUser');
-            window.location.href = 'index.html';
+            logoutUser();
         }
 
         window.onload = () => {

@@ -295,6 +295,39 @@
             font-size: 0.9rem;
         }
 
+        .lecture-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .lecture-card {
+            display: grid;
+            grid-template-columns: minmax(120px, 0.8fr) minmax(160px, 1.2fr) minmax(140px, 1fr);
+            gap: 1rem;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .lecture-time {
+            font-weight: 800;
+            color: var(--primary-dark);
+        }
+
+        .lecture-title {
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .lecture-meta {
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            line-height: 1.45;
+        }
+
         .portal-actions {
             display: flex;
             gap: 0.75rem;
@@ -429,6 +462,10 @@
             }
 
             .info-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .lecture-card {
                 grid-template-columns: 1fr;
             }
         }
@@ -611,6 +648,21 @@
                         </button>
                     </div>
                 </section>
+
+                <section class="panel-card">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                        <div>
+                            <h3>Class Lectures</h3>
+                            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Your assigned teacher lectures by day and time.</p>
+                        </div>
+                        <div class="meta-pill">
+                            <i data-lucide="calendar-clock" width="16"></i>
+                            <span id="studentLectureCount">0 Lectures</span>
+                        </div>
+                    </div>
+                    <div class="lecture-list" id="studentLectureList"></div>
+                    <div class="empty-note" id="studentLectureEmpty">No lectures have been assigned for your class yet.</div>
+                </section>
             </div>
 
             <div class="section-stack">
@@ -697,6 +749,7 @@
         const BACKEND_URL = isLocalhost ? `${window.location.protocol}//${window.location.hostname}:3000` : (window.ENV_BACKEND_URL || window.location.origin);
         const API_BASE_URL = `${BACKEND_URL}/api`;
         const STORAGE_KEY_STUDENTS = 'eduCore_students';
+        const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
@@ -711,6 +764,16 @@
 
         function formatCurrency(amount) {
             return `PKR ${parseInt(amount || 0, 10).toLocaleString()}`;
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
         }
 
         function getStatusClass(status) {
@@ -985,6 +1048,116 @@
             return `${normalizedHour}:${minutes} ${suffix}`;
         }
 
+        function normalizeTeacherSchedule(schedule) {
+            if (Array.isArray(schedule)) return schedule;
+            if (typeof schedule === 'string' && schedule.trim()) {
+                try {
+                    const parsed = JSON.parse(schedule);
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+            return [];
+        }
+
+        function normalizeClassName(value) {
+            const raw = String(value || '').trim().toLowerCase();
+            if (!raw) return '';
+            const wordsToNumbers = {
+                'play group': 'playgroup',
+                nursery: 'nursery',
+                prep: 'prep',
+                one: '1',
+                two: '2',
+                three: '3',
+                four: '4',
+                five: '5',
+                six: '6',
+                seven: '7',
+                eight: '8',
+                nine: '9',
+                ten: '10'
+            };
+            let normalized = raw
+                .replace(/-/g, ' ')
+                .replace(/\bclass\b/g, '')
+                .replace(/\bgrade\b/g, '')
+                .replace(/\b(st|nd|rd|th)\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            normalized = normalized.replace(/^(\d+)(st|nd|rd|th)$/g, '$1');
+            return wordsToNumbers[normalized] || normalized;
+        }
+
+        function compareLectureRows(a, b) {
+            const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+            const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
+            if (dayDiff !== 0) return dayDiff;
+            return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+        }
+
+        async function loadTeachersForLectures() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teachers`);
+                if (!response.ok) throw new Error('Unable to load teachers.');
+                const teachers = await response.json();
+                localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(teachers));
+                return Array.isArray(teachers) ? teachers : [];
+            } catch (error) {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_TEACHERS) || '[]');
+            }
+        }
+
+        async function applyStudentLectures(student) {
+            const lectureList = document.getElementById('studentLectureList');
+            const emptyState = document.getElementById('studentLectureEmpty');
+            const countEl = document.getElementById('studentLectureCount');
+            const studentClass = normalizeClassName(student.classGrade);
+            const teachers = await loadTeachersForLectures();
+            const lectures = [];
+
+            teachers.forEach((teacher) => {
+                normalizeTeacherSchedule(teacher.schedule).forEach((item) => {
+                    if (normalizeClassName(item.classGrade) !== studentClass) return;
+                    lectures.push({
+                        ...item,
+                        teacherName: teacher.fullName || 'Teacher',
+                        teacherSubject: teacher.subject || ''
+                    });
+                });
+            });
+
+            lectures.sort(compareLectureRows);
+            countEl.innerText = `${lectures.length} ${lectures.length === 1 ? 'Lecture' : 'Lectures'}`;
+
+            if (!lectures.length) {
+                lectureList.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            lectureList.innerHTML = lectures.map((item) => `
+                <div class="lecture-card">
+                    <div>
+                        <div class="lecture-time">${escapeHtml(item.day || '-')}</div>
+                        <div class="lecture-meta">${escapeHtml(formatScheduleTime(item.startTime))} - ${escapeHtml(formatScheduleTime(item.endTime))}</div>
+                    </div>
+                    <div>
+                        <div class="lecture-title">${escapeHtml(item.subject || item.teacherSubject || '-')}</div>
+                        <div class="lecture-meta">Teacher: ${escapeHtml(item.teacherName)}</div>
+                    </div>
+                    <div>
+                        <div class="lecture-meta">Class: ${escapeHtml(item.classGrade || student.classGrade || '-')}</div>
+                        <div class="lecture-meta">Room: ${escapeHtml(item.room || '-')}</div>
+                        ${item.note ? `<div class="lecture-meta">${escapeHtml(item.note)}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+            emptyState.style.display = 'none';
+        }
+
         function applyDateSheet(student) {
             const state = loadDateSheetState();
             const tbody = document.getElementById('studentDateSheetBody');
@@ -1105,6 +1278,7 @@
             applyStudentResult(getLatestStudentResult(student));
             applyStudentAttendance(student);
             applyDateSheet(student);
+            applyStudentLectures(student);
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
         }
 
@@ -1143,10 +1317,8 @@
         }
 
         function logout() {
-            sessionStorage.removeItem('loggedInUser');
-            sessionStorage.removeItem('eduCore_token');
+            logoutUser();
             sessionStorage.removeItem(STUDENT_PROFILE_CACHE_KEY);
-            window.location.href = 'index.html';
         }
 
         window.onload = () => {

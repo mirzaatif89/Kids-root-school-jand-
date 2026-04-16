@@ -9,10 +9,10 @@ const {
 } = require('../_lib/services');
 
 const teacherAttributes = [
-    'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'cnic', 'phone',
+    'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
     'email', 'address', 'qualification', 'campusName', 'gender', 'subject', 'salary',
     'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-    'bankAccountNumber', 'bankBranch', 'username', 'password', 'plainPassword', 'role'
+    'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role'
 ];
 
 module.exports = createHandler({
@@ -34,6 +34,9 @@ module.exports = createHandler({
                 item.password = await bcrypt.hash(item.password, 10);
             }
             item.plainPassword = rawPassword;
+            if (Array.isArray(item.schedule)) {
+                item.schedule = JSON.stringify(item.schedule);
+            }
 
             await Teacher.upsert(item);
             await upsertAuthUser(User, {

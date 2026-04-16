@@ -14,7 +14,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
 
             <nav class="nav-links">
@@ -250,8 +250,8 @@
                                 <label>Campus / Branch<input type="text" id="campusName" value="Main branch"></label>
                                 <label>Contact Line<input type="text" id="schoolContact" value="Address: Dekhni Road Jand | Phone: 03045259900"></label>
                                 <label>Term Title<input type="text" id="termTitle" value="3rd Term 2025-26"></label>
-                                <label>Left Logo URL<input type="text" id="leftLogoUrl" placeholder="https://... or assets/logo-left.png"></label>
-                                <label>Right Logo URL<input type="text" id="rightLogoUrl" placeholder="https://... or assets/logo-right.png"></label>
+                                <label>Left Logo URL<input type="text" id="leftLogoUrl" value="images/logo.jpeg" placeholder="images/logo.jpeg"></label>
+                                <label>Right Logo URL<input type="text" id="rightLogoUrl" value="images/logo.jpeg" placeholder="images/logo.jpeg"></label>
                             </div>
                         </div>
 
@@ -1822,6 +1822,10 @@
         function updateLogo(logoId, value) {
             const img = document.getElementById(logoId);
             const box = img.closest('.result-logo-box');
+            img.onerror = () => {
+                img.removeAttribute('src');
+                box.classList.remove('has-logo');
+            };
             img.src = value || '';
             box.classList.toggle('has-logo', Boolean(value));
         }

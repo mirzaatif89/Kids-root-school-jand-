@@ -9,7 +9,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const QRCode = require('qrcode');
-const nodemailer = require('nodemailer');
 
 require('dotenv').config();
 
@@ -38,6 +37,8 @@ app.get('/', (req, res) => {
 let sequelize;
 let startupPromise = null;
 let isInitialized = false;
+const ACTIVE_SESSION_TTL_MS = 90000;
+const activeSessions = new Map();
 
 const MODULE_KEYS = [
     'dashboard',
@@ -52,12 +53,12 @@ const MODULE_KEYS = [
     'teacher_attendance',
     'student_attendance_report',
     'teacher_attendance_report',
+    'notifications',
     'exams',
     'revenue',
     'settings',
     'permissions',
     'branch_registration',
-    'email',
     'aboutme',
     'student_portal',
     'teacher_portal',
@@ -107,6 +108,7 @@ const defaultPermissions = {
                 teachers: 'view',
                 staff: 'view',
                 classes: 'view',
+                notifications: 'view',
                 exams: 'view',
                 revenue: 'view',
                 aboutme: 'view'
@@ -372,6 +374,59 @@ function authenticateToken(req, res, next) {
     }
 }
 
+function pruneActiveSessions() {
+    const now = Date.now();
+    activeSessions.forEach((session, sessionId) => {
+        if (!session.lastSeen || now - session.lastSeen > ACTIVE_SESSION_TTL_MS) {
+            activeSessions.delete(sessionId);
+        }
+    });
+}
+
+function createSessionId(role, id) {
+    return `${String(role || 'user').toLowerCase()}_${String(id || '0')}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function registerActiveSession(req, sessionId, user) {
+    if (!sessionId || !user) return;
+
+    activeSessions.set(sessionId, {
+        sessionId,
+        userId: String(user.id || ''),
+        username: user.username || '',
+        fullName: user.fullName || '',
+        role: user.role || '',
+        campusName: user.campusName || '',
+        loginAt: Date.now(),
+        lastSeen: Date.now(),
+        ip: req.ip || req.socket?.remoteAddress || '',
+        userAgent: req.get('user-agent') || ''
+    });
+}
+
+function buildActiveSessionsSummary() {
+    pruneActiveSessions();
+    const sessions = Array.from(activeSessions.values()).map((session) => ({
+        ...session,
+        loginAt: new Date(session.loginAt).toISOString(),
+        lastSeen: new Date(session.lastSeen).toISOString()
+    }));
+    const byRole = sessions.reduce((acc, session) => {
+        const role = session.role || 'Unknown';
+        acc[role] = (acc[role] || 0) + 1;
+        return acc;
+    }, {});
+    const uniqueUsers = new Set(sessions.map((session) => `${session.role}:${session.userId || session.username}`));
+
+    return {
+        success: true,
+        totalActiveLogins: sessions.length,
+        uniqueActiveUsers: uniqueUsers.size,
+        byRole,
+        sessions
+    };
+}
+
 function readPermissions() {
     try {
         if (!fs.existsSync(PERMISSIONS_FILE)) {
@@ -398,118 +453,6 @@ app.get('/api/permissions', (req, res) => {
     res.json(readPermissions());
 });
 
-function getEmailConfig() {
-    const host = process.env.SMTP_HOST || '';
-    const port = Number(process.env.SMTP_PORT || 587);
-    const user = process.env.SMTP_USER || '';
-    const pass = process.env.SMTP_PASS || '';
-    const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
-    const fromEmail = process.env.SMTP_FROM_EMAIL || user;
-    const fromName = process.env.SMTP_FROM_NAME || 'Apexiueum';
-
-    return {
-        configured: Boolean(host && port && user && pass && fromEmail),
-        host,
-        port,
-        user,
-        pass,
-        secure,
-        fromEmail,
-        fromName
-    };
-}
-
-function createEmailTransporter() {
-    const config = getEmailConfig();
-    if (!config.configured) return null;
-
-    return nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-            user: config.user,
-            pass: config.pass
-        }
-    });
-}
-
-app.get('/api/email/status', (req, res) => {
-    const emailConfig = getEmailConfig();
-    res.json({
-        success: true,
-        configured: emailConfig.configured,
-        fromEmail: emailConfig.fromEmail || '',
-        fromName: emailConfig.fromName || ''
-    });
-});
-
-app.post('/api/email/send', async (req, res) => {
-    try {
-        const transporter = createEmailTransporter();
-        const emailConfig = getEmailConfig();
-        const { to, cc, bcc, subject, message } = req.body || {};
-
-        if (!emailConfig.configured || !transporter) {
-            return res.status(400).json({
-                success: false,
-                message: 'SMTP is not configured. Add SMTP settings in .env and restart the server.'
-            });
-        }
-
-        const normalizeRecipients = (value) => {
-            if (Array.isArray(value)) {
-                return value.map(item => String(item || '').trim()).filter(Boolean);
-            }
-
-            return String(value || '')
-                .split(',')
-                .map(item => item.trim())
-                .filter(Boolean);
-        };
-
-        const toList = normalizeRecipients(to);
-        const ccList = normalizeRecipients(cc);
-        const bccList = normalizeRecipients(bcc);
-
-        if (!toList.length) {
-            return res.status(400).json({ success: false, message: 'At least one recipient email is required.' });
-        }
-
-        if (!subject || !String(subject).trim()) {
-            return res.status(400).json({ success: false, message: 'Email subject is required.' });
-        }
-
-        if (!message || !String(message).trim()) {
-            return res.status(400).json({ success: false, message: 'Email message is required.' });
-        }
-
-        const info = await transporter.sendMail({
-            from: `"${emailConfig.fromName}" <${emailConfig.fromEmail}>`,
-            to: toList.join(', '),
-            cc: ccList.length ? ccList.join(', ') : undefined,
-            bcc: bccList.length ? bccList.join(', ') : undefined,
-            subject: String(subject).trim(),
-            text: String(message).trim(),
-            html: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#1f2937;white-space:pre-wrap;">${String(message).trim()
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')}</div>`
-        });
-
-        return res.json({
-            success: true,
-            message: 'Email sent successfully.',
-            messageId: info.messageId
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message || 'Email could not be sent.'
-        });
-    }
-});
-
 app.post('/api/permissions', (req, res) => {
     try {
         const saved = writePermissions(req.body || {});
@@ -529,22 +472,30 @@ app.post('/api/login', async (req, res) => {
         if (username === adminEmail && password === adminPass) {
             const permissions = readPermissions();
             const groupKey = permissions.roleGroups.Admin || 'admin';
-            const token = jwt.sign({ id: 'admin', role: 'Admin' }, JWT_SECRET, { expiresIn: '1d' });
+            const sessionId = createSessionId('Admin', 'admin');
+            const token = jwt.sign({ id: 'admin', role: 'Admin', sessionId }, JWT_SECRET, { expiresIn: '1d' });
+            const user = { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey };
+            registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
                 token,
-                user: { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey }
+                sessionId,
+                user
             });
         }
 
         if (username === PRINCIPAL_USERNAME && password === PRINCIPAL_PASSWORD) {
             const permissions = readPermissions();
             const groupKey = permissions.roleGroups.Principal || 'principal';
-            const token = jwt.sign({ id: 'principal', role: 'Principal' }, JWT_SECRET, { expiresIn: '1d' });
+            const sessionId = createSessionId('Principal', 'principal');
+            const token = jwt.sign({ id: 'principal', role: 'Principal', sessionId }, JWT_SECRET, { expiresIn: '1d' });
+            const user = { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey };
+            registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
                 token,
-                user: { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey }
+                sessionId,
+                user
             });
         }
 
@@ -591,18 +542,22 @@ app.post('/api/login', async (req, res) => {
                     profileName = staff?.fullName || profileName;
                 }
 
-                const token = jwt.sign({ id: user.profileId, role: user.role, campusName: user.campusName || '' }, JWT_SECRET, { expiresIn: '1d' });
+                const sessionId = createSessionId(user.role, user.profileId);
+                const token = jwt.sign({ id: user.profileId, role: user.role, campusName: user.campusName || '', sessionId }, JWT_SECRET, { expiresIn: '1d' });
+                const responseUser = {
+                    id: user.profileId,
+                    fullName: profileName,
+                    role: user.role,
+                    username: user.username,
+                    campusName: user.campusName || '',
+                    groupKey: permissions.roleGroups[user.role] || roleKey
+                };
+                registerActiveSession(req, sessionId, responseUser);
                 return res.json({
                     success: true,
                     token,
-                    user: {
-                        id: user.profileId,
-                        fullName: profileName,
-                        role: user.role,
-                        username: user.username,
-                        campusName: user.campusName || '',
-                        groupKey: permissions.roleGroups[user.role] || roleKey
-                    }
+                    sessionId,
+                    user: responseUser
                 });
             }
         }
@@ -611,6 +566,44 @@ app.post('/api/login', async (req, res) => {
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
     }
+});
+
+app.post('/api/session/heartbeat', authenticateToken, (req, res) => {
+    const sessionId = req.user.sessionId;
+    if (!sessionId) {
+        return res.status(400).json({ success: false, message: 'Session id missing.' });
+    }
+
+    const existing = activeSessions.get(sessionId);
+    activeSessions.set(sessionId, {
+        ...(existing || {}),
+        sessionId,
+        userId: String(req.user.id || existing?.userId || ''),
+        role: req.user.role || existing?.role || '',
+        campusName: req.user.campusName || existing?.campusName || '',
+        loginAt: existing?.loginAt || Date.now(),
+        lastSeen: Date.now(),
+        ip: req.ip || req.socket?.remoteAddress || existing?.ip || '',
+        userAgent: req.get('user-agent') || existing?.userAgent || ''
+    });
+
+    res.json({ success: true });
+});
+
+app.post('/api/session/end', authenticateToken, (req, res) => {
+    if (req.user.sessionId) {
+        activeSessions.delete(req.user.sessionId);
+    }
+
+    res.json({ success: true });
+});
+
+app.get('/api/active-sessions', authenticateToken, (req, res) => {
+    if (req.user.role !== 'Admin') {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    res.json(buildActiveSessionsSummary());
 });
 
 app.get('/api/students', async (req, res) => {
@@ -1075,10 +1068,10 @@ app.get('/api/teachers', async (req, res) => {
     try {
         const teachers = await sequelize.models.Teacher.findAll({
             attributes: [
-                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'cnic', 'phone',
+                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'username', 'password', 'plainPassword', 'role'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role'
             ]
         });
         res.json(teachers);
@@ -1114,6 +1107,9 @@ app.post('/api/teachers', async (req, res) => {
                 item.password = await bcrypt.hash(item.password, 10);
             }
             item.plainPassword = rawPassword;
+            if (Array.isArray(item.schedule)) {
+                item.schedule = JSON.stringify(item.schedule);
+            }
 
             await Teacher.upsert(item);
             await upsertAuthUser(User, {
@@ -1131,10 +1127,10 @@ app.post('/api/teachers', async (req, res) => {
 
         const allTeachers = await Teacher.findAll({
             attributes: [
-                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'cnic', 'phone',
+                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'username', 'password', 'plainPassword', 'role'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role'
             ]
         });
         io.emit('teachers_update', allTeachers);
@@ -1168,10 +1164,10 @@ app.delete('/api/teachers/:id', async (req, res) => {
 
         const allTeachers = await Teacher.findAll({
             attributes: [
-                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'cnic', 'phone',
+                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'username', 'password', 'plainPassword', 'role'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role'
             ]
         });
         io.emit('teachers_update', allTeachers);
@@ -1286,6 +1282,8 @@ function defineStudentModel(db) {
         fullName: DataTypes.STRING,
         profileImage: DataTypes.TEXT('long'),
         fatherName: DataTypes.STRING,
+        dob: DataTypes.STRING,
+        admissionDate: DataTypes.STRING,
         classGrade: DataTypes.STRING,
         campusName: DataTypes.STRING,
         gender: DataTypes.STRING,
@@ -1311,6 +1309,7 @@ function defineTeacherModel(db) {
         fullName: DataTypes.STRING,
         profileImage: DataTypes.TEXT('long'),
         fatherName: DataTypes.STRING,
+        dob: DataTypes.STRING,
         cnic: DataTypes.STRING,
         phone: DataTypes.STRING,
         email: { type: DataTypes.STRING, unique: true, allowNull: true },
@@ -1327,6 +1326,7 @@ function defineTeacherModel(db) {
         bankAccountTitle: DataTypes.STRING,
         bankAccountNumber: DataTypes.STRING,
         bankBranch: DataTypes.STRING,
+        schedule: DataTypes.TEXT('long'),
         username: { type: DataTypes.STRING, unique: true },
         password: DataTypes.STRING,
         plainPassword: DataTypes.STRING,
@@ -1355,6 +1355,7 @@ function defineStaffModel(db) {
         employeeCode: DataTypes.STRING,
         fullName: DataTypes.STRING,
         fatherName: DataTypes.STRING,
+        dob: DataTypes.STRING,
         designation: DataTypes.STRING,
         cnic: DataTypes.STRING,
         phone: DataTypes.STRING,
@@ -1650,6 +1651,8 @@ async function ensureLegacySchema() {
         fullName: { type: DataTypes.STRING, allowNull: true },
         profileImage: { type: DataTypes.TEXT('long'), allowNull: true },
         fatherName: { type: DataTypes.STRING, allowNull: true },
+        dob: { type: DataTypes.STRING, allowNull: true },
+        admissionDate: { type: DataTypes.STRING, allowNull: true },
         classGrade: { type: DataTypes.STRING, allowNull: true },
         campusName: { type: DataTypes.STRING, allowNull: true },
         gender: { type: DataTypes.STRING, allowNull: true },
@@ -1683,6 +1686,7 @@ async function ensureLegacySchema() {
         fullName: { type: DataTypes.STRING, allowNull: true },
         profileImage: { type: DataTypes.TEXT('long'), allowNull: true },
         fatherName: { type: DataTypes.STRING, allowNull: true },
+        dob: { type: DataTypes.STRING, allowNull: true },
         cnic: { type: DataTypes.STRING, allowNull: true },
         phone: { type: DataTypes.STRING, allowNull: true },
         email: { type: DataTypes.STRING, allowNull: true },
@@ -1699,6 +1703,7 @@ async function ensureLegacySchema() {
         bankAccountTitle: { type: DataTypes.STRING, allowNull: true },
         bankAccountNumber: { type: DataTypes.STRING, allowNull: true },
         bankBranch: { type: DataTypes.STRING, allowNull: true },
+        schedule: { type: DataTypes.TEXT('long'), allowNull: true },
         username: { type: DataTypes.STRING, allowNull: true },
         password: { type: DataTypes.STRING, allowNull: true },
         plainPassword: { type: DataTypes.STRING, allowNull: true },
@@ -1709,6 +1714,7 @@ async function ensureLegacySchema() {
         employeeCode: { type: DataTypes.STRING, allowNull: true },
         fullName: { type: DataTypes.STRING, allowNull: true },
         fatherName: { type: DataTypes.STRING, allowNull: true },
+        dob: { type: DataTypes.STRING, allowNull: true },
         designation: { type: DataTypes.STRING, allowNull: true },
         cnic: { type: DataTypes.STRING, allowNull: true },
         phone: { type: DataTypes.STRING, allowNull: true },

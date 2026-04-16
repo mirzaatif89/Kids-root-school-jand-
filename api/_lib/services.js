@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer');
 const QRCode = require('qrcode');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eduCore_secret_key_2026';
@@ -22,12 +21,12 @@ const MODULE_KEYS = [
     'teacher_attendance',
     'student_attendance_report',
     'teacher_attendance_report',
+    'notifications',
     'exams',
     'revenue',
     'settings',
     'permissions',
     'branch_registration',
-    'email',
     'aboutme',
     'student_portal',
     'teacher_portal',
@@ -77,6 +76,7 @@ const defaultPermissions = {
                 teachers: 'view',
                 staff: 'view',
                 classes: 'view',
+                notifications: 'view',
                 exams: 'view',
                 revenue: 'view',
                 aboutme: 'view'
@@ -294,44 +294,6 @@ async function savePermissions(db, data) {
     return nextPermissions;
 }
 
-function getEmailConfig() {
-    const host = process.env.SMTP_HOST || '';
-    const port = Number(process.env.SMTP_PORT || 587);
-    const user = process.env.SMTP_USER || '';
-    const pass = process.env.SMTP_PASS || '';
-    const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465;
-    const fromEmail = process.env.SMTP_FROM_EMAIL || user;
-    const fromName = process.env.SMTP_FROM_NAME || 'Apexiueum';
-
-    return {
-        configured: Boolean(host && port && user && pass && fromEmail),
-        host,
-        port,
-        user,
-        pass,
-        secure,
-        fromEmail,
-        fromName
-    };
-}
-
-function createEmailTransporter() {
-    const config = getEmailConfig();
-    if (!config.configured) {
-        return null;
-    }
-
-    return nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
-        auth: {
-            user: config.user,
-            pass: config.pass
-        }
-    });
-}
-
 function authenticateToken(req) {
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
@@ -515,11 +477,9 @@ module.exports = {
     PRINCIPAL_USERNAME,
     PRINCIPAL_PASSWORD,
     createChallanToken,
-    createEmailTransporter,
     ensureUniqueStudentIdentity,
     ensureUniqueTeacherIdentity,
     authenticateToken,
-    getEmailConfig,
     getRequestBaseUrl,
     isPasswordHash,
     jwt,

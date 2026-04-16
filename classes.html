@@ -134,7 +134,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
 
             <nav class="nav-links">
@@ -231,7 +231,7 @@
             <!-- Classes Grid View -->
             <div id="classesGridView">
                 <div class="classes-grid" id="classesGrid">
-                    <!-- Classes 1-10 will be generated here -->
+                    <!-- Class cards will be generated here -->
                 </div>
             </div>
 
@@ -345,6 +345,7 @@
             { id: '8', name: 'Class Eight', keywords: ['8', 'eight', '8th', 'class 8', 'class eight'] },
             { id: '9', name: 'Class Nine', keywords: ['9', 'nine', '9th', 'class 9', 'class nine'] },
             { id: '10', name: 'Class Ten', keywords: ['10', 'ten', '10th', 'class 10', 'class ten'] },
+            { id: 'graduate', name: 'Graduate', keywords: ['graduate', 'graduated', 'alumni', 'passed out'] },
         ];
 
         function renderClassesGrid() {
@@ -469,7 +470,7 @@
             if (!cls || !summary || !promoteBtn || !promoteSelectedBtn) return;
 
             if (!nextClass) {
-                summary.innerText = `${cls.name} is the final class in the current ladder. Promotion is not available.`;
+                summary.innerText = `${cls.name} is the final stage in the current ladder. Promotion is not available.`;
                 promoteBtn.style.display = 'none';
                 promoteSelectedBtn.style.display = 'none';
                 return;

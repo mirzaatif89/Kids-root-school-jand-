@@ -304,6 +304,22 @@
             line-height: 1.55;
         }
 
+        .student-fee-snapshot {
+            margin-top: 1rem;
+            padding: 0.9rem;
+            border: 1px solid #d7e3ec;
+            border-radius: 0.75rem;
+            background: #f8fbff;
+            color: var(--challan-text);
+            display: grid;
+            gap: 0.45rem;
+            font-size: 0.86rem;
+        }
+
+        .student-fee-snapshot strong {
+            color: var(--challan-accent);
+        }
+
         .qr-preview-card {
             margin-top: 1rem;
             padding: 1rem;
@@ -444,7 +460,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
@@ -589,6 +605,9 @@
                                     <i data-lucide="printer" size="16"></i>&nbsp;Print Challan
                                 </button>
                             </div>
+                            <div class="student-fee-snapshot" id="studentFeeSnapshot">
+                                Select a student or enter roll number to view pending fee details.
+                            </div>
                         </div>
                     </section>
 
@@ -640,6 +659,11 @@
         };
         const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'familyNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'additionalCharges', 'discountValue', 'particulars', 'schoolName', 'schoolAddress', 'urduNote', 'challanNotes'];
         const printCopies = ['School Copy', 'Student Copy'];
+        const CHALLAN_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
+        const CHALLAN_MONTHS = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ];
         let challanStudents = [];
         let challanQrState = {
             paymentUrl: '',
@@ -654,8 +678,8 @@
             if (window.lucide) window.lucide.createIcons();
         });
 
-        function initializeChallanPage() {
-            challanStudents = [...getData(STORAGE_KEY_STUDENTS)].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+        async function initializeChallanPage() {
+            await loadChallanStudents();
             populateStudents();
             setChallanDefaults();
             challanFormFields.forEach(id => {
@@ -670,6 +694,51 @@
                 studentLookup.addEventListener('change', handleStudentLookup);
             }
             triggerChallanRefresh();
+        }
+
+        async function loadChallanStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                if (!response.ok) throw new Error('Students could not be loaded.');
+                const data = await response.json();
+                const students = typeof mergeStudentRecords === 'function' ? mergeStudentRecords(data) : data;
+                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
+                challanStudents = [...students].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+            } catch (error) {
+                challanStudents = [...getData(STORAGE_KEY_STUDENTS)].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
+            }
+            await mergeChallanFeePaymentsIntoMonthlyStore();
+        }
+
+        function getChallanLongMonthName(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const parsed = new Date(raw.replace(',', ' 1,'));
+            if (!Number.isNaN(parsed.getTime())) return CHALLAN_MONTHS[parsed.getMonth()];
+            const lower = raw.toLowerCase();
+            return CHALLAN_MONTHS.find(month => lower.includes(month.toLowerCase()) || lower.includes(month.slice(0, 3).toLowerCase())) || raw;
+        }
+
+        async function mergeChallanFeePaymentsIntoMonthlyStore() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/fees/payments`);
+                if (!response.ok) return;
+                const result = await response.json();
+                const payments = Array.isArray(result.payments) ? result.payments : [];
+                const monthlyFees = JSON.parse(localStorage.getItem(CHALLAN_MONTHLY_FEES_KEY) || '{}');
+
+                payments.forEach((payment) => {
+                    if (payment.status !== 'Paid' || !payment.studentId) return;
+                    const month = getChallanLongMonthName(payment.feeMonth);
+                    if (!month) return;
+                    monthlyFees[payment.studentId] = monthlyFees[payment.studentId] || {};
+                    monthlyFees[payment.studentId][month] = 'Paid';
+                });
+
+                localStorage.setItem(CHALLAN_MONTHLY_FEES_KEY, JSON.stringify(monthlyFees));
+            } catch (error) {
+                console.warn('Fee payments could not be loaded:', error.message);
+            }
         }
 
         function populateStudents() {
@@ -732,7 +801,9 @@
 
             const student = challanStudents.find(item =>
                 String(item.studentCode || '').toLowerCase() === lookupValue ||
-                String(item.rollNo || '').toLowerCase() === lookupValue
+                String(item.rollNo || '').toLowerCase() === lookupValue ||
+                String(item.id || '').toLowerCase() === lookupValue ||
+                String(item.fullName || '').toLowerCase() === lookupValue
             );
 
             if (!student) {
@@ -747,6 +818,7 @@
 
         function applyStudentToChallan(student, syncLookup = false) {
             if (!student) return;
+            const feeSummary = getChallanStudentFeeSummary(student);
 
             document.getElementById('studentClass').value = student.classGrade || '';
             document.getElementById('studentRollNo').value = student.rollNo || '';
@@ -754,15 +826,79 @@
             document.getElementById('studentAdmNo').value = student.admissionNo || '';
             document.getElementById('familyNo').value = student.familyNo || '';
             document.getElementById('fatherName').value = student.fatherName || '';
-            document.getElementById('fatherMobile').value = student.phone || student.fatherMobile || '';
+            document.getElementById('fatherMobile').value = student.parentPhone || student.phone || student.fatherMobile || '';
             applyBranchDetailsToChallan(student.campusName);
-            if (!document.getElementById('baseAmount').value) {
-                document.getElementById('baseAmount').value = student.monthlyFee || 0;
-            }
+            document.getElementById('feeMonth').value = feeSummary.pendingMonths.join(', ');
+            document.getElementById('baseAmount').value = feeSummary.pendingAmount || student.monthlyFee || 0;
+            document.getElementById('particulars').value = feeSummary.pendingMonths.length > 1 ? 'Pending Tuition Fee' : 'Tuition Fee';
+            renderStudentFeeSnapshot(student, feeSummary);
 
             if (syncLookup) {
                 document.getElementById('studentLookup').value = student.studentCode || student.rollNo || '';
             }
+        }
+
+        function getChallanStudentFeeSummary(student) {
+            const currentMonthIndex = new Date().getMonth();
+            const monthlyFees = JSON.parse(localStorage.getItem(CHALLAN_MONTHLY_FEES_KEY) || '{}');
+            const studentMonthly = monthlyFees[student.id] || {};
+            const admissionMonthIndex = getStudentAdmissionMonthIndex(student, studentMonthly, currentMonthIndex);
+            const applicableMonths = CHALLAN_MONTHS.slice(admissionMonthIndex, currentMonthIndex + 1);
+            const paidMonths = applicableMonths.filter(month => studentMonthly[month] === 'Paid');
+            let pendingMonths = applicableMonths.filter(month => studentMonthly[month] !== 'Paid');
+
+            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
+                pendingMonths = [CHALLAN_MONTHS[currentMonthIndex]];
+            }
+
+            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            return {
+                monthlyFee,
+                admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
+                paidMonths,
+                pendingMonths,
+                pendingAmount: pendingMonths.length * monthlyFee
+            };
+        }
+
+        function getStudentAdmissionMonthIndex(student, studentMonthly = {}, fallbackMonthIndex = new Date().getMonth()) {
+            const admissionMonthIndex = parseMonthIndex(student?.admissionDate);
+            if (admissionMonthIndex >= 0) return Math.min(admissionMonthIndex, fallbackMonthIndex);
+
+            const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => studentMonthly[month] === 'Paid');
+            if (firstPaidMonthIndex >= 0) return Math.min(firstPaidMonthIndex, fallbackMonthIndex);
+
+            const recordMonthIndex = parseMonthIndex(student?.createdAt || student?.updatedAt || '');
+            if (recordMonthIndex >= 0) return Math.min(recordMonthIndex, fallbackMonthIndex);
+
+            return fallbackMonthIndex;
+        }
+
+        function parseMonthIndex(value) {
+            if (!value) return -1;
+
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) return parsed.getMonth();
+
+            const normalized = String(value).trim().toLowerCase();
+            return CHALLAN_MONTHS.findIndex(month =>
+                normalized.includes(month.toLowerCase()) ||
+                normalized.includes(month.slice(0, 3).toLowerCase())
+            );
+        }
+
+        function renderStudentFeeSnapshot(student, summary = getChallanStudentFeeSummary(student)) {
+            const snapshot = document.getElementById('studentFeeSnapshot');
+            if (!snapshot) return;
+
+            snapshot.innerHTML = `
+                <div><strong>${escapeHtml(student.fullName || 'Student')}</strong> | Roll No: ${escapeHtml(student.rollNo || '-')} | Class: ${escapeHtml(student.classGrade || '-')}</div>
+                <div>Admission Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
+                <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
+                <div>Paid Months: ${summary.paidMonths.length ? escapeHtml(summary.paidMonths.join(', ')) : 'None'}</div>
+                <div>Pending Months: <strong>${summary.pendingMonths.length ? escapeHtml(summary.pendingMonths.join(', ')) : 'None'}</strong></div>
+                <div>Total Pending: <strong>PKR ${summary.pendingAmount.toLocaleString('en-PK')}</strong></div>
+            `;
         }
 
         function resetChallanForm() {
@@ -778,6 +914,7 @@
             document.getElementById('fatherMobile').value = '';
             document.getElementById('baseAmount').value = '';
             document.getElementById('additionalCharges').value = 0;
+            document.getElementById('studentFeeSnapshot').textContent = 'Select a student or enter roll number to view pending fee details.';
             setChallanDefaults();
             triggerChallanRefresh();
         }
@@ -787,6 +924,13 @@
         }
 
         function triggerChallanRefresh() {
+            const data = getChallanData();
+            const qrBlockReason = getChallanQrBlockReason(data);
+            challanQrState = {
+                paymentUrl: '',
+                qrImageUrl: '',
+                status: qrBlockReason || 'Generating payment QR code...'
+            };
             renderChallanPreview();
             clearTimeout(challanQrTimer);
             challanQrTimer = setTimeout(refreshChallanQr, 250);
@@ -795,12 +939,13 @@
         async function refreshChallanQr() {
             const data = getChallanData();
             const requestId = ++challanQrRequestId;
+            const qrBlockReason = getChallanQrBlockReason(data);
 
-            if (!data.studentId || !data.feeMonth || !data.challanNumber) {
+            if (qrBlockReason) {
                 challanQrState = {
                     paymentUrl: '',
                     qrImageUrl: '',
-                    status: 'Select a student to generate a payment QR code.'
+                    status: qrBlockReason
                 };
                 renderQrPreviewBlock();
                 renderChallanPreview();
@@ -893,7 +1038,7 @@
         }
 
         function getChallanData() {
-            const selectedStudent = challanStudents.find(item => item.id === document.getElementById('challanStudent').value);
+            const selectedStudent = getSelectedChallanStudent();
             const baseAmount = Number(document.getElementById('baseAmount').value || 0);
             const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const discountInput = document.getElementById('discountValue').value.trim();
@@ -926,6 +1071,25 @@
                 notes: document.getElementById('challanNotes').value.trim() || 'No additional instructions.',
                 totalDue: Math.max(baseAmount + additionalCharges - discountAmount, 0)
             };
+        }
+
+        function getSelectedChallanStudent() {
+            return challanStudents.find(item => item.id === document.getElementById('challanStudent').value);
+        }
+
+        function getChallanQrBlockReason(data) {
+            const selectedStudent = getSelectedChallanStudent();
+            if (!selectedStudent || !data.studentId) return 'Select a student to generate a payment QR code.';
+            if (!data.feeMonth || data.feeMonth === '-') return 'Select a fee month before generating a payment QR code.';
+            if (!data.challanNumber || data.challanNumber === '-') return 'Enter a challan number before generating a payment QR code.';
+            if (data.totalDue <= 0) return 'No payable amount is due, so a payment QR code is not needed.';
+
+            const feeSummary = getChallanStudentFeeSummary(selectedStudent);
+            if (!feeSummary.pendingMonths.length) {
+                return 'This student has no pending fee, so a payment QR code is not needed.';
+            }
+
+            return '';
         }
 
         function buildPreviewMarkup(data) {

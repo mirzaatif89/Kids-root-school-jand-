@@ -9,32 +9,74 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .permissions-grid { display:grid; gap:1.25rem; }
-        .permissions-card { background:var(--surface-color); border:1px solid var(--border-color); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); padding:1.25rem; }
+        .permissions-card { background:var(--surface-color); border:1px solid var(--border-color); border-radius:8px; box-shadow:var(--shadow-sm); padding:1.25rem; }
         .permissions-card h3 { margin-bottom:0.4rem; }
         .permissions-card p { color:var(--text-secondary); margin-bottom:1rem; }
-        .role-map-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; }
-        .role-map-item, .login-item { display:flex; flex-direction:column; gap:0.45rem; }
-        .role-map-item select, .group-header input, .group-header select { width:100%; padding:0.75rem 0.9rem; border:1px solid var(--border-color); border-radius:var(--radius-md); }
-        .group-list { display:grid; gap:1rem; }
-        .group-box { border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1rem; background:#fff; }
-        .group-header { display:grid; grid-template-columns:1.2fr 1fr; gap:1rem; margin-bottom:1rem; }
-        .module-table { width:100%; border-collapse:collapse; }
-        .module-table th, .module-table td { padding:0.7rem 0.6rem; border-bottom:1px solid var(--border-color); text-align:left; }
-        .module-table select { width:100%; padding:0.55rem 0.7rem; border:1px solid var(--border-color); border-radius:var(--radius-md); }
-        .page-meta { color:var(--text-secondary); font-size:0.82rem; }
         .permissions-toolbar { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
         .save-status { color:var(--text-secondary); font-size:0.9rem; }
-        .toggle-row { display:flex; gap:1rem; flex-wrap:wrap; }
-        .login-item label { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; background:#fff; border:1px solid var(--border-color); padding:0.85rem 1rem; border-radius:var(--radius-md); }
+        .overview-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:1rem; }
+        .role-card { border:1px solid var(--border-color); border-radius:8px; background:#fff; padding:1rem; display:grid; gap:0.85rem; }
+        .role-card-top { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
+        .role-name { font-weight:700; color:var(--text-primary); }
+        .login-badge { border:1px solid var(--border-color); border-radius:999px; padding:0.2rem 0.55rem; font-size:0.78rem; font-weight:700; white-space:nowrap; }
+        .login-badge.enabled { color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
+        .login-badge.disabled { color:#b91c1c; background:#fef2f2; border-color:#fecaca; }
+        .role-card select, .group-controls input, .group-controls select { width:100%; padding:0.75rem 0.9rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; color:var(--text-primary); }
+        .login-switch { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; color:var(--text-secondary); font-size:0.9rem; }
+        .login-switch input { width:1.1rem; height:1.1rem; accent-color:var(--primary-color); }
+        .group-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .group-tab { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:999px; padding:0.6rem 0.95rem; cursor:pointer; font-weight:700; transition:var(--transition); }
+        .group-tab:hover { border-color:var(--primary-color); color:var(--primary-dark); }
+        .group-tab.active { background:var(--primary-color); border-color:var(--primary-color); color:#fff; box-shadow:var(--shadow-sm); }
+        .group-box { border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff; }
+        .group-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .group-title { display:flex; flex-direction:column; gap:0.25rem; }
+        .group-key { color:var(--text-secondary); font-size:0.82rem; }
+        .group-summary { display:flex; gap:0.5rem; flex-wrap:wrap; }
+        .summary-pill { border-radius:999px; padding:0.25rem 0.65rem; font-size:0.8rem; font-weight:700; background:#f8fafc; border:1px solid var(--border-color); color:var(--text-secondary); }
+        .group-controls { display:grid; grid-template-columns:minmax(220px, 1.2fr) minmax(220px, 1fr); gap:1rem; margin-bottom:1.1rem; }
+        .field-label { display:block; margin-bottom:0.45rem; font-weight:700; font-size:0.9rem; }
+        .bulk-permissions { border:1px solid #d6efeb; background:#f8fafc; border-radius:8px; padding:0.9rem; margin-bottom:1.1rem; display:grid; gap:0.7rem; }
+        .bulk-header { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; }
+        .bulk-title { font-weight:800; color:var(--text-primary); }
+        .bulk-note { color:var(--text-secondary); font-size:0.84rem; }
+        .bulk-actions { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.5rem; }
+        .bulk-action { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; min-height:40px; padding:0.55rem 0.5rem; cursor:pointer; font-weight:800; transition:var(--transition); }
+        .bulk-action:hover { border-color:var(--primary-color); color:var(--primary-dark); box-shadow:var(--shadow-sm); }
+        .permission-categories { display:grid; gap:1rem; }
+        .permission-category { border:1px solid #edf5f3; border-radius:8px; overflow:hidden; }
+        .category-header { display:grid; grid-template-columns:minmax(180px, 1fr) minmax(280px, auto); gap:0.75rem; align-items:center; background:#f8fafc; padding:0.75rem 0.9rem; border-bottom:1px solid #edf5f3; }
+        .category-header h4 { margin:0; font-size:0.95rem; }
+        .category-count { color:var(--text-secondary); font-size:0.82rem; }
+        .category-actions { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.35rem; }
+        .category-action { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; min-height:32px; padding:0.35rem 0.45rem; cursor:pointer; font-weight:800; font-size:0.76rem; transition:var(--transition); }
+        .category-action:hover { border-color:var(--primary-color); color:var(--primary-dark); }
+        .module-list { display:grid; }
+        .module-row { display:grid; grid-template-columns:minmax(190px, 1fr) minmax(320px, 1.6fr); gap:1rem; align-items:center; padding:0.9rem; border-bottom:1px solid #edf5f3; }
+        .module-row:last-child { border-bottom:0; }
+        .module-name { font-weight:700; }
+        .page-meta { color:var(--text-secondary); font-size:0.82rem; word-break:break-word; }
+        .access-segment { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.4rem; }
+        .access-option { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; padding:0.55rem 0.45rem; cursor:pointer; font-weight:700; font-size:0.85rem; transition:var(--transition); min-height:38px; }
+        .access-option:hover { border-color:var(--primary-color); color:var(--primary-dark); }
+        .access-option.active[data-access="none"] { background:#fef2f2; border-color:#fecaca; color:#b91c1c; }
+        .access-option.active[data-access="view"] { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
+        .access-option.active[data-access="edit"] { background:#fff7ed; border-color:#fed7aa; color:#c2410c; }
+        .access-option.active[data-access="manage"] { background:#ecfdf5; border-color:#a7f3d0; color:#047857; }
         @media (max-width: 768px) {
-            .group-header { grid-template-columns:1fr; }
+            .group-controls { grid-template-columns:1fr; }
+            .bulk-actions { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .category-header { grid-template-columns:1fr; }
+            .category-actions { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+            .module-row { grid-template-columns:1fr; }
+            .access-segment { grid-template-columns:repeat(2, minmax(0, 1fr)); }
         }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="logo-section"><i data-lucide="graduation-cap"></i> Apexiueum</div>
+            <div class="logo-section"><i data-lucide="graduation-cap"></i> Apexiums School System</div>
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
                 <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
@@ -57,7 +99,7 @@
             <header class="header">
                 <div>
                     <h1>Groups & Permissions</h1>
-                    <p style="color:var(--text-secondary); margin-top:0.25rem;">Manage Django-style role mapping and group permissions from here.</p>
+                    <p style="color:var(--text-secondary); margin-top:0.25rem;">Manage role login, default group, home page, and module access from one screen.</p>
                 </div>
             </header>
 
@@ -65,28 +107,23 @@
                 <section class="permissions-card">
                     <div class="permissions-toolbar">
                         <div>
-                            <h3>Role Mapping</h3>
-                            <p>Assign a default group to each role.</p>
+                            <h3>Roles</h3>
+                            <p>Set each role login status and the permission group it will use.</p>
                         </div>
                         <div class="save-status" id="permissionsStatus">Loading permissions...</div>
                     </div>
-                    <div class="role-map-grid" id="roleGroupContainer"></div>
-                </section>
-
-                <section class="permissions-card">
-                    <h3>Login Access</h3>
-                    <p>Enable or disable login access for each role.</p>
-                    <div class="toggle-row" id="loginAccessContainer"></div>
+                    <div class="overview-grid" id="roleGroupContainer"></div>
                 </section>
 
                 <section class="permissions-card">
                     <div class="permissions-toolbar">
                         <div>
                             <h3>Group Permissions</h3>
-                            <p>Set page and module access using `none`, `view`, `edit`, and `manage`.</p>
+                            <p>Choose a group, then set clear access level for every page.</p>
                         </div>
                         <button class="btn btn-primary" id="savePermissionsBtn">Save Permissions</button>
                     </div>
+                    <div class="group-tabs" id="groupTabs"></div>
                     <div class="group-list" id="groupList"></div>
                 </section>
             </div>
@@ -97,34 +134,40 @@
     <script src="script.js"></script>
     <script>
         const ROLE_OPTIONS = ['Admin', 'Principal', 'Branch', 'Teacher', 'Student', 'Staff'];
-        const ACCESS_OPTIONS = ['none', 'view', 'edit', 'manage'];
+        const ACCESS_OPTIONS = [
+            { key: 'none', label: 'No Access' },
+            { key: 'view', label: 'View' },
+            { key: 'edit', label: 'Edit' },
+            { key: 'manage', label: 'Full' }
+        ];
         const MODULE_DEFINITIONS = [
-            { key: 'dashboard', label: 'Dashboard', page: 'dashboard.html' },
-            { key: 'students', label: 'Students', page: 'students.html' },
-            { key: 'teachers', label: 'Teachers', page: 'teachers.html' },
-            { key: 'staff', label: 'Staff', page: 'staff.html' },
-            { key: 'classes', label: 'Classes', page: 'classes.html' },
-            { key: 'fees', label: 'Fees', page: 'fees.html' },
-            { key: 'fee_challan', label: 'Fee Challan', page: 'fee_challan.html' },
-            { key: 'teacher_salaries', label: 'Teacher Salaries', page: 'teacher_salaries.html' },
-            { key: 'student_attendance', label: 'Student Attendance', page: 'student_attendance.html' },
-            { key: 'teacher_attendance', label: 'Teacher Attendance', page: 'teacher_attendance.html' },
-            { key: 'student_attendance_report', label: 'Student Attendance Report', page: 'student_attendance_report.html' },
-            { key: 'teacher_attendance_report', label: 'Teacher Attendance Report', page: 'teacher_attendance_report.html' },
-            { key: 'exams', label: 'Exams', page: 'exams.html' },
-            { key: 'revenue', label: 'Revenue', page: 'revenue.html' },
-            { key: 'settings', label: 'Settings', page: 'settings.html' },
-            { key: 'permissions', label: 'Permissions', page: 'permissions.html' },
-            { key: 'branch_registration', label: 'Branch Registration', page: 'branch_registration.html' },
-            { key: 'email', label: 'Email', page: 'email.html' },
-            { key: 'aboutme', label: 'About Us', page: 'aboutme.html' },
-            { key: 'student_portal', label: 'Student Portal', page: 'student_portal.html' },
-            { key: 'teacher_portal', label: 'Teacher Portal', page: 'teacher_portal.html' },
-            { key: 'staff_portal', label: 'Staff Portal', page: 'staff_portal.html' },
-            { key: 'principal_portal', label: 'Principal Portal', page: 'principal_portal.html' }
+            { key: 'dashboard', label: 'Dashboard', page: 'dashboard.html', category: 'Main Admin Pages' },
+            { key: 'students', label: 'Students', page: 'students.html', category: 'Main Admin Pages' },
+            { key: 'teachers', label: 'Teachers', page: 'teachers.html', category: 'Main Admin Pages' },
+            { key: 'staff', label: 'Staff', page: 'staff.html', category: 'Main Admin Pages' },
+            { key: 'classes', label: 'Classes', page: 'classes.html', category: 'Main Admin Pages' },
+            { key: 'fees', label: 'Fees', page: 'fees.html', category: 'Finance' },
+            { key: 'fee_challan', label: 'Fee Challan', page: 'fee_challan.html', category: 'Finance' },
+            { key: 'teacher_salaries', label: 'Teacher Salaries', page: 'teacher_salaries.html', category: 'Finance' },
+            { key: 'revenue', label: 'Revenue', page: 'revenue.html', category: 'Finance' },
+            { key: 'student_attendance', label: 'Student Attendance', page: 'student_attendance.html', category: 'Attendance' },
+            { key: 'teacher_attendance', label: 'Teacher Attendance', page: 'teacher_attendance.html', category: 'Attendance' },
+            { key: 'student_attendance_report', label: 'Student Attendance Report', page: 'student_attendance_report.html', category: 'Attendance' },
+            { key: 'teacher_attendance_report', label: 'Teacher Attendance Report', page: 'teacher_attendance_report.html', category: 'Attendance' },
+            { key: 'notifications', label: 'Notifications', page: 'notifications.html', category: 'System' },
+            { key: 'exams', label: 'Exams', page: 'exams.html', category: 'Academics' },
+            { key: 'settings', label: 'Settings', page: 'settings.html', category: 'System' },
+            { key: 'permissions', label: 'Permissions', page: 'permissions.html', category: 'System' },
+            { key: 'branch_registration', label: 'Branch Registration', page: 'branch_registration.html', category: 'System' },
+            { key: 'aboutme', label: 'About Us', page: 'aboutme.html', category: 'System' },
+            { key: 'student_portal', label: 'Student Portal', page: 'student_portal.html', category: 'Portals' },
+            { key: 'teacher_portal', label: 'Teacher Portal', page: 'teacher_portal.html', category: 'Portals' },
+            { key: 'staff_portal', label: 'Staff Portal', page: 'staff_portal.html', category: 'Portals' },
+            { key: 'principal_portal', label: 'Principal Portal', page: 'principal_portal.html', category: 'Portals' }
         ];
 
         let permissionsState = null;
+        let activeGroupKey = null;
 
         function getPermissionsApiUrl() {
             const isLocalhost = window.location.hostname === 'localhost' ||
@@ -144,15 +187,62 @@
             document.getElementById('permissionsStatus').textContent = message;
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function getAccessSummary(group) {
+            return ACCESS_OPTIONS.reduce((summary, access) => {
+                summary[access.key] = MODULE_DEFINITIONS.filter((module) => group.permissions[module.key] === access.key).length;
+                return summary;
+            }, {});
+        }
+
+        function getGroupedModules() {
+            return MODULE_DEFINITIONS.reduce((categories, module) => {
+                categories[module.category] = categories[module.category] || [];
+                categories[module.category].push(module);
+                return categories;
+            }, {});
+        }
+
+        function setGroupAccess(groupKey, accessKey, moduleKeys = MODULE_DEFINITIONS.map((module) => module.key)) {
+            const group = permissionsState.groups[groupKey];
+            if (!group) return;
+            moduleKeys.forEach((moduleKey) => {
+                group.permissions[moduleKey] = accessKey;
+            });
+            renderGroups();
+            setStatus('Unsaved group permission changes');
+        }
+
         function renderRoleGroups() {
             const container = document.getElementById('roleGroupContainer');
             const groupKeys = Object.keys(permissionsState.groups);
             container.innerHTML = ROLE_OPTIONS.map((role) => `
-                <div class="role-map-item">
-                    <strong>${role}</strong>
+                <div class="role-card">
+                    <div class="role-card-top">
+                        <div class="role-name">${escapeHtml(role)}</div>
+                        <span class="login-badge ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'enabled' : 'disabled'}">
+                            ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'Login On' : 'Login Off'}
+                        </span>
+                    </div>
+                    <label class="login-switch">
+                        <span>Allow login</span>
+                        <input type="checkbox" data-login-role="${role.toLowerCase()}" ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'checked' : ''}>
+                    </label>
+                    <label>
+                        <span class="field-label">Permission Group</span>
                     <select data-role-group="${role}">
-                        ${groupKeys.map((groupKey) => `<option value="${groupKey}" ${permissionsState.roleGroups[role] === groupKey ? 'selected' : ''}>${permissionsState.groups[groupKey].name}</option>`).join('')}
+                            ${groupKeys.map((groupKey) => `<option value="${escapeHtml(groupKey)}" ${permissionsState.roleGroups[role] === groupKey ? 'selected' : ''}>${escapeHtml(permissionsState.groups[groupKey].name)}</option>`).join('')}
                     </select>
+                    </label>
                 </div>
             `).join('');
 
@@ -161,83 +251,169 @@
                     permissionsState.roleGroups[event.target.dataset.roleGroup] = event.target.value;
                 });
             });
-        }
-
-        function renderLoginAccess() {
-            const container = document.getElementById('loginAccessContainer');
-            container.innerHTML = ROLE_OPTIONS.map((role) => {
-                const key = role.toLowerCase();
-                return `
-                    <div class="login-item">
-                        <label>
-                            <span>${role} Login</span>
-                            <input type="checkbox" data-login-role="${key}" ${permissionsState.loginAccess[key] !== false ? 'checked' : ''}>
-                        </label>
-                    </div>
-                `;
-            }).join('');
 
             container.querySelectorAll('input[data-login-role]').forEach((input) => {
                 input.addEventListener('change', (event) => {
                     permissionsState.loginAccess[event.target.dataset.loginRole] = event.target.checked;
+                    renderRoleGroups();
+                });
+            });
+        }
+
+        function renderGroupTabs() {
+            const tabs = document.getElementById('groupTabs');
+            const groupKeys = Object.keys(permissionsState.groups);
+            if (!activeGroupKey || !permissionsState.groups[activeGroupKey]) {
+                activeGroupKey = groupKeys[0];
+            }
+            tabs.innerHTML = groupKeys.map((groupKey) => `
+                <button type="button" class="group-tab ${groupKey === activeGroupKey ? 'active' : ''}" data-group-tab="${escapeHtml(groupKey)}">
+                    ${escapeHtml(permissionsState.groups[groupKey].name)}
+                </button>
+            `).join('');
+
+            tabs.querySelectorAll('button[data-group-tab]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    activeGroupKey = event.currentTarget.dataset.groupTab;
+                    renderGroups();
                 });
             });
         }
 
         function renderGroups() {
             const groupList = document.getElementById('groupList');
-            groupList.innerHTML = Object.entries(permissionsState.groups).map(([groupKey, group]) => `
+            renderGroupTabs();
+            const groupKey = activeGroupKey;
+            const group = permissionsState.groups[groupKey];
+            const summary = getAccessSummary(group);
+            const categories = getGroupedModules();
+            groupList.innerHTML = `
                 <div class="group-box">
                     <div class="group-header">
+                        <div class="group-title">
+                            <h3>${escapeHtml(group.name)}</h3>
+                            <span class="group-key">Group key: ${escapeHtml(groupKey)}</span>
+                        </div>
+                        <div class="group-summary">
+                            <span class="summary-pill">${summary.manage} Full</span>
+                            <span class="summary-pill">${summary.edit} Edit</span>
+                            <span class="summary-pill">${summary.view} View</span>
+                            <span class="summary-pill">${summary.none} No Access</span>
+                        </div>
+                    </div>
+                    <div class="group-controls">
                         <div>
-                            <label style="display:block; margin-bottom:0.45rem; font-weight:600;">Group Name</label>
-                            <input type="text" data-group-name="${groupKey}" value="${group.name}">
+                            <label class="field-label">Group Name</label>
+                            <input type="text" data-group-name="${escapeHtml(groupKey)}" value="${escapeHtml(group.name)}">
                         </div>
                         <div>
-                            <label style="display:block; margin-bottom:0.45rem; font-weight:600;">Home Page</label>
-                            <select data-group-home="${groupKey}">
-                                ${MODULE_DEFINITIONS.map((module) => `<option value="${module.page}" ${group.homePage === module.page ? 'selected' : ''}>${module.label}</option>`).join('')}
+                            <label class="field-label">After Login Open</label>
+                            <select data-group-home="${escapeHtml(groupKey)}">
+                                ${MODULE_DEFINITIONS.map((module) => `<option value="${escapeHtml(module.page)}" ${group.homePage === module.page ? 'selected' : ''}>${escapeHtml(module.label)}</option>`).join('')}
                             </select>
                         </div>
                     </div>
-                    <table class="module-table">
-                        <thead>
-                            <tr><th>Module</th><th>Page</th><th>Access</th></tr>
-                        </thead>
-                        <tbody>
-                            ${MODULE_DEFINITIONS.map((module) => `
-                                <tr>
-                                    <td>${module.label}</td>
-                                    <td><span class="page-meta">${module.page}</span></td>
-                                    <td>
-                                        <select data-group-permission="${groupKey}" data-module-key="${module.key}">
-                                            ${ACCESS_OPTIONS.map((access) => `<option value="${access}" ${group.permissions[module.key] === access ? 'selected' : ''}>${access}</option>`).join('')}
-                                        </select>
-                                    </td>
-                                </tr>
+                    <div class="bulk-permissions">
+                        <div class="bulk-header">
+                            <div>
+                                <div class="bulk-title">Apply to Whole Group</div>
+                                <div class="bulk-note">One click will set all pages for ${escapeHtml(group.name)}.</div>
+                            </div>
+                        </div>
+                        <div class="bulk-actions">
+                            ${ACCESS_OPTIONS.map((access) => `
+                                <button type="button"
+                                    class="bulk-action"
+                                    data-bulk-group="${escapeHtml(groupKey)}"
+                                    data-access="${escapeHtml(access.key)}">
+                                    ${escapeHtml(access.label)}
+                                </button>
                             `).join('')}
-                        </tbody>
-                    </table>
+                        </div>
+                    </div>
+                    <div class="permission-categories">
+                        ${Object.entries(categories).map(([category, modules]) => `
+                            <section class="permission-category">
+                                <div class="category-header">
+                                    <div>
+                                        <h4>${escapeHtml(category)}</h4>
+                                        <span class="category-count">${modules.length} pages</span>
+                                    </div>
+                                    <div class="category-actions">
+                                        ${ACCESS_OPTIONS.map((access) => `
+                                            <button type="button"
+                                                class="category-action"
+                                                data-category-group="${escapeHtml(groupKey)}"
+                                                data-category="${escapeHtml(category)}"
+                                                data-access="${escapeHtml(access.key)}">
+                                                ${escapeHtml(access.label)}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                                <div class="module-list">
+                                    ${modules.map((module) => `
+                                        <div class="module-row">
+                                            <div>
+                                                <div class="module-name">${escapeHtml(module.label)}</div>
+                                                <div class="page-meta">${escapeHtml(module.page)}</div>
+                                            </div>
+                                            <div class="access-segment" role="group" aria-label="${escapeHtml(module.label)} access">
+                                                ${ACCESS_OPTIONS.map((access) => `
+                                                    <button type="button"
+                                                        class="access-option ${group.permissions[module.key] === access.key ? 'active' : ''}"
+                                                        data-group-permission="${escapeHtml(groupKey)}"
+                                                        data-module-key="${escapeHtml(module.key)}"
+                                                        data-access="${escapeHtml(access.key)}">
+                                                        ${escapeHtml(access.label)}
+                                                    </button>
+                                                `).join('')}
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </section>
+                        `).join('')}
+                    </div>
                 </div>
-            `).join('');
+            `;
 
             groupList.querySelectorAll('input[data-group-name]').forEach((input) => {
                 input.addEventListener('input', (event) => {
                     permissionsState.groups[event.target.dataset.groupName].name = event.target.value.trim() || event.target.dataset.groupName;
                     renderRoleGroups();
+                    renderGroupTabs();
                 });
             });
 
             groupList.querySelectorAll('select[data-group-home]').forEach((select) => {
                 select.addEventListener('change', (event) => {
                     permissionsState.groups[event.target.dataset.groupHome].homePage = event.target.value;
+                    setStatus('Unsaved group permission changes');
                 });
             });
 
-            groupList.querySelectorAll('select[data-group-permission]').forEach((select) => {
-                select.addEventListener('change', (event) => {
-                    const { groupPermission, moduleKey } = event.target.dataset;
-                    permissionsState.groups[groupPermission].permissions[moduleKey] = event.target.value;
+            groupList.querySelectorAll('button[data-bulk-group]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    const { bulkGroup, access } = event.currentTarget.dataset;
+                    setGroupAccess(bulkGroup, access);
+                });
+            });
+
+            groupList.querySelectorAll('button[data-category-group]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    const { categoryGroup, category, access } = event.currentTarget.dataset;
+                    const moduleKeys = categories[category].map((module) => module.key);
+                    setGroupAccess(categoryGroup, access, moduleKeys);
+                });
+            });
+
+            groupList.querySelectorAll('button[data-group-permission]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    const { groupPermission, moduleKey, access } = event.currentTarget.dataset;
+                    permissionsState.groups[groupPermission].permissions[moduleKey] = access;
+                    renderGroups();
+                    setStatus('Unsaved group permission changes');
                 });
             });
         }
@@ -249,7 +425,6 @@
             permissionsState = normalizeConfig(data);
             sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionsState));
             renderRoleGroups();
-            renderLoginAccess();
             renderGroups();
             setStatus('Permissions loaded');
         }
@@ -269,7 +444,6 @@
             permissionsState = normalizeConfig(result.permissions);
             sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionsState));
             renderRoleGroups();
-            renderLoginAccess();
             renderGroups();
             setStatus('Permissions saved');
         }

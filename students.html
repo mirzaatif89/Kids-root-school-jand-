@@ -283,7 +283,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiueum
+                <i data-lucide="graduation-cap"></i> Apexiums School System
             </div>
 
             <nav class="nav-links">
@@ -403,6 +403,13 @@
                             <option value="Fatima Campus">Fatima Campus</option>
                         </select>
                     </div>
+                    <div class="student-filter-group">
+                        <label for="ageFilter">Filter By Age</label>
+                        <select id="ageFilter">
+                            <option value="All">All Ages</option>
+                            <option value="below5">Below 5 Years</option>
+                        </select>
+                    </div>
                     <button class="btn btn-outline student-print-btn" type="button" onclick="window.print()">
                         <i data-lucide="printer"></i> Print Students
                     </button>
@@ -431,6 +438,14 @@
                         <div class="input-group">
                             <label>Father's Name</label>
                             <input type="text" id="fatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="studentDob" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Admission Date</label>
+                            <input type="date" id="admissionDate">
                         </div>
                         <div class="input-group">
                             <label>Class</label>
@@ -545,6 +560,7 @@
                             <th>Roll No</th>
                             <th>Name</th>
                             <th>Father Name</th>
+                            <th>DOB</th>
                             <th>Class</th>
                             <th>Campus</th>
                             <th>Gender</th>
