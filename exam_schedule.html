@@ -143,6 +143,9 @@
                                 <button type="button" class="btn btn-primary" id="printDateSheetBtn">
                                     <i data-lucide="printer" size="16"></i> Print Date Sheet
                                 </button>
+                                <button type="button" class="btn btn-success" id="executeDateSheetBtn">
+                                    <i data-lucide="send" size="16"></i> Execute to Students
+                                </button>
                             </div>
                         </div>
 
@@ -176,6 +179,21 @@
                                 </div>
                             </div>
                         </form>
+                        <div class="date-sheet-record-card" id="dateSheetRecordCard">
+                            <div>
+                                <h4>Published Date Sheet Record</h4>
+                                <p id="dateSheetRecordSummary">No date sheet has been executed yet.</p>
+                            </div>
+                            <div class="date-sheet-record-actions">
+                                <span class="status-badge status-pending" id="dateSheetRecordStatus">No Record</span>
+                                <button type="button" class="btn btn-outline" id="hideDateSheetBtn">
+                                    <i data-lucide="eye-off" size="16"></i> Hide
+                                </button>
+                                <button type="button" class="btn btn-primary" id="showDateSheetBtn">
+                                    <i data-lucide="eye" size="16"></i> Show
+                                </button>
+                            </div>
+                        </div>
                     </section>
 
                     <section class="table-container result-preview-panel">
@@ -793,6 +811,36 @@
             white-space: pre-line;
         }
 
+        .date-sheet-record-card {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .date-sheet-record-card h4 {
+            margin: 0 0 0.25rem;
+        }
+
+        .date-sheet-record-card p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .date-sheet-record-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+        }
+
         .result-card-sheet {
             display: flex;
             justify-content: center;
@@ -1216,6 +1264,132 @@
             localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(state));
         }
 
+        function getApiBaseUrl() {
+            const isLocalhost = window.location.hostname === 'localhost' ||
+                window.location.hostname === '127.0.0.1' ||
+                window.location.hostname.startsWith('192.168.') ||
+                window.location.hostname.startsWith('10.') ||
+                window.location.hostname.startsWith('172.') ||
+                window.location.protocol === 'file:';
+            const backendUrl = isLocalhost
+                ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
+                : (window.ENV_BACKEND_URL || window.location.origin);
+            return `${backendUrl}/api`;
+        }
+
+        async function executeDateSheetForStudents() {
+            refreshDateSheetPreview();
+            const state = loadDateSheetState();
+            const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
+            if (!rows.length) {
+                await showAppAlert('Add at least one schedule row before executing the date sheet.', 'Date Sheet Required');
+                return;
+            }
+
+            const button = document.getElementById('executeDateSheetBtn');
+            const originalText = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = '<i data-lucide="loader-2" size="16"></i> Executing...';
+            if (window.lucide) window.lucide.createIcons();
+
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/date-sheet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...state, status: 'executed', executedAt: new Date().toISOString() })
+                });
+                const result = await response.json();
+                if (!response.ok || result.success === false) {
+                    throw new Error(result.message || 'Date sheet could not be executed.');
+                }
+                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                renderDateSheetRecord(result.dateSheet);
+                await showAppAlert('Date sheet executed. Students can now see and download it from their portal.', 'Executed');
+            } catch (error) {
+                await showAppAlert(error.message || 'Date sheet could not be executed.', 'Execution Failed');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = originalText;
+                if (window.lucide) window.lucide.createIcons();
+            }
+        }
+
+        async function loadPublishedDateSheetRecord() {
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/date-sheet`);
+                if (!response.ok) throw new Error('Date sheet record unavailable.');
+                const result = await response.json();
+                if (result.dateSheet) {
+                    localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                }
+                renderDateSheetRecord(result.dateSheet || null);
+            } catch (error) {
+                renderDateSheetRecord(loadDateSheetState());
+            }
+        }
+
+        function renderDateSheetRecord(record) {
+            const summary = document.getElementById('dateSheetRecordSummary');
+            const status = document.getElementById('dateSheetRecordStatus');
+            const hideBtn = document.getElementById('hideDateSheetBtn');
+            const showBtn = document.getElementById('showDateSheetBtn');
+            if (!summary || !status || !hideBtn || !showBtn) return;
+
+            const rows = Array.isArray(record?.scheduleRows) ? record.scheduleRows : [];
+            if (!record || !rows.length || !record.status) {
+                summary.textContent = 'No date sheet has been executed yet.';
+                status.textContent = 'No Record';
+                status.className = 'status-badge status-pending';
+                hideBtn.disabled = true;
+                showBtn.disabled = true;
+                return;
+            }
+
+            const visible = record.status === 'executed';
+            const timestamp = record.executedAt || record.hiddenAt || record.updatedAt || '';
+            const dateLabel = timestamp ? new Date(timestamp).toLocaleString('en-GB') : '-';
+            summary.textContent = `${record.dateSheetExamTitle || 'Date Sheet'} | ${record.dateSheetClassGroup || 'All Classes'} | ${rows.length} rows | Last update: ${dateLabel}`;
+            status.textContent = visible ? 'Visible on Student Portal' : 'Hidden from Student Portal';
+            status.className = `status-badge ${visible ? 'status-paid' : 'status-failed'}`;
+            hideBtn.disabled = !visible;
+            showBtn.disabled = visible;
+        }
+
+        async function setDateSheetVisibility(nextStatus) {
+            const current = loadDateSheetState();
+            const rows = Array.isArray(current.scheduleRows) ? current.scheduleRows : [];
+            if (!rows.length) {
+                await showAppAlert('No executed date sheet record is available.', 'No Record');
+                return;
+            }
+
+            const payload = {
+                ...current,
+                status: nextStatus,
+                executedAt: nextStatus === 'executed' ? (current.executedAt || new Date().toISOString()) : current.executedAt,
+                hiddenAt: nextStatus === 'hidden' ? new Date().toISOString() : current.hiddenAt
+            };
+
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/date-sheet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (!response.ok || result.success === false) {
+                    throw new Error(result.message || 'Date sheet visibility could not be updated.');
+                }
+                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                renderDateSheetRecord(result.dateSheet);
+                await showAppAlert(nextStatus === 'hidden'
+                    ? 'Date sheet has been hidden from student portals.'
+                    : 'Date sheet is visible on student portals again.', 'Updated');
+            } catch (error) {
+                await showAppAlert(error.message || 'Date sheet visibility could not be updated.', 'Update Failed');
+            }
+        }
+
         function formatScheduleDate(value) {
             if (!value) return '-';
             const parsed = new Date(value);
@@ -1473,7 +1647,11 @@
                 refreshDateSheetPreview();
                 printSection('print-schedule');
             });
+            document.getElementById('executeDateSheetBtn').addEventListener('click', executeDateSheetForStudents);
+            document.getElementById('hideDateSheetBtn').addEventListener('click', () => setDateSheetVisibility('hidden'));
+            document.getElementById('showDateSheetBtn').addEventListener('click', () => setDateSheetVisibility('executed'));
             document.getElementById('resetDateSheetBtn').addEventListener('click', resetDateSheet);
+            loadPublishedDateSheetRecord();
             document.getElementById('resultCardForm').addEventListener('input', refreshResultCardPreview);
             document.getElementById('addSubjectBtn').addEventListener('click', () => {
                 document.getElementById('subjectsEditor').insertAdjacentHTML('beforeend', createSubjectRow());

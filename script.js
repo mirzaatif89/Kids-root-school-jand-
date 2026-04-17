@@ -479,6 +479,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionStorage.setItem('eduCore_token', result.token);
                     sessionStorage.setItem('loggedInUser', JSON.stringify(result.user));
                     sessionStorage.removeItem('eduCore_permissions_config');
+                    if (result.permissions) {
+                        sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(result.permissions));
+                    }
 
                     // Track login for statistics
                     const loginTracking = JSON.parse(localStorage.getItem('EDUCORE_LOGIN_TRACKING')) || { count: 0, lastLogin: null };
@@ -490,21 +493,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     btn.innerText = 'Redirecting...';
 
-                    // Redirect based on role
-                    setTimeout(() => {
-                        if (result.user.role === 'Admin') {
-                            window.location.href = 'dashboard.html';
-                        } else if (result.user.role === 'Branch') {
-                            window.location.href = 'students.html';
-                        } else if (result.user.role === 'Student') {
-                            window.location.href = 'student_portal.html';
-                        } else if (result.user.role === 'Teacher') {
-                            window.location.href = 'teacher_portal.html';
-                        } else if (result.user.role === 'Staff') {
-                            window.location.href = 'staff_portal.html';
-                        } else if (result.user.role === 'Principal') {
-                            window.location.href = 'principal_portal.html';
+                    const getDefaultRoleHome = () => {
+                        if (result.user.role === 'Admin') return 'dashboard.html';
+                        if (result.user.role === 'Branch') return 'students.html';
+                        if (result.user.role === 'Student') return 'student_portal.html';
+                        return 'dashboard.html';
+                    };
+
+                    const getPermissionHome = () => {
+                        if (!result.permissions) return '';
+                        const groupKey = result.user.groupKey || result.permissions.roleGroups?.[result.user.role];
+                        const group = result.permissions.groups?.[groupKey];
+                        const pageRegistry = window.eduCoreAuth?.pageRegistry || {};
+                        const homePage = group?.homePage || '';
+                        const homeModule = pageRegistry[homePage]?.moduleKey;
+                        if (homePage && homeModule && group?.permissions?.[homeModule] !== 'none') {
+                            return homePage;
                         }
+                        const firstAllowed = Object.entries(pageRegistry).find(([, page]) => group?.permissions?.[page.moduleKey] !== 'none');
+                        return firstAllowed ? firstAllowed[0] : '';
+                    };
+
+                    setTimeout(() => {
+                        window.location.href = getPermissionHome() || getDefaultRoleHome();
                     }, 800);
                 } else {
                     throw new Error(result.message || 'Invalid Username or Password');
@@ -3122,6 +3133,12 @@ function renderStaff(term = '') {
         return `<div class="doc-badge-wrap">${badges.join('')}</div>`;
     };
 
+    const getVisibleStaffPassword = (record) => {
+        if (record.plainPassword && !isHashedPassword(record.plainPassword)) return record.plainPassword;
+        if (record.password && !isHashedPassword(record.password)) return record.password;
+        return 'Reset required';
+    };
+
     if (filtered.length === 0) {
         noData.style.display = 'block';
     } else {
@@ -3143,6 +3160,12 @@ function renderStaff(term = '') {
                 <td>${getDocumentBadgesMarkup(s)}</td>
                 <td>${s.cnic || '-'}</td>
                 <td>${s.phone || '-'}</td>
+                <td class="staff-login-details">
+                    <div>
+                        <div><strong>User:</strong> ${s.username || '-'}</div>
+                        <div><strong>Pass:</strong> ${getVisibleStaffPassword(s)}</div>
+                    </div>
+                </td>
                 <td>PKR ${s.salary}</td>
                 <td>
                     <button class="action-btn btn-edit" onclick='editStaff(${JSON.stringify(s)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
@@ -3170,7 +3193,12 @@ function editStaff(s) {
     document.getElementById('sGender').value = s.gender || '';
     document.getElementById('sSalary').value = s.salary || '0';
     if (document.getElementById('sUsername')) document.getElementById('sUsername').value = s.username || '';
-    if (document.getElementById('sPassword')) document.getElementById('sPassword').value = s.plainPassword || s.password || '';
+    if (document.getElementById('sPassword')) {
+        const visiblePassword = s.plainPassword && !isHashedPassword(s.plainPassword)
+            ? s.plainPassword
+            : (s.password && !isHashedPassword(s.password) ? s.password : '');
+        document.getElementById('sPassword').value = visiblePassword;
+    }
     if (document.getElementById('sBankName')) document.getElementById('sBankName').value = s.bankName || '';
     if (document.getElementById('sBankAccountTitle')) document.getElementById('sBankAccountTitle').value = s.bankAccountTitle || '';
     if (document.getElementById('sBankAccountNumber')) document.getElementById('sBankAccountNumber').value = s.bankAccountNumber || '';

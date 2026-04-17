@@ -18,6 +18,7 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eduCore_secret_key_2026';
 const PERMISSIONS_FILE = path.join(__dirname, 'permissions.json');
+const DATE_SHEET_FILE = path.join(__dirname, 'date_sheet.json');
 const PRINCIPAL_USERNAME = process.env.PRINCIPAL_USERNAME || 'principal@school.com';
 const PRINCIPAL_PASSWORD = process.env.PRINCIPAL_PASSWORD || 'Principal123';
 
@@ -61,19 +62,43 @@ const MODULE_KEYS = [
     'permissions',
     'branch_registration',
     'aboutme',
-    'student_portal',
-    'teacher_portal',
-    'staff_portal',
-    'principal_portal'
+    'student_portal'
 ];
 const ACCESS_LEVELS = ['none', 'view', 'edit', 'manage'];
+const ALLOWED_HOME_PAGES = new Set([
+    'dashboard.html',
+    'students.html',
+    'teachers.html',
+    'staff.html',
+    'classes.html',
+    'fees.html',
+    'fee_challan.html',
+    'teacher_salaries.html',
+    'student_attendance.html',
+    'teacher_attendance.html',
+    'student_attendance_report.html',
+    'teacher_attendance_report.html',
+    'notifications.html',
+    'special_notices.html',
+    'exams.html',
+    'revenue.html',
+    'settings.html',
+    'permissions.html',
+    'branch_registration.html',
+    'aboutme.html',
+    'student_portal.html'
+]);
 
 function buildModuleSet(defaultAccess = 'none', overrides = {}) {
-    return MODULE_KEYS.reduce((acc, key) => {
+    const acc = MODULE_KEYS.reduce((next, key) => {
         const requested = overrides[key];
-        acc[key] = ACCESS_LEVELS.includes(requested) ? requested : defaultAccess;
-        return acc;
+        next[key] = ACCESS_LEVELS.includes(requested) ? requested : defaultAccess;
+        return next;
     }, {});
+    Object.entries(overrides || {}).forEach(([key, value]) => {
+        if (!acc[key] && ACCESS_LEVELS.includes(value)) acc[key] = value;
+    });
+    return acc;
 }
 
 const defaultPermissions = {
@@ -101,9 +126,8 @@ const defaultPermissions = {
         },
         principal: {
             name: 'Principal Group',
-            homePage: 'principal_portal.html',
+            homePage: 'dashboard.html',
             permissions: buildModuleSet('none', {
-                principal_portal: 'manage',
                 dashboard: 'view',
                 students: 'view',
                 teachers: 'view',
@@ -128,13 +152,42 @@ const defaultPermissions = {
         },
         teacher: {
             name: 'Teachers',
-            homePage: 'teacher_portal.html',
+            homePage: 'dashboard.html',
             permissions: buildModuleSet('none', {
-                teacher_portal: 'manage',
+                dashboard: 'view',
                 students: 'view',
                 classes: 'view',
                 student_attendance: 'edit',
                 student_attendance_report: 'view',
+                exams: 'edit',
+                aboutme: 'view'
+            })
+        },
+        senior_teacher: {
+            name: 'Senior Teachers',
+            homePage: 'dashboard.html',
+            permissions: buildModuleSet('none', {
+                dashboard: 'view',
+                students: 'view',
+                teachers: 'view',
+                classes: 'view',
+                student_attendance: 'edit',
+                student_attendance_report: 'view',
+                exams: 'edit',
+                aboutme: 'view'
+            })
+        },
+        coordinator: {
+            name: 'Coordinators',
+            homePage: 'dashboard.html',
+            permissions: buildModuleSet('none', {
+                dashboard: 'view',
+                students: 'view',
+                teachers: 'view',
+                classes: 'manage',
+                student_attendance: 'manage',
+                student_attendance_report: 'view',
+                teacher_attendance: 'view',
                 exams: 'edit',
                 aboutme: 'view'
             })
@@ -152,9 +205,43 @@ const defaultPermissions = {
         },
         staff: {
             name: 'Staff',
-            homePage: 'staff_portal.html',
+            homePage: 'dashboard.html',
             permissions: buildModuleSet('none', {
-                staff_portal: 'manage',
+                dashboard: 'view',
+                aboutme: 'view'
+            })
+        },
+        accountant: {
+            name: 'Accountants',
+            homePage: 'dashboard.html',
+            permissions: buildModuleSet('none', {
+                dashboard: 'view',
+                fees: 'manage',
+                fee_challan: 'manage',
+                revenue: 'view',
+                aboutme: 'view'
+            })
+        },
+        receptionist: {
+            name: 'Receptionists',
+            homePage: 'dashboard.html',
+            permissions: buildModuleSet('none', {
+                dashboard: 'view',
+                students: 'view',
+                fees: 'view',
+                fee_challan: 'view',
+                notifications: 'view',
+                aboutme: 'view'
+            })
+        },
+        office_assistant: {
+            name: 'Office Assistants',
+            homePage: 'dashboard.html',
+            permissions: buildModuleSet('none', {
+                dashboard: 'view',
+                students: 'view',
+                classes: 'view',
+                notifications: 'view',
                 aboutme: 'view'
             })
         }
@@ -164,6 +251,11 @@ const defaultPermissions = {
 function normalizePermissionsConfig(input = {}) {
     const raw = input && typeof input === 'object' ? input : {};
     const groupsInput = raw.groups && typeof raw.groups === 'object' ? raw.groups : {};
+    const customModules = Array.isArray(raw.customModules) ? raw.customModules : [];
+    const allowedHomePages = new Set(ALLOWED_HOME_PAGES);
+    customModules.forEach((module) => {
+        if (module && module.page) allowedHomePages.add(String(module.page));
+    });
     const groups = Object.entries({
         ...defaultPermissions.groups,
         ...groupsInput
@@ -174,9 +266,10 @@ function normalizePermissionsConfig(input = {}) {
             permissions: buildModuleSet('none')
         };
         const nextGroup = groupValue && typeof groupValue === 'object' ? groupValue : {};
+        const requestedHomePage = String(nextGroup.homePage || baseGroup.homePage || 'dashboard.html');
         acc[key] = {
             name: String(nextGroup.name || baseGroup.name || key),
-            homePage: String(nextGroup.homePage || baseGroup.homePage || 'dashboard.html'),
+            homePage: allowedHomePages.has(requestedHomePage) ? requestedHomePage : 'dashboard.html',
             permissions: buildModuleSet('none', {
                 ...baseGroup.permissions,
                 ...(nextGroup.permissions || {})
@@ -194,6 +287,7 @@ function normalizePermissionsConfig(input = {}) {
             ...defaultPermissions.roleGroups,
             ...(raw.roleGroups || {})
         },
+        customModules,
         groups
     };
 }
@@ -464,6 +558,64 @@ app.post('/api/permissions', (req, res) => {
     }
 });
 
+function normalizeDateSheetPayload(data = {}) {
+    const raw = data && typeof data === 'object' ? data : {};
+    const scheduleRows = Array.isArray(raw.scheduleRows)
+        ? raw.scheduleRows.map((row) => ({
+            subject: String(row.subject || '').trim(),
+            className: String(row.className || '').trim(),
+            examDate: String(row.examDate || '').trim(),
+            startTime: String(row.startTime || '').trim(),
+            endTime: String(row.endTime || '').trim()
+        })).filter((row) => row.subject || row.className || row.examDate || row.startTime || row.endTime)
+        : [];
+
+    return {
+        dateSheetSchoolName: String(raw.dateSheetSchoolName || '').trim(),
+        dateSheetExamTitle: String(raw.dateSheetExamTitle || '').trim(),
+        dateSheetSession: String(raw.dateSheetSession || '').trim(),
+        dateSheetClassGroup: String(raw.dateSheetClassGroup || '').trim(),
+        dateSheetCampus: String(raw.dateSheetCampus || '').trim(),
+        dateSheetDefaultStart: String(raw.dateSheetDefaultStart || '').trim(),
+        dateSheetInstructions: String(raw.dateSheetInstructions || '').trim(),
+        scheduleRows,
+        status: ['executed', 'hidden'].includes(raw.status) ? raw.status : 'draft',
+        executedAt: raw.executedAt || (raw.status === 'executed' ? new Date().toISOString() : null),
+        hiddenAt: raw.status === 'hidden' ? (raw.hiddenAt || new Date().toISOString()) : null,
+        updatedAt: new Date().toISOString()
+    };
+}
+
+function readDateSheet() {
+    try {
+        if (!fs.existsSync(DATE_SHEET_FILE)) return null;
+        const saved = JSON.parse(fs.readFileSync(DATE_SHEET_FILE, 'utf8'));
+        return normalizeDateSheetPayload(saved);
+    } catch (error) {
+        return null;
+    }
+}
+
+function writeDateSheet(data) {
+    const normalized = normalizeDateSheetPayload(data);
+    fs.writeFileSync(DATE_SHEET_FILE, JSON.stringify(normalized, null, 2), 'utf8');
+    return normalized;
+}
+
+app.get('/api/date-sheet', (req, res) => {
+    res.json({ success: true, dateSheet: readDateSheet() });
+});
+
+app.post('/api/date-sheet', (req, res) => {
+    try {
+        const saved = writeDateSheet(req.body || {});
+        io.emit('date_sheet_update', saved);
+        res.json({ success: true, dateSheet: saved });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Date sheet could not be executed.' });
+    }
+});
+
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
@@ -482,12 +634,16 @@ app.post('/api/login', async (req, res) => {
                 success: true,
                 token,
                 sessionId,
+                permissions,
                 user
             });
         }
 
         if (username === PRINCIPAL_USERNAME && password === PRINCIPAL_PASSWORD) {
             const permissions = readPermissions();
+            if (permissions.loginAccess.principal === false) {
+                return res.status(403).json({ success: false, message: 'Principal login is currently disabled by admin.' });
+            }
             const groupKey = permissions.roleGroups.Principal || 'principal';
             const sessionId = createSessionId('Principal', 'principal');
             const token = jwt.sign({ id: 'principal', role: 'Principal', sessionId }, JWT_SECRET, { expiresIn: '1d' });
@@ -497,6 +653,7 @@ app.post('/api/login', async (req, res) => {
                 success: true,
                 token,
                 sessionId,
+                permissions,
                 user
             });
         }
@@ -559,6 +716,7 @@ app.post('/api/login', async (req, res) => {
                     success: true,
                     token,
                     sessionId,
+                    permissions,
                     user: responseUser
                 });
             }

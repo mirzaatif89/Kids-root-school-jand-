@@ -22,19 +22,25 @@ module.exports = createHandler({
             sendJson(res, 200, {
                 success: true,
                 token,
-                user: { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey }
+                user: { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey },
+                permissions
             });
             return;
         }
 
         if (username === PRINCIPAL_USERNAME && password === PRINCIPAL_PASSWORD) {
             const permissions = await loadPermissions(db);
+            if (permissions.loginAccess.principal === false) {
+                sendJson(res, 403, { success: false, message: 'Principal login is currently disabled by admin.' });
+                return;
+            }
             const groupKey = permissions.roleGroups.Principal || 'principal';
             const token = jwt.sign({ id: 'principal', role: 'Principal' }, JWT_SECRET, { expiresIn: '1d' });
             sendJson(res, 200, {
                 success: true,
                 token,
-                user: { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey }
+                user: { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey },
+                permissions
             });
             return;
         }
@@ -87,6 +93,7 @@ module.exports = createHandler({
         sendJson(res, 200, {
             success: true,
             token,
+            permissions,
             user: {
                 id: user.profileId,
                 fullName: profileName,

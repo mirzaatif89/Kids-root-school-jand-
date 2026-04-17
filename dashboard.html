@@ -113,8 +113,8 @@
             </header>
 
             <!-- Stats Grid -->
-            <div class="stats-grid">
-                <a href="students.html" class="card">
+            <div class="stats-grid" id="dashboardStatsGrid">
+                <a href="students.html" class="card" data-dashboard-card>
                     <div class="card-title">Total Students</div>
                     <div class="card-value" id="dashStudentCount">...</div>
                     <div class="card-trend trend-up">
@@ -125,7 +125,7 @@
                     </div>
                 </a>
 
-                <a href="teachers.html" class="card">
+                <a href="teachers.html" class="card" data-dashboard-card>
                     <div class="card-title">Total Teachers</div>
                     <div class="card-value" id="dashTeacherCount">...</div>
                     <div class="card-trend trend-up">
@@ -136,7 +136,7 @@
                     </div>
                 </a>
 
-                <a href="staff.html" class="card">
+                <a href="staff.html" class="card" data-dashboard-card>
                     <div class="card-title">Total Staff</div>
                     <div class="card-value" id="dashStaffCount">...</div>
                     <div class="card-trend trend-up">
@@ -147,7 +147,7 @@
                     </div>
                 </a>
 
-                <a href="revenue.html" class="card">
+                <a href="revenue.html" class="card" data-dashboard-card>
                     <div class="card-title">Total Revenue</div>
                     <div class="card-value" id="dashRevenue">...</div>
                     <div class="card-trend trend-up">
@@ -158,7 +158,7 @@
                     </div>
                 </a>
 
-                <div class="card">
+                <div class="card" data-admin-only-card>
                     <div class="card-title">Active Portal Logins</div>
                     <div class="card-value" id="dashActiveLogins">...</div>
                     <div class="card-trend trend-up" id="dashActiveLoginsDetail">

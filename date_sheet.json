@@ -1,0 +1,36 @@
+{
+  "dateSheetSchoolName": "MY OWN Science School",
+  "dateSheetExamTitle": "Mid Term Examination 2026",
+  "dateSheetSession": "2025-26",
+  "dateSheetClassGroup": "Grade 5 / Section A",
+  "dateSheetCampus": "Main Campus",
+  "dateSheetDefaultStart": "09:00",
+  "dateSheetInstructions": "",
+  "scheduleRows": [
+    {
+      "subject": "English",
+      "className": "Grade 5",
+      "examDate": "2026-05-10",
+      "startTime": "09:00",
+      "endTime": "10:30"
+    },
+    {
+      "subject": "Mathematics",
+      "className": "Grade 5",
+      "examDate": "2026-05-12",
+      "startTime": "09:00",
+      "endTime": "10:30"
+    },
+    {
+      "subject": "Science",
+      "className": "Grade 5",
+      "examDate": "2026-05-14",
+      "startTime": "09:00",
+      "endTime": "10:30"
+    }
+  ],
+  "status": "hidden",
+  "executedAt": "2026-04-17T14:37:37.021Z",
+  "hiddenAt": "2026-04-17T14:43:22.553Z",
+  "updatedAt": "2026-04-17T14:43:22.557Z"
+}

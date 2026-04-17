@@ -317,6 +317,39 @@
             background: #fff;
         }
 
+        .result-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.75rem;
+            margin-top: 0.85rem;
+        }
+
+        .result-filter-grid label {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .result-filter-grid input {
+            width: 100%;
+            margin-top: 0.35rem;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.75rem 0.85rem;
+            font: inherit;
+            background: #fff;
+            color: var(--text-primary);
+        }
+
+        .result-history-table .btn-inline {
+            margin-top: 0;
+            padding: 0.45rem 0.7rem;
+            border-radius: 8px;
+            font-size: 0.84rem;
+        }
+
         .teacher-note {
             margin-top: 1rem;
             padding: 1rem;
@@ -651,6 +684,30 @@
                             Load Result
                         </button>
                     </div>
+                    <div class="result-filter-grid">
+                        <label>Date
+                            <input type="date" id="studentResultDateFilter">
+                        </label>
+                        <label>Class
+                            <input type="text" id="studentResultClassFilter" placeholder="Class">
+                        </label>
+                        <label>Roll Number
+                            <input type="text" id="studentResultRollFilter" placeholder="Roll number">
+                        </label>
+                    </div>
+                    <table class="panel-table result-history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Class</th>
+                                <th>Term</th>
+                                <th>%</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentResultHistoryBody"></tbody>
+                    </table>
+                    <div class="empty-note" id="studentResultHistoryEmpty">No previous or current result matched these filters.</div>
                     <div class="mini-grid">
                         <div class="mini-stat">
                             <div class="mini-stat-label">Latest Term</div>
@@ -746,6 +803,10 @@
                             <div class="mini-stat-value" id="attendanceRate">-</div>
                         </div>
                         <div class="mini-stat">
+                            <div class="mini-stat-label">Marked Days</div>
+                            <div class="mini-stat-value" id="attendanceTotal">-</div>
+                        </div>
+                        <div class="mini-stat">
                             <div class="mini-stat-label">Present Days</div>
                             <div class="mini-stat-value" id="attendancePresent">-</div>
                         </div>
@@ -798,6 +859,7 @@
         const STUDENT_RESULT_CACHE_KEY = 'eduCore_student_result_card';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const authToken = sessionStorage.getItem('eduCore_token');
+        let studentResultHistory = [];
 
         if (!loggedInUser || loggedInUser.role !== 'Student' || !authToken) {
             window.location.href = 'index.html';
@@ -876,18 +938,95 @@
             ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
         }
 
+        function loadResultArchive() {
+            try {
+                return JSON.parse(localStorage.getItem(RESULT_ARCHIVE_KEY) || '[]');
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function normalizeLoose(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function normalizeResultClass(value) {
+            return normalizeLoose(value).replace(/\bclass\b/g, '').replace(/[^a-z0-9]/g, '');
+        }
+
+        function getResultRecordDate(record = {}) {
+            const rawDate = record.resultDate || record.examDate || record.updatedAt || record.createdAt || '';
+            if (!rawDate) return '';
+            const parsed = new Date(rawDate);
+            if (!Number.isNaN(parsed.getTime())) {
+                return parsed.toISOString().slice(0, 10);
+            }
+            return String(rawDate).slice(0, 10);
+        }
+
+        function formatResultRecordDate(record = {}) {
+            const date = getResultRecordDate(record);
+            if (!date) return '-';
+            const parsed = new Date(`${date}T00:00:00`);
+            return Number.isNaN(parsed.getTime()) ? date : parsed.toLocaleDateString();
+        }
+
+        function getResultRecordClass(record = {}, student = {}) {
+            return record.studentGrade || record.classGrade || record.className || student.classGrade || '';
+        }
+
+        function getResultRecordRollCandidates(record = {}, student = {}) {
+            return [
+                record.rollNo,
+                record.rollNumber,
+                record.studentRollNo,
+                record.studentLookupId,
+                student.rollNo,
+                student.studentCode,
+                student.id,
+                loggedInUser?.id
+            ].map(normalizeLoose).filter(Boolean);
+        }
+
+        function calculateResultPercentage(result = {}) {
+            const subjects = Array.isArray(result.subjects) ? result.subjects : [];
+            const totalMarks = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
+            const obtainedMarks = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);
+            return totalMarks ? (obtainedMarks / totalMarks) * 100 : 0;
+        }
+
+        function getFilteredStudentResults(student, filters = {}) {
+            const archive = loadResultArchive();
+            const identityCandidates = getStudentIdentityCandidates(student);
+            const lookupFilter = normalizeLoose(filters.lookup);
+            const dateFilter = String(filters.date || '').trim();
+            const classFilter = normalizeLoose(filters.classGrade);
+            const rollFilter = normalizeLoose(filters.rollNo);
+
+            return archive.filter((record) => {
+                const recordLookup = normalizeLoose(record.studentLookupId);
+                const recordName = normalizeLoose(record.studentName);
+                const belongsToStudent = identityCandidates.includes(recordLookup);
+
+                if (!belongsToStudent) return false;
+                if (lookupFilter && !identityCandidates.includes(lookupFilter) && recordName !== lookupFilter) return false;
+                if (dateFilter && getResultRecordDate(record) !== dateFilter) return false;
+                if (classFilter && normalizeResultClass(getResultRecordClass(record, student)) !== normalizeResultClass(classFilter)) return false;
+                if (rollFilter && !getResultRecordRollCandidates(record, student).includes(rollFilter)) return false;
+
+                return true;
+            }).sort((a, b) => new Date(b.updatedAt || b.resultDate || 0) - new Date(a.updatedAt || a.resultDate || 0));
+        }
+
         function getLatestStudentResult(student) {
-            const archive = JSON.parse(localStorage.getItem(RESULT_ARCHIVE_KEY) || '[]');
-            const candidates = getStudentIdentityCandidates(student);
-            const matches = archive.filter((record) => candidates.includes(String(record.studentLookupId || '').trim().toLowerCase()));
-            return matches.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))[0] || null;
+            return getFilteredStudentResults(student)[0] || null;
         }
 
         function getResultByLookup(query) {
             const normalizedQuery = String(query || '').trim().toLowerCase();
             if (!normalizedQuery) return null;
 
-            const archive = JSON.parse(localStorage.getItem(RESULT_ARCHIVE_KEY) || '[]');
+            const archive = loadResultArchive();
             const matches = archive.filter((record) => {
                 const candidates = [
                     record.studentLookupId,
@@ -898,6 +1037,38 @@
             });
 
             return matches.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))[0] || null;
+        }
+
+        function renderStudentResultHistory(student, filters = {}) {
+            const tbody = document.getElementById('studentResultHistoryBody');
+            const emptyState = document.getElementById('studentResultHistoryEmpty');
+            studentResultHistory = getFilteredStudentResults(student, filters);
+
+            if (!studentResultHistory.length) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                applyStudentResult(null);
+                return;
+            }
+
+            tbody.innerHTML = studentResultHistory.map((record, index) => {
+                const percentage = calculateResultPercentage(record);
+                return `
+                    <tr>
+                        <td>${escapeHtml(formatResultRecordDate(record))}</td>
+                        <td>${escapeHtml(getResultRecordClass(record, student) || '-')}</td>
+                        <td>${escapeHtml(record.termTitle || '-')}</td>
+                        <td>${escapeHtml(`${formatMark(percentage)}%`)}</td>
+                        <td>
+                            <button type="button" class="btn-inline student-result-view-btn" data-result-index="${index}">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            emptyState.style.display = 'none';
+            applyStudentResult(studentResultHistory[0]);
         }
 
         function applyStudentResult(result) {
@@ -940,6 +1111,9 @@
 
         function loadStudentResultByLookup() {
             const lookupValue = document.getElementById('studentResultLookup').value.trim();
+            const dateValue = document.getElementById('studentResultDateFilter').value.trim();
+            const classValue = document.getElementById('studentResultClassFilter').value.trim();
+            const rollValue = document.getElementById('studentResultRollFilter').value.trim();
             const student = JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback();
             const allowedCandidates = getStudentIdentityCandidates(student);
             const normalizedLookup = lookupValue.toLowerCase();
@@ -954,13 +1128,29 @@
                 return;
             }
 
-            const result = getResultByLookup(lookupValue);
-            if (!result) {
-                alert('No saved result card was found for the entered student ID.');
+            const matches = getFilteredStudentResults(student, {
+                lookup: lookupValue,
+                date: dateValue,
+                classGrade: classValue,
+                rollNo: rollValue
+            });
+            if (!matches.length) {
+                alert('No saved result card was found for these filters.');
+                renderStudentResultHistory(student, {
+                    lookup: lookupValue,
+                    date: dateValue,
+                    classGrade: classValue,
+                    rollNo: rollValue
+                });
                 return;
             }
 
-            applyStudentResult(result);
+            renderStudentResultHistory(student, {
+                lookup: lookupValue,
+                date: dateValue,
+                classGrade: classValue,
+                rollNo: rollValue
+            });
         }
 
         function getStudentBranchContactDetails(campusName) {
@@ -1090,17 +1280,38 @@
             const candidates = getStudentIdentityCandidates(student);
             const attendanceKey = Object.keys(attendanceStore).find((key) => candidates.includes(String(key || '').trim().toLowerCase()));
             const records = attendanceKey ? attendanceStore[attendanceKey] : [];
-            const normalizedRecords = Array.isArray(records) ? records : [];
-            const present = normalizedRecords.filter((item) => item === 'Present').length;
-            const absent = normalizedRecords.filter((item) => item === 'Absent').length;
-            const late = normalizedRecords.filter((item) => item === 'Late').length;
-            const total = normalizedRecords.length;
-            const rate = total ? Math.round((present / total) * 100) : 0;
+            const normalizedRecords = Array.isArray(records)
+                ? records.map((item) => (typeof item === 'string' ? { status: item } : item))
+                : [];
+            const markedRecords = normalizedRecords.filter((item) => ['Present', 'Absent', 'Late'].includes(item?.status));
+            const present = markedRecords.filter((item) => item.status === 'Present').length;
+            const absent = markedRecords.filter((item) => item.status === 'Absent').length;
+            const late = markedRecords.filter((item) => item.status === 'Late').length;
+            const total = markedRecords.length;
+            const attended = present + late;
+            const rate = total ? Math.round((attended / total) * 100) : 0;
 
             document.getElementById('attendanceRate').innerText = total ? `${rate}%` : 'No record';
+            document.getElementById('attendanceTotal').innerText = total ? String(total) : '-';
             document.getElementById('attendancePresent').innerText = total ? String(present) : '-';
             document.getElementById('attendanceAbsent').innerText = total ? String(absent) : '-';
             document.getElementById('attendanceLate').innerText = total ? String(late) : '-';
+        }
+
+        async function loadStudentAttendanceForPortal() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/student-attendance`);
+                if (!response.ok) throw new Error('Attendance unavailable.');
+                const result = await response.json();
+                if (result.attendance && typeof result.attendance === 'object') {
+                    localStorage.setItem(STUDENT_ATTENDANCE_KEY, JSON.stringify(result.attendance));
+                    return result.attendance;
+                }
+            } catch (error) {
+                return JSON.parse(localStorage.getItem(STUDENT_ATTENDANCE_KEY) || '{}');
+            }
+
+            return JSON.parse(localStorage.getItem(STUDENT_ATTENDANCE_KEY) || '{}');
         }
 
         function loadDateSheetState() {
@@ -1110,6 +1321,24 @@
             } catch (error) {
                 return {};
             }
+        }
+
+        async function loadExecutedDateSheet() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/date-sheet`);
+                if (!response.ok) throw new Error('Date sheet unavailable.');
+                const result = await response.json();
+                if (result.dateSheet && result.dateSheet.status === 'executed') {
+                    localStorage.setItem(DATE_SHEET_KEY, JSON.stringify(result.dateSheet));
+                    return result.dateSheet;
+                }
+                localStorage.removeItem(DATE_SHEET_KEY);
+                return {};
+            } catch (error) {
+                return loadDateSheetState();
+            }
+
+            return loadDateSheetState();
         }
 
         function formatScheduleDate(value) {
@@ -1245,7 +1474,9 @@
             const emptyState = document.getElementById('studentDateSheetEmpty');
             const className = String(student.classGrade || '').trim().toLowerCase();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
-            const filteredRows = rows.filter((row) => !className || String(row.className || '').trim().toLowerCase().includes(className));
+            const filteredRows = state.status === 'executed'
+                ? rows.filter((row) => !className || String(row.className || '').trim().toLowerCase().includes(className))
+                : [];
 
             if (!filteredRows.length) {
                 tbody.innerHTML = '';
@@ -1267,7 +1498,7 @@
         function downloadDateSheet() {
             const state = loadDateSheetState();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
-            if (!rows.length) {
+            if (state.status !== 'executed' || !rows.length) {
                 alert('No date sheet is available to download yet.');
                 return;
             }
@@ -1361,12 +1592,18 @@
             document.getElementById('pendingDuesCard').innerText = formatCurrency(pendingAmount);
             document.getElementById('duesStatusCard').innerText = student.feesStatus || 'Pending';
             document.getElementById('studentResultLookup').value = student.studentCode || student.id || student.rollNo || '';
+            document.getElementById('studentResultClassFilter').value = student.classGrade || '';
+            document.getElementById('studentResultRollFilter').value = student.rollNo || student.studentCode || student.id || '';
 
             const feeStatusBadge = document.getElementById('feeStatusBadge');
             feeStatusBadge.innerText = student.feesStatus || 'Pending';
             feeStatusBadge.className = `status-badge ${getStatusClass(student.feesStatus)}`;
 
-            applyStudentResult(getLatestStudentResult(student));
+            renderStudentResultHistory(student, {
+                lookup: document.getElementById('studentResultLookup').value,
+                classGrade: document.getElementById('studentResultClassFilter').value,
+                rollNo: document.getElementById('studentResultRollFilter').value
+            });
             applyStudentAttendance(student);
             applyDateSheet(student);
             applyStudentLectures(student);
@@ -1391,6 +1628,8 @@
                 }
 
                 const student = await response.json();
+                await loadStudentAttendanceForPortal();
+                await loadExecutedDateSheet();
                 applyStudentData(student);
                 return;
             } catch (error) {
@@ -1398,6 +1637,8 @@
                     JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null');
 
                 if (fallbackStudent) {
+                    await loadStudentAttendanceForPortal();
+                    await loadExecutedDateSheet();
                     applyStudentData(fallbackStudent);
                     return;
                 }
@@ -1421,6 +1662,22 @@
                     event.preventDefault();
                     loadStudentResultByLookup();
                 }
+            });
+            ['studentResultDateFilter', 'studentResultClassFilter', 'studentResultRollFilter'].forEach((inputId) => {
+                document.getElementById(inputId).addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        loadStudentResultByLookup();
+                    }
+                });
+                document.getElementById(inputId).addEventListener('change', loadStudentResultByLookup);
+            });
+            document.getElementById('studentResultHistoryBody').addEventListener('click', (event) => {
+                const button = event.target.closest('.student-result-view-btn');
+                if (!button) return;
+                const index = Number(button.dataset.resultIndex);
+                const result = studentResultHistory[index];
+                if (result) applyStudentResult(result);
             });
             loadStudentProfile();
             loadSpecialNoticesForPortal();

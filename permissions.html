@@ -1,769 +1,596 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permissions - Apexiueum</title>
+    <title>Permissions - Apexiums School System</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .permissions-grid { display:grid; gap:1.25rem; }
-        .permissions-card { background:var(--surface-color); border:1px solid var(--border-color); border-radius:8px; box-shadow:var(--shadow-sm); padding:1.25rem; }
-        .permissions-card h3 { margin-bottom:0.4rem; }
-        .permissions-card p { color:var(--text-secondary); margin-bottom:1rem; }
-        .permissions-toolbar { display:flex; justify-content:space-between; gap:1rem; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
-        .save-status { color:var(--text-secondary); font-size:0.9rem; font-weight:700; }
-        .permission-shell { display:grid; grid-template-columns:minmax(260px, 0.8fr) minmax(520px, 1.8fr); gap:1.25rem; align-items:start; }
-        .role-panel { position:sticky; top:1rem; display:grid; gap:1rem; }
-        .role-stack { display:grid; gap:0.75rem; }
-        .role-card { border:1px solid var(--border-color); border-radius:8px; background:#fff; padding:1rem; display:grid; gap:0.85rem; cursor:pointer; text-align:left; transition:var(--transition); width:100%; }
-        .role-card:hover { border-color:var(--primary-color); box-shadow:var(--shadow-sm); }
-        .role-card.active { border-color:var(--primary-color); box-shadow:0 0 0 3px rgba(32, 176, 164, 0.13); }
-        .role-card-top { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; }
-        .role-name { font-weight:800; color:var(--text-primary); }
-        .role-group-name { color:var(--text-secondary); font-size:0.85rem; }
-        .login-badge { border:1px solid var(--border-color); border-radius:999px; padding:0.2rem 0.55rem; font-size:0.78rem; font-weight:700; white-space:nowrap; }
-        .login-badge.enabled { color:#047857; background:#ecfdf5; border-color:#a7f3d0; }
-        .login-badge.disabled { color:#b91c1c; background:#fef2f2; border-color:#fecaca; }
-        .role-card select, .group-controls input, .group-controls select, .permission-search { width:100%; padding:0.75rem 0.9rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; color:var(--text-primary); }
-        .login-switch { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; color:var(--text-secondary); font-size:0.9rem; cursor:pointer; }
-        .login-switch input { width:1.1rem; height:1.1rem; accent-color:var(--primary-color); }
-        .access-guide { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.75rem; }
-        .access-guide-card { border:1px solid var(--border-color); border-radius:8px; padding:0.9rem; background:#fff; }
-        .access-guide-card strong { display:block; margin-bottom:0.25rem; }
-        .access-guide-card span { color:var(--text-secondary); font-size:0.82rem; line-height:1.4; }
-        .access-guide-card[data-access="none"] { border-color:#fecaca; background:#fef2f2; }
-        .access-guide-card[data-access="view"] { border-color:#bfdbfe; background:#eff6ff; }
-        .access-guide-card[data-access="edit"] { border-color:#fed7aa; background:#fff7ed; }
-        .access-guide-card[data-access="manage"] { border-color:#a7f3d0; background:#ecfdf5; }
-        .group-tabs { display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem; }
-        .group-tab { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:999px; padding:0.6rem 0.95rem; cursor:pointer; font-weight:700; transition:var(--transition); }
-        .group-tab:hover { border-color:var(--primary-color); color:var(--primary-dark); }
-        .group-tab.active { background:var(--primary-color); border-color:var(--primary-color); color:#fff; box-shadow:var(--shadow-sm); }
-        .group-box { border:1px solid var(--border-color); border-radius:8px; padding:1rem; background:#fff; }
-        .group-header { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
-        .group-title { display:flex; flex-direction:column; gap:0.25rem; }
-        .group-key { color:var(--text-secondary); font-size:0.82rem; }
-        .group-summary { display:flex; gap:0.5rem; flex-wrap:wrap; }
-        .summary-pill { border-radius:999px; padding:0.25rem 0.65rem; font-size:0.8rem; font-weight:700; background:#f8fafc; border:1px solid var(--border-color); color:var(--text-secondary); }
-        .group-controls { display:grid; grid-template-columns:minmax(220px, 1.2fr) minmax(220px, 1fr); gap:1rem; margin-bottom:1.1rem; }
-        .field-label { display:block; margin-bottom:0.45rem; font-weight:700; font-size:0.9rem; }
-        .bulk-permissions { border:1px solid #d6efeb; background:#f8fafc; border-radius:8px; padding:0.9rem; margin-bottom:1.1rem; display:grid; gap:0.7rem; }
-        .bulk-header { display:flex; align-items:center; justify-content:space-between; gap:0.75rem; flex-wrap:wrap; }
-        .bulk-title { font-weight:800; color:var(--text-primary); }
-        .bulk-note { color:var(--text-secondary); font-size:0.84rem; }
-        .bulk-actions { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.5rem; }
-        .bulk-action { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; min-height:40px; padding:0.55rem 0.5rem; cursor:pointer; font-weight:800; transition:var(--transition); }
-        .bulk-action:hover { border-color:var(--primary-color); color:var(--primary-dark); box-shadow:var(--shadow-sm); }
-        .permission-tools { display:grid; grid-template-columns:minmax(240px, 1fr) auto; gap:0.75rem; align-items:center; margin-bottom:1rem; }
-        .permission-categories { display:grid; gap:1rem; }
-        .permission-empty { border:1px dashed var(--border-color); border-radius:8px; padding:1.5rem; text-align:center; color:var(--text-secondary); background:#fff; }
-        .permission-category { border:1px solid #edf5f3; border-radius:8px; overflow:hidden; }
-        .category-header { display:grid; grid-template-columns:minmax(180px, 1fr) minmax(280px, auto); gap:0.75rem; align-items:center; background:#f8fafc; padding:0.75rem 0.9rem; border-bottom:1px solid #edf5f3; }
-        .category-header h4 { margin:0; font-size:0.95rem; }
-        .category-count { color:var(--text-secondary); font-size:0.82rem; }
-        .category-actions { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.35rem; }
-        .category-action { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; min-height:32px; padding:0.35rem 0.45rem; cursor:pointer; font-weight:800; font-size:0.76rem; transition:var(--transition); }
-        .category-action:hover { border-color:var(--primary-color); color:var(--primary-dark); }
-        .module-list { display:grid; }
-        .module-row { display:grid; grid-template-columns:minmax(190px, 1fr) minmax(320px, 1.6fr); gap:1rem; align-items:center; padding:0.9rem; border-bottom:1px solid #edf5f3; }
-        .module-row:last-child { border-bottom:0; }
-        .module-name { font-weight:700; }
-        .page-meta { color:var(--text-secondary); font-size:0.82rem; word-break:break-word; }
-        .access-segment { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.4rem; }
-        .access-option { border:1px solid var(--border-color); background:#fff; color:var(--text-secondary); border-radius:8px; padding:0.55rem 0.45rem; cursor:pointer; font-weight:700; font-size:0.85rem; transition:var(--transition); min-height:38px; }
-        .access-option:hover { border-color:var(--primary-color); color:var(--primary-dark); }
-        .access-option.active[data-access="none"] { background:#fef2f2; border-color:#fecaca; color:#b91c1c; }
-        .access-option.active[data-access="view"] { background:#eff6ff; border-color:#bfdbfe; color:#1d4ed8; }
-        .access-option.active[data-access="edit"] { background:#fff7ed; border-color:#fed7aa; color:#c2410c; }
-        .access-option.active[data-access="manage"] { background:#ecfdf5; border-color:#a7f3d0; color:#047857; }
-        .individual-permission-grid { display:grid; grid-template-columns:0.75fr minmax(260px, 1.4fr) minmax(220px, 1fr) auto; gap:0.85rem; align-items:end; }
-        .individual-permission-grid select,
-        .individual-permission-grid input { width:100%; padding:0.75rem 0.9rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; color:var(--text-primary); }
-        .individual-note { margin-top:0.85rem; color:var(--text-secondary); font-size:0.9rem; }
-        .individual-current { margin-top:0.85rem; display:flex; flex-wrap:wrap; gap:0.5rem; }
-        .individual-pill { border:1px solid var(--border-color); border-radius:999px; padding:0.3rem 0.7rem; background:#f8fafc; color:var(--text-secondary); font-size:0.82rem; font-weight:700; }
-        @media (max-width: 1080px) {
-            .permission-shell { grid-template-columns:1fr; }
-            .role-panel { position:static; }
-            .individual-permission-grid { grid-template-columns:1fr 1fr; }
+        .permissions-panel {
+            display: grid;
+            grid-template-columns: 320px minmax(0, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
-        @media (max-width: 768px) {
-            .access-guide { grid-template-columns:1fr 1fr; }
-            .group-controls { grid-template-columns:1fr; }
-            .bulk-actions { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-            .permission-tools { grid-template-columns:1fr; }
-            .individual-permission-grid { grid-template-columns:1fr; }
-            .category-header { grid-template-columns:1fr; }
-            .category-actions { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-            .module-row { grid-template-columns:1fr; }
-            .access-segment { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+
+        .permissions-sidebar,
+        .permissions-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .permission-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 1.5rem;
+        }
+
+        .permission-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .permission-card-header h2 {
+            margin: 0;
+            font-size: 1.15rem;
+        }
+
+        .permission-card-header p {
+            margin: 0.35rem 0 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .permission-group-details,
+        .permission-section {
+            margin-top: 1rem;
+        }
+
+        .permission-group-details label,
+        .permission-section h3 {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .permissions-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.75rem;
+        }
+
+        .permissions-table th,
+        .permissions-table td {
+            text-align: left;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .permissions-table th {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .permission-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .login-access-list {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .login-access-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: var(--bg-color);
+            gap: 1rem;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: 0.3s;
+            border-radius: 999px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--surface-color);
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .switch input:checked + .slider {
+            background-color: var(--success-color);
+        }
+
+        .switch input:checked + .slider:before {
+            transform: translateX(22px);
+        }
+
+        @media (max-width: 1080px) {
+            .permissions-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 680px) {
+            .permission-card-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .permission-card-header button {
+                width: 100%;
+            }
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="logo-section"><i data-lucide="graduation-cap"></i> Apexiums School System</div>
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums School System
+            </div>
+
             <nav class="nav-links">
-                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
-                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
-                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
-                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
-                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
-                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
-                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
-                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
-                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
-                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
-                <a href="permissions.html" class="nav-item active"><i data-lucide="shield"></i><span>Permissions</span></a>
-                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
-                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i><span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i><span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i><span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i><span>Classes</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i><span>Fees</span>
+                </a>
+                <a href="fee_challan.html" class="nav-item">
+                    <i data-lucide="file-text"></i><span>Fee Challan</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i><span>Salaries</span>
+                </a>
+                <a href="exams.html" class="nav-item">
+                    <i data-lucide="clipboard-list"></i><span>Exams</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i><span>Revenue</span>
+                </a>
+                <a href="permissions.html" class="nav-item active">
+                    <i data-lucide="shield"></i><span>Permissions</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i><span>About Us</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="log-out"></i><span>Logout</span>
+                </a>
             </nav>
-            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
         </aside>
 
         <main class="main-content">
             <header class="header">
                 <div>
-                    <h1>Groups & Permissions</h1>
-                    <p style="color:var(--text-secondary); margin-top:0.25rem;">Manage role login, default group, home page, and module access from one screen.</p>
+                    <h1>Permissions</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Manage role groups, choose login access, and assign module rights to each role.</p>
                 </div>
             </header>
 
-            <div class="permissions-grid">
-                <section class="permissions-card">
-                    <div class="permissions-toolbar">
-                        <div>
-                            <h3>Access Levels</h3>
-                            <p>Use these levels when assigning access to each role group.</p>
-                        </div>
-                        <div class="save-status" id="permissionsStatus">Loading permissions...</div>
-                    </div>
-                    <div class="access-guide">
-                        <div class="access-guide-card" data-access="none"><strong>No Access</strong><span>Hide the page and block opening it.</span></div>
-                        <div class="access-guide-card" data-access="view"><strong>View</strong><span>Open the page without management rights.</span></div>
-                        <div class="access-guide-card" data-access="edit"><strong>Edit</strong><span>Allow routine changes where supported.</span></div>
-                        <div class="access-guide-card" data-access="manage"><strong>Full</strong><span>Allow full management for that page.</span></div>
-                    </div>
-                </section>
-
-                <section class="permissions-card">
-                    <div class="permissions-toolbar">
-                        <div>
-                            <h3>Individual Teacher / Staff Permissions</h3>
-                            <p>Assign a separate permission group to one teacher or one staff member without changing the whole role.</p>
-                        </div>
-                    </div>
-                    <div class="individual-permission-grid">
-                        <label>
-                            <span class="field-label">Member Type</span>
-                            <select id="individualMemberType">
-                                <option value="teacher">Teacher</option>
-                                <option value="staff">Staff</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span class="field-label">Select Member</span>
-                            <select id="individualMemberSelect"></select>
-                        </label>
-                        <label>
-                            <span class="field-label">Permission Group</span>
-                            <select id="individualGroupSelect"></select>
-                        </label>
-                        <button type="button" class="btn btn-primary" id="saveIndividualPermissionBtn">Save Individual Permission</button>
-                    </div>
-                    <div class="individual-current" id="individualPermissionCurrent"></div>
-                    <div class="individual-note">This overrides only the selected member. The member should sign out and sign in again to receive the updated permissions.</div>
-                </section>
-
-                <div class="permission-shell">
-                    <aside class="role-panel">
-                        <section class="permissions-card">
-                            <div class="permissions-toolbar">
-                                <div>
-                                    <h3>Roles</h3>
-                                    <p>Select a role, then assign its group and login status.</p>
-                                </div>
-                            </div>
-                            <div class="role-stack" id="roleGroupContainer"></div>
-                        </section>
-                    </aside>
-
-                    <section class="permissions-card">
-                        <div class="permissions-toolbar">
+            <section class="permissions-panel">
+                <div class="permissions-sidebar">
+                    <div class="permission-card">
+                        <div class="permission-card-header">
                             <div>
-                                <h3 id="activeGroupHeading">Group Permissions</h3>
-                                <p id="activeGroupSubheading">Select a role to edit page access.</p>
+                                <h2>Role-based permission editor</h2>
+                                <p>Assign module access to a role group and save for everyone.</p>
                             </div>
-                            <button class="btn btn-primary" id="savePermissionsBtn">Save Permissions</button>
+                            <button id="addRoleBtn" class="btn btn-secondary" type="button">+ New Role</button>
                         </div>
-                        <div class="group-tabs" id="groupTabs"></div>
-                        <div class="group-list" id="groupList"></div>
-                    </section>
+
+                        <label for="roleGroupSelect">Select role group</label>
+                        <select id="roleGroupSelect" class="form-control"></select>
+
+                        <div class="permission-group-details">
+                            <label for="roleGroupName">Group display name</label>
+                            <input id="roleGroupName" class="form-control" type="text" placeholder="Role name">
+
+                            <label for="roleGroupKey">Group key</label>
+                            <input id="roleGroupKey" class="form-control" type="text" placeholder="role_key" disabled>
+
+                            <label for="roleHomePage">Home page</label>
+                            <select id="roleHomePage" class="form-control"></select>
+                        </div>
+
+                        <div class="permission-section">
+                            <h3>Login access</h3>
+                            <p>Enable or disable login by role.</p>
+                            <div id="loginAccessList" class="login-access-list"></div>
+                        </div>
+
+                        <button id="savePermissionsBtn" class="btn btn-success" type="button">Save Permissions</button>
+                    </div>
                 </div>
-            </div>
+
+                <div class="permissions-content">
+                    <div class="permission-card">
+                        <div class="permission-card-header">
+                            <div>
+                                <h2>Module permissions</h2>
+                                <p>Choose the access level for each module in the selected role group.</p>
+                            </div>
+                        </div>
+
+                        <div class="permission-table-wrapper">
+                            <table id="permissionsTable" class="permissions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>Access</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
 
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
-        const ROLE_OPTIONS = ['Admin', 'Principal', 'Branch', 'Teacher', 'Student', 'Staff'];
-        const ACCESS_OPTIONS = [
-            { key: 'none', label: 'No Access' },
-            { key: 'view', label: 'View' },
-            { key: 'edit', label: 'Edit' },
-            { key: 'manage', label: 'Full' }
-        ];
-        const MODULE_DEFINITIONS = [
-            { key: 'dashboard', label: 'Dashboard', page: 'dashboard.html', category: 'Main Admin Pages' },
-            { key: 'students', label: 'Students', page: 'students.html', category: 'Main Admin Pages' },
-            { key: 'teachers', label: 'Teachers', page: 'teachers.html', category: 'Main Admin Pages' },
-            { key: 'staff', label: 'Staff', page: 'staff.html', category: 'Main Admin Pages' },
-            { key: 'classes', label: 'Classes', page: 'classes.html', category: 'Main Admin Pages' },
-            { key: 'fees', label: 'Fees', page: 'fees.html', category: 'Finance' },
-            { key: 'fee_challan', label: 'Fee Challan', page: 'fee_challan.html', category: 'Finance' },
-            { key: 'teacher_salaries', label: 'Teacher Salaries', page: 'teacher_salaries.html', category: 'Finance' },
-            { key: 'revenue', label: 'Revenue', page: 'revenue.html', category: 'Finance' },
-            { key: 'student_attendance', label: 'Student Attendance', page: 'student_attendance.html', category: 'Attendance' },
-            { key: 'teacher_attendance', label: 'Teacher Attendance', page: 'teacher_attendance.html', category: 'Attendance' },
-            { key: 'student_attendance_report', label: 'Student Attendance Report', page: 'student_attendance_report.html', category: 'Attendance' },
-            { key: 'teacher_attendance_report', label: 'Teacher Attendance Report', page: 'teacher_attendance_report.html', category: 'Attendance' },
-            { key: 'notifications', label: 'Notifications', page: 'notifications.html', category: 'System' },
-            { key: 'special_notices', label: 'Special Notices', page: 'special_notices.html', category: 'System' },
-            { key: 'exams', label: 'Exams', page: 'exams.html', category: 'Academics' },
-            { key: 'settings', label: 'Settings', page: 'settings.html', category: 'System' },
-            { key: 'permissions', label: 'Permissions', page: 'permissions.html', category: 'System' },
-            { key: 'branch_registration', label: 'Branch Registration', page: 'branch_registration.html', category: 'System' },
-            { key: 'aboutme', label: 'About Us', page: 'aboutme.html', category: 'System' },
-            { key: 'student_portal', label: 'Student Portal', page: 'student_portal.html', category: 'Portals' },
-            { key: 'teacher_portal', label: 'Teacher Portal', page: 'teacher_portal.html', category: 'Portals' },
-            { key: 'staff_portal', label: 'Staff Portal', page: 'staff_portal.html', category: 'Portals' },
-            { key: 'principal_portal', label: 'Principal Portal', page: 'principal_portal.html', category: 'Portals' }
-        ];
+        if (window.lucide) window.lucide.createIcons();
 
-        let permissionsState = null;
-        let activeGroupKey = null;
-        let activeRole = 'Admin';
-        let permissionSearch = '';
-        let individualTeachers = [];
-        let individualStaff = [];
+        const permissionState = {
+            config: null,
+            moduleKeys: [],
+            selectedGroupKey: null
+        };
 
-        function getPermissionsApiUrl() {
-            const isLocalhost = window.location.hostname === 'localhost' ||
-                window.location.hostname === '127.0.0.1' ||
-                window.location.protocol === 'file:';
-            const backendUrl = isLocalhost
-                ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
-                : (window.ENV_BACKEND_URL || window.location.origin);
-            return `${backendUrl}/api/permissions`;
+        function toLabel(value) {
+            return String(value || '')
+                .replace(/_/g, ' ')
+                .replace(/\b\w/g, (match) => match.toUpperCase());
         }
 
-        function getApiBaseUrl() {
-            return getPermissionsApiUrl().replace('/permissions', '');
+        function getPermissionsConfig() {
+            return permissionState.config || {};
         }
 
-        function normalizeConfig(input) {
-            return window.eduCoreAuth.normalizePermissionsConfig(input || {});
+        function getSelectedGroup() {
+            const config = getPermissionsConfig();
+            return config.groups && permissionState.selectedGroupKey
+                ? config.groups[permissionState.selectedGroupKey]
+                : null;
         }
 
-        function setStatus(message) {
-            document.getElementById('permissionsStatus').textContent = message;
-        }
-
-        function escapeHtml(value) {
-            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            }[char]));
-        }
-
-        function getAccessSummary(group) {
-            return ACCESS_OPTIONS.reduce((summary, access) => {
-                summary[access.key] = MODULE_DEFINITIONS.filter((module) => group.permissions[module.key] === access.key).length;
-                return summary;
-            }, {});
-        }
-
-        function getGroupedModules() {
-            const term = permissionSearch.trim().toLowerCase();
-            const modules = term
-                ? MODULE_DEFINITIONS.filter((module) => `${module.label} ${module.page} ${module.category}`.toLowerCase().includes(term))
-                : MODULE_DEFINITIONS;
-
-            return modules.reduce((categories, module) => {
-                categories[module.category] = categories[module.category] || [];
-                categories[module.category].push(module);
-                return categories;
-            }, {});
-        }
-
-        function getRolesForGroup(groupKey) {
-            return ROLE_OPTIONS.filter((role) => permissionsState.roleGroups[role] === groupKey);
-        }
-
-        function setGroupAccess(groupKey, accessKey, moduleKeys = MODULE_DEFINITIONS.map((module) => module.key)) {
-            const group = permissionsState.groups[groupKey];
-            if (!group) return;
-            moduleKeys.forEach((moduleKey) => {
-                group.permissions[moduleKey] = accessKey;
-            });
-            renderGroups();
-            setStatus('Unsaved group permission changes');
-        }
-
-        function getIndividualList() {
-            return document.getElementById('individualMemberType').value === 'teacher'
-                ? individualTeachers
-                : individualStaff;
-        }
-
-        function getIndividualStorageKey() {
-            return document.getElementById('individualMemberType').value === 'teacher'
-                ? 'eduCore_teachers'
-                : 'eduCore_staff';
-        }
-
-        function renderIndividualGroupOptions() {
-            const groupSelect = document.getElementById('individualGroupSelect');
-            if (!groupSelect || !permissionsState) return;
-
-            groupSelect.innerHTML = Object.entries(permissionsState.groups).map(([groupKey, group]) => `
-                <option value="${escapeHtml(groupKey)}">${escapeHtml(group.name)}</option>
-            `).join('');
-        }
-
-        function renderIndividualMembers() {
-            const memberSelect = document.getElementById('individualMemberSelect');
-            const groupSelect = document.getElementById('individualGroupSelect');
-            const current = document.getElementById('individualPermissionCurrent');
-            if (!memberSelect || !groupSelect || !current) return;
-
-            const members = getIndividualList();
-            memberSelect.innerHTML = members.length
-                ? members.map((member) => `
-                    <option value="${escapeHtml(member.id)}">
-                        ${escapeHtml(member.fullName || 'Unnamed')} - ${escapeHtml(member.designation || member.subject || '')}
-                    </option>
-                `).join('')
-                : '<option value="">No members found</option>';
-
-            const selected = members.find((member) => member.id === memberSelect.value) || members[0] || null;
-            if (selected) {
-                memberSelect.value = selected.id;
-                groupSelect.value = selected.groupKey || (document.getElementById('individualMemberType').value === 'teacher' ? 'teacher' : 'staff');
-                const groupName = permissionsState.groups[groupSelect.value]?.name || groupSelect.value;
-                current.innerHTML = `
-                    <span class="individual-pill">Current Group: ${escapeHtml(groupName)}</span>
-                    <span class="individual-pill">Designation: ${escapeHtml(selected.designation || selected.subject || '-')}</span>
-                `;
-            } else {
-                current.innerHTML = '<span class="individual-pill">No teacher or staff member selected</span>';
-            }
-        }
-
-        async function loadIndividualMembers() {
-            try {
-                const [teacherRes, staffRes] = await Promise.all([
-                    fetch(`${getApiBaseUrl()}/teachers`),
-                    fetch(`${getApiBaseUrl()}/staff`)
-                ]);
-
-                if (teacherRes.ok) {
-                    individualTeachers = await teacherRes.json();
-                    localStorage.setItem('eduCore_teachers', JSON.stringify(individualTeachers));
-                } else {
-                    individualTeachers = JSON.parse(localStorage.getItem('eduCore_teachers') || '[]');
+        function buildModuleKeys(config) {
+            const keys = new Set();
+            const groups = config.groups || {};
+            Object.values(groups).forEach((group) => {
+                if (group && group.permissions) {
+                    Object.keys(group.permissions).forEach((moduleKey) => keys.add(moduleKey));
                 }
-
-                if (staffRes.ok) {
-                    individualStaff = await staffRes.json();
-                    localStorage.setItem('eduCore_staff', JSON.stringify(individualStaff));
-                } else {
-                    individualStaff = JSON.parse(localStorage.getItem('eduCore_staff') || '[]');
-                }
-            } catch (error) {
-                individualTeachers = JSON.parse(localStorage.getItem('eduCore_teachers') || '[]');
-                individualStaff = JSON.parse(localStorage.getItem('eduCore_staff') || '[]');
-            }
-
-            renderIndividualGroupOptions();
-            renderIndividualMembers();
-        }
-
-        async function saveIndividualPermission() {
-            const type = document.getElementById('individualMemberType').value;
-            const memberId = document.getElementById('individualMemberSelect').value;
-            const groupKey = document.getElementById('individualGroupSelect').value;
-            const members = getIndividualList();
-            const member = members.find((item) => item.id === memberId);
-
-            if (!member) {
-                await showAppAlert('Please select a teacher or staff member first.', 'Selection Required');
-                return;
-            }
-
-            const updatedMember = { ...member, groupKey };
-            const nextMembers = members.map((item) => item.id === memberId ? updatedMember : item);
-            if (type === 'teacher') {
-                individualTeachers = nextMembers;
-            } else {
-                individualStaff = nextMembers;
-            }
-
-            localStorage.setItem(getIndividualStorageKey(), JSON.stringify(nextMembers));
-
-            const response = await fetch(`${getApiBaseUrl()}/${type === 'teacher' ? 'teachers' : 'staff'}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify([updatedMember])
             });
-            const result = await response.json();
-
-            if (!response.ok || result.success === false) {
-                throw new Error(result.message || result.error || 'Individual permission could not be saved.');
-            }
-
-            renderIndividualMembers();
-            await showAppAlert('Individual permission has been saved. The member should sign in again to use it.', 'Saved');
+            return [...keys].sort();
         }
 
         function renderRoleGroups() {
-            const container = document.getElementById('roleGroupContainer');
-            const groupKeys = Object.keys(permissionsState.groups);
-            container.innerHTML = ROLE_OPTIONS.map((role) => `
-                <div class="role-card ${role === activeRole ? 'active' : ''}" data-role-card="${escapeHtml(role)}" role="button" tabindex="0">
-                    <div class="role-card-top">
-                        <div>
-                            <div class="role-name">${escapeHtml(role)}</div>
-                            <div class="role-group-name">${escapeHtml(permissionsState.groups[permissionsState.roleGroups[role]]?.name || permissionsState.roleGroups[role] || 'No group')}</div>
-                        </div>
-                        <span class="login-badge ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'enabled' : 'disabled'}">
-                            ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'Login On' : 'Login Off'}
-                        </span>
-                    </div>
-                    <label class="login-switch" onclick="event.stopPropagation();">
-                        <span>Allow login</span>
-                        <input type="checkbox" data-login-role="${role.toLowerCase()}" ${permissionsState.loginAccess[role.toLowerCase()] !== false ? 'checked' : ''}>
-                    </label>
-                    <label onclick="event.stopPropagation();">
-                        <span class="field-label">Permission Group</span>
-                        <select data-role-group="${role}">
-                            ${groupKeys.map((groupKey) => `<option value="${escapeHtml(groupKey)}" ${permissionsState.roleGroups[role] === groupKey ? 'selected' : ''}>${escapeHtml(permissionsState.groups[groupKey].name)}</option>`).join('')}
-                        </select>
-                    </label>
-                </div>
-            `).join('');
+            const select = document.getElementById('roleGroupSelect');
+            if (!select) return;
+            select.innerHTML = '';
+            const config = getPermissionsConfig();
+            const groupKeys = Object.keys(config.groups || {});
+            groupKeys.forEach((groupKey) => {
+                const opt = document.createElement('option');
+                opt.value = groupKey;
+                opt.textContent = `${config.groups[groupKey].name || groupKey} (${groupKey})`;
+                select.appendChild(opt);
+            });
+            if (!permissionState.selectedGroupKey || !groupKeys.includes(permissionState.selectedGroupKey)) {
+                permissionState.selectedGroupKey = groupKeys[0] || null;
+            }
+            select.value = permissionState.selectedGroupKey;
+            renderSelectedGroup();
+        }
 
-            container.querySelectorAll('[data-role-card]').forEach((card) => {
-                const openRole = (event) => {
-                    activeRole = event.currentTarget.dataset.roleCard;
-                    activeGroupKey = permissionsState.roleGroups[activeRole];
-                    permissionSearch = '';
+        function renderHomePageOptions() {
+            const select = document.getElementById('roleHomePage');
+            if (!select) return;
+            select.innerHTML = '';
+            permissionState.moduleKeys.forEach((moduleKey) => {
+                const opt = document.createElement('option');
+                opt.value = `${moduleKey}.html`;
+                opt.textContent = toLabel(moduleKey);
+                select.appendChild(opt);
+            });
+            const currentGroup = getSelectedGroup();
+            if (currentGroup && currentGroup.homePage) {
+                const currentValue = String(currentGroup.homePage);
+                const alreadyExists = Array.from(select.options).some((opt) => opt.value === currentValue);
+                if (!alreadyExists) {
+                    const extraOpt = document.createElement('option');
+                    extraOpt.value = currentValue;
+                    extraOpt.textContent = currentValue;
+                    select.appendChild(extraOpt);
+                }
+                select.value = currentValue;
+            } else {
+                select.value = select.options[0]?.value || 'dashboard.html';
+            }
+        }
+
+        function renderLoginAccess() {
+            const list = document.getElementById('loginAccessList');
+            if (!list) return;
+            list.innerHTML = '';
+            const config = getPermissionsConfig();
+            const loginAccess = config.loginAccess || {};
+            Object.entries(loginAccess).forEach(([roleKey, allowed]) => {
+                const row = document.createElement('div');
+                row.className = 'login-access-row';
+                row.innerHTML = `
+                    <div><strong>${toLabel(roleKey)}</strong></div>
+                    <label class="switch">
+                        <input type="checkbox" value="${roleKey}" ${allowed !== false ? 'checked' : ''}>
+                        <span class="slider"></span>
+                    </label>
+                `;
+                const checkbox = row.querySelector('input[type="checkbox"]');
+                checkbox.addEventListener('change', () => {
+                    permissionState.config.loginAccess[roleKey] = checkbox.checked;
+                });
+                list.appendChild(row);
+            });
+        }
+
+        function renderPermissionsTable() {
+            const tbody = document.querySelector('#permissionsTable tbody');
+            if (!tbody) return;
+            const group = getSelectedGroup();
+            tbody.innerHTML = '';
+            if (!group) return;
+            permissionState.moduleKeys.forEach((moduleKey) => {
+                const tr = document.createElement('tr');
+                const label = document.createElement('td');
+                label.textContent = toLabel(moduleKey);
+                const accessCell = document.createElement('td');
+                accessCell.innerHTML = `
+                    <select class="form-control permission-select" data-module-key="${moduleKey}">
+                        <option value="none">No Access</option>
+                        <option value="view">View</option>
+                        <option value="edit">Edit</option>
+                        <option value="manage">Full</option>
+                    </select>
+                `;
+                const select = accessCell.querySelector('select');
+                select.value = group.permissions[moduleKey] || 'none';
+                select.addEventListener('change', () => {
+                    group.permissions[moduleKey] = select.value;
+                });
+                tr.appendChild(label);
+                tr.appendChild(accessCell);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderSelectedGroup() {
+            const group = getSelectedGroup();
+            const nameInput = document.getElementById('roleGroupName');
+            const keyInput = document.getElementById('roleGroupKey');
+            const homePageSelect = document.getElementById('roleHomePage');
+
+            if (!group || !nameInput || !keyInput || !homePageSelect) return;
+            nameInput.value = group.name || permissionState.selectedGroupKey || '';
+            keyInput.value = permissionState.selectedGroupKey || '';
+            renderHomePageOptions();
+            if (group.homePage) {
+                homePageSelect.value = group.homePage;
+            }
+            renderPermissionsTable();
+        }
+
+        function initializePermissionEditor(config) {
+            permissionState.config = config;
+            permissionState.moduleKeys = buildModuleKeys(config);
+            permissionState.selectedGroupKey = permissionState.selectedGroupKey || Object.keys(config.groups || {})[0];
+            renderRoleGroups();
+            renderLoginAccess();
+            attachPermissionEvents();
+        }
+
+        function attachPermissionEvents() {
+            const select = document.getElementById('roleGroupSelect');
+            const nameInput = document.getElementById('roleGroupName');
+            const homePageSelect = document.getElementById('roleHomePage');
+            const saveBtn = document.getElementById('savePermissionsBtn');
+            const addRoleBtn = document.getElementById('addRoleBtn');
+
+            if (select) {
+                select.addEventListener('change', () => {
+                    permissionState.selectedGroupKey = select.value;
+                    renderSelectedGroup();
+                });
+            }
+
+            if (nameInput) {
+                nameInput.addEventListener('input', () => {
+                    const selected = getSelectedGroup();
+                    if (selected) selected.name = nameInput.value.trim();
                     renderRoleGroups();
-                    renderGroups();
+                });
+            }
+
+            if (homePageSelect) {
+                homePageSelect.addEventListener('change', () => {
+                    const selected = getSelectedGroup();
+                    if (selected) selected.homePage = homePageSelect.value;
+                });
+            }
+
+            if (addRoleBtn) {
+                addRoleBtn.addEventListener('click', async () => {
+                    const roleName = prompt('Enter new role group name');
+                    if (!roleName) return;
+                    let groupKey = prompt('Enter a unique role key (used internally)');
+                    if (!groupKey) return;
+                    groupKey = groupKey.trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_');
+                    if (!groupKey) {
+                        alert('A valid role key is required.');
+                        return;
+                    }
+                    const config = getPermissionsConfig();
+                    if (config.groups[groupKey]) {
+                        alert('This role key already exists. Please choose another.');
+                        return;
+                    }
+                    const permissions = {};
+                    permissionState.moduleKeys.forEach((moduleKey) => {
+                        permissions[moduleKey] = 'none';
+                    });
+                    config.groups[groupKey] = {
+                        name: roleName.trim(),
+                        homePage: 'dashboard.html',
+                        permissions
+                    };
+                    permissionState.selectedGroupKey = groupKey;
+                    renderRoleGroups();
+                    renderLoginAccess();
+                });
+            }
+
+            if (saveBtn) {
+                saveBtn.addEventListener('click', async () => {
+                    const config = getPermissionsConfig();
+                    try {
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = 'Saving...';
+                        const response = await fetch(`${API_BASE_URL}/permissions`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(config)
+                        });
+                        const data = await response.json();
+                        if (!response.ok) {
+                            throw new Error(data?.message || 'Unable to save permissions.');
+                        }
+                        permissionState.config = data.permissions || config;
+                        sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionState.config));
+                        renderRoleGroups();
+                        renderLoginAccess();
+                        showAppAlert('Permissions saved successfully.', 'Saved');
+                    } catch (error) {
+                        showAppAlert(error.message || 'Failed to save permissions.', 'Error');
+                    } finally {
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save Permissions';
+                    }
+                });
+            }
+        }
+
+        async function loadPermissionConfigFromServer() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/permissions`);
+                if (!response.ok) throw new Error('Server returned an error while loading permissions.');
+                const config = await response.json();
+                permissionState.config = config;
+                sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(config));
+                return config;
+            } catch (error) {
+                const cached = sessionStorage.getItem('eduCore_permissions_config');
+                if (cached) {
+                    try {
+                        return JSON.parse(cached);
+                    } catch {
+                        sessionStorage.removeItem('eduCore_permissions_config');
+                    }
+                }
+                return {
+                    loginAccess: {},
+                    roleGroups: {},
+                    groups: {}
                 };
-                card.addEventListener('click', openRole);
-                card.addEventListener('keydown', (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openRole(event);
-                    }
-                });
-            });
-
-            container.querySelectorAll('select[data-role-group]').forEach((select) => {
-                select.addEventListener('change', (event) => {
-                    const role = event.target.dataset.roleGroup;
-                    permissionsState.roleGroups[role] = event.target.value;
-                    activeRole = role;
-                    activeGroupKey = event.target.value;
-                    setStatus('Unsaved role group changes');
-                    renderRoleGroups();
-                    renderGroups();
-                });
-            });
-
-            container.querySelectorAll('input[data-login-role]').forEach((input) => {
-                input.addEventListener('change', (event) => {
-                    permissionsState.loginAccess[event.target.dataset.loginRole] = event.target.checked;
-                    setStatus('Unsaved login access changes');
-                    renderRoleGroups();
-                });
-            });
-        }
-
-        function renderGroupTabs() {
-            const tabs = document.getElementById('groupTabs');
-            const groupKeys = Object.keys(permissionsState.groups);
-            if (!activeGroupKey || !permissionsState.groups[activeGroupKey]) {
-                activeGroupKey = permissionsState.roleGroups[activeRole] || groupKeys[0];
             }
-            tabs.innerHTML = groupKeys.map((groupKey) => `
-                <button type="button" class="group-tab ${groupKey === activeGroupKey ? 'active' : ''}" data-group-tab="${escapeHtml(groupKey)}">
-                    ${escapeHtml(permissionsState.groups[groupKey].name)}
-                </button>
-            `).join('');
-
-            tabs.querySelectorAll('button[data-group-tab]').forEach((button) => {
-                button.addEventListener('click', (event) => {
-                    activeGroupKey = event.currentTarget.dataset.groupTab;
-                    const matchingRole = ROLE_OPTIONS.find((role) => permissionsState.roleGroups[role] === activeGroupKey);
-                    if (matchingRole) activeRole = matchingRole;
-                    permissionSearch = '';
-                    renderRoleGroups();
-                    renderGroups();
-                });
-            });
-        }
-
-        function renderGroups() {
-            const groupList = document.getElementById('groupList');
-            renderGroupTabs();
-            const groupKey = activeGroupKey;
-            const group = permissionsState.groups[groupKey];
-            const summary = getAccessSummary(group);
-            const categories = getGroupedModules();
-            const assignedRoles = getRolesForGroup(groupKey);
-            document.getElementById('activeGroupHeading').textContent = `${group.name} Permissions`;
-            document.getElementById('activeGroupSubheading').textContent = assignedRoles.length
-                ? `Used by: ${assignedRoles.join(', ')}`
-                : 'No role currently uses this group.';
-            groupList.innerHTML = `
-                <div class="group-box">
-                    <div class="group-header">
-                        <div class="group-title">
-                            <h3>${escapeHtml(group.name)}</h3>
-                            <span class="group-key">Group key: ${escapeHtml(groupKey)}${assignedRoles.length ? ` | Roles: ${escapeHtml(assignedRoles.join(', '))}` : ''}</span>
-                        </div>
-                        <div class="group-summary">
-                            <span class="summary-pill">${summary.manage} Full</span>
-                            <span class="summary-pill">${summary.edit} Edit</span>
-                            <span class="summary-pill">${summary.view} View</span>
-                            <span class="summary-pill">${summary.none} No Access</span>
-                        </div>
-                    </div>
-                    <div class="group-controls">
-                        <div>
-                            <label class="field-label">Group Name</label>
-                            <input type="text" data-group-name="${escapeHtml(groupKey)}" value="${escapeHtml(group.name)}">
-                        </div>
-                        <div>
-                            <label class="field-label">After Login Open</label>
-                            <select data-group-home="${escapeHtml(groupKey)}">
-                                ${MODULE_DEFINITIONS.map((module) => `<option value="${escapeHtml(module.page)}" ${group.homePage === module.page ? 'selected' : ''}>${escapeHtml(module.label)}</option>`).join('')}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="bulk-permissions">
-                        <div class="bulk-header">
-                            <div>
-                                <div class="bulk-title">Quick Apply</div>
-                                <div class="bulk-note">Set every page in this group at once.</div>
-                            </div>
-                        </div>
-                        <div class="bulk-actions">
-                            ${ACCESS_OPTIONS.map((access) => `
-                                <button type="button"
-                                    class="bulk-action"
-                                    data-bulk-group="${escapeHtml(groupKey)}"
-                                    data-access="${escapeHtml(access.key)}">
-                                    ${escapeHtml(access.label)}
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                    <div class="permission-tools">
-                        <input class="permission-search" id="permissionSearchInput" type="search" value="${escapeHtml(permissionSearch)}" placeholder="Search pages or categories...">
-                        <button type="button" class="btn btn-outline" id="clearPermissionSearchBtn">Clear Search</button>
-                    </div>
-                    <div class="permission-categories">
-                        ${Object.keys(categories).length ? Object.entries(categories).map(([category, modules]) => `
-                            <section class="permission-category">
-                                <div class="category-header">
-                                    <div>
-                                        <h4>${escapeHtml(category)}</h4>
-                                        <span class="category-count">${modules.length} pages</span>
-                                    </div>
-                                    <div class="category-actions">
-                                        ${ACCESS_OPTIONS.map((access) => `
-                                            <button type="button"
-                                                class="category-action"
-                                                data-category-group="${escapeHtml(groupKey)}"
-                                                data-category="${escapeHtml(category)}"
-                                                data-access="${escapeHtml(access.key)}">
-                                                ${escapeHtml(access.label)}
-                                            </button>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                                <div class="module-list">
-                                    ${modules.map((module) => `
-                                        <div class="module-row">
-                                            <div>
-                                                <div class="module-name">${escapeHtml(module.label)}</div>
-                                                <div class="page-meta">${escapeHtml(module.page)}</div>
-                                            </div>
-                                            <div class="access-segment" role="group" aria-label="${escapeHtml(module.label)} access">
-                                                ${ACCESS_OPTIONS.map((access) => `
-                                                    <button type="button"
-                                                        class="access-option ${group.permissions[module.key] === access.key ? 'active' : ''}"
-                                                        data-group-permission="${escapeHtml(groupKey)}"
-                                                        data-module-key="${escapeHtml(module.key)}"
-                                                        data-access="${escapeHtml(access.key)}">
-                                                        ${escapeHtml(access.label)}
-                                                    </button>
-                                                `).join('')}
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </section>
-                        `).join('') : '<div class="permission-empty">No pages match your search.</div>'}
-                    </div>
-                </div>
-            `;
-
-            const searchInput = document.getElementById('permissionSearchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', (event) => {
-                    permissionSearch = event.target.value;
-                    renderGroups();
-                    const nextSearch = document.getElementById('permissionSearchInput');
-                    if (nextSearch) {
-                        nextSearch.focus();
-                        nextSearch.setSelectionRange(nextSearch.value.length, nextSearch.value.length);
-                    }
-                });
-            }
-
-            const clearSearchBtn = document.getElementById('clearPermissionSearchBtn');
-            if (clearSearchBtn) {
-                clearSearchBtn.addEventListener('click', () => {
-                    permissionSearch = '';
-                    renderGroups();
-                });
-            }
-
-            groupList.querySelectorAll('input[data-group-name]').forEach((input) => {
-                input.addEventListener('input', (event) => {
-                    permissionsState.groups[event.target.dataset.groupName].name = event.target.value.trim() || event.target.dataset.groupName;
-                    renderRoleGroups();
-                    renderGroupTabs();
-                });
-            });
-
-            groupList.querySelectorAll('select[data-group-home]').forEach((select) => {
-                select.addEventListener('change', (event) => {
-                    permissionsState.groups[event.target.dataset.groupHome].homePage = event.target.value;
-                    setStatus('Unsaved group permission changes');
-                });
-            });
-
-            groupList.querySelectorAll('button[data-bulk-group]').forEach((button) => {
-                button.addEventListener('click', (event) => {
-                    const { bulkGroup, access } = event.currentTarget.dataset;
-                    setGroupAccess(bulkGroup, access);
-                });
-            });
-
-            groupList.querySelectorAll('button[data-category-group]').forEach((button) => {
-                button.addEventListener('click', (event) => {
-                    const { categoryGroup, category, access } = event.currentTarget.dataset;
-                    const moduleKeys = categories[category].map((module) => module.key);
-                    setGroupAccess(categoryGroup, access, moduleKeys);
-                });
-            });
-
-            groupList.querySelectorAll('button[data-group-permission]').forEach((button) => {
-                button.addEventListener('click', (event) => {
-                    const { groupPermission, moduleKey, access } = event.currentTarget.dataset;
-                    permissionsState.groups[groupPermission].permissions[moduleKey] = access;
-                    renderGroups();
-                    setStatus('Unsaved group permission changes');
-                });
-            });
-        }
-
-        async function loadPermissionsConfig() {
-            setStatus('Loading permissions...');
-            const response = await fetch(getPermissionsApiUrl());
-            const data = await response.json();
-            permissionsState = normalizeConfig(data);
-            activeGroupKey = permissionsState.roleGroups[activeRole] || Object.keys(permissionsState.groups)[0];
-            sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionsState));
-            renderIndividualGroupOptions();
-            renderRoleGroups();
-            renderGroups();
-            setStatus('Permissions loaded');
-        }
-
-        async function savePermissionsConfig() {
-            setStatus('Saving permissions...');
-            const response = await fetch(getPermissionsApiUrl(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(permissionsState)
-            });
-            const result = await response.json();
-            if (!response.ok || result.success === false) {
-                throw new Error(result.message || 'Permissions save failed.');
-            }
-
-            permissionsState = normalizeConfig(result.permissions);
-            sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionsState));
-            renderIndividualGroupOptions();
-            renderIndividualMembers();
-            renderRoleGroups();
-            renderGroups();
-            setStatus('Permissions saved');
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
-            document.getElementById('savePermissionsBtn').addEventListener('click', async () => {
-                try {
-                    await savePermissionsConfig();
-                    showAppAlert('Permissions have been saved.', 'Saved');
-                } catch (error) {
-                    setStatus('Save failed');
-                    showAppAlert(error.message, 'Save Failed');
-                }
-            });
-
-            document.getElementById('individualMemberType').addEventListener('change', renderIndividualMembers);
-            document.getElementById('individualMemberSelect').addEventListener('change', renderIndividualMembers);
-            document.getElementById('individualGroupSelect').addEventListener('change', () => {
-                const current = document.getElementById('individualPermissionCurrent');
-                const groupKey = document.getElementById('individualGroupSelect').value;
-                const selected = getIndividualList().find((member) => member.id === document.getElementById('individualMemberSelect').value);
-                current.innerHTML = `
-                    <span class="individual-pill">Selected Group: ${escapeHtml(permissionsState.groups[groupKey]?.name || groupKey)}</span>
-                    <span class="individual-pill">Designation: ${escapeHtml(selected?.designation || selected?.subject || '-')}</span>
-                `;
-            });
-            document.getElementById('saveIndividualPermissionBtn').addEventListener('click', async () => {
-                try {
-                    await saveIndividualPermission();
-                } catch (error) {
-                    showAppAlert(error.message || 'Individual permission could not be saved.', 'Save Failed');
-                }
-            });
-
-            try {
-                await loadPermissionsConfig();
-                await loadIndividualMembers();
-            } catch (error) {
-                setStatus('Load failed');
-                showAppAlert(error.message || 'Permissions could not be loaded.', 'Load Failed');
-            }
-
-            if (window.lucide) window.lucide.createIcons();
+            const config = await loadPermissionConfigFromServer();
+            initializePermissionEditor(config);
         });
     </script>
 </body>
+
 </html>
