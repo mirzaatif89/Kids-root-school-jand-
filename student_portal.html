@@ -242,6 +242,38 @@
             color: var(--text-secondary);
         }
 
+        .special-notice-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .special-notice-card {
+            border: 1px solid #99f6e4;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 8px;
+            background: #f0fdfa;
+            padding: 1rem;
+        }
+
+        .special-notice-card h4 {
+            margin: 0 0 0.35rem;
+            color: var(--primary-dark);
+        }
+
+        .special-notice-card p {
+            margin: 0;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .special-notice-date {
+            margin-top: 0.65rem;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
         .section-stack {
             display: grid;
             gap: 1.5rem;
@@ -570,6 +602,14 @@
             </div>
         </div>
 
+        <section class="panel-card" id="specialNoticeSection" style="display:none; margin-bottom: 2rem;">
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <i data-lucide="megaphone" width="20"></i>
+                <h3>Special Notices</h3>
+            </div>
+            <div class="special-notice-list" id="specialNoticeList"></div>
+        </section>
+
         <div class="portal-grid">
             <div class="section-stack">
                 <section class="panel-card">
@@ -750,6 +790,7 @@
         const API_BASE_URL = `${BACKEND_URL}/api`;
         const STORAGE_KEY_STUDENTS = 'eduCore_students';
         const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
+        const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
@@ -780,6 +821,41 @@
             if (status === 'Paid') return 'status-paid';
             if (status === 'Late') return 'status-failed';
             return 'status-pending';
+        }
+
+        function renderSpecialNotices(notices = []) {
+            const section = document.getElementById('specialNoticeSection');
+            const list = document.getElementById('specialNoticeList');
+            const visibleNotices = notices.filter((notice) => notice.status === 'executed' && (notice.targetPortals || []).includes('student'));
+
+            if (!visibleNotices.length) {
+                section.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            section.style.display = '';
+            list.innerHTML = visibleNotices.map((notice) => `
+                <article class="special-notice-card">
+                    <h4>${escapeHtml(notice.title)}</h4>
+                    <p>${escapeHtml(notice.message)}</p>
+                    <div class="special-notice-date">${escapeHtml(notice.createdAtLabel || '')}</div>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadSpecialNoticesForPortal() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/special-notices?portal=student`);
+                if (!response.ok) throw new Error('Notices unavailable.');
+                const result = await response.json();
+                const notices = result.notices || [];
+                localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(notices));
+                renderSpecialNotices(notices);
+            } catch (error) {
+                renderSpecialNotices(JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]'));
+            }
         }
 
         function toNumber(value) {
@@ -1332,6 +1408,7 @@
                 }
             });
             loadStudentProfile();
+            loadSpecialNoticesForPortal();
             lucide.createIcons();
         };
     </script>

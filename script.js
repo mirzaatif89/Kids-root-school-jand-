@@ -11,6 +11,7 @@ const STORAGE_KEY_STAFF = 'eduCore_staff';
 const STORAGE_KEY_TEACHER_SALARIES = 'eduCore_teacher_salaries';
 const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher credentials
 const STORAGE_KEY_PROMOTION_HISTORY = 'eduCore_promotion_history';
+const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
 let teacherScheduleDraft = [];
 
 // === REAL-TIME SQL CONFIGURATION ===
@@ -240,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureBranchRegistrationNav();
     ensureAttendanceNav();
     ensureNotificationsNav();
+    ensureSpecialNoticesNav();
     applyBranchScopedStudentsView();
 
     // === INIT ICONS ===
@@ -1127,6 +1129,48 @@ function ensureNotificationsNav() {
         permissionsLink.insertAdjacentElement('beforebegin', notificationLink);
     } else {
         navLinks.appendChild(notificationLink);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureSpecialNoticesNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser) return;
+    if (navLinks.querySelector('[data-special-notices-link]')) return;
+
+    const permissions = (() => {
+        try {
+            return JSON.parse(sessionStorage.getItem('eduCore_permissions_config') || '{}');
+        } catch (error) {
+            return {};
+        }
+    })();
+    const canAccessSpecialNotices = loggedInUser.role === 'Admin' ||
+        loggedInUser.role === 'Principal' ||
+        (window.eduCoreAuth && window.eduCoreAuth.canAccessPage(loggedInUser, permissions, 'special_notices.html'));
+
+    if (!canAccessSpecialNotices) return;
+
+    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
+    const notificationsLink = navLinks.querySelector('a[href="notifications.html"]');
+    const revenueLink = navLinks.querySelector('a[href="revenue.html"]');
+    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
+    const noticeLink = document.createElement('a');
+    noticeLink.href = 'special_notices.html';
+    noticeLink.className = `nav-item${currentPage === 'special_notices.html' ? ' active' : ''}`;
+    noticeLink.dataset.specialNoticesLink = 'true';
+    noticeLink.innerHTML = '<i data-lucide="megaphone"></i><span>Special Notices</span>';
+
+    if (notificationsLink) {
+        notificationsLink.insertAdjacentElement('afterend', noticeLink);
+    } else if (revenueLink) {
+        revenueLink.insertAdjacentElement('afterend', noticeLink);
+    } else if (permissionsLink) {
+        permissionsLink.insertAdjacentElement('beforebegin', noticeLink);
+    } else {
+        navLinks.appendChild(noticeLink);
     }
 
     if (window.lucide) window.lucide.createIcons();

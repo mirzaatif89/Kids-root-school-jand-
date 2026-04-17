@@ -15,6 +15,7 @@
         'student_attendance_report.html': { moduleKey: 'student_attendance_report', defaultHome: 'dashboard.html' },
         'teacher_attendance_report.html': { moduleKey: 'teacher_attendance_report', defaultHome: 'dashboard.html' },
         'notifications.html': { moduleKey: 'notifications', defaultHome: 'dashboard.html' },
+        'special_notices.html': { moduleKey: 'special_notices', defaultHome: 'dashboard.html' },
         'exams.html': { moduleKey: 'exams', defaultHome: 'dashboard.html' },
         'revenue.html': { moduleKey: 'revenue', defaultHome: 'dashboard.html' },
         'settings.html': { moduleKey: 'settings', defaultHome: 'dashboard.html' },
@@ -77,6 +78,9 @@
             });
             if (groupKey === 'principal' && !nextGroup.permissions?.notifications) {
                 permissions.notifications = 'view';
+            }
+            if (groupKey === 'principal' && !nextGroup.permissions?.special_notices) {
+                permissions.special_notices = 'manage';
             }
             acc[groupKey] = {
                 ...nextGroup,

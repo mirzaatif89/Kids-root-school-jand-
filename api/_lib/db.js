@@ -143,6 +143,18 @@ function defineTeacherAttendanceModel(db) {
     });
 }
 
+function defineSpecialNoticeModel(db) {
+    return db.define('SpecialNotice', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        title: { type: DataTypes.STRING, allowNull: false },
+        message: { type: DataTypes.TEXT('long'), allowNull: false },
+        targetPortals: { type: DataTypes.TEXT('long'), allowNull: false },
+        status: { type: DataTypes.STRING, defaultValue: 'draft' },
+        executedAt: { type: DataTypes.DATE, allowNull: true },
+        createdAtLabel: DataTypes.STRING
+    });
+}
+
 function defineAppSettingModel(db) {
     return db.define('AppSetting', {
         settingKey: { type: DataTypes.STRING, primaryKey: true },
@@ -292,6 +304,7 @@ async function getDb() {
             defineStudentAttendanceModel(db);
             defineTeacherAttendanceModel(db);
             defineAppSettingModel(db);
+            defineSpecialNoticeModel(db);
 
             await db.sync();
             await ensureLegacySchema(db);

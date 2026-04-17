@@ -54,6 +54,7 @@ const MODULE_KEYS = [
     'student_attendance_report',
     'teacher_attendance_report',
     'notifications',
+    'special_notices',
     'exams',
     'revenue',
     'settings',
@@ -109,6 +110,7 @@ const defaultPermissions = {
                 staff: 'view',
                 classes: 'view',
                 notifications: 'view',
+                special_notices: 'manage',
                 exams: 'view',
                 revenue: 'view',
                 aboutme: 'view'
@@ -614,6 +616,115 @@ app.get('/api/students', async (req, res) => {
         res.json(students);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+function normalizeNoticeTargets(targetPortals) {
+    const allowedTargets = new Set(['student', 'teacher', 'staff']);
+    const targets = Array.isArray(targetPortals) ? targetPortals : [];
+    return [...new Set(targets.map((target) => String(target || '').toLowerCase()).filter((target) => allowedTargets.has(target)))];
+}
+
+function serializeNoticeTargets(targets) {
+    return JSON.stringify(normalizeNoticeTargets(targets));
+}
+
+function formatSpecialNotice(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : record;
+    let targetPortals = [];
+    if (Array.isArray(raw.targetPortals)) {
+        targetPortals = raw.targetPortals;
+    } else {
+        try {
+            targetPortals = JSON.parse(raw.targetPortals || '[]');
+        } catch (error) {
+            targetPortals = [];
+        }
+    }
+    return {
+        ...raw,
+        targetPortals: normalizeNoticeTargets(targetPortals)
+    };
+}
+
+app.get('/api/special-notices', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const portal = String(req.query.portal || '').toLowerCase();
+        const where = portal ? { status: 'executed' } : {};
+        const records = await sequelize.models.SpecialNotice.findAll({
+            where,
+            order: [['updatedAt', 'DESC']]
+        });
+        const notices = records.map(formatSpecialNotice)
+            .filter((notice) => !portal || notice.targetPortals.includes(portal));
+        res.json({ success: true, notices });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/special-notices', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const payload = req.body || {};
+        const title = String(payload.title || '').trim();
+        const message = String(payload.message || '').trim();
+        const targetPortals = normalizeNoticeTargets(payload.targetPortals);
+        const status = payload.status === 'executed' ? 'executed' : 'draft';
+
+        if (!title || !message) {
+            return res.status(400).json({ success: false, message: 'Notice title and message are required.' });
+        }
+
+        if (status === 'executed' && !targetPortals.length) {
+            return res.status(400).json({ success: false, message: 'Select at least one portal before executing.' });
+        }
+
+        const id = payload.id || `NOTICE-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const notice = {
+            id,
+            title,
+            message,
+            targetPortals: serializeNoticeTargets(targetPortals),
+            status,
+            executedAt: status === 'executed' ? (payload.executedAt || new Date()) : null,
+            createdAtLabel: payload.createdAtLabel || new Date().toLocaleString('en-GB')
+        };
+
+        await sequelize.models.SpecialNotice.upsert(notice);
+
+        const records = await sequelize.models.SpecialNotice.findAll({
+            order: [['updatedAt', 'DESC']]
+        });
+        const notices = records.map(formatSpecialNotice);
+        io.emit('special_notices_update', notices);
+        res.json({ success: true, notice: formatSpecialNotice(notice), notices });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/special-notices/:id', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const deletedCount = await sequelize.models.SpecialNotice.destroy({ where: { id: req.params.id } });
+        const records = await sequelize.models.SpecialNotice.findAll({
+            order: [['updatedAt', 'DESC']]
+        });
+        const notices = records.map(formatSpecialNotice);
+        io.emit('special_notices_update', notices);
+
+        res.json({
+            success: true,
+            deleted: deletedCount > 0,
+            notices
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
     }
 });
 
@@ -1411,6 +1522,18 @@ function defineTeacherAttendanceModel(db) {
     });
 }
 
+function defineSpecialNoticeModel(db) {
+    return db.define('SpecialNotice', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        title: { type: DataTypes.STRING, allowNull: false },
+        message: { type: DataTypes.TEXT('long'), allowNull: false },
+        targetPortals: { type: DataTypes.TEXT('long'), allowNull: false },
+        status: { type: DataTypes.STRING, defaultValue: 'draft' },
+        executedAt: { type: DataTypes.DATE, allowNull: true },
+        createdAtLabel: DataTypes.STRING
+    });
+}
+
 function normalizeAttendanceStatus(status) {
     if (status === 'P') return 'Present';
     if (status === 'A') return 'Absent';
@@ -1763,6 +1886,7 @@ async function startServer() {
         defineFeePaymentModel(sequelize);
         defineStudentAttendanceModel(sequelize);
         defineTeacherAttendanceModel(sequelize);
+        defineSpecialNoticeModel(sequelize);
 
         // Avoid Sequelize's repeated ALTER-based index churn on MySQL.
         // Missing legacy columns are handled separately in ensureLegacySchema().

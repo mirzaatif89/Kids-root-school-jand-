@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Notices - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .notice-layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.85fr) minmax(420px, 1.15fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .notice-form-grid {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .notice-field label,
+        .target-picker legend {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .notice-field input,
+        .notice-field textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem 0.95rem;
+            font: inherit;
+            color: var(--text-primary);
+            background: #fff;
+        }
+
+        .notice-field textarea {
+            min-height: 190px;
+            resize: vertical;
+        }
+
+        .target-picker {
+            border: 0;
+            padding: 0;
+            margin: 0;
+        }
+
+        .target-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .target-option {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem;
+            background: #f8fafc;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .notice-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .notice-preview {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            padding: 2rem;
+            min-height: 360px;
+        }
+
+        .notice-preview-header {
+            text-align: center;
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .notice-preview-header h2 {
+            margin: 0;
+            color: #0f766e;
+            letter-spacing: 0.02em;
+        }
+
+        .notice-preview-title {
+            text-align: center;
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            color: #111827;
+        }
+
+        .notice-preview-message {
+            white-space: pre-wrap;
+            color: #1f2937;
+            line-height: 1.75;
+            font-size: 1rem;
+        }
+
+        .notice-preview-footer {
+            margin-top: 2.5rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 2rem;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .notice-list {
+            display: grid;
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .notice-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: 1rem;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .notice-card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .notice-pill-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .notice-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.25rem 0.6rem;
+            background: #e0f2fe;
+            color: #075985;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .notice-pill.executed {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .notice-pill.draft {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        @media (max-width: 980px) {
+            .notice-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap"></i> Apexiums School System
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
+                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
+                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
+                <a href="notifications.html" class="nav-item" data-notifications-link="true"><i data-lucide="bell-ring"></i><span>Notifications</span></a>
+                <a href="special_notices.html" class="nav-item active" data-special-notices-link="true"><i data-lucide="megaphone"></i><span>Special Notices</span></a>
+                <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
+                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Print & Execute Special Notices</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Create school notices, print them, and publish to selected portals.</p>
+                </div>
+            </header>
+
+            <section class="notice-layout">
+                <div class="table-container">
+                    <form id="specialNoticeForm" class="notice-form-grid">
+                        <input type="hidden" id="noticeId">
+                        <div class="notice-field">
+                            <label for="noticeTitle">Notice Title</label>
+                            <input type="text" id="noticeTitle" placeholder="Example: School Holiday Notice" required>
+                        </div>
+
+                        <div class="notice-field">
+                            <label for="noticeMessage">Notice Message</label>
+                            <textarea id="noticeMessage" placeholder="Write the official school notice here..." required></textarea>
+                        </div>
+
+                        <fieldset class="target-picker">
+                            <legend>Show On Portal</legend>
+                            <div class="target-options">
+                                <label class="target-option"><input type="checkbox" name="targetPortal" value="student"> Student</label>
+                                <label class="target-option"><input type="checkbox" name="targetPortal" value="teacher"> Teacher</label>
+                                <label class="target-option"><input type="checkbox" name="targetPortal" value="staff"> Staff</label>
+                            </div>
+                        </fieldset>
+
+                        <div class="notice-actions">
+                            <button type="button" class="btn btn-outline" onclick="printCurrentNotice()"><i data-lucide="printer"></i> Print</button>
+                            <button type="button" class="btn btn-primary" onclick="executeCurrentNotice()"><i data-lucide="send"></i> Execute Notice</button>
+                            <button type="button" class="btn btn-outline" onclick="resetNoticeForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <div class="notice-preview" id="noticePreview">
+                        <div class="notice-preview-header">
+                            <h2>Apexiums School System</h2>
+                            <p>Official Special Notice</p>
+                        </div>
+                        <div class="notice-preview-title" id="previewTitle">Notice Title</div>
+                        <div class="notice-preview-message" id="previewMessage">Write a notice to preview the printable format.</div>
+                        <div class="notice-preview-footer">
+                            <span id="previewDate">Date: -</span>
+                            <span>Authorized Signature: __________</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="table-container" style="margin-top: 1.25rem;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                    <div>
+                        <h3 style="margin:0;">Notice History</h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.25rem;">Executed and saved special notices.</p>
+                    </div>
+                    <button type="button" class="btn btn-outline" onclick="loadSpecialNotices()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                </div>
+                <div class="notice-list" id="noticeHistory"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let specialNotices = [];
+
+        function escapeHtml(value) {
+            return String(value || '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function getSelectedNoticeTargets() {
+            return Array.from(document.querySelectorAll('input[name="targetPortal"]:checked')).map((input) => input.value);
+        }
+
+        function getNoticeDraft() {
+            return {
+                id: document.getElementById('noticeId').value || `NOTICE-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                title: document.getElementById('noticeTitle').value.trim(),
+                message: document.getElementById('noticeMessage').value.trim(),
+                targetPortals: getSelectedNoticeTargets(),
+                createdAtLabel: new Date().toLocaleString('en-GB')
+            };
+        }
+
+        function updateNoticePreview() {
+            const title = document.getElementById('noticeTitle').value.trim() || 'Notice Title';
+            const message = document.getElementById('noticeMessage').value.trim() || 'Write a notice to preview the printable format.';
+            document.getElementById('previewTitle').textContent = title;
+            document.getElementById('previewMessage').textContent = message;
+            document.getElementById('previewDate').textContent = `Date: ${new Date().toLocaleDateString('en-GB')}`;
+        }
+
+        function validateNotice(draft, requireTargets = false) {
+            if (!draft.title || !draft.message) {
+                alert('Please add notice title and message.');
+                return false;
+            }
+            if (requireTargets && draft.targetPortals.length === 0) {
+                alert('Please select Student, Teacher, or Staff portal before executing.');
+                return false;
+            }
+            return true;
+        }
+
+        function printCurrentNotice() {
+            const draft = getNoticeDraft();
+            if (!validateNotice(draft, false)) return;
+
+            const printWindow = window.open('', '_blank', 'width=900,height=700');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escapeHtml(draft.title)}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #111827; padding: 36px; }
+                        .sheet { border: 1px solid #64748b; padding: 32px; min-height: 82vh; }
+                        .head { text-align: center; border-bottom: 2px solid #0f766e; padding-bottom: 16px; margin-bottom: 28px; }
+                        h1 { color: #0f766e; margin: 0 0 6px; font-size: 24px; }
+                        h2 { text-align: center; margin: 0 0 24px; font-size: 22px; }
+                        .message { white-space: pre-wrap; line-height: 1.8; font-size: 16px; }
+                        .foot { display: flex; justify-content: space-between; margin-top: 56px; color: #475569; }
+                    </style>
+                </head>
+                <body>
+                    <div class="sheet">
+                        <div class="head"><h1>Apexiums School System</h1><div>Official Special Notice</div></div>
+                        <h2>${escapeHtml(draft.title)}</h2>
+                        <div class="message">${escapeHtml(draft.message)}</div>
+                        <div class="foot"><span>Date: ${new Date().toLocaleDateString('en-GB')}</span><span>Authorized Signature: __________</span></div>
+                    </div>
+                    <script>window.onload = () => { window.print(); window.close(); };<\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        async function executeCurrentNotice() {
+            const draft = getNoticeDraft();
+            if (!validateNotice(draft, true)) return;
+
+            const notice = {
+                ...draft,
+                status: 'executed',
+                executedAt: new Date().toISOString()
+            };
+
+            const localNotices = JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]');
+            const nextLocal = [notice, ...localNotices.filter((item) => item.id !== notice.id)];
+            localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(nextLocal));
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/special-notices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(notice)
+                });
+                const result = await parseJsonResponse(response, 'Special notice could not be executed.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Special notice could not be executed.');
+                specialNotices = result.notices || nextLocal;
+                localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(specialNotices));
+            } catch (error) {
+                console.warn(error.message);
+                specialNotices = nextLocal;
+            }
+
+            pushNotification('Special Notice Executed', `${notice.title} was published to selected portals.`, 'megaphone');
+            renderNoticeHistory();
+            resetNoticeForm();
+            alert('Notice executed and published to selected portals.');
+        }
+
+        async function loadSpecialNotices() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/special-notices`);
+                if (!response.ok) throw new Error('Server notices unavailable.');
+                const result = await response.json();
+                specialNotices = result.notices || [];
+                localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(specialNotices));
+            } catch (error) {
+                specialNotices = JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]');
+            }
+            renderNoticeHistory();
+        }
+
+        async function deleteSpecialNotice(id) {
+            if (!confirm('Delete this special notice?')) return;
+            specialNotices = specialNotices.filter((notice) => notice.id !== id);
+            localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(specialNotices));
+            renderNoticeHistory();
+            try {
+                await fetch(`${API_BASE_URL}/special-notices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            } catch (error) {
+                console.warn(error.message);
+            }
+        }
+
+        function editSpecialNotice(id) {
+            const notice = specialNotices.find((item) => item.id === id);
+            if (!notice) return;
+            document.getElementById('noticeId').value = notice.id;
+            document.getElementById('noticeTitle').value = notice.title || '';
+            document.getElementById('noticeMessage').value = notice.message || '';
+            document.querySelectorAll('input[name="targetPortal"]').forEach((input) => {
+                input.checked = (notice.targetPortals || []).includes(input.value);
+            });
+            updateNoticePreview();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderNoticeHistory() {
+            const container = document.getElementById('noticeHistory');
+            if (!specialNotices.length) {
+                container.innerHTML = '<div class="empty-state">No special notices found.</div>';
+                return;
+            }
+
+            container.innerHTML = specialNotices.map((notice) => {
+                const targets = (notice.targetPortals || []).map((target) => `<span class="notice-pill">${escapeHtml(target)}</span>`).join('');
+                return `
+                    <article class="notice-card">
+                        <div class="notice-card-top">
+                            <div>
+                                <h4 style="margin:0;">${escapeHtml(notice.title)}</h4>
+                                <p style="margin:0.25rem 0 0;color:var(--text-secondary);">${escapeHtml(notice.createdAtLabel || '')}</p>
+                            </div>
+                            <span class="notice-pill ${notice.status === 'executed' ? 'executed' : 'draft'}">${escapeHtml(notice.status || 'draft')}</span>
+                        </div>
+                        <p style="margin:0;color:var(--text-secondary);">${escapeHtml(notice.message || '').slice(0, 180)}${String(notice.message || '').length > 180 ? '...' : ''}</p>
+                        <div class="notice-pill-row">${targets || '<span class="notice-pill draft">No portal</span>'}</div>
+                        <div class="notice-actions">
+                            <button type="button" class="btn btn-outline" onclick="editSpecialNotice('${notice.id}')"><i data-lucide="pencil"></i> Edit</button>
+                            <button type="button" class="btn btn-outline" onclick="deleteSpecialNotice('${notice.id}')"><i data-lucide="trash-2"></i> Delete</button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function resetNoticeForm() {
+            document.getElementById('specialNoticeForm').reset();
+            document.getElementById('noticeId').value = '';
+            updateNoticePreview();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('noticeTitle').addEventListener('input', updateNoticePreview);
+            document.getElementById('noticeMessage').addEventListener('input', updateNoticePreview);
+            updateNoticePreview();
+            loadSpecialNotices();
+        });
+    </script>
+</body>
+
+</html>

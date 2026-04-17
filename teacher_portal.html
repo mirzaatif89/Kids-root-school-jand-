@@ -127,6 +127,38 @@
             text-align: center;
         }
 
+        .special-notice-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .special-notice-card {
+            border: 1px solid #f9a8d4;
+            border-left: 4px solid #be185d;
+            border-radius: 8px;
+            background: #fdf2f8;
+            padding: 1rem;
+        }
+
+        .special-notice-card h4 {
+            margin: 0 0 0.35rem;
+            color: #9d174d;
+        }
+
+        .special-notice-card p {
+            margin: 0;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .special-notice-date {
+            margin-top: 0.65rem;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
         @media (max-width: 720px) {
             .user-card {
                 flex-direction: column;
@@ -176,6 +208,14 @@
             </div>
         </div>
 
+        <div class="schedule-card" id="specialNoticeSection" style="display:none;">
+            <div style="display:flex;align-items:center;gap:0.6rem;">
+                <i data-lucide="megaphone" width="20"></i>
+                <h3>Special Notices</h3>
+            </div>
+            <div class="special-notice-list" id="specialNoticeList"></div>
+        </div>
+
         <div class="user-card" style="margin-top: 2rem; flex-direction: column; align-items: flex-start; gap: 1rem;">
             <h3>Professional Profile</h3>
             <div style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -220,6 +260,7 @@
         const BACKEND_URL = isLocalhost ? `${window.location.protocol}//${window.location.hostname}:3000` : (window.ENV_BACKEND_URL || window.location.origin);
         const API_BASE_URL = `${BACKEND_URL}/api`;
         const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
+        const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -271,6 +312,51 @@
             const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
             if (dayDiff !== 0) return dayDiff;
             return String(a.startTime || '').localeCompare(String(b.startTime || ''));
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function renderSpecialNotices(notices = []) {
+            const section = document.getElementById('specialNoticeSection');
+            const list = document.getElementById('specialNoticeList');
+            const visibleNotices = notices.filter((notice) => notice.status === 'executed' && (notice.targetPortals || []).includes('teacher'));
+
+            if (!visibleNotices.length) {
+                section.style.display = 'none';
+                list.innerHTML = '';
+                return;
+            }
+
+            section.style.display = '';
+            list.innerHTML = visibleNotices.map((notice) => `
+                <article class="special-notice-card">
+                    <h4>${escapeHtml(notice.title)}</h4>
+                    <p>${escapeHtml(notice.message)}</p>
+                    <div class="special-notice-date">${escapeHtml(notice.createdAtLabel || '')}</div>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadSpecialNoticesForPortal() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/special-notices?portal=teacher`);
+                if (!response.ok) throw new Error('Notices unavailable.');
+                const result = await response.json();
+                const notices = result.notices || [];
+                localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(notices));
+                renderSpecialNotices(notices);
+            } catch (error) {
+                renderSpecialNotices(JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]'));
+            }
         }
 
         function renderTeacherSchedule(teacher) {
@@ -329,6 +415,7 @@
         window.onload = () => {
             syncWithSQL(); // Pull latest Faculty data from SQL
             loadData();
+            loadSpecialNoticesForPortal();
             lucide.createIcons();
         };
     </script>
