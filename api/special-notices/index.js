@@ -74,7 +74,9 @@ module.exports = createHandler({
         });
         let emailResult = null;
         try {
-            emailResult = await sendSpecialNoticeStudentEmails(db, formatSpecialNotice(notice));
+            emailResult = await sendSpecialNoticeStudentEmails(db, formatSpecialNotice(notice), {
+                force: body?.forceEmail === true
+            });
         } catch (error) {
             emailResult = { success: false, message: error.message || 'Student notice email could not be sent.' };
         }

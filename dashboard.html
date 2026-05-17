@@ -105,6 +105,30 @@
             padding: 0.45rem 0.7rem;
             font-size: 0.78rem;
         }
+
+        .dashboard-email-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            border: none;
+            border-radius: 0.75rem;
+            background: var(--primary-color);
+            color: #fff;
+            padding: 0.78rem 1rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            white-space: nowrap;
+        }
+
+        .dashboard-email-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .dashboard-email-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 
@@ -189,6 +213,10 @@
             <header class="header">
                 <h1>Overview</h1>
                 <div class="header-actions">
+                    <button type="button" class="dashboard-email-btn" id="dashboardExecuteEmailsBtn" onclick="executeAllDashboardEmails()">
+                        <i data-lucide="mail-check" size="18"></i>
+                        Execute All Emails
+                    </button>
                     <div class="search-bar" style="width: 100%; max-width: 300px;">
                         <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
                         <input type="text" id="dashSearch" placeholder="Search students...">
@@ -306,6 +334,50 @@
     <script src="auth.js"></script>
     <script src="script.js?v=20260517-db-save-list-all"></script>
     <script>
+        async function executeAllDashboardEmails() {
+            const button = document.getElementById('dashboardExecuteEmailsBtn');
+            const previousHtml = button ? button.innerHTML : '';
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i data-lucide="loader-circle" size="18"></i> Executing...';
+                if (window.lucide) lucide.createIcons();
+            }
+
+            try {
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                const response = await fetch(`${API_BASE_URL}/email/execute-all`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ force: true })
+                });
+                const result = await parseJsonResponse(response, 'All emails could not be executed.');
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'All emails could not be executed.');
+                }
+
+                const details = result.result || {};
+                const message = [
+                    `Total sent: ${result.totalSent || 0}`,
+                    `Failed: ${result.totalFailed || 0}`,
+                    `Pending fee: ${details.pendingFees?.sent || 0}`,
+                    `Birthday: ${details.birthdays?.sent || 0}`,
+                    `Special notices: ${details.specialNotices?.sent || 0}`
+                ].join('\n');
+                alert(message);
+            } catch (error) {
+                alert(`Email execution failed: ${error.message || error}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = previousHtml;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        }
+
         lucide.createIcons();
     </script>
 </body>

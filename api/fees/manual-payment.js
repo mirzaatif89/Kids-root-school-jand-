@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { createHandler, sendJson } = require('../_lib/http');
 const { getDb } = require('../_lib/db');
 const { sendFeePaymentConfirmationEmail } = require('../_lib/fee-reminders');
@@ -16,6 +17,7 @@ module.exports = createHandler({
             amount,
             fullAmount,
             fineAmount,
+            paymentMode,
             challanNumber
         } = body || {};
 
@@ -31,10 +33,10 @@ module.exports = createHandler({
             return;
         }
 
-        const paymentAmount = Number(amount || 0);
-        const safeFullAmount = Number(fullAmount || amount || student.monthlyFee || 0);
-        const remainingDue = Math.max(safeFullAmount - paymentAmount, 0);
-        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
+        const requestedPaymentAmount = Math.max(Number(amount || 0), 0);
+        const safeFineAmount = Math.max(Number(fineAmount || 0), 0);
+        const fineOnly = String(paymentMode || '').toLowerCase() === 'fine' || (requestedPaymentAmount <= 0 && safeFineAmount > 0);
+        const safeFullAmount = Number(fullAmount || student.monthlyFee || 0);
 
         const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const normalizeMonthList = (value) => Array.isArray(value)
@@ -54,13 +56,29 @@ module.exports = createHandler({
 
         const feeMonthRecorded = selectedMonths.length ? selectedMonths.join(', ') : 'Dues';
         const safeChallanNumber = String(challanNumber || '').trim() || `MAN-${Date.now()}`;
+        const existingMonthPayments = fineOnly ? [] : await FeePayment.findAll({
+            where: {
+                studentId,
+                status: { [Op.in]: ['Paid', 'Partial'] },
+                paymentSource: { [Op.notIn]: ['Fine', 'Fine Correction'] }
+            }
+        });
+        const existingPaidForMonth = existingMonthPayments.reduce((sum, payment) => {
+            const paymentMonths = extractMonthList(payment.feeMonth);
+            const overlaps = selectedMonths.some((month) => paymentMonths.includes(month));
+            return overlaps ? sum + Number(payment.amount || 0) : sum;
+        }, 0);
+        const remainingBeforePayment = Math.max(safeFullAmount - existingPaidForMonth, 0);
+        const paymentAmount = fineOnly ? 0 : Math.min(requestedPaymentAmount, remainingBeforePayment);
+        const remainingDue = Math.max(safeFullAmount - existingPaidForMonth - paymentAmount, 0);
+        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
 
-        const existingPayment = await FeePayment.findByPk(safeChallanNumber);
+        const existingPayment = fineOnly ? null : await FeePayment.findByPk(safeChallanNumber);
         const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
         const paidAt = existingPayment?.paidAt || new Date();
         const paymentDateLabel = new Date(paidAt).toLocaleDateString('en-GB');
 
-        const paymentRow = {
+        const paymentRow = !fineOnly && paymentAmount > 0 ? {
             challanNumber: safeChallanNumber,
             studentId,
             studentName: studentName || student.fullName || '',
@@ -73,11 +91,33 @@ module.exports = createHandler({
             paidAt,
             paymentDateLabel,
             paymentSource: 'Manual'
-        };
+        } : null;
 
-        await FeePayment.upsert(paymentRow);
+        if (paymentRow) {
+            await FeePayment.upsert(paymentRow);
+        }
 
-        if (!alreadyRecorded && FeeDueBalance) {
+        let fineRow = null;
+        if (safeFineAmount > 0) {
+            const fineChallanNumber = `${safeChallanNumber}-FINE`;
+            fineRow = {
+                challanNumber: fineChallanNumber,
+                studentId,
+                studentName: studentName || student.fullName || '',
+                rollNo: rollNo || student.rollNo || '',
+                classGrade: classGrade || student.classGrade || '',
+                session: session || '',
+                feeMonth: `Fine - ${feeMonthRecorded}`,
+                amount: safeFineAmount,
+                status: 'Paid',
+                paidAt,
+                paymentDateLabel,
+                paymentSource: 'Fine'
+            };
+            await FeePayment.upsert(fineRow);
+        }
+
+        if (!alreadyRecorded && FeeDueBalance && paymentAmount > 0) {
             const existingDue = await FeeDueBalance.findByPk(studentId);
             const currentBalance = existingDue ? Number(existingDue.balance || 0) : 0;
             const safeCurrent = Number.isFinite(currentBalance) ? currentBalance : 0;
@@ -98,7 +138,7 @@ module.exports = createHandler({
             return lower === currentLower || lower === currentShortLower;
         });
 
-        if (currentMonthPaid && resolvedStatus === 'Paid') {
+        if (paymentRow && currentMonthPaid && resolvedStatus === 'Paid') {
             await Student.update({
                 feesStatus: 'Paid',
                 paymentDate: paymentDateLabel
@@ -109,7 +149,7 @@ module.exports = createHandler({
 
         let emailResult = null;
         let fineEmailResult = null;
-        if (!alreadyRecorded && Number(fineAmount || 0) > 0) {
+        if (safeFineAmount > 0) {
             try {
                 fineEmailResult = await sendFineAppliedEmail(db, {
                     studentId,
@@ -117,16 +157,16 @@ module.exports = createHandler({
                     rollNo: rollNo || student.rollNo || '',
                     classGrade: classGrade || student.classGrade || '',
                     feeMonth: feeMonthRecorded,
-                    fullAmount: safeFullAmount,
-                    fineAmount: Number(fineAmount || 0),
-                    challanNumber: safeChallanNumber
+                    fullAmount: safeFullAmount + safeFineAmount,
+                    fineAmount: safeFineAmount,
+                    challanNumber: fineRow?.challanNumber || safeChallanNumber
                 });
             } catch (error) {
                 fineEmailResult = { success: false, message: error.message || 'Fine email could not be sent.' };
             }
         }
 
-        if (!alreadyRecorded && resolvedStatus === 'Paid') {
+        if (paymentRow && !alreadyRecorded && resolvedStatus === 'Paid') {
             try {
                 emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
             } catch (error) {
@@ -134,6 +174,6 @@ module.exports = createHandler({
             }
         }
 
-        sendJson(res, 200, { success: true, payment: paymentRow, alreadyRecorded, emailResult, fineEmailResult });
+        sendJson(res, 200, { success: true, payment: paymentRow || fineRow, finePayment: fineRow, alreadyRecorded, emailResult, fineEmailResult });
     }
 }, { getDb });

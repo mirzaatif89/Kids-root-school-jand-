@@ -21,6 +21,7 @@ const {
     sendFineAppliedEmail,
     startStudentEmailNotificationScheduler
 } = require('./api/_lib/student-emails');
+const { startWhatsAppBirthdayScheduler } = require('./api/_lib/cronjob');
 
 require('dotenv').config();
 
@@ -1421,7 +1422,9 @@ app.post('/api/special-notices', async (req, res) => {
         const notices = records.map(formatSpecialNotice);
         let emailResult = null;
         try {
-            emailResult = await sendSpecialNoticeStudentEmails(sequelize, formatSpecialNotice(notice));
+            emailResult = await sendSpecialNoticeStudentEmails(sequelize, formatSpecialNotice(notice), {
+                force: payload.forceEmail === true
+            });
         } catch (error) {
             emailResult = { success: false, message: error.message || 'Student notice email could not be sent.' };
         }
@@ -1965,6 +1968,7 @@ app.post('/api/fees/challan-token', async (req, res) => {
             amount,
             fullAmount,
             fineAmount,
+            paymentMode,
             challanNumber
         } = req.body || {};
 
@@ -2095,6 +2099,7 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             amount,
             fullAmount,
             fineAmount,
+            paymentMode,
             challanNumber
         } = req.body || {};
 
@@ -2111,10 +2116,10 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Student not found.' });
         }
 
-        const paymentAmount = Number(amount || 0);
-        const safeFullAmount = Number(fullAmount || amount || student.monthlyFee || 0);
-        const remainingDue = Math.max(safeFullAmount - paymentAmount, 0);
-        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
+        const requestedPaymentAmount = Math.max(Number(amount || 0), 0);
+        const safeFineAmount = Math.max(Number(fineAmount || 0), 0);
+        const fineOnly = String(paymentMode || '').toLowerCase() === 'fine' || (requestedPaymentAmount <= 0 && safeFineAmount > 0);
+        const safeFullAmount = Number(fullAmount || student.monthlyFee || 0);
 
         const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
@@ -2135,13 +2140,29 @@ app.post('/api/fees/manual-payment', async (req, res) => {
 
         const feeMonthRecorded = selectedMonths.length ? selectedMonths.join(', ') : 'Dues';
         const safeChallanNumber = String(challanNumber || '').trim() || `MAN-${Date.now()}`;
+        const existingMonthPayments = fineOnly ? [] : await FeePayment.findAll({
+            where: {
+                studentId,
+                status: { [Op.in]: ['Paid', 'Partial'] },
+                paymentSource: { [Op.notIn]: ['Fine', 'Fine Correction'] }
+            }
+        });
+        const existingPaidForMonth = existingMonthPayments.reduce((sum, payment) => {
+            const paymentMonths = extractMonthList(payment.feeMonth);
+            const overlaps = selectedMonths.some((month) => paymentMonths.includes(month));
+            return overlaps ? sum + Number(payment.amount || 0) : sum;
+        }, 0);
+        const remainingBeforePayment = Math.max(safeFullAmount - existingPaidForMonth, 0);
+        const paymentAmount = fineOnly ? 0 : Math.min(requestedPaymentAmount, remainingBeforePayment);
+        const remainingDue = Math.max(safeFullAmount - existingPaidForMonth - paymentAmount, 0);
+        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
 
-        const existingPayment = await FeePayment.findByPk(safeChallanNumber);
+        const existingPayment = fineOnly ? null : await FeePayment.findByPk(safeChallanNumber);
         const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
         const paidAt = existingPayment?.paidAt || new Date();
         const paymentDateLabel = paidAt.toLocaleDateString('en-GB');
 
-        const paymentRow = {
+        const paymentRow = !fineOnly && paymentAmount > 0 ? {
             challanNumber: safeChallanNumber,
             studentId,
             studentName: studentName || student.fullName || '',
@@ -2154,11 +2175,33 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             paidAt,
             paymentDateLabel,
             paymentSource: 'Manual'
-        };
+        } : null;
 
-        await FeePayment.upsert(paymentRow);
+        if (paymentRow) {
+            await FeePayment.upsert(paymentRow);
+        }
 
-        if (!alreadyRecorded && FeeDueBalance) {
+        let fineRow = null;
+        if (safeFineAmount > 0) {
+            const fineChallanNumber = `${safeChallanNumber}-FINE`;
+            fineRow = {
+                challanNumber: fineChallanNumber,
+                studentId,
+                studentName: studentName || student.fullName || '',
+                rollNo: rollNo || student.rollNo || '',
+                classGrade: classGrade || student.classGrade || '',
+                session: session || '',
+                feeMonth: `Fine - ${feeMonthRecorded}`,
+                amount: safeFineAmount,
+                status: 'Paid',
+                paidAt,
+                paymentDateLabel,
+                paymentSource: 'Fine'
+            };
+            await FeePayment.upsert(fineRow);
+        }
+
+        if (!alreadyRecorded && FeeDueBalance && paymentAmount > 0) {
             const existingDue = await FeeDueBalance.findByPk(studentId);
             const currentBalance = existingDue ? Number(existingDue.balance || 0) : 0;
             const safeCurrent = Number.isFinite(currentBalance) ? currentBalance : 0;
@@ -2179,7 +2222,7 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             return lower === currentLower || lower === currentShortLower;
         });
 
-        if (currentMonthPaid && resolvedStatus === 'Paid') {
+        if (paymentRow && currentMonthPaid && resolvedStatus === 'Paid') {
             await Student.update({
                 feesStatus: 'Paid',
                 paymentDate: paymentDateLabel
@@ -2190,7 +2233,7 @@ app.post('/api/fees/manual-payment', async (req, res) => {
 
         let emailResult = null;
         let fineEmailResult = null;
-        if (!alreadyRecorded && Number(fineAmount || 0) > 0) {
+        if (safeFineAmount > 0) {
             try {
                 fineEmailResult = await sendFineAppliedEmail(sequelize, {
                     studentId,
@@ -2198,16 +2241,16 @@ app.post('/api/fees/manual-payment', async (req, res) => {
                     rollNo: rollNo || student.rollNo || '',
                     classGrade: classGrade || student.classGrade || '',
                     feeMonth: feeMonthRecorded,
-                    fullAmount: safeFullAmount,
-                    fineAmount: Number(fineAmount || 0),
-                    challanNumber: safeChallanNumber
+                    fullAmount: safeFullAmount + safeFineAmount,
+                    fineAmount: safeFineAmount,
+                    challanNumber: fineRow?.challanNumber || safeChallanNumber
                 });
             } catch (error) {
                 fineEmailResult = { success: false, message: error.message || 'Fine email could not be sent.' };
             }
         }
 
-        if (!alreadyRecorded && resolvedStatus === 'Paid') {
+        if (paymentRow && !alreadyRecorded && resolvedStatus === 'Paid') {
             try {
                 emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
             } catch (error) {
@@ -2217,9 +2260,9 @@ app.post('/api/fees/manual-payment', async (req, res) => {
 
         const allStudents = await Student.findAll();
         io.emit('students_update', allStudents);
-        io.emit('fee_payment_update', { payment: paymentRow });
+        io.emit('fee_payment_update', { payment: paymentRow || fineRow, finePayment: fineRow });
 
-        return res.json({ success: true, payment: paymentRow, alreadyRecorded, emailResult, fineEmailResult });
+        return res.json({ success: true, payment: paymentRow || fineRow, finePayment: fineRow, alreadyRecorded, emailResult, fineEmailResult });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'Manual payment failed.' });
     }
@@ -2246,6 +2289,67 @@ app.get('/api/fees/payments', async (req, res) => {
             success: false,
             message: error.message || 'Fee payments could not be loaded.'
         });
+    }
+});
+
+app.post('/api/fees/fine-charge', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const { studentId, studentName, rollNo, classGrade, session, feeMonth, fineAmount } = req.body || {};
+        const sid = String(studentId || '').trim();
+        const month = String(feeMonth || '').trim();
+        const amount = Math.max(Number(fineAmount || 0), 0);
+
+        if (!sid || !month) {
+            return res.status(400).json({ success: false, message: 'Student and month are required.' });
+        }
+
+        const Student = sequelize.models.Student;
+        const FeePayment = sequelize.models.FeePayment;
+        const student = await Student.findByPk(sid);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        await FeePayment.update({
+            status: 'Voided',
+            paymentSource: 'Fine Correction'
+        }, {
+            where: {
+                studentId: sid,
+                paymentSource: 'Fine',
+                feeMonth: { [Op.like]: `%${month}%` },
+                status: { [Op.in]: ['Paid', 'Partial'] }
+            }
+        });
+
+        let finePayment = null;
+        if (amount > 0) {
+            const paidAt = new Date();
+            finePayment = {
+                challanNumber: `FINE-${sid}-${month.replace(/[^a-z0-9]/gi, '').toUpperCase()}`,
+                studentId: sid,
+                studentName: studentName || student.fullName || '',
+                rollNo: rollNo || student.rollNo || '',
+                classGrade: classGrade || student.classGrade || '',
+                session: session || '',
+                feeMonth: `Fine - ${month}`,
+                amount,
+                status: 'Paid',
+                paidAt,
+                paymentDateLabel: paidAt.toLocaleDateString('en-GB'),
+                paymentSource: 'Fine'
+            };
+            await FeePayment.upsert(finePayment);
+        }
+
+        io.emit('fee_payment_update', { payment: finePayment });
+        return res.json({ success: true, finePayment, fineAmount: amount });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Fine could not be saved.' });
     }
 });
 
@@ -2796,7 +2900,8 @@ app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res)
 
     try {
         const result = await sendPendingFeeReminderEmails(sequelize, {
-            force: req.body?.force === true
+            force: req.body?.force === true,
+            studentIds: Array.isArray(req.body?.studentIds) ? req.body.studentIds : undefined
         });
         return res.json({
             success: true,
@@ -2807,6 +2912,71 @@ app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res)
         return res.status(error.statusCode || 500).json({
             success: false,
             message: error.message || 'Pending fee reminders could not be sent.'
+        });
+    }
+});
+
+function parseExecuteAllNoticeTargets(value) {
+    if (Array.isArray(value)) return value;
+    try {
+        const parsed = JSON.parse(value || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+        return [];
+    }
+}
+
+function formatExecuteAllNotice(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : record;
+    return {
+        ...raw,
+        targetPortals: parseExecuteAllNoticeTargets(raw?.targetPortals)
+    };
+}
+
+app.post('/api/email/execute-all', authenticateToken, async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const force = req.body?.force === true;
+        const result = {
+            pendingFees: { attempted: 0, sent: 0, skipped: 0, failed: [] },
+            birthdays: { attempted: 0, sent: 0, skipped: 0, failed: [] },
+            specialNotices: { attempted: 0, sent: 0, skipped: 0, failed: [] }
+        };
+
+        result.pendingFees = await sendPendingFeeReminderEmails(sequelize, { force });
+        result.birthdays = await sendBirthdayStudentEmails(sequelize, { force });
+
+        const notices = await sequelize.models.SpecialNotice.findAll({
+            where: { status: 'executed' },
+            order: [['updatedAt', 'DESC']]
+        });
+
+        for (const notice of notices.map(formatExecuteAllNotice).filter((item) => item.targetPortals.includes('student'))) {
+            const noticeResult = await sendSpecialNoticeStudentEmails(sequelize, notice, { force });
+            result.specialNotices.attempted += Number(noticeResult.attempted || 0);
+            result.specialNotices.sent += Number(noticeResult.sent || 0);
+            result.specialNotices.skipped += Number(noticeResult.skipped || 0);
+            result.specialNotices.failed.push(...(Array.isArray(noticeResult.failed) ? noticeResult.failed : []));
+        }
+
+        const totalSent = result.pendingFees.sent + result.birthdays.sent + result.specialNotices.sent;
+        const totalFailed = result.pendingFees.failed.length + result.birthdays.failed.length + result.specialNotices.failed.length;
+
+        return res.json({
+            success: true,
+            message: `All email jobs executed. Sent: ${totalSent}. Failed: ${totalFailed}.`,
+            totalSent,
+            totalFailed,
+            result
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'All emails could not be executed.'
         });
     }
 });
@@ -2831,6 +3001,244 @@ app.post('/api/email/send-birthday-greetings', authenticateToken, async (req, re
             message: error.message || 'Birthday emails could not be sent.'
         });
     }
+});
+
+function normalizeLibraryStatus(item = {}) {
+    const status = String(item.status || 'Issued').trim();
+    if (status === 'Returned' || status === 'Lost') return status;
+    const due = new Date(`${item.dueDate}T23:59:59`);
+    if (item.dueDate && !Number.isNaN(due.getTime()) && due < new Date()) return 'Overdue';
+    return 'Issued';
+}
+
+function formatLibraryIssue(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : record;
+    return {
+        ...raw,
+        status: normalizeLibraryStatus(raw),
+        loanDays: Number(raw.loanDays || 0),
+        finePerDay: Number(raw.finePerDay || 0)
+    };
+}
+
+app.get('/api/library/issues', async (_req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const records = await sequelize.models.LibraryIssue.findAll({
+            order: [['updatedAt', 'DESC']]
+        });
+        return res.json({ success: true, issues: records.map(formatLibraryIssue) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Library records could not be loaded.' });
+    }
+});
+
+app.post('/api/library/issues', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const payload = req.body || {};
+        const id = String(payload.id || `LIB-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`).trim();
+        const bookTitle = String(payload.bookTitle || '').trim();
+        const bookNumber = String(payload.bookNumber || '').trim();
+        const studentId = String(payload.studentId || '').trim();
+        const issueDate = String(payload.issueDate || new Date().toISOString().slice(0, 10)).trim();
+        const loanDays = Math.max(Number.parseInt(payload.loanDays || '7', 10) || 7, 1);
+
+        if (!bookTitle || !bookNumber || !studentId) {
+            return res.status(400).json({ success: false, message: 'Book title, book number, and student are required.' });
+        }
+
+        const issueDateValue = new Date(`${issueDate}T00:00:00`);
+        const dueDateValue = new Date(issueDateValue);
+        dueDateValue.setDate(dueDateValue.getDate() + loanDays);
+        const dueDate = payload.dueDate || dueDateValue.toISOString().slice(0, 10);
+
+        const record = {
+            id,
+            bookTitle,
+            bookNumber,
+            accessionNumber: String(payload.accessionNumber || '').trim(),
+            isbn: String(payload.isbn || '').trim(),
+            author: String(payload.author || '').trim(),
+            category: String(payload.category || '').trim(),
+            shelfLocation: String(payload.shelfLocation || '').trim(),
+            studentId,
+            studentName: String(payload.studentName || '').trim(),
+            rollNo: String(payload.rollNo || '').trim(),
+            classGrade: String(payload.classGrade || '').trim(),
+            fatherName: String(payload.fatherName || '').trim(),
+            parentPhone: String(payload.parentPhone || '').trim(),
+            studentEmail: String(payload.studentEmail || '').trim(),
+            issueDate,
+            loanDays,
+            dueDate,
+            returnDate: payload.returnDate || null,
+            status: payload.status === 'Returned' || payload.status === 'Lost' ? payload.status : 'Issued',
+            finePerDay: Number(payload.finePerDay || 0),
+            conditionIssue: String(payload.conditionIssue || '').trim(),
+            conditionReturn: String(payload.conditionReturn || '').trim(),
+            notes: String(payload.notes || '').trim()
+        };
+
+        await sequelize.models.LibraryIssue.upsert(record);
+        const records = await sequelize.models.LibraryIssue.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, issue: formatLibraryIssue(record), issues: records.map(formatLibraryIssue) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Library record could not be saved.' });
+    }
+});
+
+app.post('/api/library/issues/:id/return', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const issue = await sequelize.models.LibraryIssue.findByPk(req.params.id);
+        if (!issue) return res.status(404).json({ success: false, message: 'Library record not found.' });
+
+        await issue.update({
+            status: 'Returned',
+            returnDate: req.body?.returnDate || new Date().toISOString().slice(0, 10),
+            conditionReturn: String(req.body?.conditionReturn || issue.conditionReturn || '').trim(),
+            notes: String(req.body?.notes || issue.notes || '').trim()
+        });
+
+        const records = await sequelize.models.LibraryIssue.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, issue: formatLibraryIssue(issue), issues: records.map(formatLibraryIssue) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Book return could not be saved.' });
+    }
+});
+
+app.delete('/api/library/issues/:id', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        await sequelize.models.LibraryIssue.destroy({ where: { id: req.params.id } });
+        const records = await sequelize.models.LibraryIssue.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, issues: records.map(formatLibraryIssue) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Library record could not be deleted.' });
+    }
+});
+
+function mapFacilityRecord(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : record;
+    return { ...raw };
+}
+
+app.get('/api/cafe/contracts', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    try {
+        const records = await sequelize.models.CafeContract.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, contracts: records.map(mapFacilityRecord) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Cafe contracts could not be loaded.' });
+    }
+});
+
+app.post('/api/cafe/contracts', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    try {
+        const body = req.body || {};
+        const contractorName = String(body.contractorName || '').trim();
+        if (!contractorName) return res.status(400).json({ success: false, message: 'Contractor name is required.' });
+        const record = {
+            id: body.id || `CAFE-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            contractorName,
+            companyName: body.companyName || '',
+            contactNumber: body.contactNumber || '',
+            cnic: body.cnic || '',
+            email: body.email || '',
+            contractType: body.contractType || 'Cafe Operations',
+            startDate: body.startDate || '',
+            endDate: body.endDate || '',
+            monthlyRent: Number(body.monthlyRent || 0),
+            securityDeposit: Number(body.securityDeposit || 0),
+            paymentStatus: body.paymentStatus || 'Pending',
+            menuItems: body.menuItems || '',
+            hygieneStatus: body.hygieneStatus || 'Good',
+            licenseNumber: body.licenseNumber || '',
+            staffCount: Number(body.staffCount || 0),
+            status: body.status || 'Active',
+            notes: body.notes || ''
+        };
+        await sequelize.models.CafeContract.upsert(record);
+        const records = await sequelize.models.CafeContract.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, contract: record, contracts: records.map(mapFacilityRecord) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Cafe contract could not be saved.' });
+    }
+});
+
+app.delete('/api/cafe/contracts/:id', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    await sequelize.models.CafeContract.destroy({ where: { id: req.params.id } });
+    const records = await sequelize.models.CafeContract.findAll({ order: [['updatedAt', 'DESC']] });
+    return res.json({ success: true, contracts: records.map(mapFacilityRecord) });
+});
+
+app.get('/api/transport/assignments', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    try {
+        const records = await sequelize.models.TransportAssignment.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, assignments: records.map(mapFacilityRecord) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Transport records could not be loaded.' });
+    }
+});
+
+app.post('/api/transport/assignments', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    try {
+        const body = req.body || {};
+        const driverName = String(body.driverName || '').trim();
+        const vehicleNumber = String(body.vehicleNumber || '').trim();
+        if (!driverName || !vehicleNumber) return res.status(400).json({ success: false, message: 'Driver name and vehicle number are required.' });
+        const record = {
+            id: body.id || `TRN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            driverName,
+            driverPhone: body.driverPhone || '',
+            driverCnic: body.driverCnic || '',
+            licenseNumber: body.licenseNumber || '',
+            licenseExpiry: body.licenseExpiry || '',
+            vehicleNumber,
+            vehicleType: body.vehicleType || '',
+            vehicleModel: body.vehicleModel || '',
+            seatingCapacity: Number(body.seatingCapacity || 0),
+            routeName: body.routeName || '',
+            routeArea: body.routeArea || '',
+            pickupTime: body.pickupTime || '',
+            dropTime: body.dropTime || '',
+            helperName: body.helperName || '',
+            helperPhone: body.helperPhone || '',
+            insuranceExpiry: body.insuranceExpiry || '',
+            fitnessExpiry: body.fitnessExpiry || '',
+            status: body.status || 'Active',
+            notes: body.notes || ''
+        };
+        await sequelize.models.TransportAssignment.upsert(record);
+        const records = await sequelize.models.TransportAssignment.findAll({ order: [['updatedAt', 'DESC']] });
+        return res.json({ success: true, assignment: record, assignments: records.map(mapFacilityRecord) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Transport record could not be saved.' });
+    }
+});
+
+app.delete('/api/transport/assignments/:id', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    await sequelize.models.TransportAssignment.destroy({ where: { id: req.params.id } });
+    const records = await sequelize.models.TransportAssignment.findAll({ order: [['updatedAt', 'DESC']] });
+    return res.json({ success: true, assignments: records.map(mapFacilityRecord) });
 });
 
 app.all('/api', (req, res) => {
@@ -3038,6 +3446,83 @@ function defineAppSettingModel(db) {
     return db.define('AppSetting', {
         settingKey: { type: DataTypes.STRING, primaryKey: true },
         settingValue: { type: DataTypes.TEXT('long'), allowNull: false }
+    });
+}
+
+function defineLibraryIssueModel(db) {
+    return db.define('LibraryIssue', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        bookTitle: { type: DataTypes.STRING, allowNull: false },
+        bookNumber: { type: DataTypes.STRING, allowNull: false },
+        accessionNumber: DataTypes.STRING,
+        isbn: DataTypes.STRING,
+        author: DataTypes.STRING,
+        category: DataTypes.STRING,
+        shelfLocation: DataTypes.STRING,
+        studentId: { type: DataTypes.STRING, allowNull: false },
+        studentName: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        fatherName: DataTypes.STRING,
+        parentPhone: DataTypes.STRING,
+        studentEmail: DataTypes.STRING,
+        issueDate: { type: DataTypes.STRING, allowNull: false },
+        loanDays: { type: DataTypes.INTEGER, defaultValue: 7 },
+        dueDate: { type: DataTypes.STRING, allowNull: false },
+        returnDate: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Issued' },
+        finePerDay: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+        conditionIssue: DataTypes.STRING,
+        conditionReturn: DataTypes.STRING,
+        notes: DataTypes.TEXT
+    });
+}
+
+function defineCafeContractModel(db) {
+    return db.define('CafeContract', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        contractorName: { type: DataTypes.STRING, allowNull: false },
+        companyName: DataTypes.STRING,
+        contactNumber: DataTypes.STRING,
+        cnic: DataTypes.STRING,
+        email: DataTypes.STRING,
+        contractType: DataTypes.STRING,
+        startDate: DataTypes.STRING,
+        endDate: DataTypes.STRING,
+        monthlyRent: DataTypes.DECIMAL(10, 2),
+        securityDeposit: DataTypes.DECIMAL(10, 2),
+        paymentStatus: DataTypes.STRING,
+        menuItems: DataTypes.TEXT,
+        hygieneStatus: DataTypes.STRING,
+        licenseNumber: DataTypes.STRING,
+        staffCount: DataTypes.INTEGER,
+        status: { type: DataTypes.STRING, defaultValue: 'Active' },
+        notes: DataTypes.TEXT
+    });
+}
+
+function defineTransportAssignmentModel(db) {
+    return db.define('TransportAssignment', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        driverName: { type: DataTypes.STRING, allowNull: false },
+        driverPhone: DataTypes.STRING,
+        driverCnic: DataTypes.STRING,
+        licenseNumber: DataTypes.STRING,
+        licenseExpiry: DataTypes.STRING,
+        vehicleNumber: { type: DataTypes.STRING, allowNull: false },
+        vehicleType: DataTypes.STRING,
+        vehicleModel: DataTypes.STRING,
+        seatingCapacity: DataTypes.INTEGER,
+        routeName: DataTypes.STRING,
+        routeArea: DataTypes.STRING,
+        pickupTime: DataTypes.STRING,
+        dropTime: DataTypes.STRING,
+        helperName: DataTypes.STRING,
+        helperPhone: DataTypes.STRING,
+        insuranceExpiry: DataTypes.STRING,
+        fitnessExpiry: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Active' },
+        notes: DataTypes.TEXT
     });
 }
 
@@ -3408,6 +3893,9 @@ async function startServer() {
         defineSpecialNoticeModel(sequelize);
         defineBannerModel(sequelize);
         defineAppSettingModel(sequelize);
+        defineLibraryIssueModel(sequelize);
+        defineCafeContractModel(sequelize);
+        defineTransportAssignmentModel(sequelize);
 
         // Avoid Sequelize's repeated ALTER-based index churn on MySQL.
         // Missing legacy columns are handled separately in ensureLegacySchema().
@@ -3417,6 +3905,7 @@ async function startServer() {
         console.log('✅ Database synced successfully');
         startPendingFeeReminderScheduler(() => Promise.resolve(sequelize), console);
         startStudentEmailNotificationScheduler(() => Promise.resolve(sequelize), console);
+        startWhatsAppBirthdayScheduler(() => Promise.resolve(sequelize), console);
 
         isInitialized = true;
     } catch (err) {

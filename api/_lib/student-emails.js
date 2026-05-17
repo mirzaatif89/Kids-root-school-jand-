@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { sendSmtpEmail } = require('./mailer');
+const { renderSchoolEmail } = require('./email-template');
 
 const BIRTHDAY_LOG_KEY = 'student_birthday_email_log';
 const NOTICE_LOG_KEY = 'student_notice_email_log';
@@ -93,14 +94,20 @@ function buildBirthdayEmail(student) {
         'Apexiums School'
     ].join('\n');
 
-    const html = `
-        <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
-            <p>Dear ${escapeHtml(name)},</p>
-            <p><strong>Happy Birthday from Apexiums School.</strong></p>
-            <p>We wish you a successful and happy year ahead.</p>
-            <p>Apexiums School</p>
-        </div>
-    `;
+    const html = renderSchoolEmail({
+        title: 'Happy Birthday',
+        badge: 'Apexiums School',
+        preheader: 'Happy Birthday from Apexiums School.',
+        greeting: name,
+        intro: 'Happy Birthday from Apexiums School. We wish you a successful and happy year ahead.',
+        accentColor: '#7c3aed',
+        rows: [
+            ['Student Name', name],
+            ['Class', student.classGrade || '-'],
+            ['Roll No', student.rollNo || '-']
+        ],
+        footerNote: 'May your day be filled with happiness and your year with success.'
+    });
 
     return {
         to: normalizeEmail(student.email),
@@ -125,14 +132,21 @@ function buildNoticeEmail(student, notice) {
         'Apexiums School'
     ].join('\n');
 
-    const html = `
-        <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
-            <p>Dear ${escapeHtml(name)},</p>
-            <h2 style="font-size:18px;margin:0 0 12px">${escapeHtml(title)}</h2>
-            <p style="white-space:pre-line">${escapeHtml(message)}</p>
-            <p>Apexiums School</p>
-        </div>
-    `;
+    const html = renderSchoolEmail({
+        title,
+        badge: 'Official Special Notice',
+        preheader: message.slice(0, 140),
+        greeting: name,
+        intro: 'Please read the following official school notice carefully.',
+        accentColor: '#0f766e',
+        rows: [
+            ['Student Name', name],
+            ['Class', student.classGrade || '-'],
+            ['Roll No', student.rollNo || '-']
+        ],
+        bodyHtml: `<div style="margin-top:18px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1f2937;font-size:15px;line-height:1.8;white-space:pre-line">${escapeHtml(message)}</div>`,
+        footerNote: 'This notice has been issued by the school administration.'
+    });
 
     return {
         to: normalizeEmail(student.email),
@@ -170,22 +184,16 @@ function buildFineEmail(student, payload = {}) {
         'Apexiums School'
     ].join('\n');
 
-    const tableRows = rows.map(([label, value]) => `
-        <tr>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280">${escapeHtml(label)}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:700;color:#111827">${escapeHtml(value)}</td>
-        </tr>
-    `).join('');
-
-    const html = `
-        <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
-            <p>Dear ${escapeHtml(name)},</p>
-            <p>A fine has been applied on your school fee.</p>
-            <table style="width:100%;max-width:560px;border-collapse:collapse;margin:12px 0">${tableRows}</table>
-            <p>Please clear the pending amount at the earliest.</p>
-            <p>Apexiums School</p>
-        </div>
-    `;
+    const html = renderSchoolEmail({
+        title: 'Fee Fine Applied',
+        badge: 'Fee Department',
+        preheader: `Fine amount: PKR ${fineAmount.toLocaleString('en-PK')}`,
+        greeting: name,
+        intro: 'A fine has been applied on your school fee. Please clear the pending amount at the earliest.',
+        accentColor: '#dc2626',
+        rows,
+        footerNote: 'If you need clarification, please contact the school fee office.'
+    });
 
     return {
         to: normalizeEmail(student.email),

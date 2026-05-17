@@ -1,20 +1,16 @@
 const { Op } = require('sequelize');
 const { sendSmtpEmail } = require('./mailer');
+const { renderSchoolEmail } = require('./email-template');
 
 const REMINDER_LOG_KEY = 'pending_fee_email_log';
 const REMINDER_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+const MONTHS_LIST = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
 
 function todayKey() {
     return new Date().toISOString().slice(0, 10);
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 function parseReminderLog(row) {
@@ -50,6 +46,125 @@ function isPendingStudent(student, dueBalance = 0) {
     return status !== 'paid' || Number(dueBalance || 0) > 0;
 }
 
+function getApplicableFeeMonths(student, date = new Date()) {
+    let admissionMonthIndex = 0;
+    let admissionYear = date.getFullYear();
+
+    if (student?.admissionDate) {
+        const admissionDate = new Date(student.admissionDate);
+        if (!Number.isNaN(admissionDate.getTime())) {
+            admissionMonthIndex = admissionDate.getMonth();
+            admissionYear = admissionDate.getFullYear();
+        }
+    }
+
+    const currentYear = date.getFullYear();
+    const currentMonthIndex = date.getMonth();
+    const applicableMonths = [];
+
+    for (let year = admissionYear; year <= currentYear; year += 1) {
+        const startMonth = year === admissionYear ? admissionMonthIndex : 0;
+        const endMonth = year === currentYear ? currentMonthIndex : 11;
+        for (let i = startMonth; i <= endMonth; i += 1) {
+            applicableMonths.push(MONTHS_LIST[i]);
+        }
+    }
+
+    return applicableMonths;
+}
+
+function extractPaymentMonthNames(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return [];
+    const lower = raw.toLowerCase();
+    const hits = MONTHS_LIST.filter((month) => lower.includes(month.toLowerCase()) || lower.includes(month.slice(0, 3).toLowerCase()));
+    if (hits.length) return hits;
+
+    const parsed = new Date(raw.replace(',', ' 1,'));
+    if (!Number.isNaN(parsed.getTime())) return [MONTHS_LIST[parsed.getMonth()]];
+    return [];
+}
+
+async function loadPaidAmountMap(FeePayment) {
+    const paidMap = new Map();
+    if (!FeePayment) return paidMap;
+
+    const payments = await FeePayment.findAll();
+    payments.forEach((payment) => {
+        if (String(payment.paymentSource || '').toLowerCase() === 'fine') return;
+        const status = String(payment.status || '').trim();
+        if (!['Paid', 'Partial'].includes(status)) return;
+        const studentId = String(payment.studentId || '').trim();
+        if (!studentId) return;
+        const months = extractPaymentMonthNames(payment.feeMonth);
+        if (!months.length) return;
+
+        const totalAmount = Number(payment.amount || 0);
+        const perMonthAmount = months.length ? totalAmount / months.length : totalAmount;
+        if (!Number.isFinite(perMonthAmount) || perMonthAmount <= 0) return;
+
+        months.forEach((month) => {
+            const key = `${studentId}:${month}`;
+            paidMap.set(key, Number(paidMap.get(key) || 0) + perMonthAmount);
+        });
+    });
+
+    return paidMap;
+}
+
+async function loadFineChargeMap(FeePayment) {
+    const fineMap = new Map();
+    if (!FeePayment) return fineMap;
+
+    const payments = await FeePayment.findAll();
+    payments.forEach((payment) => {
+        if (String(payment.paymentSource || '').toLowerCase() !== 'fine') return;
+        const studentId = String(payment.studentId || '').trim();
+        if (!studentId) return;
+        const months = extractPaymentMonthNames(payment.feeMonth);
+        if (!months.length) return;
+        const totalAmount = Number(payment.amount || 0);
+        const perMonthAmount = months.length ? totalAmount / months.length : totalAmount;
+        if (!Number.isFinite(perMonthAmount) || perMonthAmount <= 0) return;
+
+        months.forEach((month) => {
+            const key = `${studentId}:${month}`;
+            fineMap.set(key, Number(fineMap.get(key) || 0) + perMonthAmount);
+        });
+    });
+
+    return fineMap;
+}
+
+function calculateStudentPendingFee(student, paidAmountMap, fineChargeMap, dueBalance = 0) {
+    const monthlyFee = Number(student?.monthlyFee || 0) || 0;
+    const studentId = String(student?.id || '').trim();
+    const summary = {
+        pendingAmount: Math.max(Number(dueBalance || 0), 0),
+        pendingMonths: [],
+        paidAmount: 0
+    };
+
+    if (!studentId || monthlyFee <= 0) {
+        return summary;
+    }
+
+    const calculated = getApplicableFeeMonths(student).reduce((acc, month) => {
+        const paidForMonth = Number(paidAmountMap.get(`${studentId}:${month}`) || 0);
+        const fineForMonth = Number(fineChargeMap.get(`${studentId}:${month}`) || 0);
+        const monthTotalDue = monthlyFee + fineForMonth;
+        acc.paidAmount += paidForMonth;
+        const dueForMonth = Math.max(monthTotalDue - paidForMonth, 0);
+        if (dueForMonth > 0) {
+            acc.pendingMonths.push({ month, dueAmount: dueForMonth, paidAmount: paidForMonth });
+            acc.pendingAmount += dueForMonth;
+        }
+        return acc;
+    }, { pendingAmount: 0, pendingMonths: [], paidAmount: 0 });
+
+    return calculated.pendingAmount > summary.pendingAmount ? calculated : summary;
+}
+
 function buildPendingFeeEmail(student, dueBalance = 0) {
     const name = student.fullName || 'Student';
     const amount = Number(dueBalance || student.monthlyFee || 0);
@@ -70,19 +185,22 @@ function buildPendingFeeEmail(student, dueBalance = 0) {
         'Apexiums School'
     ].filter(Boolean).join('\n');
 
-    const html = `
-        <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
-            <p>Dear ${escapeHtml(name)},</p>
-            <p>This is a reminder that your school fee is pending.</p>
-            <p><strong>${escapeHtml(amountLine)}</strong></p>
-            <p>
-                ${student.classGrade ? `Class: ${escapeHtml(student.classGrade)}<br>` : ''}
-                ${student.rollNo ? `Roll No: ${escapeHtml(student.rollNo)}<br>` : ''}
-            </p>
-            <p>Please clear the pending fee at the earliest.</p>
-            <p>Apexiums School</p>
-        </div>
-    `;
+    const html = renderSchoolEmail({
+        title: 'Pending Fee Reminder',
+        badge: 'Fee Department',
+        preheader: amountLine,
+        greeting: name,
+        intro: 'This is a polite reminder that your school fee is currently pending. Please clear the pending amount at the earliest.',
+        accentColor: '#dc2626',
+        rows: [
+            ['Student Name', name],
+            ['Class', student.classGrade || '-'],
+            ['Roll No', student.rollNo || '-'],
+            ['Pending Amount', amount > 0 ? `PKR ${amount.toLocaleString('en-PK')}` : 'Pending'],
+            ['Status', 'Payment Pending']
+        ],
+        footerNote: 'If you have already paid this fee, please ignore this reminder or contact the school office with your payment receipt.'
+    });
 
     return {
         to: normalizeEmail(student.email),
@@ -128,29 +246,16 @@ function buildFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 
         'Apexiums School'
     ].join('\n');
 
-    const tableRows = rows.map(([label, value]) => `
-        <tr>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;color:#6b7280">${escapeHtml(label)}</td>
-            <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb;font-weight:700;color:#111827">${escapeHtml(value)}</td>
-        </tr>
-    `).join('');
-
-    const html = `
-        <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
-            <div style="max-width:560px;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
-                <div style="background:#16a34a;color:#ffffff;padding:16px 18px">
-                    <div style="font-size:18px;font-weight:700">${escapeHtml(subject)}</div>
-                    <div style="font-size:13px;margin-top:4px">${escapeHtml(statusLine)}</div>
-                </div>
-                <div style="padding:18px">
-                    <p>Dear ${escapeHtml(name)},</p>
-                    <table style="width:100%;border-collapse:collapse;margin:12px 0">${tableRows}</table>
-                    <p>Thank you.</p>
-                    <p>Apexiums School</p>
-                </div>
-            </div>
-        </div>
-    `;
+    const html = renderSchoolEmail({
+        title: subject,
+        badge: 'Fee Department',
+        preheader: statusLine,
+        greeting: name,
+        intro: statusLine,
+        accentColor: isPaid ? '#16a34a' : '#0f766e',
+        rows,
+        footerNote: 'Thank you for keeping your school fee record updated.'
+    });
 
     return {
         to: normalizeEmail(student.email),
@@ -176,10 +281,13 @@ async function loadDueBalanceMap(FeeDueBalance) {
 }
 
 async function sendPendingFeeReminderEmails(db, options = {}) {
-    const { Student, FeeDueBalance, AppSetting } = db.models;
+    const { Student, FeeDueBalance, FeePayment, AppSetting } = db.models;
     const dateKey = options.dateKey || todayKey();
     const log = await getReminderLog(AppSetting);
     const alreadySent = new Set(Array.isArray(log[dateKey]) ? log[dateKey].map(String) : []);
+    const requestedStudentIds = Array.isArray(options.studentIds)
+        ? new Set(options.studentIds.map((id) => String(id || '').trim()).filter(Boolean))
+        : null;
 
     const where = {
         email: {
@@ -188,11 +296,17 @@ async function sendPendingFeeReminderEmails(db, options = {}) {
     };
     const students = await Student.findAll({ where });
     const dueBalances = await loadDueBalanceMap(FeeDueBalance);
+    const paidAmountMap = await loadPaidAmountMap(FeePayment);
+    const fineChargeMap = await loadFineChargeMap(FeePayment);
+    const pendingByStudentId = new Map();
     const pendingStudents = students.filter((student) => {
+        if (requestedStudentIds && !requestedStudentIds.has(String(student.id))) return false;
         const email = normalizeEmail(student.email);
         if (!email) return false;
         if (!options.force && alreadySent.has(String(student.id))) return false;
-        return isPendingStudent(student, dueBalances.get(String(student.id)) || 0);
+        const pendingDetails = calculateStudentPendingFee(student, paidAmountMap, fineChargeMap, dueBalances.get(String(student.id)) || 0);
+        pendingByStudentId.set(String(student.id), pendingDetails);
+        return isPendingStudent(student, pendingDetails.pendingAmount);
     });
 
     const result = {
@@ -204,7 +318,8 @@ async function sendPendingFeeReminderEmails(db, options = {}) {
 
     for (const student of pendingStudents) {
         try {
-            await sendSmtpEmail(buildPendingFeeEmail(student, dueBalances.get(String(student.id)) || 0));
+            const pendingDetails = pendingByStudentId.get(String(student.id)) || {};
+            await sendSmtpEmail(buildPendingFeeEmail(student, pendingDetails.pendingAmount || 0));
             result.sent += 1;
             alreadySent.add(String(student.id));
         } catch (error) {

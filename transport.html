@@ -8,20 +8,200 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .module-panel {
+        .facility-layout {
+            display: grid;
+            grid-template-columns: minmax(320px, .85fr) minmax(560px, 1.15fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .panel {
             background: #fff;
             border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.25rem;
+            border-radius: 8px;
+            padding: 1.1rem;
             box-shadow: var(--shadow-sm);
         }
-        .module-panel h2 {
-            margin: 0 0 0.5rem;
-            font-size: 1.15rem;
+
+        .panel h2 {
+            margin: 0 0 .8rem;
+            font-size: 1.05rem;
         }
-        .module-panel p {
-            margin: 0;
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .85rem;
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: .35rem;
             color: var(--text-secondary);
+            font-size: .78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: .65rem .75rem;
+            font: inherit;
+        }
+
+        .field textarea {
+            min-height: 82px;
+            resize: vertical;
+        }
+
+        .actions,
+        .row-actions {
+            display: flex;
+            gap: .65rem;
+            flex-wrap: wrap;
+        }
+
+        .actions {
+            margin-top: 1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: .75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: .8rem;
+        }
+
+        .stat span {
+            font-size: .75rem;
+            color: var(--text-secondary);
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .stat strong {
+            display: block;
+            margin-top: .25rem;
+            font-size: 1.3rem;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: .75rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .table-wrap {
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        table.facility {
+            width: 100%;
+            min-width: 980px;
+            border-collapse: collapse;
+        }
+
+        table.facility th,
+        table.facility td {
+            padding: .7rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: top;
+            font-size: .86rem;
+        }
+
+        table.facility th {
+            background: #f8fbff;
+            color: var(--text-secondary);
+            font-size: .75rem;
+            text-transform: uppercase;
+        }
+
+        .meta {
+            display: grid;
+            gap: .18rem;
+        }
+
+        .muted {
+            color: var(--text-secondary);
+            font-size: .78rem;
+        }
+
+        .pill {
+            display: inline-flex;
+            padding: .28rem .55rem;
+            border-radius: 999px;
+            font-size: .75rem;
+            font-weight: 800;
+        }
+
+        .pill.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .pill.maintenance {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .pill.inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .mini {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: .42rem .6rem;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: .76rem;
+        }
+
+        .mini.danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+
+        @media (max-width: 1050px) {
+            .facility-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .grid,
+            .stats {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -38,28 +218,206 @@
                 <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
                 <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
                 <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="library.html" class="nav-item"><i data-lucide="library"></i><span>Library</span></a>
+                <a href="cafe.html" class="nav-item"><i data-lucide="coffee"></i><span>Cafe</span></a>
+                <a href="transport.html" class="nav-item active"><i data-lucide="bus"></i><span>Transport</span></a>
                 <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
-                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
-                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
-                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
-                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
                 <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
-                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
                 <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
             </nav>
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
         </aside>
+
         <main class="main-content">
-            <header class="header"><h1>Transport</h1></header>
-            <section class="module-panel">
-                <h2>Transport</h2>
-                <p>This section is ready for transport records and management.</p>
+            <header class="header">
+                <div>
+                    <h1>Transport Management</h1>
+                    <p style="color:var(--text-secondary);margin-top:.25rem">Driver, vehicle, route, helper, timing, and document expiry records.</p>
+                </div>
+            </header>
+
+            <section class="facility-layout">
+                <div class="panel">
+                    <h2 id="formTitle">Transport Record</h2>
+                    <form id="transportForm">
+                        <input type="hidden" id="recordId">
+                        <div class="grid">
+                            <div class="field"><label>Driver Name</label><input id="driverName" required></div>
+                            <div class="field"><label>Driver Phone</label><input id="driverPhone"></div>
+                            <div class="field"><label>Driver CNIC</label><input id="driverCnic"></div>
+                            <div class="field"><label>License Number</label><input id="licenseNumber"></div>
+                            <div class="field"><label>License Expiry</label><input id="licenseExpiry" type="date"></div>
+                            <div class="field"><label>Vehicle Number</label><input id="vehicleNumber" required></div>
+                            <div class="field"><label>Vehicle Type</label><select id="vehicleType"><option>Van</option><option>Bus</option><option>Car</option><option>Rickshaw</option><option>Other</option></select></div>
+                            <div class="field"><label>Vehicle Model</label><input id="vehicleModel"></div>
+                            <div class="field"><label>Seating Capacity</label><input id="seatingCapacity" type="number" min="0"></div>
+                            <div class="field"><label>Route Name</label><input id="routeName" placeholder="Route A"></div>
+                            <div class="field full"><label>Route Area</label><input id="routeArea" placeholder="Gulshan, Model Town, School Campus"></div>
+                            <div class="field"><label>Pickup Time</label><input id="pickupTime" type="time"></div>
+                            <div class="field"><label>Drop Time</label><input id="dropTime" type="time"></div>
+                            <div class="field"><label>Helper Name</label><input id="helperName"></div>
+                            <div class="field"><label>Helper Phone</label><input id="helperPhone"></div>
+                            <div class="field"><label>Insurance Expiry</label><input id="insuranceExpiry" type="date"></div>
+                            <div class="field"><label>Fitness Expiry</label><input id="fitnessExpiry" type="date"></div>
+                            <div class="field"><label>Status</label><select id="status"><option>Active</option><option>Maintenance</option><option>Inactive</option></select></div>
+                            <div class="field full"><label>Notes</label><textarea id="notes" placeholder="Route notes, emergency contact, vehicle condition..."></textarea></div>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Transport</button>
+                            <button class="btn btn-outline" type="button" onclick="resetForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <div class="stats">
+                        <div class="stat"><span>Total</span><strong id="total">0</strong></div>
+                        <div class="stat"><span>Active</span><strong id="active">0</strong></div>
+                        <div class="stat"><span>Capacity</span><strong id="capacity">0</strong></div>
+                        <div class="stat"><span>Docs Due</span><strong id="docsDue">0</strong></div>
+                    </div>
+                    <div class="toolbar">
+                        <div class="search-bar"><i data-lucide="search" size="18"></i><input id="search" placeholder="Search driver, vehicle, route..."></div>
+                        <button class="btn btn-outline" onclick="loadAssignments()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="facility">
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Vehicle</th>
+                                    <th>Route</th>
+                                    <th>Timing / Helper</th>
+                                    <th>Documents</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
+
     <script src="auth.js"></script>
     <script src="script.js?v=20260517-facility-nav"></script>
-    <script>lucide.createIcons();</script>
+    <script>
+        let records = [];
+        const fields = ['driverName', 'driverPhone', 'driverCnic', 'licenseNumber', 'licenseExpiry', 'vehicleNumber', 'vehicleType', 'vehicleModel', 'seatingCapacity', 'routeName', 'routeArea', 'pickupTime', 'dropTime', 'helperName', 'helperPhone', 'insuranceExpiry', 'fitnessExpiry', 'status', 'notes'];
+
+        function esc(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+        }
+
+        function isDueSoon(value) {
+            if (!value) return false;
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const future = new Date(today);
+            future.setDate(future.getDate() + 30);
+            return date >= today && date <= future;
+        }
+
+        async function loadAssignments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/transport/assignments`);
+                const data = await parseJsonResponse(response, 'Transport records unavailable.');
+                records = data.assignments || [];
+            } catch (error) {
+                records = JSON.parse(localStorage.getItem('transport_assignments') || '[]');
+            }
+            localStorage.setItem('transport_assignments', JSON.stringify(records));
+            render();
+        }
+
+        function buildPayload() {
+            const payload = { id: recordId.value || undefined };
+            fields.forEach(field => {
+                payload[field] = document.getElementById(field).value;
+            });
+            return payload;
+        }
+
+        async function saveAssignment(event) {
+            event.preventDefault();
+            try {
+                const response = await fetch(`${API_BASE_URL}/transport/assignments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(buildPayload())
+                });
+                const data = await parseJsonResponse(response, 'Transport record could not be saved.');
+                if (!response.ok || data.success === false) throw new Error(data.message || 'Transport record could not be saved.');
+                records = data.assignments || [];
+                resetForm();
+                render();
+                await showAppAlert('Transport record saved.');
+            } catch (error) {
+                await showAppAlert(error.message || String(error), 'Message');
+            }
+        }
+
+        function render() {
+            const term = (search.value || '').toLowerCase();
+            const rows = records.filter(record => `${record.driverName} ${record.driverPhone} ${record.vehicleNumber} ${record.routeName} ${record.routeArea}`.toLowerCase().includes(term));
+            total.textContent = records.length;
+            active.textContent = records.filter(record => record.status === 'Active').length;
+            capacity.textContent = records.reduce((sum, record) => sum + Number(record.seatingCapacity || 0), 0);
+            docsDue.textContent = records.filter(record => isDueSoon(record.licenseExpiry) || isDueSoon(record.insuranceExpiry) || isDueSoon(record.fitnessExpiry)).length;
+
+            body.innerHTML = rows.length ? rows.map(record => `
+                <tr>
+                    <td><div class="meta"><strong>${esc(record.driverName)}</strong><span class="muted">${esc(record.driverPhone || '-')}</span><span class="muted">CNIC: ${esc(record.driverCnic || '-')}</span></div></td>
+                    <td><div class="meta"><strong>${esc(record.vehicleNumber)}</strong><span class="muted">${esc(record.vehicleType || '-')} | ${esc(record.vehicleModel || '-')}</span><span class="muted">Seats: ${esc(record.seatingCapacity || 0)}</span></div></td>
+                    <td><div class="meta"><strong>${esc(record.routeName || '-')}</strong><span class="muted">${esc(record.routeArea || '-')}</span></div></td>
+                    <td><div class="meta"><span>Pickup: <strong>${esc(record.pickupTime || '-')}</strong></span><span>Drop: <strong>${esc(record.dropTime || '-')}</strong></span><span class="muted">Helper: ${esc(record.helperName || '-')} ${record.helperPhone ? '| ' + esc(record.helperPhone) : ''}</span></div></td>
+                    <td><div class="meta"><span>License: ${esc(record.licenseNumber || '-')}</span><span class="muted">L: ${esc(record.licenseExpiry || '-')} | I: ${esc(record.insuranceExpiry || '-')}</span><span class="muted">Fitness: ${esc(record.fitnessExpiry || '-')}</span></div></td>
+                    <td><span class="pill ${(record.status || '').toLowerCase()}">${esc(record.status || '-')}</span></td>
+                    <td><div class="row-actions"><button class="mini" onclick="editRecord('${record.id}')">Edit</button><button class="mini danger" onclick="deleteRecord('${record.id}')">Delete</button></div></td>
+                </tr>
+            `).join('') : '<tr><td colspan="7">No transport records found.</td></tr>';
+            lucide.createIcons();
+        }
+
+        function editRecord(id) {
+            const record = records.find(item => item.id === id);
+            if (!record) return;
+            recordId.value = record.id;
+            fields.forEach(field => {
+                document.getElementById(field).value = record[field] || '';
+            });
+            formTitle.textContent = 'Edit Transport Record';
+            scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function deleteRecord(id) {
+            if (!(await showAppConfirm('Delete this transport record?'))) return;
+            const response = await fetch(`${API_BASE_URL}/transport/assignments/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const data = await parseJsonResponse(response, 'Delete failed.');
+            records = data.assignments || [];
+            render();
+        }
+
+        function resetForm() {
+            transportForm.reset();
+            recordId.value = '';
+            formTitle.textContent = 'Transport Record';
+            status.value = 'Active';
+            vehicleType.value = 'Van';
+        }
+
+        transportForm.addEventListener('submit', saveAssignment);
+        search.addEventListener('input', render);
+        document.addEventListener('DOMContentLoaded', () => {
+            resetForm();
+            loadAssignments();
+            lucide.createIcons();
+        });
+    </script>
 </body>
 
 </html>

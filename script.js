@@ -3835,6 +3835,70 @@ function viewStudentFromEncoded(encodedPayload) {
     viewStudent(payload);
 }
 
+async function sendStudentCustomEmailFromEncoded(encodedPayload) {
+    const student = decodeRowPayload(encodedPayload);
+    const to = String(student?.email || '').trim();
+    if (!student || !to) {
+        showAppAlert('This student does not have an email address saved.', 'Email Missing');
+        return;
+    }
+
+    const subject = window.prompt('Email subject', 'Message from Apexiums School');
+    if (!subject) return;
+    const message = window.prompt('Email message');
+    if (!message) return;
+
+    try {
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        const response = await fetch(`${API_BASE_URL}/email/send`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+                to,
+                subject,
+                text: `Dear ${student.fullName || 'Student'},\n\n${message}\n\nApexiums School`,
+                html: `
+                    <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#111827">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef2f7;padding:28px 12px">
+                            <tr>
+                                <td align="center">
+                                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;border-collapse:collapse;background:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 12px 32px rgba(15,23,42,.12)">
+                                        <tr>
+                                            <td style="background:#0f766e;padding:24px 28px;color:#ffffff">
+                                                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                                    <tr>
+                                                        <td width="74"><img src="cid:school-logo" width="62" height="62" alt="Apexiums School" style="display:block;border-radius:14px;background:#ffffff;padding:6px;object-fit:contain"></td>
+                                                        <td style="padding-left:14px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Apexiums School</div><h1 style="margin:6px 0 0;font-size:24px;line-height:1.25;color:#ffffff">${escapeHtml(subject)}</h1></td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:28px">
+                                                <p style="margin:0 0 12px;color:#111827;font-size:15px">Dear ${escapeHtml(student.fullName || 'Student')},</p>
+                                                <div style="margin-top:18px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1f2937;font-size:15px;line-height:1.8;white-space:pre-line">${escapeHtml(message)}</div>
+                                                <p style="margin:22px 0 0;color:#111827;font-size:14px;font-weight:700">Apexiums School</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                `
+            })
+        });
+        const result = await parseJsonResponse(response, 'Email could not be sent.');
+        if (!response.ok || result?.success === false) throw new Error(result?.message || 'Email could not be sent.');
+        showAppAlert('Email sent successfully.', 'Email Sent');
+    } catch (error) {
+        showAppAlert(error.message || String(error), 'Email Failed');
+    }
+}
+
 function handleStudentActionSelect(selectElement, encodedPayload, studentId, isBranchUser = 0) {
     const action = String(selectElement?.value || '').trim().toLowerCase();
     if (!action) return;
@@ -3843,6 +3907,11 @@ function handleStudentActionSelect(selectElement, encodedPayload, studentId, isB
 
     if (action === 'view') {
         viewStudentFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'email') {
+        sendStudentCustomEmailFromEncoded(encodedPayload);
         return;
     }
 
@@ -4458,6 +4527,7 @@ function renderStudents(term = '') {
                     <select class="table-action-select" onchange="handleStudentActionSelect(this, '${encodedStudent}', '${s.id}', ${isBranchUser ? 1 : 0})">
                         <option value="">Actions</option>
                         <option value="view">View</option>
+                        ${s.email ? '<option value="email">Send Email</option>' : ''}
                         ${canEditStudents ? '<option value="edit">Edit</option>' : ''}
                         ${canEditStudents ? (terminated ? '<option value="reactivate">Reactivate</option>' : '<option value="terminate">Mark Terminated</option>') : ''}
                         ${canDeleteStudents ? '<option value="delete">Delete</option>' : ''}

@@ -554,6 +554,9 @@
                             student to manage monthly fee records</p>
                     </div>
                     <div class="section-actions">
+                        <button class="print-unpaid-btn" id="sendClassPendingEmailsBtn" onclick="sendSelectedClassPendingFeeEmails()">
+                            <i data-lucide="mail" size="18"></i> Email Pending
+                        </button>
                         <button class="print-unpaid-btn" onclick="printSelectedClassUnpaidFees()">
                             <i data-lucide="printer" size="18"></i> Print Unpaid List
                         </button>
@@ -600,9 +603,14 @@
                             Class: <span id="spanClass" style="color: var(--text-primary);"></span>
                         </p>
                     </div>
-                    <button class="back-btn" onclick="backToStudentList()">
-                        <i data-lucide="arrow-left" size="18"></i> Back to Students
-                    </button>
+                    <div class="section-actions">
+                        <button class="print-unpaid-btn" id="sendStudentPendingEmailBtn" onclick="sendCurrentStudentPendingFeeEmail()">
+                            <i data-lucide="mail" size="18"></i> Email Pending
+                        </button>
+                        <button class="back-btn" onclick="backToStudentList()">
+                            <i data-lucide="arrow-left" size="18"></i> Back to Students
+                        </button>
+                    </div>
                 </div>
 
                 <div id="monthListContainer">
@@ -614,7 +622,7 @@
             <div id="manualPaymentModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
                 <div style="background: white; border-radius: 0.75rem; padding: 2rem; max-width: 560px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700;">Add Manual Payment</h3>
+                        <h3 id="manualPaymentModalTitle" style="margin: 0; font-size: 1.2rem; font-weight: 700;">Add Manual Payment</h3>
                         <button onclick="closeManualPaymentModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
                     </div>
                     
@@ -651,7 +659,7 @@
                         </div>
                         <div>
                             <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fine Amount</label>
-                            <input type="number" id="fineAmount" value="0" min="0" readonly style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: #f9fafb;" />
+                            <input type="number" id="fineAmount" value="0" min="0" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: #f9fafb;" oninput="updateManualPaymentTotal()" />
                         </div>
                     </div>
 
@@ -661,7 +669,7 @@
 
                     <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
                         <button onclick="closeManualPaymentModal()" style="flex: 1; padding: 0.75rem; border: 1px solid #d1d5db; background: white; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Cancel</button>
-                        <button onclick="submitManualPayment()" style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Save Payment</button>
+                        <button id="manualPaymentSubmitBtn" onclick="submitManualPayment()" style="flex: 1; padding: 0.75rem; background: #10b981; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600;">Save Payment</button>
                     </div>
                 </div>
             </div>
@@ -673,6 +681,7 @@
     <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+        const STORAGE_KEY_FINE_PAYMENTS = 'eduCore_fine_payments';
         const monthsList = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -748,11 +757,14 @@
             let pendingAmount = 0;
 
             applicableMonths.forEach((month) => {
-                const paidForMonth = Number(studentPayments[month]?.amount || 0) || (studentMonthly[month] === 'Paid' ? monthlyFee : 0);
+                const monthFine = getFineAmountForMonth(student.id, month);
+                const monthTotalDue = monthlyFee + monthFine;
+                const rawPaidForMonth = Number(studentPayments[month]?.amount || 0) || (studentMonthly[month] === 'Paid' ? monthTotalDue : 0);
+                const paidForMonth = Math.min(rawPaidForMonth, monthTotalDue);
                 paidAmount += paidForMonth;
-                const dueForMonth = Math.max(monthlyFee - paidForMonth, 0);
+                const dueForMonth = Math.max(monthTotalDue - paidForMonth, 0);
                 pendingAmount += dueForMonth;
-                if (monthlyFee > 0 && dueForMonth <= 0) {
+                if (monthTotalDue > 0 && dueForMonth <= 0) {
                     paidMonths.push(month);
                 } else {
                     pendingMonths.push(month);
@@ -790,6 +802,20 @@
             return single ? [single] : [];
         }
 
+        function getStoredFinePayments(studentId) {
+            const finePaymentsStore = JSON.parse(localStorage.getItem(STORAGE_KEY_FINE_PAYMENTS) || '{}');
+            return Array.isArray(finePaymentsStore[studentId]) ? finePaymentsStore[studentId] : [];
+        }
+
+        function getFineAmountForMonth(studentId, month) {
+            const targetMonth = String(month || '').trim();
+            if (!targetMonth) return 0;
+            return getStoredFinePayments(studentId).reduce((sum, fine) => {
+                const fineMonths = extractMonthNames(fine.feeMonth);
+                return fineMonths.includes(targetMonth) ? sum + (Number(fine.amount || 0) || 0) : sum;
+            }, 0);
+        }
+
         async function mergeFeePaymentsIntoMonthlyStore() {
             try {
                 const response = await fetch(`${API_BASE_URL}/fees/payments`);
@@ -800,6 +826,7 @@
                 // Rebuild from scratch for consistency.
                 const monthlyFees = {};
                 const paymentDetails = {};
+                const finePayments = {};
                 const students = getData(STORAGE_KEY_STUDENTS) || [];
                 const studentsById = new Map(students.map((s) => [String(s?.id || ''), s]));
 
@@ -834,6 +861,18 @@
 
                 payments.forEach((payment) => {
                     if (!payment?.studentId || !['Paid', 'Partial'].includes(String(payment.status || ''))) return;
+                    if (String(payment.paymentSource || '').toLowerCase() === 'fine') {
+                        const sid = String(payment.studentId || '').trim();
+                        if (!sid) return;
+                        finePayments[sid] = finePayments[sid] || [];
+                        finePayments[sid].push({
+                            challanNumber: payment.challanNumber || '',
+                            feeMonth: String(payment.feeMonth || '').replace(/^Fine\s*-\s*/i, ''),
+                            amount: Number(payment.amount || 0),
+                            paymentDateLabel: payment.paymentDateLabel || ''
+                        });
+                        return;
+                    }
                     const months = extractMonthNames(payment.feeMonth);
                     if (!months.length) return;
                     const totalAmount = Number(payment.amount || 0);
@@ -843,6 +882,7 @@
 
                 localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
                 localStorage.setItem('eduCore_payment_details', JSON.stringify(paymentDetails));
+                localStorage.setItem(STORAGE_KEY_FINE_PAYMENTS, JSON.stringify(finePayments));
             } catch (error) {
                 console.warn('Fee payments could not be loaded:', error.message);
             }
@@ -1014,22 +1054,26 @@
             const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
 
             const getPaidForMonth = (month) => {
+                const monthTotalDue = monthlyFee + getFineAmountForMonth(student.id, month);
                 const paid = Number(studentPayments[month]?.amount || 0);
-                if (paid > 0) return paid;
-                if (studentRecord[month] === 'Paid' && monthlyFee > 0) return monthlyFee;
+                if (paid > 0) return Math.min(paid, monthTotalDue);
+                if (studentRecord[month] === 'Paid' && monthTotalDue > 0) return monthTotalDue;
                 return 0;
             };
 
             return getApplicableFeeMonths(student).reduce((summary, month) => {
                 const paidForMonth = getPaidForMonth(month);
+                const monthFine = getFineAmountForMonth(student.id, month);
+                const monthTotalDue = monthlyFee + monthFine;
                 summary.paidAmount += paidForMonth;
 
-                const dueForMonth = Math.max(monthlyFee - paidForMonth, 0);
+                const dueForMonth = Math.max(monthTotalDue - paidForMonth, 0);
                 if (dueForMonth > 0) {
                     summary.pendingMonths.push({
                         month,
                         paidAmount: paidForMonth,
-                        dueAmount: dueForMonth
+                        dueAmount: dueForMonth,
+                        fineAmount: monthFine
                     });
                     summary.pendingAmount += dueForMonth;
                 }
@@ -1360,6 +1404,81 @@
             printWindow.document.close();
         }
 
+        async function sendPendingFeeReminderEmails(studentIds, button = null) {
+            const ids = Array.from(new Set((studentIds || []).map((id) => String(id || '').trim()).filter(Boolean)));
+            if (!ids.length) {
+                alert('No pending fee students found for email reminder.');
+                return null;
+            }
+
+            const previousHtml = button ? button.innerHTML : '';
+            if (button) {
+                button.disabled = true;
+                button.innerHTML = '<i data-lucide="loader-circle" size="18"></i> Sending...';
+                if (window.lucide) lucide.createIcons();
+            }
+
+            try {
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                const response = await fetch(`${API_BASE_URL}/fees/send-pending-reminders`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify({ force: true, studentIds: ids })
+                });
+                const result = await parseJsonResponse(response, 'Pending fee email could not be sent.');
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'Pending fee email could not be sent.');
+                }
+
+                const failedCount = Array.isArray(result.failed) ? result.failed.length : 0;
+                alert(`Pending fee emails sent: ${result.sent || 0}${failedCount ? ` | Failed: ${failedCount}` : ''}`);
+                return result;
+            } catch (error) {
+                alert(`Email could not be sent: ${error.message || error}`);
+                return null;
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerHTML = previousHtml;
+                    if (window.lucide) lucide.createIcons();
+                }
+            }
+        }
+
+        function getUnpaidFeeStudentIds(classId, term = '') {
+            return getFeesStudentsForClass(classId, term)
+                .map((student) => ({
+                    student,
+                    details: getStudentPendingFeeDetails(student)
+                }))
+                .filter((row) => row.details.pendingAmount > 0)
+                .map((row) => row.student.id);
+        }
+
+        function sendSelectedClassPendingFeeEmails() {
+            const tableView = document.getElementById('feesTableView');
+            const classId = tableView.dataset.classId || 'all';
+            const term = classId === 'search_results' ? document.getElementById('feeSearchInput').value : '';
+            const studentIds = getUnpaidFeeStudentIds(classId, term);
+            sendPendingFeeReminderEmails(studentIds, document.getElementById('sendClassPendingEmailsBtn'));
+        }
+
+        function sendCurrentStudentPendingFeeEmail() {
+            const studentId = document.getElementById('studentFeeRecordView').dataset.studentId;
+            if (!studentId) return;
+            const students = getData(STORAGE_KEY_STUDENTS) || [];
+            const student = students.find((item) => String(item?.id || '') === String(studentId));
+            const details = student ? getStudentPendingFeeDetails(student) : null;
+            if (!details || details.pendingAmount <= 0) {
+                alert('This student has no pending fee.');
+                return;
+            }
+            sendPendingFeeReminderEmails([studentId], document.getElementById('sendStudentPendingEmailBtn'));
+        }
+
         function renderFeesClassGrid() {
             const grid = document.getElementById('feesClassGrid');
             const students = (getData(STORAGE_KEY_STUDENTS) || []).filter((s) => !isStudentTerminated(s));
@@ -1443,6 +1562,8 @@
                 // Get current month status
                 const currentMonthStatus = getCurrentMonthFeeStatus(s);
                 const feeSummary = getStudentFeeSummary(s);
+                const hasPendingFee = feeSummary.pendingAmount > 0;
+                const studentIdJson = JSON.stringify(String(s.id || ''));
 
                 tr.innerHTML = `
                     <td><strong>#${s.rollNo}</strong></td>
@@ -1465,11 +1586,15 @@
                     </td>
                     <td><span class="status-badge ${currentMonthStatus.className}"><i data-lucide="${currentMonthStatus.icon}" size="14"></i> ${currentMonthStatus.label}</span></td>
                     <td>
-                        <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.5rem;">View Record</button>
+                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+                            ${hasPendingFee ? `<button class="btn btn-outline" style="padding: 0.4rem 0.65rem; font-size: 0.75rem; border-radius: 0.5rem;" onclick="event.stopPropagation(); sendPendingFeeReminderEmails([${studentIdJson}], this)"><i data-lucide="mail" size="14"></i> Email</button>` : ''}
+                            <button class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.5rem;">View Record</button>
+                        </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+            if (window.lucide) lucide.createIcons();
         }
 
         function showStudentFeeRecord(studentId) {
@@ -1542,15 +1667,19 @@
 
             const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
             const getPaidForMonth = (month) => {
+                const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
                 const paid = Number(studentPayments[month]?.amount || 0);
-                if (paid > 0) return paid;
-                if (studentRecord[month] === 'Paid' && monthlyFee > 0) return monthlyFee;
+                if (paid > 0) return Math.min(paid, monthTotalDue);
+                if (studentRecord[month] === 'Paid' && monthTotalDue > 0) return monthTotalDue;
                 return 0;
             };
 
             // Paid/Pending based on actual paid amount for the month.
-            const pendingMonths = applicableMonths.filter((month) => getPaidForMonth(month) < monthlyFee);
-            const paidMonths = applicableMonths.filter((month) => getPaidForMonth(month) >= monthlyFee && monthlyFee > 0);
+            const pendingMonths = applicableMonths.filter((month) => getPaidForMonth(month) < (monthlyFee + getFineAmountForMonth(studentId, month)));
+            const paidMonths = applicableMonths.filter((month) => {
+                const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
+                return getPaidForMonth(month) >= monthTotalDue && monthTotalDue > 0;
+            });
 
             // Create header section showing summary
             const headerDiv = document.createElement('div');
@@ -1566,7 +1695,8 @@
             const paidAmountDisplay = paidMonths.reduce((sum, month) => sum + getPaidForMonth(month), 0);
             const pendingAmountDisplay = pendingMonths.reduce((sum, month) => {
                 const paidForMonth = getPaidForMonth(month);
-                return sum + Math.max(monthlyFee - paidForMonth, 0);
+                const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
+                return sum + Math.max(monthTotalDue - paidForMonth, 0);
             }, 0);
             const paidBreakdown = paidMonths.length
                 ? paidMonths.map((m) => `${m}: PKR ${getPaidForMonth(m).toLocaleString('en-PK')}`).join(', ')
@@ -1628,18 +1758,15 @@
                     justify-content: space-between;
                     align-items: center;
                 `;
-                titleDiv.innerHTML = `
-                    <span>${pendingMonths.length} Pending Month(s) - Awaiting Payment</span>
-                    <button onclick="openManualPaymentModal('${studentId}')" style="background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.9rem;">
-                        <i data-lucide="plus" size="16" style="vertical-align: middle; margin-right: 0.25rem;"></i> Add Payment
-                    </button>
-                `;
+                titleDiv.innerHTML = `<span>${pendingMonths.length} Pending Month(s) - Awaiting Payment</span>`;
                 container.appendChild(titleDiv);
 
                 pendingMonths.forEach(month => {
                     const isCurrentMonth = month === CURRENT_MONTH_NAME;
                     const paidForMonth = getPaidForMonth(month);
-                    const dueForMonth = Math.max(monthlyFee - paidForMonth, 0);
+                    const fineForMonth = getFineAmountForMonth(studentId, month);
+                    const totalForMonth = monthlyFee + fineForMonth;
+                    const dueForMonth = Math.max(totalForMonth - paidForMonth, 0);
                     const row = document.createElement('div');
                     row.className = `month-row${isCurrentMonth ? ' current-month' : ''}`;
 
@@ -1670,7 +1797,15 @@
                                 <i data-lucide="${badgeIcon}"></i>
                                 ${badgeLabel}
                             </span>
-                            ${paidForMonth > 0 ? `<span style="font-size: 0.8rem; color: #7f1d1d; margin-left: 0.5rem;">Paid: PKR ${paidForMonth.toLocaleString('en-PK')} | Due: PKR ${dueForMonth.toLocaleString('en-PK')}</span>` : ''}
+                            <span style="font-size: 0.8rem; color: #7f1d1d; margin-left: 0.5rem;">
+                                Total Due: PKR ${dueForMonth.toLocaleString('en-PK')}${fineForMonth > 0 ? ` (Fee PKR ${monthlyFee.toLocaleString('en-PK')} + Fine PKR ${fineForMonth.toLocaleString('en-PK')})` : ''}
+                            </span>
+                            <button class="toggle-fee-btn btn-mark-paid" style="background:#10b981;" onclick="openManualPaymentModal('${studentId}', '${month}', 'payment')">
+                                <i data-lucide="plus" size="14"></i> Add Payment
+                            </button>
+                            <button class="toggle-fee-btn" style="background:#f59e0b;color:#111827;" onclick="openManualPaymentModal('${studentId}', '${month}', 'fine')">
+                                <i data-lucide="badge-alert" size="14"></i> ${fineForMonth > 0 ? 'Edit Fine' : 'Add Fine'}
+                            </button>
                             <button class="toggle-fee-btn btn-mark-paid" onclick="toggleMonthFee('${studentId}', '${month}')">
                                 <i data-lucide="check-circle" size="14"></i> Mark Paid
                             </button>
@@ -1719,7 +1854,7 @@
             if (window.lucide) lucide.createIcons();
         }
 
-        function openManualPaymentModal(studentId) {
+        function openManualPaymentModal(studentId, selectedMonth = '', mode = 'payment') {
             const students = getData(STORAGE_KEY_STUDENTS);
             const student = (students || []).find(s => String(s?.id || '') === String(studentId || ''));
             const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
@@ -1729,9 +1864,10 @@
             
             const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
             const getPaidForMonth = (month) => {
+                const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
                 const paid = Number(studentPayments[month]?.amount || 0);
-                if (paid > 0) return paid;
-                if (studentRecord[month] === 'Paid' && monthlyFee > 0) return monthlyFee;
+                if (paid > 0) return Math.min(paid, monthTotalDue);
+                if (studentRecord[month] === 'Paid' && monthTotalDue > 0) return monthTotalDue;
                 return 0;
             };
 
@@ -1756,27 +1892,35 @@
                 }
             }
 
-            const pendingMonths = applicableMonths.filter((month) => getPaidForMonth(month) < monthlyFee);
+            const pendingMonths = applicableMonths.filter((month) => getPaidForMonth(month) < (monthlyFee + getFineAmountForMonth(studentId, month)));
             
             const monthSelect = document.getElementById('paymentMonth');
             monthSelect.innerHTML = '<option value="">Select Month</option>';
             pendingMonths.forEach(month => {
                 const paidForMonth = getPaidForMonth(month);
-                const dueForMonth = Math.max(monthlyFee - paidForMonth, 0);
+                const fineForMonth = getFineAmountForMonth(studentId, month);
+                const baseDueForMonth = Math.max(monthlyFee - paidForMonth, 0);
+                const dueForMonth = Math.max(baseDueForMonth + fineForMonth, 0);
                 const option = document.createElement('option');
                 option.value = month;
                 option.dataset.dueAmount = String(dueForMonth);
+                option.dataset.baseDueAmount = String(baseDueForMonth);
+                option.dataset.currentFineAmount = String(fineForMonth);
                 option.textContent = `${month} (Due: PKR ${dueForMonth.toLocaleString('en-PK')})`;
                 monthSelect.appendChild(option);
             });
 
             monthSelect.onchange = () => updateManualPaymentTotal(true);
+            if (selectedMonth) monthSelect.value = selectedMonth;
             document.getElementById('paymentAmount').value = '';
             document.getElementById('fineFrequency').value = 'none';
             document.getElementById('fineUnits').value = '0';
             document.getElementById('fineRate').value = '0';
-            document.getElementById('fineAmount').value = '0';
+            document.getElementById('fineAmount').value = mode === 'fine' ? String(getFineAmountForMonth(studentId, selectedMonth) || 0) : '0';
             document.getElementById('manualPaymentModal').dataset.studentId = studentId;
+            document.getElementById('manualPaymentModal').dataset.paymentMode = mode === 'fine' ? 'fine' : 'payment';
+            document.getElementById('manualPaymentModalTitle').textContent = mode === 'fine' ? 'Edit Fine Amount' : 'Add Manual Payment';
+            document.getElementById('manualPaymentSubmitBtn').textContent = mode === 'fine' ? 'Save Fine Amount' : 'Save Payment';
             document.getElementById('manualPaymentModal').style.display = 'flex';
             updateManualPaymentTotal(true);
         }
@@ -1784,6 +1928,9 @@
         function closeManualPaymentModal() {
             document.getElementById('manualPaymentModal').style.display = 'none';
             document.getElementById('manualPaymentModal').dataset.studentId = '';
+            document.getElementById('manualPaymentModal').dataset.paymentMode = '';
+            document.getElementById('manualPaymentModalTitle').textContent = 'Add Manual Payment';
+            document.getElementById('manualPaymentSubmitBtn').textContent = 'Save Payment';
         }
 
         function getManualPaymentDueAmount() {
@@ -1792,36 +1939,66 @@
             return Number(selectedOption?.dataset?.dueAmount || 0) || 0;
         }
 
+        function getManualPaymentBaseDueAmount() {
+            const monthSelect = document.getElementById('paymentMonth');
+            const selectedOption = monthSelect?.selectedOptions?.[0];
+            return Number(selectedOption?.dataset?.baseDueAmount || selectedOption?.dataset?.dueAmount || 0) || 0;
+        }
+
         function calculateManualFineAmount() {
+            const modal = document.getElementById('manualPaymentModal');
+            const mode = String(modal?.dataset?.paymentMode || 'payment');
             const frequency = String(document.getElementById('fineFrequency')?.value || 'none');
-            if (frequency === 'none') return 0;
+            const manualFine = Number(document.getElementById('fineAmount')?.value || 0);
+            if (frequency === 'none') return Math.max(Number.isFinite(manualFine) ? manualFine : 0, 0);
             const units = Number(document.getElementById('fineUnits')?.value || 0);
             const rate = Number(document.getElementById('fineRate')?.value || 0);
-            return Math.max((Number.isFinite(units) ? units : 0) * (Number.isFinite(rate) ? rate : 0), 0);
+            const calculatedFine = Math.max((Number.isFinite(units) ? units : 0) * (Number.isFinite(rate) ? rate : 0), 0);
+            return mode === 'fine' && calculatedFine <= 0 ? Math.max(Number.isFinite(manualFine) ? manualFine : 0, 0) : calculatedFine;
         }
 
         function updateManualPaymentTotal(forceFillAmount = false) {
             const dueAmount = getManualPaymentDueAmount();
+            const baseDueAmount = getManualPaymentBaseDueAmount();
             const fineAmount = calculateManualFineAmount();
-            const totalAmount = Math.max(dueAmount + fineAmount, 0);
+            const modal = document.getElementById('manualPaymentModal');
+            const mode = String(modal?.dataset?.paymentMode || 'payment');
             const amountInput = document.getElementById('paymentAmount');
             const fineInput = document.getElementById('fineAmount');
             const dueHint = document.getElementById('manualPaymentDueHint');
             const totalHint = document.getElementById('manualPaymentTotalHint');
+            const feePaymentAmount = mode === 'fine' ? 0 : Number(amountInput?.value || 0) || dueAmount;
 
-            if (fineInput) fineInput.value = String(fineAmount);
+            if (fineInput) {
+                fineInput.readOnly = mode !== 'fine' && String(document.getElementById('fineFrequency')?.value || 'none') !== 'none';
+                if (String(document.getElementById('fineFrequency')?.value || 'none') !== 'none') {
+                    fineInput.value = String(fineAmount);
+                }
+                fineInput.style.background = fineInput.readOnly ? '#f9fafb' : '#fff';
+                fineInput.placeholder = mode === 'fine' ? 'Enter fine amount' : 'Fine amount';
+            }
+            if (amountInput) {
+                amountInput.disabled = mode === 'fine';
+                amountInput.placeholder = mode === 'fine' ? 'Fine only - fee remains pending' : 'Enter fee payment amount';
+            }
             if (dueHint) dueHint.textContent = `Due: PKR ${dueAmount.toLocaleString('en-PK')}`;
-            if (totalHint) totalHint.textContent = `Total with fine: PKR ${totalAmount.toLocaleString('en-PK')}`;
+            if (totalHint) {
+                totalHint.textContent = mode === 'fine'
+                    ? `Fine amount: PKR ${fineAmount.toLocaleString('en-PK')} | New month due: PKR ${(baseDueAmount + fineAmount).toLocaleString('en-PK')}`
+                    : `Fee payment: PKR ${feePaymentAmount.toLocaleString('en-PK')} | Fine: PKR ${fineAmount.toLocaleString('en-PK')}`;
+            }
             if (amountInput && (forceFillAmount || !String(amountInput.value || '').trim())) {
-                amountInput.value = totalAmount ? String(totalAmount) : '';
+                amountInput.value = mode === 'fine' ? '' : (dueAmount ? String(dueAmount) : '');
             }
         }
 
         async function submitManualPayment() {
             const modal = document.getElementById('manualPaymentModal');
             const studentId = String(modal.dataset.studentId || '').trim();
+            const paymentMode = String(modal.dataset.paymentMode || 'payment');
             const month = String(document.getElementById('paymentMonth').value || '').trim();
-            const amount = parseInt(document.getElementById('paymentAmount').value || '0', 10);
+            const fineAmount = calculateManualFineAmount();
+            const amount = paymentMode === 'fine' ? 0 : parseInt(document.getElementById('paymentAmount').value || '0', 10);
 
             if (!studentId) {
                 alert('Student is missing. Please reopen the payment modal.');
@@ -1833,8 +2010,8 @@
                 return;
             }
 
-            if (!Number.isFinite(amount) || amount <= 0) {
-                alert('Please enter a valid amount');
+            if (paymentMode !== 'fine' && (!Number.isFinite(amount) || amount <= 0) && fineAmount <= 0) {
+                alert('Please enter a valid payment amount or add a fine amount.');
                 return;
             }
 
@@ -1842,8 +2019,7 @@
             const student = students.find((s) => String(s?.id || '') === studentId);
             const monthlyFee = Number(student?.monthlyFee || 0) || 0;
             const dueAmount = getManualPaymentDueAmount() || monthlyFee;
-            const fineAmount = calculateManualFineAmount();
-            const fullAmount = Math.max(dueAmount + fineAmount, amount);
+            const fullAmount = dueAmount;
 
             const payload = {
                 studentId,
@@ -1855,10 +2031,26 @@
                 feeMonths: [month],
                 amount,
                 fullAmount,
-                fineAmount
+                fineAmount,
+                paymentMode
             };
 
             try {
+                if (paymentMode === 'fine') {
+                    const token = sessionStorage.getItem('eduCore_token') || '';
+                    const response = await fetch(`${API_BASE_URL}/fees/fine-charge`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            ...(token ? { Authorization: `Bearer ${token}` } : {})
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const body = await response.json().catch(() => ({}));
+                    if (!response.ok || body?.success === false) {
+                        throw new Error(body?.message || 'Fine amount could not be saved.');
+                    }
+                } else
                 if (typeof syncToSQLDetailed === 'function') {
                     const result = await syncToSQLDetailed('fees/manual-payment', payload);
                     if (!result?.success) throw new Error(result?.error || 'Manual payment failed.');
@@ -1901,7 +2093,8 @@
             // "Mark Paid" should persist as a manual payment, otherwise it resets after refresh.
             const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
             const alreadyPaid = Number(paymentDetails?.[sid]?.[key]?.amount || 0) || 0;
-            const due = Math.max(monthlyFee - alreadyPaid, 0);
+            const monthTotalDue = monthlyFee + getFineAmountForMonth(sid, key);
+            const due = Math.max(monthTotalDue - alreadyPaid, 0);
 
             if (due <= 0) {
                 alert('This month is already paid.');
@@ -1917,7 +2110,7 @@
                 feeMonth: key,
                 feeMonths: [key],
                 amount: due,
-                fullAmount: monthlyFee || due
+                fullAmount: monthTotalDue || due
             };
 
             try {

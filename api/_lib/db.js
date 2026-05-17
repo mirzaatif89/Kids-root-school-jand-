@@ -7,7 +7,7 @@ require('dotenv').config();
 let startupPromise = null;
 let sequelize = null;
 
-export const defineStudentModel = (db)=> {
+function defineStudentModel(db) {
     return db.define('Student', {
         id: { type: DataTypes.STRING, primaryKey: true },
         studentCode: DataTypes.STRING,
@@ -189,6 +189,83 @@ function defineAppSettingModel(db) {
     });
 }
 
+function defineLibraryIssueModel(db) {
+    return db.define('LibraryIssue', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        bookTitle: { type: DataTypes.STRING, allowNull: false },
+        bookNumber: { type: DataTypes.STRING, allowNull: false },
+        accessionNumber: DataTypes.STRING,
+        isbn: DataTypes.STRING,
+        author: DataTypes.STRING,
+        category: DataTypes.STRING,
+        shelfLocation: DataTypes.STRING,
+        studentId: { type: DataTypes.STRING, allowNull: false },
+        studentName: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        fatherName: DataTypes.STRING,
+        parentPhone: DataTypes.STRING,
+        studentEmail: DataTypes.STRING,
+        issueDate: { type: DataTypes.STRING, allowNull: false },
+        loanDays: { type: DataTypes.INTEGER, defaultValue: 7 },
+        dueDate: { type: DataTypes.STRING, allowNull: false },
+        returnDate: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Issued' },
+        finePerDay: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+        conditionIssue: DataTypes.STRING,
+        conditionReturn: DataTypes.STRING,
+        notes: DataTypes.TEXT
+    });
+}
+
+function defineCafeContractModel(db) {
+    return db.define('CafeContract', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        contractorName: { type: DataTypes.STRING, allowNull: false },
+        companyName: DataTypes.STRING,
+        contactNumber: DataTypes.STRING,
+        cnic: DataTypes.STRING,
+        email: DataTypes.STRING,
+        contractType: DataTypes.STRING,
+        startDate: DataTypes.STRING,
+        endDate: DataTypes.STRING,
+        monthlyRent: DataTypes.DECIMAL(10, 2),
+        securityDeposit: DataTypes.DECIMAL(10, 2),
+        paymentStatus: DataTypes.STRING,
+        menuItems: DataTypes.TEXT,
+        hygieneStatus: DataTypes.STRING,
+        licenseNumber: DataTypes.STRING,
+        staffCount: DataTypes.INTEGER,
+        status: { type: DataTypes.STRING, defaultValue: 'Active' },
+        notes: DataTypes.TEXT
+    });
+}
+
+function defineTransportAssignmentModel(db) {
+    return db.define('TransportAssignment', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        driverName: { type: DataTypes.STRING, allowNull: false },
+        driverPhone: DataTypes.STRING,
+        driverCnic: DataTypes.STRING,
+        licenseNumber: DataTypes.STRING,
+        licenseExpiry: DataTypes.STRING,
+        vehicleNumber: { type: DataTypes.STRING, allowNull: false },
+        vehicleType: DataTypes.STRING,
+        vehicleModel: DataTypes.STRING,
+        seatingCapacity: DataTypes.INTEGER,
+        routeName: DataTypes.STRING,
+        routeArea: DataTypes.STRING,
+        pickupTime: DataTypes.STRING,
+        dropTime: DataTypes.STRING,
+        helperName: DataTypes.STRING,
+        helperPhone: DataTypes.STRING,
+        insuranceExpiry: DataTypes.STRING,
+        fitnessExpiry: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Active' },
+        notes: DataTypes.TEXT
+    });
+}
+
 async function initializeDatabase() {
     const connection = await mysql.createConnection({
         host: process.env.DB_HOST || 'localhost',
@@ -341,6 +418,9 @@ async function getDb() {
             defineAppSettingModel(db);
             defineSpecialNoticeModel(db);
             defineBannerModel(db);
+            defineLibraryIssueModel(db);
+            defineCafeContractModel(db);
+            defineTransportAssignmentModel(db);
 
             await db.sync();
             await ensureLegacySchema(db);

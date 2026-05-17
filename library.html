@@ -8,58 +8,390 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .module-panel {
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.25rem;
-            box-shadow: var(--shadow-sm);
-        }
-        .module-panel h2 {
-            margin: 0 0 0.5rem;
-            font-size: 1.15rem;
-        }
-        .module-panel p {
-            margin: 0;
-            color: var(--text-secondary);
-        }
+        .library-layout { display: grid; grid-template-columns: minmax(320px, 0.85fr) minmax(520px, 1.15fr); gap: 1.25rem; align-items: start; }
+        .library-panel { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.1rem; box-shadow: var(--shadow-sm); }
+        .library-panel h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .library-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+        .library-field.full { grid-column: 1 / -1; }
+        .library-field label { display: block; margin-bottom: 0.35rem; color: var(--text-secondary); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+        .library-field input, .library-field select, .library-field textarea { width: 100%; min-height: 42px; border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 0.75rem; font: inherit; background: #fff; color: var(--text-primary); }
+        .library-field textarea { min-height: 76px; resize: vertical; }
+        .library-actions { display: flex; gap: 0.65rem; flex-wrap: wrap; margin-top: 1rem; }
+        .library-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+        .library-stat { border: 1px solid var(--border-color); border-radius: 8px; padding: 0.8rem; background: #f8fafc; }
+        .library-stat span { color: var(--text-secondary); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; }
+        .library-stat strong { display: block; margin-top: 0.3rem; font-size: 1.35rem; color: var(--text-primary); }
+        .library-toolbar { display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; }
+        .library-toolbar .search-bar { max-width: 340px; }
+        .library-table-wrap { overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; }
+        .library-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+        .library-table th, .library-table td { padding: 0.7rem; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; font-size: 0.86rem; }
+        .library-table th { background: #f8fbff; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .lib-meta { display: grid; gap: 0.18rem; }
+        .lib-meta strong { color: var(--text-primary); }
+        .lib-muted { color: var(--text-secondary); font-size: 0.78rem; }
+        .lib-status { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.28rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap; }
+        .lib-status.issued { background: #e0f2fe; color: #075985; }
+        .lib-status.returned { background: #dcfce7; color: #166534; }
+        .lib-status.overdue { background: #fee2e2; color: #991b1b; }
+        .lib-status.lost { background: #fef3c7; color: #92400e; }
+        .lib-row-actions { display: flex; gap: 0.45rem; flex-wrap: wrap; }
+        .lib-small-btn { border: 1px solid var(--border-color); border-radius: 8px; background: #fff; padding: 0.42rem 0.6rem; cursor: pointer; font-weight: 800; font-size: 0.76rem; display: inline-flex; align-items: center; gap: 0.3rem; }
+        .lib-small-btn.primary { background: var(--primary-color); color: #fff; border-color: var(--primary-color); }
+        .lib-small-btn.danger { background: #fee2e2; color: #991b1b; border-color: #fecaca; }
+        @media (max-width: 1080px) { .library-layout { grid-template-columns: 1fr; } .library-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 640px) { .library-grid, .library-stats { grid-template-columns: 1fr; } }
     </style>
 </head>
 
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="logo-section">
-                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
-            </div>
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
                 <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
                 <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
                 <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
                 <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="library.html" class="nav-item active"><i data-lucide="library"></i><span>Library</span></a>
                 <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
                 <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
-                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
                 <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
-                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
                 <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
                 <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
                 <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
             </nav>
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
         </aside>
+
         <main class="main-content">
-            <header class="header"><h1>Library</h1></header>
-            <section class="module-panel">
-                <h2>Library</h2>
-                <p>This section is ready for library records and management.</p>
+            <header class="header">
+                <div>
+                    <h1>Library Register</h1>
+                    <p style="color:var(--text-secondary);margin-top:0.25rem;">Track issued books, student details, due dates, returns, and overdue records.</p>
+                </div>
+            </header>
+
+            <section class="library-layout">
+                <div class="library-panel">
+                    <h2 id="libraryFormTitle">Issue Book</h2>
+                    <form id="libraryIssueForm">
+                        <input type="hidden" id="libraryRecordId">
+                        <div class="library-grid">
+                            <div class="library-field full"><label for="libraryStudent">Student</label><select id="libraryStudent" required><option value="">Select student</option></select></div>
+                            <div class="library-field"><label>Roll No</label><input id="libraryRollNo" readonly></div>
+                            <div class="library-field"><label>Class</label><input id="libraryClass" readonly></div>
+                            <div class="library-field"><label>Father Name</label><input id="libraryFatherName" readonly></div>
+                            <div class="library-field"><label>Parent Phone</label><input id="libraryParentPhone" readonly></div>
+                            <div class="library-field full"><label for="bookTitle">Book Title</label><input id="bookTitle" placeholder="Example: Oxford English Reader" required></div>
+                            <div class="library-field"><label for="bookNumber">Book Number</label><input id="bookNumber" placeholder="B-1024" required></div>
+                            <div class="library-field"><label for="accessionNumber">Accession No.</label><input id="accessionNumber" placeholder="ACC-001"></div>
+                            <div class="library-field"><label for="author">Author</label><input id="author" placeholder="Author name"></div>
+                            <div class="library-field"><label for="isbn">ISBN</label><input id="isbn" placeholder="ISBN"></div>
+                            <div class="library-field"><label for="category">Category</label><input id="category" placeholder="Course / Story / Reference"></div>
+                            <div class="library-field"><label for="shelfLocation">Shelf</label><input id="shelfLocation" placeholder="Shelf A2"></div>
+                            <div class="library-field"><label for="issueDate">Issue Date</label><input type="date" id="issueDate" required></div>
+                            <div class="library-field"><label for="loanDays">Days</label><input type="number" id="loanDays" min="1" value="7" required></div>
+                            <div class="library-field"><label for="dueDate">Due Date</label><input type="date" id="dueDate" required></div>
+                            <div class="library-field"><label for="finePerDay">Fine / Day</label><input type="number" id="finePerDay" min="0" value="0"></div>
+                            <div class="library-field"><label for="conditionIssue">Book Condition</label><select id="conditionIssue"><option value="Good">Good</option><option value="New">New</option><option value="Fair">Fair</option><option value="Damaged">Damaged</option></select></div>
+                            <div class="library-field"><label for="recordStatus">Status</label><select id="recordStatus"><option value="Issued">Issued</option><option value="Returned">Returned</option><option value="Lost">Lost</option></select></div>
+                            <div class="library-field full"><label for="libraryNotes">Notes</label><textarea id="libraryNotes" placeholder="Any remarks, return condition, librarian notes..."></textarea></div>
+                        </div>
+                        <div class="library-actions">
+                            <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Record</button>
+                            <button type="button" class="btn btn-outline" onclick="resetLibraryForm()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="library-panel">
+                    <div class="library-stats">
+                        <div class="library-stat"><span>Total</span><strong id="libTotal">0</strong></div>
+                        <div class="library-stat"><span>Issued</span><strong id="libIssued">0</strong></div>
+                        <div class="library-stat"><span>Overdue</span><strong id="libOverdue">0</strong></div>
+                        <div class="library-stat"><span>Returned</span><strong id="libReturned">0</strong></div>
+                    </div>
+                    <div class="library-toolbar">
+                        <div class="search-bar">
+                            <i data-lucide="search" size="18" style="color:var(--text-secondary);"></i>
+                            <input type="text" id="librarySearch" placeholder="Search student, book, number...">
+                        </div>
+                        <select id="libraryStatusFilter" style="min-height:42px;border:1px solid var(--border-color);border-radius:8px;padding:0 0.75rem;">
+                            <option value="all">All Status</option>
+                            <option value="Issued">Issued</option>
+                            <option value="Overdue">Overdue</option>
+                            <option value="Returned">Returned</option>
+                            <option value="Lost">Lost</option>
+                        </select>
+                    </div>
+                    <div class="library-table-wrap">
+                        <table class="library-table">
+                            <thead><tr><th>Book</th><th>Student</th><th>Issue / Due</th><th>Status</th><th>Fine</th><th>Actions</th></tr></thead>
+                            <tbody id="libraryIssueBody"><tr><td colspan="6">Loading library records...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
+
     <script src="auth.js"></script>
     <script src="script.js?v=20260517-facility-nav"></script>
-    <script>lucide.createIcons();</script>
+    <script>
+        let libraryIssues = [];
+        let libraryStudents = [];
+
+        function escapeLibrary(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+        }
+
+        function todayInput() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        function addDays(dateValue, days) {
+            const date = new Date(`${dateValue}T00:00:00`);
+            if (Number.isNaN(date.getTime())) return todayInput();
+            date.setDate(date.getDate() + (Number(days) || 0));
+            return date.toISOString().slice(0, 10);
+        }
+
+        function formatDate(value) {
+            if (!value) return '-';
+            const parsed = new Date(`${value}T00:00:00`);
+            return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleDateString('en-GB');
+        }
+
+        function normalizeIssueStatus(issue) {
+            if (issue.status === 'Returned' || issue.status === 'Lost') return issue.status;
+            const due = new Date(`${issue.dueDate}T23:59:59`);
+            return issue.dueDate && !Number.isNaN(due.getTime()) && due < new Date() ? 'Overdue' : 'Issued';
+        }
+
+        function overdueDays(issue) {
+            const status = normalizeIssueStatus(issue);
+            if (status !== 'Overdue') return 0;
+            const due = new Date(`${issue.dueDate}T00:00:00`);
+            const now = new Date(`${todayInput()}T00:00:00`);
+            return Math.max(Math.ceil((now - due) / 86400000), 0);
+        }
+
+        function getStudentById(id) {
+            return libraryStudents.find((student) => String(student.id) === String(id));
+        }
+
+        function fillStudentDetails() {
+            const student = getStudentById(document.getElementById('libraryStudent').value);
+            document.getElementById('libraryRollNo').value = student?.rollNo || '';
+            document.getElementById('libraryClass').value = student?.classGrade || '';
+            document.getElementById('libraryFatherName').value = student?.fatherName || '';
+            document.getElementById('libraryParentPhone').value = student?.parentPhone || '';
+        }
+
+        function syncDueDate() {
+            document.getElementById('dueDate').value = addDays(document.getElementById('issueDate').value, document.getElementById('loanDays').value);
+        }
+
+        async function loadStudentsForLibrary() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                const data = await response.json();
+                libraryStudents = Array.isArray(data) ? data : [];
+                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(libraryStudents));
+            } catch (_error) {
+                libraryStudents = getData(STORAGE_KEY_STUDENTS) || [];
+            }
+            const select = document.getElementById('libraryStudent');
+            select.innerHTML = '<option value="">Select student</option>' + libraryStudents.map((student) => (
+                `<option value="${escapeLibrary(student.id)}">${escapeLibrary(student.fullName || 'Student')} - ${escapeLibrary(student.classGrade || '-')} - Roll ${escapeLibrary(student.rollNo || '-')}</option>`
+            )).join('');
+        }
+
+        async function loadLibraryIssues() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/library/issues`);
+                const result = await parseJsonResponse(response, 'Library records could not be loaded.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Library records could not be loaded.');
+                libraryIssues = result.issues || [];
+            } catch (error) {
+                console.warn(error.message);
+                libraryIssues = JSON.parse(localStorage.getItem('eduCore_library_issues') || '[]');
+            }
+            localStorage.setItem('eduCore_library_issues', JSON.stringify(libraryIssues));
+            renderLibraryIssues();
+        }
+
+        function getLibraryPayload() {
+            const student = getStudentById(document.getElementById('libraryStudent').value) || {};
+            return {
+                id: document.getElementById('libraryRecordId').value || undefined,
+                bookTitle: document.getElementById('bookTitle').value.trim(),
+                bookNumber: document.getElementById('bookNumber').value.trim(),
+                accessionNumber: document.getElementById('accessionNumber').value.trim(),
+                isbn: document.getElementById('isbn').value.trim(),
+                author: document.getElementById('author').value.trim(),
+                category: document.getElementById('category').value.trim(),
+                shelfLocation: document.getElementById('shelfLocation').value.trim(),
+                studentId: document.getElementById('libraryStudent').value,
+                studentName: student.fullName || '',
+                rollNo: student.rollNo || '',
+                classGrade: student.classGrade || '',
+                fatherName: student.fatherName || '',
+                parentPhone: student.parentPhone || '',
+                studentEmail: student.email || '',
+                issueDate: document.getElementById('issueDate').value,
+                loanDays: Number(document.getElementById('loanDays').value || 7),
+                dueDate: document.getElementById('dueDate').value,
+                status: document.getElementById('recordStatus').value,
+                finePerDay: Number(document.getElementById('finePerDay').value || 0),
+                conditionIssue: document.getElementById('conditionIssue').value,
+                notes: document.getElementById('libraryNotes').value.trim()
+            };
+        }
+
+        async function saveLibraryIssue(event) {
+            event.preventDefault();
+            const payload = getLibraryPayload();
+            if (!payload.bookTitle || !payload.bookNumber || !payload.studentId) {
+                alert('Please select student and enter book title/number.');
+                return;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/library/issues`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await parseJsonResponse(response, 'Library record could not be saved.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Library record could not be saved.');
+                libraryIssues = result.issues || [];
+                localStorage.setItem('eduCore_library_issues', JSON.stringify(libraryIssues));
+                resetLibraryForm();
+                renderLibraryIssues();
+                alert('Library record saved.');
+            } catch (error) {
+                alert(error.message || error);
+            }
+        }
+
+        function renderLibraryStats(rows) {
+            document.getElementById('libTotal').textContent = libraryIssues.length;
+            document.getElementById('libIssued').textContent = libraryIssues.filter((item) => normalizeIssueStatus(item) === 'Issued').length;
+            document.getElementById('libOverdue').textContent = libraryIssues.filter((item) => normalizeIssueStatus(item) === 'Overdue').length;
+            document.getElementById('libReturned').textContent = libraryIssues.filter((item) => normalizeIssueStatus(item) === 'Returned').length;
+        }
+
+        function renderLibraryIssues() {
+            const body = document.getElementById('libraryIssueBody');
+            const term = String(document.getElementById('librarySearch')?.value || '').toLowerCase().trim();
+            const filter = document.getElementById('libraryStatusFilter')?.value || 'all';
+            const rows = libraryIssues.filter((issue) => {
+                const status = normalizeIssueStatus(issue);
+                const haystack = `${issue.bookTitle || ''} ${issue.bookNumber || ''} ${issue.accessionNumber || ''} ${issue.studentName || ''} ${issue.rollNo || ''} ${issue.classGrade || ''}`.toLowerCase();
+                return (!term || haystack.includes(term)) && (filter === 'all' || status === filter);
+            });
+            renderLibraryStats(rows);
+
+            if (!rows.length) {
+                body.innerHTML = '<tr><td colspan="6">No library records found.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = rows.map((issue) => {
+                const status = normalizeIssueStatus(issue);
+                const daysLate = overdueDays(issue);
+                const fine = daysLate * Number(issue.finePerDay || 0);
+                return `
+                    <tr>
+                        <td><div class="lib-meta"><strong>${escapeLibrary(issue.bookTitle)}</strong><span class="lib-muted">Book #: ${escapeLibrary(issue.bookNumber)} | Acc: ${escapeLibrary(issue.accessionNumber || '-')}</span><span class="lib-muted">${escapeLibrary(issue.author || '-')} | ${escapeLibrary(issue.category || '-')} | ${escapeLibrary(issue.shelfLocation || '-')}</span></div></td>
+                        <td><div class="lib-meta"><strong>${escapeLibrary(issue.studentName || '-')}</strong><span class="lib-muted">Roll ${escapeLibrary(issue.rollNo || '-')} | ${escapeLibrary(issue.classGrade || '-')}</span><span class="lib-muted">${escapeLibrary(issue.fatherName || '-')} | ${escapeLibrary(issue.parentPhone || '-')}</span></div></td>
+                        <td><div class="lib-meta"><span>Issued: <strong>${formatDate(issue.issueDate)}</strong></span><span>Due: <strong>${formatDate(issue.dueDate)}</strong></span><span class="lib-muted">${Number(issue.loanDays || 0)} day(s)</span></div></td>
+                        <td><span class="lib-status ${status.toLowerCase()}"><i data-lucide="${status === 'Returned' ? 'check-circle' : status === 'Overdue' ? 'alert-triangle' : status === 'Lost' ? 'circle-x' : 'clock'}" size="13"></i>${status}</span></td>
+                        <td><div class="lib-meta"><strong>PKR ${fine.toLocaleString('en-PK')}</strong><span class="lib-muted">${daysLate ? `${daysLate} day(s) late` : `PKR ${Number(issue.finePerDay || 0).toLocaleString('en-PK')} / day`}</span></div></td>
+                        <td><div class="lib-row-actions">
+                            ${status !== 'Returned' ? `<button class="lib-small-btn primary" onclick="returnLibraryIssue('${issue.id}')"><i data-lucide="rotate-ccw" size="14"></i> Return</button>` : ''}
+                            <button class="lib-small-btn" onclick="editLibraryIssue('${issue.id}')"><i data-lucide="pencil" size="14"></i> Edit</button>
+                            <button class="lib-small-btn danger" onclick="deleteLibraryIssue('${issue.id}')"><i data-lucide="trash-2" size="14"></i> Delete</button>
+                        </div></td>
+                    </tr>
+                `;
+            }).join('');
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function editLibraryIssue(id) {
+            const issue = libraryIssues.find((item) => String(item.id) === String(id));
+            if (!issue) return;
+            document.getElementById('libraryFormTitle').textContent = 'Edit Library Record';
+            document.getElementById('libraryRecordId').value = issue.id || '';
+            document.getElementById('libraryStudent').value = issue.studentId || '';
+            fillStudentDetails();
+            ['bookTitle', 'bookNumber', 'accessionNumber', 'author', 'isbn', 'category', 'shelfLocation', 'issueDate', 'loanDays', 'dueDate', 'finePerDay'].forEach((idKey) => {
+                document.getElementById(idKey).value = issue[idKey] || '';
+            });
+            document.getElementById('conditionIssue').value = issue.conditionIssue || 'Good';
+            document.getElementById('recordStatus').value = issue.status === 'Returned' || issue.status === 'Lost' ? issue.status : 'Issued';
+            document.getElementById('libraryNotes').value = issue.notes || '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function returnLibraryIssue(id) {
+            if (!(await showAppConfirm('Mark this book as returned?'))) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/library/issues/${encodeURIComponent(id)}/return`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ returnDate: todayInput() })
+                });
+                const result = await parseJsonResponse(response, 'Book return could not be saved.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Book return could not be saved.');
+                libraryIssues = result.issues || [];
+                renderLibraryIssues();
+            } catch (error) {
+                alert(error.message || error);
+            }
+        }
+
+        async function deleteLibraryIssue(id) {
+            if (!(await showAppConfirm('Delete this library record?'))) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/library/issues/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                const result = await parseJsonResponse(response, 'Library record could not be deleted.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Library record could not be deleted.');
+                libraryIssues = result.issues || [];
+                renderLibraryIssues();
+            } catch (error) {
+                alert(error.message || error);
+            }
+        }
+
+        function resetLibraryForm() {
+            document.getElementById('libraryIssueForm').reset();
+            document.getElementById('libraryFormTitle').textContent = 'Issue Book';
+            document.getElementById('libraryRecordId').value = '';
+            document.getElementById('issueDate').value = todayInput();
+            document.getElementById('loanDays').value = '7';
+            syncDueDate();
+            fillStudentDetails();
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            document.getElementById('issueDate').value = todayInput();
+            syncDueDate();
+            document.getElementById('libraryStudent').addEventListener('change', fillStudentDetails);
+            document.getElementById('issueDate').addEventListener('change', syncDueDate);
+            document.getElementById('loanDays').addEventListener('input', syncDueDate);
+            document.getElementById('librarySearch').addEventListener('input', renderLibraryIssues);
+            document.getElementById('libraryStatusFilter').addEventListener('change', renderLibraryIssues);
+            document.getElementById('libraryIssueForm').addEventListener('submit', saveLibraryIssue);
+            await loadStudentsForLibrary();
+            await loadLibraryIssues();
+            if (window.lucide) lucide.createIcons();
+        });
+    </script>
 </body>
 
 </html>

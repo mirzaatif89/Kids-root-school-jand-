@@ -270,7 +270,7 @@
 
                         <div class="notice-actions">
                             <button type="button" class="btn btn-outline" onclick="printCurrentNotice()"><i data-lucide="printer"></i> Print</button>
-                            <button type="button" class="btn btn-primary" onclick="executeCurrentNotice()"><i data-lucide="send"></i> Execute Notice</button>
+                            <button type="button" class="btn btn-primary" onclick="executeCurrentNotice()"><i data-lucide="send"></i> Execute + Email</button>
                             <button type="button" class="btn btn-outline" onclick="resetNoticeForm()">Clear</button>
                         </div>
                     </form>
@@ -439,6 +439,7 @@
             const localNotices = JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]');
             const nextLocal = [notice, ...localNotices.filter((item) => item.id !== notice.id)];
             localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(nextLocal));
+            let executeResult = null;
 
             try {
                 const response = await fetch(`${API_BASE_URL}/special-notices`, {
@@ -448,6 +449,7 @@
                 });
                 const result = await parseJsonResponse(response, 'Special notice could not be executed.');
                 if (!response.ok || result.success === false) throw new Error(result.message || 'Special notice could not be executed.');
+                executeResult = result;
                 specialNotices = result.notices || nextLocal;
                 localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(specialNotices));
             } catch (error) {
@@ -458,7 +460,41 @@
             pushNotification('Special Notice Executed', `${notice.title} was published to selected portals.`, 'megaphone');
             renderNoticeHistory();
             resetNoticeForm();
-            alert('Notice executed and published to selected portals.');
+            const emailSent = Number(executeResult?.emailResult?.sent || 0);
+            const emailFailed = Array.isArray(executeResult?.emailResult?.failed) ? executeResult.emailResult.failed.length : 0;
+            alert(`Notice executed and published to selected portals. Student emails sent: ${emailSent}${emailFailed ? ` | Failed: ${emailFailed}` : ''}`);
+        }
+
+        async function sendSpecialNoticeEmail(id) {
+            const notice = specialNotices.find((item) => String(item.id) === String(id));
+            if (!notice) return;
+            if (!(notice.targetPortals || []).includes('student')) {
+                alert('Select Student portal for this notice before sending student emails.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/special-notices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...notice,
+                        status: 'executed',
+                        targetPortals: notice.targetPortals || ['student'],
+                        forceEmail: true
+                    })
+                });
+                const result = await parseJsonResponse(response, 'Notice email could not be sent.');
+                if (!response.ok || result.success === false) throw new Error(result.message || 'Notice email could not be sent.');
+                specialNotices = result.notices || specialNotices;
+                localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(specialNotices));
+                renderNoticeHistory();
+                const emailSent = Number(result?.emailResult?.sent || 0);
+                const emailFailed = Array.isArray(result?.emailResult?.failed) ? result.emailResult.failed.length : 0;
+                alert(`Student notice emails sent: ${emailSent}${emailFailed ? ` | Failed: ${emailFailed}` : ''}`);
+            } catch (error) {
+                alert(`Notice email could not be sent: ${error.message || error}`);
+            }
         }
 
         async function loadSpecialNotices() {
@@ -511,6 +547,7 @@
 
             container.innerHTML = specialNotices.map((notice) => {
                 const targets = (notice.targetPortals || []).map((target) => `<span class="notice-pill">${escapeHtml(target)}</span>`).join('');
+                const canEmailStudents = (notice.targetPortals || []).includes('student') && notice.status === 'executed';
                 return `
                     <article class="notice-card">
                         <div class="notice-card-top">
@@ -523,6 +560,7 @@
                         <p style="margin:0;color:var(--text-secondary);">${escapeHtml(notice.message || '').slice(0, 180)}${String(notice.message || '').length > 180 ? '...' : ''}</p>
                         <div class="notice-pill-row">${targets || '<span class="notice-pill draft">No portal</span>'}</div>
                         <div class="notice-actions">
+                            ${canEmailStudents ? `<button type="button" class="btn btn-primary" onclick="sendSpecialNoticeEmail('${notice.id}')"><i data-lucide="mail"></i> Email Students</button>` : ''}
                             <button type="button" class="btn btn-outline" onclick="editSpecialNotice('${notice.id}')"><i data-lucide="pencil"></i> Edit</button>
                             <button type="button" class="btn btn-outline" onclick="deleteSpecialNotice('${notice.id}')"><i data-lucide="trash-2"></i> Delete</button>
                         </div>

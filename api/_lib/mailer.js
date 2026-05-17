@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { getSchoolLogoAttachment, SCHOOL_LOGO_CID } = require('./email-template');
 
 function getSmtpConfig() {
     const host = String(process.env.SMTP_HOST || '').trim();
@@ -92,6 +93,11 @@ async function sendSmtpEmail(payload = {}) {
     const email = validateEmailPayload(payload);
     const transporter = createTransporter();
 
+    const attachments = Array.isArray(payload.attachments) ? [...payload.attachments] : [];
+    if (email.html.includes(`cid:${SCHOOL_LOGO_CID}`) && !attachments.some((item) => item?.cid === SCHOOL_LOGO_CID)) {
+        attachments.push(getSchoolLogoAttachment());
+    }
+
     const result = await transporter.sendMail({
         from: `"${config.fromName.replace(/"/g, '\\"')}" <${config.fromEmail}>`,
         to: email.to,
@@ -100,6 +106,7 @@ async function sendSmtpEmail(payload = {}) {
         subject: email.subject,
         text: email.text || undefined,
         html: email.html || undefined,
+        attachments: attachments.length ? attachments : undefined,
         replyTo: payload.replyTo ? String(payload.replyTo).trim() : undefined
     });
 
