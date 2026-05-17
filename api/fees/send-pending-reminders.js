@@ -1,17 +1,14 @@
 const { createHandler, sendJson } = require('../_lib/http');
 const { getDb } = require('../_lib/db');
-const { sendPendingFeeReminderEmails } = require('../_lib/fee-reminders');
 
 module.exports = createHandler({
-    POST: async ({ res, db, body }) => {
-        const result = await sendPendingFeeReminderEmails(db, {
-            force: body?.force === true
-        });
-
+    POST: async ({ res }) => {
         sendJson(res, 200, {
             success: true,
-            message: `Pending fee reminders sent: ${result.sent}.`,
-            ...result
+            message: 'Pending fee email reminders are disabled.',
+            sent: 0,
+            skipped: 0,
+            failed: []
         });
     }
 }, { getDb });

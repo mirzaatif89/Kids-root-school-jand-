@@ -1,7 +1,6 @@
 const { createHandler, sendHtml } = require('../../_lib/http');
 const { getDb } = require('../../_lib/db');
 const { JWT_SECRET, jwt, renderFeePaymentPage } = require('../../_lib/services');
-const { sendFeePaymentConfirmationEmail } = require('../../_lib/fee-reminders');
 
 module.exports = createHandler({
     GET: async ({ req, res, db }) => {
@@ -108,14 +107,6 @@ module.exports = createHandler({
             }, {
                 where: { id: payload.studentId }
             });
-        }
-
-        if (!alreadyRecorded && resolvedStatus === 'Paid') {
-            try {
-                await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
-            } catch (error) {
-                console.warn(`Fee paid email skipped for ${payload.studentId}: ${error.message || error}`);
-            }
         }
 
         sendHtml(res, 200, renderFeePaymentPage({

@@ -9,12 +9,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const QRCode = require('qrcode');
-const { getSmtpConfig, sendSmtpEmail } = require('./api/_lib/mailer');
-const {
-    sendFeePaymentConfirmationEmail,
-    sendPendingFeeReminderEmails,
-    startPendingFeeReminderScheduler
-} = require('./api/_lib/fee-reminders');
+const { getSmtpConfig } = require('./api/_lib/mailer');
 
 require('dotenv').config();
 
@@ -81,7 +76,6 @@ app.get('/health', (_req, res) => {
 let sequelize;
 let startupPromise = null;
 let isInitialized = false;
-let pendingFeeReminderInterval = null;
 const ACTIVE_SESSION_TTL_MS = 90000;
 const activeSessions = new Map();
 
@@ -2026,20 +2020,11 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             });
         }
 
-        let emailResult = null;
-        if (!alreadyRecorded && resolvedStatus === 'Paid') {
-            try {
-                emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
-            } catch (error) {
-                emailResult = { success: false, message: error.message || 'Fee paid email could not be sent.' };
-            }
-        }
-
         const allStudents = await Student.findAll();
         io.emit('students_update', allStudents);
         io.emit('fee_payment_update', { payment: paymentRow });
 
-        return res.json({ success: true, payment: paymentRow, alreadyRecorded, emailResult });
+        return res.json({ success: true, payment: paymentRow, alreadyRecorded });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'Manual payment failed.' });
     }
@@ -2279,14 +2264,6 @@ app.get('/api/fees/pay/:token', async (req, res) => {
             }, {
                 where: { id: payload.studentId }
             });
-        }
-
-        if (!alreadyRecorded && resolvedStatus === 'Paid') {
-            try {
-                await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
-            } catch (error) {
-                console.warn(`Fee paid email skipped for ${payload.studentId}: ${error.message || error}`);
-            }
         }
 
         const allStudents = await Student.findAll();
@@ -2577,41 +2554,20 @@ app.get('/api/email/config', authenticateToken, (req, res) => {
 });
 
 app.post('/api/email/send', authenticateToken, async (req, res) => {
-    try {
-        const result = await sendSmtpEmail(req.body || {});
-        res.json({
-            success: true,
-            message: 'Email sent successfully.',
-            ...result
-        });
-    } catch (error) {
-        res.status(error.statusCode || 500).json({
-            success: false,
-            message: error.message || 'Email could not be sent.'
-        });
-    }
+    res.json({
+        success: true,
+        message: 'Email sending is disabled.'
+    });
 });
 
 app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res) => {
-    if (!sequelize) {
-        return res.status(503).json({ success: false, message: 'Database offline' });
-    }
-
-    try {
-        const result = await sendPendingFeeReminderEmails(sequelize, {
-            force: req.body?.force === true
-        });
-        return res.json({
-            success: true,
-            message: `Pending fee reminders sent: ${result.sent}.`,
-            ...result
-        });
-    } catch (error) {
-        return res.status(error.statusCode || 500).json({
-            success: false,
-            message: error.message || 'Pending fee reminders could not be sent.'
-        });
-    }
+    return res.json({
+        success: true,
+        message: 'Pending fee email reminders are disabled.',
+        sent: 0,
+        skipped: 0,
+        failed: []
+    });
 });
 
 app.all('/api', (req, res) => {
@@ -3198,9 +3154,6 @@ async function startServer() {
         console.log('✅ Database synced successfully');
 
         isInitialized = true;
-        if (!pendingFeeReminderInterval) {
-            pendingFeeReminderInterval = startPendingFeeReminderScheduler(() => sequelize);
-        }
     } catch (err) {
         startupPromise = null;
         console.error('Database connection error:', err.message);
