@@ -287,8 +287,12 @@
         }
 
         .student-toolbar-left {
-            align-items: center;
-            flex: 1 1 620px;
+            display: grid;
+            grid-template-columns: auto minmax(300px, 450px);
+            align-items: end;
+            column-gap: 1rem;
+            row-gap: 1.35rem;
+            flex: 1 1 560px;
             min-width: 0;
         }
 
@@ -305,8 +309,18 @@
             flex: 1 1 320px;
         }
 
+        .student-quick-filter {
+            grid-column: 1;
+            min-width: 210px;
+            width: 210px;
+        }
+
         .student-filter-group select[multiple] {
-            min-height: 116px;
+            min-height: 86px;
+            max-height: 86px;
+            padding: 0.55rem 0.75rem;
+            overflow-y: auto;
+            appearance: auto;
         }
 
         .student-toolbar-actions {
@@ -528,6 +542,10 @@
                 width: 100%;
             }
 
+            .student-toolbar-left {
+                grid-template-columns: auto minmax(260px, 1fr);
+            }
+
             .student-toolbar-actions {
                 justify-content: flex-start;
             }
@@ -572,6 +590,11 @@
                 display: grid;
                 grid-template-columns: 1fr;
                 gap: 0.75rem;
+            }
+
+            .student-quick-filter {
+                width: 100%;
+                grid-column: auto;
             }
 
             .student-toolbar-actions,
@@ -785,9 +808,9 @@
                         <label for="studentSearchInput">Search Student</label>
                         <input type="text" id="studentSearchInput" placeholder="Search by name, roll no, or student ID">
                     </div>
-                    <div class="student-filter-group">
+                    <div class="student-filter-group student-quick-filter">
                         <label for="quickStudentFilter">Quick Filter</label>
-                        <select id="quickStudentFilter" multiple>
+                        <select id="quickStudentFilter" multiple size="5">
                             <option value="all">All Students</option>
                             <option value="gender:Male">Male Students</option>
                             <option value="gender:Female">Female Students</option>
