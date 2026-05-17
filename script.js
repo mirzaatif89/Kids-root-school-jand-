@@ -760,7 +760,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => {
             bindStudentClassFeeAutoFill();
         });
-        studentForm.addEventListener('submit', handleStudentFormSubmit);
+        bindStudentFormSubmit();
         const studentSearch = document.getElementById('studentSearchInput');
         const quickFilter = document.getElementById('studentQuickFilter');
         const printMode = document.getElementById('studentPrintMode');
@@ -3688,6 +3688,18 @@ async function handleStudentFormSubmit(e) {
     renderStudents();
     showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
 }
+
+function bindStudentFormSubmit() {
+    const studentForm = document.getElementById('studentForm');
+    if (!studentForm || studentForm.dataset.submitBound === '1') return;
+    studentForm.dataset.submitBound = '1';
+    studentForm.onsubmit = (event) => {
+        handleStudentFormSubmit(event);
+        return false;
+    };
+}
+
+bindStudentFormSubmit();
 
 function decodeRowPayload(encodedPayload) {
     try {

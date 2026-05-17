@@ -859,7 +859,7 @@
             <!-- Add/Edit Form -->
             <div id="studentFormContainer" class="form-container">
                 <h3 style="margin-bottom: 1.5rem;" id="formTitle">Add New Student</h3>
-                <form id="studentForm">
+                <form id="studentForm" onsubmit="handleStudentFormSubmit(event); return false;">
                     <input type="hidden" id="studentId"> <!-- Hidden ID for Editing -->
 
                     <div class="form-grid">
@@ -1095,7 +1095,7 @@
     </div>
 
     <script src="auth.js"></script>
-    <script src="script.js?v=20260517-db-save-list-fix"></script>
+    <script src="script.js?v=20260517-student-submit-bind-fix"></script>
     <script>
         // Init Icons
         lucide.createIcons();
