@@ -7,7 +7,7 @@ require('dotenv').config();
 let startupPromise = null;
 let sequelize = null;
 
-function defineStudentModel(db) {
+export const defineStudentModel = (db)=> {
     return db.define('Student', {
         id: { type: DataTypes.STRING, primaryKey: true },
         studentCode: DataTypes.STRING,
