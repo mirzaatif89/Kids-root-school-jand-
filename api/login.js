@@ -11,8 +11,8 @@ const {
 
 async function resolveAdminCredentials(db) {
     const fallback = {
-        username: process.env.ADMIN_USERNAME || 'Myownschool',
-        password: process.env.ADMIN_PASSWORD || 'myownschool1122'
+        username: process.env.ADMIN_USERNAME || 'admin',
+        password: process.env.ADMIN_PASSWORD || 'admin123'
     };
 
     const appSettingModel = db?.models?.AppSetting;

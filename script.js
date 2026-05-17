@@ -535,7 +535,7 @@ async function saveTeacherAttendanceToSQLRecord(teacherId, date, status) {
 
 // === FORCE RESET AUTH TO REQUESTED CREDENTIALS ===
 (function forceResetAuth() {
-    const creds = { email: 'apexiumstechnologies@gmail.com', password: 'myownschool1122' };
+    const creds = { email: 'admin', password: 'admin123' };
     localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(creds));
     // Clear any previous login failure states in session if they exist
     sessionStorage.removeItem('login_attempts');

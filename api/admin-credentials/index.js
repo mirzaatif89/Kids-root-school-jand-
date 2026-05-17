@@ -33,8 +33,8 @@ function assertAdmin(req) {
 
 function getFallbackCredentials() {
     return {
-        username: process.env.ADMIN_USERNAME || 'Myownschool',
-        password: process.env.ADMIN_PASSWORD || 'myownschool1122'
+        username: process.env.ADMIN_USERNAME || 'admin',
+        password: process.env.ADMIN_PASSWORD || 'admin123'
     };
 }
 

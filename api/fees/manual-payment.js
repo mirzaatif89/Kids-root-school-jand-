@@ -1,5 +1,6 @@
 const { createHandler, sendJson } = require('../_lib/http');
 const { getDb } = require('../_lib/db');
+const { sendFeePaymentConfirmationEmail } = require('../_lib/fee-reminders');
 
 module.exports = createHandler({
     POST: async ({ req, res, body, db }) => {
@@ -104,6 +105,15 @@ module.exports = createHandler({
             });
         }
 
-        sendJson(res, 200, { success: true, payment: paymentRow, alreadyRecorded });
+        let emailResult = null;
+        if (!alreadyRecorded && resolvedStatus === 'Paid') {
+            try {
+                emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
+            } catch (error) {
+                emailResult = { success: false, message: error.message || 'Fee paid email could not be sent.' };
+            }
+        }
+
+        sendJson(res, 200, { success: true, payment: paymentRow, alreadyRecorded, emailResult });
     }
 }, { getDb });
