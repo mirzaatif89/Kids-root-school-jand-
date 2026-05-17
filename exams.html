@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exams - Apexiums School management</title>
+    <title>Exams - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,7 +14,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -150,11 +150,17 @@
                             <div class="result-form-section">
                                 <h4>Date Sheet Header</h4>
                                 <div class="result-form-fields">
-                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="MY OWN Science School"></label>
+                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="My own Science school"></label>
                                     <label>Exam Title<input type="text" id="dateSheetExamTitle" value="Mid Term Examination 2026"></label>
                                     <label>Session<input type="text" id="dateSheetSession" value="2025-26"></label>
                                     <label>Target Class / Group<input type="text" id="dateSheetClassGroup" value="Grade 5 / Section A"></label>
-                                    <label>Campus / Branch<input type="text" id="dateSheetCampus" value="Main Campus"></label>
+                                    <label>Campus / Branch
+                                        <select id="dateSheetCampus">
+                                            <option value="Main Campus">Main Campus</option>
+                                            <option value="Ali campus">Ali campus</option>
+                                            <option value="Fatima Campus">Fatima Campus</option>
+                                        </select>
+                                    </label>
                                     <label>General Start Time<input type="time" id="dateSheetDefaultStart" value="09:00"></label>
                                 </div>
                             </div>
@@ -189,7 +195,7 @@
                         <div class="date-sheet-preview" id="dateSheetPreview">
                             <div class="date-sheet-frame">
                                 <div class="date-sheet-header">
-                                    <h2 id="previewDateSheetSchoolName">MY OWN Science School</h2>
+                                    <h2 id="previewDateSheetSchoolName">My own Science school</h2>
                                     <p id="previewDateSheetCampus">Main Campus</p>
                                     <h3 id="previewDateSheetExamTitle">Mid Term Examination 2026</h3>
                                     <div class="date-sheet-meta">
@@ -243,7 +249,7 @@
                         <div class="result-form-section">
                             <h4>School Header</h4>
                             <div class="result-form-fields">
-                                <label>School Name<input type="text" id="schoolName" value="MY OWN Science School"></label>
+                                <label>School Name<input type="text" id="schoolName" value="My own Science school"></label>
                                 <label>Campus / Branch<input type="text" id="campusName" value="Campus: Moh Dara / Khana Malkani Road"></label>
                                 <label>Contact Line<input type="text" id="schoolContact" value="0322-222222 / 0341-123456"></label>
                                 <label>Term Title<input type="text" id="termTitle" value="3rd Term 2025-26"></label>
@@ -313,7 +319,7 @@
                             <div class="result-card-topbar">
                                 <div class="result-logo-box"><img id="previewLeftLogo" alt="Left school logo"></div>
                                 <div class="result-school-center">
-                                    <h2 id="previewSchoolName">MY OWN Science School</h2>
+                                    <h2 id="previewSchoolName">My own Science school</h2>
                                     <p id="previewCampusName">Campus: Moh Dara / Khana Malkani Road</p>
                                     <p id="previewSchoolContact">0322-222222 / 0341-123456</p>
                                 </div>
@@ -1034,6 +1040,11 @@
         }
 
         @media print {
+            @page {
+                size: A4 portrait;
+                margin: 7mm;
+            }
+
             body {
                 background: #fff;
             }
@@ -1080,7 +1091,7 @@
             }
 
             body.print-schedule .date-sheet-frame,
-            .result-card-frame {
+            body.print-result .result-card-frame {
                 box-shadow: none;
                 margin: 0 auto;
             }
@@ -1089,11 +1100,128 @@
                 border: none;
                 padding: 0;
             }
+
+            body.print-result .result-card-sheet {
+                overflow: visible !important;
+            }
+
+            body.print-result .result-card-frame {
+                width: 194mm !important;
+                min-height: 0 !important;
+                border-width: 1px !important;
+                padding: 6mm 6mm 5mm !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            body.print-result .result-card-watermark {
+                font-size: 48px;
+                letter-spacing: 7px;
+            }
+
+            body.print-result .result-card-topbar {
+                grid-template-columns: 56px 1fr 56px;
+                gap: 8px;
+                padding: 7px 8px 6px;
+            }
+
+            body.print-result .result-logo-box {
+                height: 46px;
+                font-size: 10px;
+            }
+
+            body.print-result .result-school-center h2 {
+                font-size: 16px;
+            }
+
+            body.print-result .result-school-center p {
+                font-size: 10px;
+            }
+
+            body.print-result .result-term-title {
+                margin: 8px auto 6px;
+                font-size: 14px;
+            }
+
+            body.print-result .student-meta-row {
+                gap: 10px;
+                margin-bottom: 6px;
+            }
+
+            body.print-result .meta-field,
+            body.print-result .remarks-block,
+            body.print-result .signature-block {
+                min-height: 22px;
+                padding-bottom: 2px;
+                font-size: 12px;
+            }
+
+            body.print-result .grade-chip {
+                width: 140px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+
+            body.print-result .result-marks-table th,
+            body.print-result .result-marks-table td,
+            body.print-result .behavior-table th,
+            body.print-result .behavior-table td,
+            body.print-result .grading-table td {
+                padding: 3px 5px;
+                font-size: 11px;
+            }
+
+            body.print-result .result-marks-table td:first-child,
+            body.print-result .behavior-table td:first-child,
+            body.print-result .behavior-table th:first-child {
+                padding-left: 8px;
+            }
+
+            body.print-result .position-row {
+                margin-top: 6px;
+            }
+
+            body.print-result .position-label,
+            body.print-result .position-value {
+                min-height: 34px;
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+
+            body.print-result .remarks-signatures {
+                gap: 12px;
+                margin: 10px 0 6px;
+            }
+
+            body.print-result .performance-title {
+                font-size: 15px;
+                margin: 9px 0 8px;
+            }
+
+            body.print-result .performance-grid {
+                gap: 10px;
+            }
+
+            body.print-result .bottom-signatures {
+                gap: 24px;
+                margin-top: 12px;
+            }
+
+            body.print-result .signature-line {
+                padding-top: 14px;
+                font-size: 12px;
+            }
+
+            body.print-result .signature-line strong {
+                padding-top: 5px;
+                margin-bottom: 3px;
+            }
         }
     </style>
     <script>
         const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
         const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
+        const DATE_SHEET_DEFAULT_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
         const defaultScheduleRows = [
             { subject: 'English', className: 'Grade 5', examDate: '2026-05-10', startTime: '09:00', endTime: '10:30' },
             { subject: 'Mathematics', className: 'Grade 5', examDate: '2026-05-12', startTime: '09:00', endTime: '10:30' },
@@ -1165,7 +1293,43 @@
             lucide.createIcons();
         }
 
+        function collectDateSheetCampuses() {
+            const campusMap = new Map();
+            const addCampus = (campusName) => {
+                const normalized = String(campusName || '').trim();
+                if (!normalized) return;
+                const key = normalized.toLowerCase();
+                if (!campusMap.has(key)) campusMap.set(key, normalized);
+            };
+            DATE_SHEET_DEFAULT_CAMPUSES.forEach(addCampus);
+            if (typeof DEFAULT_CAMPUS_NAMES !== 'undefined' && Array.isArray(DEFAULT_CAMPUS_NAMES)) {
+                DEFAULT_CAMPUS_NAMES.forEach(addCampus);
+            }
+            ['eduCore_students', 'eduCore_staff', 'eduCore_teachers'].forEach((storageKey) => {
+                try {
+                    const records = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    if (!Array.isArray(records)) return;
+                    records.forEach((record) => addCampus(record?.campusName));
+                } catch (error) {
+                    // Ignore invalid localStorage payloads and keep default campus list.
+                }
+            });
+            return Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+        }
+
+        function populateDateSheetCampusOptions(selectedCampus = '') {
+            const campusSelect = document.getElementById('dateSheetCampus');
+            if (!campusSelect) return;
+            const previousValue = selectedCampus || campusSelect.value || 'Main Campus';
+            const campuses = collectDateSheetCampuses();
+            if (!campuses.length) campuses.push('Main Campus');
+            campusSelect.innerHTML = campuses.map((campusName) => `<option value="${campusName}">${campusName}</option>`).join('');
+            const hasPrevious = campuses.some((campusName) => campusName.toLowerCase() === previousValue.toLowerCase());
+            campusSelect.value = hasPrevious ? previousValue : campuses[0];
+        }
+
         function fillDateSheetForm(savedState = {}) {
+            populateDateSheetCampusOptions(savedState.dateSheetCampus);
             [
                 'dateSheetSchoolName',
                 'dateSheetExamTitle',
@@ -1258,6 +1422,7 @@
         function resetDateSheet() {
             localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
             document.getElementById('dateSheetForm').reset();
+            populateDateSheetCampusOptions('Main Campus');
             renderScheduleRows({});
             refreshDateSheetPreview();
         }

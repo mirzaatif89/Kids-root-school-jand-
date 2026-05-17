@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Designation Permissions - My own Science school</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .designation-panel {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .designation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .designation-item {
+            padding: 1rem;
+            background: var(--bg-color);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .designation-item:hover {
+            background: var(--surface-color);
+            border-color: var(--primary-color);
+        }
+
+        .designation-item.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .designation-details {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .permission-card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+        }
+
+        .permission-card h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .permission-toggle {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: var(--bg-color);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+        }
+
+        .permission-toggle label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+            margin: 0;
+            padding: 0;
+        }
+
+        .permission-toggle input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .toggle-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .action-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .action-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+        }
+
+        .action-checkbox input {
+            width: 14px;
+            height: 14px;
+        }
+
+        .save-btn {
+            margin-top: 1.5rem;
+            padding: 0.85rem 1.5rem;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .save-btn:hover:not(:disabled) {
+            background: #16a34a;
+        }
+
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .designation-info {
+            background: var(--bg-color);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            border-left: 4px solid var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .designation-info h2 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+
+        .designation-info p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .actions-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .action-badge {
+            padding: 0.5rem 0.75rem;
+            background: var(--success-color);
+            color: white;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .action-badge.disabled {
+            background: var(--border-color);
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 1080px) {
+            .designation-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i><span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i><span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i><span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i><span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i><span>Classes</span>
+                </a>
+                <a href="permissions.html" class="nav-item">
+                    <i data-lucide="shield"></i><span>Role Permissions</span>
+                </a>
+                <a href="designation-permissions.html" class="nav-item active">
+                    <i data-lucide="key"></i><span>Designation Permissions</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="log-out"></i><span>Logout</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Designation-based Permissions</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Configure granular action-level permissions for each job designation.</p>
+                </div>
+            </header>
+
+            <section class="designation-panel">
+                <div class="designation-list">
+                    <div id="designationsList"></div>
+                </div>
+
+                <div class="designation-details">
+                    <div id="designationContent"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        if (window.lucide) window.lucide.createIcons();
+
+        let permissionsData = {};
+        let selectedDesignation = null;
+
+        async function loadDesignationPermissions() {
+            try {
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                if (!token) throw new Error('Please login first.');
+
+                const response = await fetch(`${API_BASE_URL}/designation-permissions`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load permissions');
+                permissionsData = await response.json();
+                renderDesignationsList();
+                if (permissionsData.designations && permissionsData.designations.length > 0) {
+                    selectDesignation(permissionsData.designations[0].key);
+                }
+            } catch (error) {
+                showAppAlert('Error loading permissions: ' + error.message, 'Error');
+            }
+        }
+
+        function renderDesignationsList() {
+            const listDiv = document.getElementById('designationsList');
+            listDiv.innerHTML = '';
+            
+            if (!permissionsData.designations) return;
+
+            permissionsData.designations.forEach(desig => {
+                const item = document.createElement('div');
+                item.className = 'designation-item';
+                item.textContent = desig.name;
+                item.onclick = () => selectDesignation(desig.key);
+                if (selectedDesignation === desig.key) {
+                    item.classList.add('active');
+                }
+                listDiv.appendChild(item);
+            });
+        }
+
+        function selectDesignation(key) {
+            selectedDesignation = key;
+            renderDesignationsList();
+            renderDesignationDetails();
+        }
+
+        function renderDesignationDetails() {
+            const contentDiv = document.getElementById('designationContent');
+            contentDiv.innerHTML = '';
+
+            const designation = permissionsData.permissions[selectedDesignation];
+            if (!designation) return;
+
+            // Header info
+            const infoDiv = document.createElement('div');
+            infoDiv.className = 'designation-info';
+            infoDiv.innerHTML = `
+                <h2>${designation.name}</h2>
+                <p>${designation.description || 'No description'}</p>
+            `;
+            contentDiv.appendChild(infoDiv);
+
+            // Action permissions
+            if (designation.actionPermissions) {
+                Object.entries(designation.actionPermissions).forEach(([module, actions]) => {
+                    const card = document.createElement('div');
+                    card.className = 'permission-card';
+                    
+                    const title = document.createElement('h3');
+                    title.innerHTML = `<i data-lucide="lock"></i> ${toLabel(module)}`;
+                    card.appendChild(title);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'permission-grid';
+
+                    Object.entries(actions).forEach(([action, allowed]) => {
+                        const toggle = document.createElement('div');
+                        toggle.className = 'permission-toggle';
+                        
+                        const checkboxLabel = document.createElement('label');
+                        checkboxLabel.innerHTML = `
+                            <input type="checkbox" 
+                                data-module="${module}" 
+                                data-action="${action}"
+                                ${allowed ? 'checked' : ''}
+                                onchange="updatePermission(this)">
+                            <span>${toLabel(action)}</span>
+                        `;
+                        toggle.appendChild(checkboxLabel);
+                        grid.appendChild(toggle);
+                    });
+
+                    card.appendChild(grid);
+                    contentDiv.appendChild(card);
+                });
+            }
+
+            // Save button
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'save-btn';
+            saveBtn.textContent = 'Save All Permissions';
+            saveBtn.onclick = savePermissions;
+            contentDiv.appendChild(saveBtn);
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function updatePermission(checkbox) {
+            const module = checkbox.dataset.module;
+            const action = checkbox.dataset.action;
+            
+            if (!permissionsData.permissions[selectedDesignation]) return;
+            if (!permissionsData.permissions[selectedDesignation].actionPermissions) return;
+            if (!permissionsData.permissions[selectedDesignation].actionPermissions[module]) return;
+            
+            permissionsData.permissions[selectedDesignation].actionPermissions[module][action] = checkbox.checked;
+        }
+
+        async function savePermissions(event) {
+            try {
+                const saveBtn = event?.target;
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
+
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                if (!token) throw new Error('Please login first.');
+
+                const response = await fetch(`${API_BASE_URL}/designation-permissions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify(permissionsData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.message || 'Failed to save');
+                }
+
+                showAppAlert('Designation permissions saved successfully!', 'Success');
+                const result = await response.json();
+                permissionsData = result;
+                renderDesignationDetails();
+            } catch (error) {
+                showAppAlert('Error: ' + error.message, 'Error');
+            } finally {
+                const saveBtn = event?.target;
+                if (saveBtn) {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save All Permissions';
+                }
+            }
+        }
+
+        function toLabel(text) {
+            return String(text).replace(/[-_]/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+        }
+
+        document.addEventListener('DOMContentLoaded', loadDesignationPermissions);
+    </script>
+</body>
+
+</html>

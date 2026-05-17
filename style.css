@@ -35,6 +35,7 @@ body {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
 a {
@@ -93,7 +94,7 @@ ul {
 .login-layout {
     display: flex;
     height: 100vh;
-    width: 100vw;
+    width: 100%;
     background: rgba(32, 176, 164, 0.08);
     /* Light teal background */
     align-items: center;
@@ -124,15 +125,22 @@ ul {
 }
 
 .login-icon-circle {
-    width: 50px;
-    height: 50px;
+    width: 190px;
+    height: 78px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 50%;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: 1rem;
     color: white;
+}
+
+.login-logo-img {
+    width: 170px;
+    height: 58px;
+    object-fit: contain;
+    display: block;
 }
 
 .login-title {
@@ -303,12 +311,23 @@ ul {
 
 .logo-section {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 0;
     margin-bottom: 2.5rem;
     color: #ffffff;
     font-weight: bold;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.sidebar-logo-img {
+    width: 132px;
+    height: 44px;
+    object-fit: contain;
+    display: block;
+    margin-bottom: 0;
 }
 
 .nav-links {
@@ -460,6 +479,7 @@ ul {
 .main-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 2rem;
     background: linear-gradient(180deg, #f7fffe 0%, #edf9f7 100%);
 }
@@ -502,8 +522,10 @@ ul {
 
 .header-actions {
     display: flex;
+    flex-direction: column;
     align-items: center;
     gap: 1.5rem;
+    margin-left: 0;
 }
 
 .notification-bell {
@@ -707,18 +729,6 @@ ul {
     box-shadow: var(--shadow-md);
 }
 
-.dashboard-action-card {
-    width: 100%;
-    text-align: left;
-    font-family: inherit;
-    cursor: pointer;
-}
-
-.dashboard-action-card:focus-visible {
-    outline: 3px solid rgba(32, 176, 164, 0.28);
-    outline-offset: 2px;
-}
-
 .card-title {
     font-size: 0.85rem;
     font-weight: 500;
@@ -799,6 +809,7 @@ ul {
 table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 thead th {
@@ -810,7 +821,8 @@ thead th {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
     background: #fcfdfe;
 }
 
@@ -820,6 +832,8 @@ tbody td {
     font-size: 0.9rem;
     color: var(--text-primary);
     vertical-align: middle;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 tbody tr {
@@ -865,44 +879,28 @@ tbody tr:hover {
     min-width: 90px;
 }
 
-/* Phone */
+/* Gender */
 #studentsTable th:nth-child(8) {
-    min-width: 130px;
-}
-
-#studentsTable th:nth-child(9) {
     min-width: 90px;
 }
 
-#studentsTable th:nth-child(10) {
-    min-width: 180px;
-}
-
-#studentsTable th:nth-child(11) {
+#studentsTable th:nth-child(9) {
     min-width: 110px;
     text-align: center;
 }
 
-#studentsTable th:nth-child(12) {
+#studentsTable th:nth-child(10) {
     min-width: 120px;
     text-align: center;
 }
 
+#studentsTable td:nth-child(9) {
+    text-align: center;
+}
+
 #studentsTable td:nth-child(10) {
-    min-width: 180px;
-}
-
-#studentsTable td:nth-child(11) {
     text-align: center;
-}
-
-#studentsTable td:nth-child(12) {
-    text-align: center;
-    white-space: nowrap;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.4rem;
+    white-space: normal;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -946,7 +944,6 @@ tbody tr:hover {
 
 #teachersTable th:nth-child(10) {
     min-width: 150px;
-    text-align: center;
 }
 
 #teachersTable td:nth-child(5) {
@@ -965,7 +962,7 @@ tbody tr:hover {
     text-align: center;
 }
 
-#teachersTable td:nth-child(10) {
+#teachersTable td:nth-child(11) {
     text-align: center;
     white-space: nowrap;
     display: flex;
@@ -1520,6 +1517,320 @@ tbody tr:hover {
     }
 }
 
+.edu-welcome-overlay {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    background:
+        radial-gradient(circle at 12% 15%, rgba(32, 176, 164, 0.34), rgba(32, 176, 164, 0) 55%),
+        radial-gradient(circle at 88% 18%, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0) 55%),
+        radial-gradient(circle at 50% 100%, rgba(14, 165, 233, 0.18), rgba(14, 165, 233, 0) 60%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.58), rgba(15, 23, 42, 0.35));
+    backdrop-filter: blur(6px);
+    z-index: 10050;
+}
+
+.edu-welcome-overlay.active {
+    display: flex;
+    animation: eduWelcomeOverlayIn 220ms ease-out both;
+}
+
+.edu-welcome-overlay.closing {
+    animation: eduWelcomeOverlayOut 220ms ease-in both;
+}
+
+.edu-welcome-card {
+    width: min(460px, 100%);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 1.15rem;
+    padding: 2rem 1.75rem 1.5rem;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.25);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+    animation: eduWelcomeCardIn 520ms cubic-bezier(0.22, 1.18, 0.36, 1) both;
+}
+
+.edu-welcome-overlay.closing .edu-welcome-card {
+    animation: eduWelcomeCardOut 240ms ease-in both;
+}
+
+.edu-welcome-card::before,
+.edu-welcome-card::after {
+    content: "";
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    border-radius: 999px;
+    filter: blur(0);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.edu-welcome-card::before {
+    top: -130px;
+    left: -90px;
+    background: radial-gradient(circle at 30% 30%, rgba(32, 176, 164, 0.55), rgba(32, 176, 164, 0));
+    animation: eduWelcomeBlob 2.8s ease-in-out infinite alternate;
+}
+
+.edu-welcome-card::after {
+    bottom: -150px;
+    right: -110px;
+    background: radial-gradient(circle at 60% 40%, rgba(59, 130, 246, 0.55), rgba(59, 130, 246, 0));
+    animation: eduWelcomeBlob 3.2s ease-in-out infinite alternate-reverse;
+}
+
+.edu-welcome-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 1rem;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(32, 176, 164, 0.12);
+    color: var(--primary-color);
+    border: 1px solid rgba(32, 176, 164, 0.24);
+    position: relative;
+    animation: eduWelcomeIconPop 900ms ease-out both;
+}
+
+.edu-welcome-icon::before {
+    content: "";
+    position: absolute;
+    width: 92px;
+    height: 92px;
+    border-radius: 999px;
+    border: 1px solid rgba(32, 176, 164, 0.25);
+    box-shadow: 0 0 0 10px rgba(32, 176, 164, 0.08);
+    opacity: 0;
+    animation: eduWelcomeRing 1.4s ease-out infinite;
+    pointer-events: none;
+}
+
+.edu-welcome-title {
+    margin: 0;
+    font-size: 1.45rem;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+}
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .edu-welcome-title {
+        background: linear-gradient(90deg, var(--primary-color), #3b82f6, var(--primary-color));
+        background-size: 200% 100%;
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        animation: eduWelcomeTitleShine 2.4s ease-in-out infinite;
+    }
+}
+
+.edu-welcome-subtitle {
+    margin: 0.55rem auto 1.25rem;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.5;
+    max-width: 40ch;
+}
+
+.edu-welcome-glow {
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 20% 10%, rgba(32, 176, 164, 0.45), rgba(32, 176, 164, 0) 45%),
+        radial-gradient(circle at 80% 0%, rgba(59, 130, 246, 0.35), rgba(59, 130, 246, 0) 50%);
+    opacity: 0;
+    animation: eduWelcomeGlow 900ms ease-out both;
+}
+
+.edu-welcome-divider {
+    height: 10px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.22);
+    position: relative;
+    overflow: hidden;
+}
+
+.edu-welcome-divider::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -40%;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, rgba(32, 176, 164, 0), rgba(32, 176, 164, 0.9), rgba(59, 130, 246, 0.9), rgba(59, 130, 246, 0));
+    animation: eduWelcomeSweep 1000ms ease-out both;
+}
+
+.edu-welcome-skip {
+    margin-top: 1rem;
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: #ffffff;
+    border-radius: 0.85rem;
+    padding: 0.8rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.edu-welcome-skip:hover {
+    background: #f1f5f9;
+}
+
+@keyframes eduWelcomeOverlayIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes eduWelcomeOverlayOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes eduWelcomeTitleShine {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes eduWelcomeGlow {
+    0% {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.85;
+        transform: scale(1);
+    }
+}
+
+@keyframes eduWelcomeSweep {
+    0% {
+        left: -40%;
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    100% {
+        left: 110%;
+        opacity: 0;
+    }
+}
+
+@keyframes eduWelcomeCardIn {
+    0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.96);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes eduWelcomeCardOut {
+    from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+}
+
+@keyframes eduWelcomeIconPop {
+    0% {
+        transform: scale(0.82);
+        opacity: 0;
+    }
+
+    55% {
+        transform: scale(1.08);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes eduWelcomeRing {
+    0% {
+        transform: scale(0.86);
+        opacity: 0;
+    }
+
+    30% {
+        opacity: 0.65;
+    }
+
+    100% {
+        transform: scale(1.12);
+        opacity: 0;
+    }
+}
+
+@keyframes eduWelcomeBlob {
+    from {
+        transform: translate3d(0, 0, 0);
+    }
+
+    to {
+        transform: translate3d(18px, 12px, 0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .edu-welcome-overlay.active,
+    .edu-welcome-card,
+    .edu-welcome-icon,
+    .edu-welcome-divider::after,
+    .edu-welcome-glow,
+    .edu-welcome-title {
+        animation: none !important;
+    }
+}
+
 .success-icon-wrap {
     width: 80px;
     height: 80px;
@@ -1988,425 +2299,302 @@ button {
     }
 }
 
-.session-modal-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 5000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-    background: rgba(15, 23, 42, 0.45);
+/* === Responsive Table Fit (Global) === */
+.table-container {
+    width: 100%;
+    overflow-x: hidden !important;
 }
 
-.session-modal-overlay.active {
-    display: flex;
+.table-container table {
+    width: 100% !important;
+    min-width: 100% !important;
+    table-layout: fixed;
 }
 
-.session-modal {
-    width: min(1120px, 100%);
-    max-height: min(760px, calc(100dvh - 2rem));
-    display: flex;
-    flex-direction: column;
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-}
-
-.session-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.session-modal-header h2 {
-    font-size: 1.15rem;
-    margin: 0;
-}
-
-.session-modal-close {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 0;
-    border-radius: 8px;
-    background: #f1f5f9;
-    color: var(--text-primary);
-    cursor: pointer;
-}
-
-.session-table-wrap {
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
-}
-
-.session-user-cell strong {
-    display: block;
-}
-
-.session-user-cell small,
-.session-meta {
-    display: block;
-    color: var(--text-secondary);
-    font-size: 0.76rem;
-    line-height: 1.35;
-}
-
-.session-device-cell {
-    max-width: 320px;
+.table-container thead th,
+.table-container tbody td {
+    min-width: 0 !important;
+    max-width: none;
     white-space: normal;
+    overflow-wrap: anywhere;
     word-break: break-word;
 }
 
-/* === ADMIN SIDEBAR SHELL === */
-body.has-admin-sidebar {
-    overflow: hidden;
+/* Keep action cells usable without forcing full table overflow */
+#studentsTable td:nth-child(10),
+#teachersTable td:nth-child(11),
+#staffTable td:nth-child(11) {
+    white-space: normal !important;
 }
 
-body.has-admin-sidebar .dashboard-container {
-    display: block;
-    height: 100vh;
-    min-height: 100vh;
-    overflow: hidden;
+.table-action-wrap {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
 
-body.has-admin-sidebar .sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: 280px;
-    height: 100vh;
-    padding: 1.1rem 0.95rem;
-    background: #0b3f3b;
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 12px 0 30px rgba(15, 23, 42, 0.14);
+.table-action-select {
+    width: 92px;
+    max-width: 100%;
+    padding: 0.42rem 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.55rem;
+    background: #f8fafc;
+    color: var(--text-primary);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.1;
+    cursor: pointer;
 }
 
-body.has-admin-sidebar .logo-section {
-    min-height: 58px;
-    margin-bottom: 0.85rem;
-    padding: 0 0.65rem 0.9rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 1rem;
-    line-height: 1.25;
+.table-action-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(32, 176, 164, 0.16);
 }
 
-body.has-admin-sidebar .logo-section svg {
-    flex: 0 0 auto;
-    width: 26px;
-    height: 26px;
-    color: var(--accent-color);
+/* Student table readability fix: keep name/father columns from collapsing */
+#studentsTable {
+    table-layout: auto !important;
 }
 
-body.has-admin-sidebar .nav-links {
-    margin: 0 -0.35rem 0.9rem 0;
-    padding: 0.15rem 0.35rem 0.15rem 0;
+#studentsTable th,
+#studentsTable td {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
+    padding: 0.72rem 0.65rem !important;
 }
 
-body.has-admin-sidebar .nav-item,
-body.has-admin-sidebar .nav-subitem {
-    border-radius: 8px;
+#studentsTable th {
+    white-space: normal !important;
+    line-height: 1.2;
 }
 
-body.has-admin-sidebar .nav-item {
-    min-height: 42px;
-    margin-bottom: 0.22rem;
-    padding: 0.66rem 0.72rem;
-    gap: 0.68rem;
-    font-size: 0.91rem;
+#studentsTable td {
+    font-size: 0.86rem;
 }
 
-body.has-admin-sidebar .nav-item:hover,
-body.has-admin-sidebar .nav-item.active,
-body.has-admin-sidebar .nav-dropdown-toggle.active {
-    background: rgba(94, 234, 212, 0.14);
-    color: #ffffff;
+#studentsTable th:nth-child(1),
+#studentsTable td:nth-child(1) {
+    min-width: 78px !important;
 }
 
-body.has-admin-sidebar .nav-item.active,
-body.has-admin-sidebar .nav-dropdown-toggle.active {
-    box-shadow: inset 3px 0 0 var(--accent-color);
+#studentsTable th:nth-child(2),
+#studentsTable td:nth-child(2) {
+    min-width: 82px !important;
 }
 
-body.has-admin-sidebar .nav-item svg {
-    flex: 0 0 auto;
-    width: 18px;
-    height: 18px;
+#studentsTable th:nth-child(3),
+#studentsTable td:nth-child(3) {
+    min-width: 150px !important;
 }
 
-body.has-admin-sidebar .nav-dropdown {
-    margin-bottom: 0.22rem;
+#studentsTable th:nth-child(4),
+#studentsTable td:nth-child(4) {
+    min-width: 130px !important;
 }
 
-body.has-admin-sidebar .nav-dropdown-toggle {
-    font-family: inherit;
+#studentsTable th:nth-child(5),
+#studentsTable td:nth-child(5) {
+    min-width: 68px !important;
 }
 
-body.has-admin-sidebar .nav-submenu {
-    margin-top: 0.18rem;
-    margin-left: 0.85rem;
-    padding-left: 0.65rem;
+#studentsTable th:nth-child(6),
+#studentsTable td:nth-child(6) {
+    min-width: 82px !important;
 }
 
-body.has-admin-sidebar .nav-subitem {
-    min-height: 36px;
-    margin-bottom: 0.12rem;
-    padding: 0.55rem 0.65rem;
-    font-size: 0.84rem;
+#studentsTable th:nth-child(7),
+#studentsTable td:nth-child(7) {
+    min-width: 72px !important;
 }
 
-body.has-admin-sidebar .nav-subitem.active {
-    box-shadow: inset 2px 0 0 var(--accent-color);
+#studentsTable th:nth-child(8),
+#studentsTable td:nth-child(8) {
+    min-width: 72px !important;
 }
 
-body.has-admin-sidebar .user-profile {
-    margin: 0;
-    padding: 0.85rem 0.65rem 0;
+#studentsTable th:nth-child(9),
+#studentsTable td:nth-child(9) {
+    min-width: 82px !important;
 }
 
-body.has-admin-sidebar .user-profile:hover {
-    margin-left: 0;
-    margin-right: 0;
-    padding-left: 0.65rem;
+#studentsTable th:nth-child(10),
+#studentsTable td:nth-child(10) {
+    min-width: 92px !important;
 }
 
-body.has-admin-sidebar .user-info {
-    min-width: 0;
+/* Teachers table responsiveness and width tuning */
+#teachersTable th,
+#teachersTable td {
+    padding: 0.66rem 0.5rem !important;
 }
 
-body.has-admin-sidebar .user-info h4,
-body.has-admin-sidebar .user-info p {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+#teachersTable th {
+    white-space: normal !important;
+    line-height: 1.2;
 }
 
-body.has-admin-sidebar .main-content {
-    width: calc(100% - 280px);
-    height: 100vh;
-    margin-left: 280px;
+#teachersTable td {
+    font-size: 0.8rem;
 }
 
-.mobile-sidebar-toggle,
-.sidebar-overlay {
-    display: none;
+#teachersTable th:nth-child(1),
+#teachersTable td:nth-child(1) {
+    min-width: 104px !important;
 }
 
-@media (max-width: 1180px) and (min-width: 901px) {
-    body.has-admin-sidebar .sidebar {
-        width: 248px;
-        padding: 1rem 0.8rem;
+#teachersTable th:nth-child(2),
+#teachersTable td:nth-child(2) {
+    min-width: 92px !important;
+}
+
+#teachersTable th:nth-child(3),
+#teachersTable td:nth-child(3) {
+    min-width: 72px !important;
+}
+
+#teachersTable th:nth-child(4),
+#teachersTable td:nth-child(4) {
+    min-width: 74px !important;
+}
+
+#teachersTable th:nth-child(5),
+#teachersTable td:nth-child(5) {
+    min-width: 96px !important;
+}
+
+#teachersTable th:nth-child(6),
+#teachersTable td:nth-child(6) {
+    min-width: 90px !important;
+}
+
+#teachersTable th:nth-child(7),
+#teachersTable td:nth-child(7) {
+    min-width: 96px !important;
+}
+
+#teachersTable th:nth-child(8),
+#teachersTable td:nth-child(8) {
+    min-width: 92px !important;
+}
+
+#teachersTable th:nth-child(9),
+#teachersTable td:nth-child(9) {
+    min-width: 80px !important;
+}
+
+#teachersTable th:nth-child(10),
+#teachersTable td:nth-child(10) {
+    min-width: 84px !important;
+}
+
+#teachersTable th:nth-child(11),
+#teachersTable td:nth-child(11) {
+    min-width: 106px !important;
+}
+
+@media (max-width: 1200px) {
+    #teachersTable th,
+    #teachersTable td {
+        padding: 0.58rem 0.44rem !important;
+        font-size: 0.74rem;
     }
 
-    body.has-admin-sidebar .main-content {
-        width: calc(100% - 248px);
-        margin-left: 248px;
-        padding: 1.35rem;
+    #teachersTable th:nth-child(1),
+    #teachersTable td:nth-child(1) {
+        min-width: 94px !important;
     }
 
-    body.has-admin-sidebar .logo-section {
-        font-size: 0.94rem;
+    #teachersTable th:nth-child(5),
+    #teachersTable td:nth-child(5),
+    #teachersTable th:nth-child(6),
+    #teachersTable td:nth-child(6),
+    #teachersTable th:nth-child(7),
+    #teachersTable td:nth-child(7),
+    #teachersTable th:nth-child(8),
+    #teachersTable td:nth-child(8) {
+        min-width: 88px !important;
     }
 
-    body.has-admin-sidebar .nav-item {
-        padding: 0.62rem 0.64rem;
-        font-size: 0.86rem;
-    }
-}
-
-@media (max-width: 900px) {
-    body.has-admin-sidebar {
-        overflow-x: hidden;
-        overflow-y: auto;
+    #teachersTable th:nth-child(10),
+    #teachersTable td:nth-child(10) {
+        min-width: 76px !important;
     }
 
-    body.has-admin-sidebar .dashboard-container {
-        height: auto !important;
-        min-height: 100dvh;
-        overflow: visible !important;
-    }
-
-    body.has-admin-sidebar .sidebar {
-        top: 0;
-        left: 0;
-        width: min(84vw, 320px) !important;
-        max-height: 100dvh;
-        height: 100dvh;
-        padding: 1rem 0.85rem;
-        transform: translateX(-104%);
-        transition: transform 0.25s ease;
-        z-index: 4001;
-        border-bottom: 0;
-    }
-
-    body.has-admin-sidebar.sidebar-open .sidebar {
-        transform: translateX(0);
-    }
-
-    body.has-admin-sidebar .nav-links {
-        display: block;
-        overflow-x: hidden;
-        overflow-y: auto;
-        padding-right: 0.35rem;
-    }
-
-    body.has-admin-sidebar .nav-item,
-    body.has-admin-sidebar .nav-subitem,
-    body.has-admin-sidebar .nav-dropdown {
-        width: 100%;
-        margin-bottom: 0.24rem;
-    }
-
-    body.has-admin-sidebar .nav-submenu {
-        position: static;
-        margin: 0.2rem 0 0 0.85rem;
-        padding: 0 0 0 0.65rem;
-        border: 0;
-        border-left: 1px solid rgba(255, 255, 255, 0.16);
-        border-radius: 0;
-        background: transparent;
-        box-shadow: none;
-    }
-
-    body.has-admin-sidebar .user-profile {
-        display: flex !important;
-    }
-
-    body.has-admin-sidebar .main-content {
-        width: 100%;
-        height: auto;
-        min-height: 100dvh;
-        margin-left: 0;
-        padding-top: 4.4rem !important;
-    }
-
-    .mobile-sidebar-toggle {
-        position: fixed;
-        top: 0.85rem;
-        left: 0.85rem;
-        z-index: 4002;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 42px;
-        height: 42px;
-        border: 0;
-        border-radius: 8px;
-        background: #0b3f3b;
-        color: #ffffff;
-        box-shadow: var(--shadow-md);
-        cursor: pointer;
-    }
-
-    .sidebar-overlay {
-        position: fixed;
-        inset: 0;
-        z-index: 4000;
-        display: block;
-        pointer-events: none;
-        background: rgba(15, 23, 42, 0);
-        transition: background 0.25s ease;
-    }
-
-    body.sidebar-open .sidebar-overlay {
-        pointer-events: auto;
-        background: rgba(15, 23, 42, 0.42);
+    #teachersTable th:nth-child(11),
+    #teachersTable td:nth-child(11) {
+        min-width: 96px !important;
     }
 }
 
-@media (max-width: 640px) {
-    body.has-admin-sidebar .main-content {
-        padding-left: 0.85rem !important;
-        padding-right: 0.85rem !important;
+@media (max-width: 1100px) {
+    #studentsTable th,
+    #studentsTable td {
+        font-size: 0.8rem;
+        padding: 0.62rem 0.55rem !important;
     }
 
-    body.has-admin-sidebar .header {
-        min-width: 0;
+    #studentsTable th:nth-child(3),
+    #studentsTable td:nth-child(3) {
+        min-width: 130px !important;
     }
 
-    body.has-admin-sidebar .header h1 {
-        overflow-wrap: anywhere;
+    #studentsTable th:nth-child(4),
+    #studentsTable td:nth-child(4) {
+        min-width: 118px !important;
     }
 
-    .table-container {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto !important;
+    #studentsTable th:nth-child(10),
+    #studentsTable td:nth-child(10) {
+        min-width: 88px !important;
     }
 
-    .table-container table {
-        width: max-content;
-        min-width: 760px;
+    #teachersTable th,
+    #teachersTable td {
+        font-size: 0.72rem;
+        padding: 0.5rem 0.38rem !important;
     }
 
-    .success-overlay {
-        min-height: 100dvh;
+    #teachersTable th:nth-child(1),
+    #teachersTable td:nth-child(1) {
+        min-width: 88px !important;
     }
 
-    .success-modal {
-        max-height: calc(100dvh - 1.6rem);
-        overflow-y: auto;
+    #teachersTable th:nth-child(2),
+    #teachersTable td:nth-child(2) {
+        min-width: 82px !important;
     }
 
-    .session-modal-overlay {
-        align-items: flex-start;
-        padding: 0.75rem;
+    #teachersTable th:nth-child(5),
+    #teachersTable td:nth-child(5),
+    #teachersTable th:nth-child(6),
+    #teachersTable td:nth-child(6),
+    #teachersTable th:nth-child(7),
+    #teachersTable td:nth-child(7),
+    #teachersTable th:nth-child(8),
+    #teachersTable td:nth-child(8) {
+        min-width: 82px !important;
     }
 
-    .session-modal {
-        max-height: calc(100dvh - 1.5rem);
-    }
-
-    .session-table-wrap table {
-        min-width: 920px;
+    #teachersTable th:nth-child(11),
+    #teachersTable td:nth-child(11) {
+        min-width: 88px !important;
     }
 }
 
-@media (max-width: 480px) {
-    body.has-admin-sidebar .sidebar {
-        width: min(88vw, 300px) !important;
-    }
-
-    .mobile-sidebar-toggle {
-        top: 0.7rem;
-        left: 0.7rem;
-        width: 40px;
-        height: 40px;
-    }
-
-    .btn {
-        width: 100%;
-    }
-
-    .header-actions .notification-bell {
-        flex: 0 0 auto;
-    }
+/* Teacher/Staff readability fix: avoid letter-by-letter wrapping */
+#teachersTable,
+#staffTable {
+    table-layout: auto !important;
 }
 
-@media (max-width: 360px) {
-    body.has-admin-sidebar .main-content {
-        padding-left: 0.65rem !important;
-        padding-right: 0.65rem !important;
-    }
-
-    body.has-admin-sidebar .sidebar {
-        width: 92vw !important;
-    }
-
-    .mobile-sidebar-toggle {
-        width: 38px;
-        height: 38px;
-    }
-
-    thead th,
-    tbody td {
-        padding: 0.65rem 0.72rem;
-    }
+#teachersTable th,
+#teachersTable td,
+#staffTable th,
+#staffTable td {
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
 }

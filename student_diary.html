@@ -1,0 +1,444 @@
+ <!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Diary - My own Science school</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="student_schedule_theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            margin-bottom: 1rem;
+            color: #0f766e;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .diary-builder-note {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .diary-modal-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.48);
+            z-index: 9999;
+        }
+
+        .diary-modal-overlay.active {
+            display: flex;
+        }
+
+        .diary-modal {
+            width: min(760px, 100%);
+            max-height: min(88vh, 760px);
+            overflow: auto;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 22px 60px rgba(15, 23, 42, 0.24);
+            border: 1px solid #cfe8e5;
+        }
+
+        .diary-modal-header,
+        .diary-modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.2rem;
+            border-bottom: 1px solid #dbecea;
+        }
+
+        .diary-modal-footer {
+            border-top: 1px solid #dbecea;
+            border-bottom: 0;
+            justify-content: flex-end;
+        }
+
+        .diary-modal-header h3 {
+            margin: 0;
+        }
+
+        .diary-modal-body {
+            padding: 1.2rem;
+        }
+
+        .diary-subject-form {
+            display: grid;
+            grid-template-columns: minmax(180px, 0.55fr) minmax(260px, 1fr) auto;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .diary-subject-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .diary-subject-card {
+            border: 1px solid #d9ece9;
+            border-radius: 10px;
+            padding: 0.9rem;
+            background: #fbfefe;
+        }
+
+        .diary-subject-card strong {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: #0f172a;
+        }
+
+        .diary-subject-card p {
+            margin: 0;
+            color: #334155;
+            white-space: pre-wrap;
+        }
+
+        .diary-group-row {
+            cursor: pointer;
+            background: #fbfefe;
+        }
+
+        .diary-group-row:hover {
+            background: #f0fdfa;
+        }
+
+        .diary-group-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .diary-detail-row {
+            display: none;
+        }
+
+        .diary-detail-row.open {
+            display: table-row;
+        }
+
+        .diary-detail-wrap {
+            display: grid;
+            gap: 0.75rem;
+            padding: 0.85rem;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+
+        .modal-icon-btn {
+            width: 36px;
+            height: 36px;
+            border: 0;
+            border-radius: 8px;
+            background: #eef2f7;
+            color: #0f172a;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 760px) {
+            .diary-subject-form {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <a class="back-link" href="student_scheduling.html"><i data-lucide="arrow-left"></i> Back to Student Scheduling</a>
+            <header class="header"><div><h1>Class Diary</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Select class and date, then add subject-wise diary for the student portal.</p></div></header>
+            <section class="schedule-panel">
+                <form id="studentDiaryForm">
+                    <input type="hidden" id="studentDiaryId">
+                    <div class="schedule-grid">
+                        <div><label>Class</label><select id="studentDiaryClass" required></select></div>
+                        <div><label>Diary Date</label><input type="date" id="studentDiaryDate" required></div>
+                        <button type="button" class="btn btn-primary" id="openDiaryBuilderBtn"><i data-lucide="book-plus"></i> Add Subject Diary</button>
+                    </div>
+                    <p class="diary-builder-note">After selecting class and date, the diary popup will open. Add one or more subjects and save them together.</p>
+                </form>
+            </section>
+            <section class="schedule-panel"><h3 style="margin-bottom:1rem;">Saved Diaries</h3><div id="studentDiaryList"></div></section>
+        </main>
+    </div>
+
+    <div class="diary-modal-overlay" id="diaryBuilderModal" aria-hidden="true">
+        <div class="diary-modal" role="dialog" aria-modal="true" aria-labelledby="diaryBuilderTitle">
+            <div class="diary-modal-header">
+                <div>
+                    <h3 id="diaryBuilderTitle">Subject Wise Diary</h3>
+                    <p id="diaryBuilderMeta" style="margin:.3rem 0 0; color:var(--text-secondary);"></p>
+                </div>
+                <button type="button" class="modal-icon-btn" id="closeDiaryBuilderBtn" aria-label="Close diary popup"><i data-lucide="x"></i></button>
+            </div>
+            <div class="diary-modal-body schedule-panel" style="margin:0; border:0; box-shadow:none; padding:1.2rem;">
+                <div class="diary-subject-form">
+                    <div>
+                        <label>Subject</label>
+                        <input type="text" id="diarySubjectInput" placeholder="e.g. English">
+                    </div>
+                    <div>
+                        <label>Diary / Homework</label>
+                        <textarea id="diaryDetailsInput" class="schedule-textarea" placeholder="Write homework, class diary, or instructions"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="addDiarySubjectBtn"><i data-lucide="plus"></i> Add</button>
+                </div>
+                <div id="diaryDraftList" class="diary-subject-list"></div>
+                <div id="diaryDraftEmpty" class="empty-note">No subject diary added yet.</div>
+            </div>
+            <div class="diary-modal-footer">
+                <button type="button" class="btn btn-secondary" id="cancelDiaryBuilderBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveDiaryBuilderBtn"><i data-lucide="save"></i> Save Diary</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const STUDENT_DIARY_KEY = 'eduCore_student_diaries';
+        let diaryDrafts = [];
+        let diaryEditId = '';
+        let lastAutoOpenedKey = '';
+
+        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('Diary data is too large to save.', 'Storage Full'); return false; } }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+
+        function populateClasses() {
+            const students = data('eduCore_students');
+            const classes = data('eduCore_classes');
+            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+            studentDiaryClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
+
+        function getDiarySelectionKey() {
+            return `${studentDiaryClass.value || ''}|${studentDiaryDate.value || ''}`;
+        }
+
+        function renderDrafts() {
+            diaryDraftEmpty.style.display = diaryDrafts.length ? 'none' : 'block';
+            diaryDraftList.innerHTML = diaryDrafts.map((item, index) => `
+                <article class="diary-subject-card">
+                    <div class="schedule-section-title" style="margin-bottom:.4rem;">
+                        <strong>${esc(item.title)}</strong>
+                        <button type="button" class="schedule-action-btn delete" onclick="removeDiaryDraft(${index})"><i data-lucide="trash-2" width="14"></i> Remove</button>
+                    </div>
+                    <p>${esc(item.details)}</p>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function openDiaryBuilder(force = false) {
+            if (!studentDiaryClass.value || !studentDiaryDate.value) {
+                showAppAlert('Please select class and diary date first.', 'Missing Diary Info');
+                return;
+            }
+            const key = getDiarySelectionKey();
+            if (!force && lastAutoOpenedKey === key) return;
+            lastAutoOpenedKey = key;
+            diaryBuilderMeta.textContent = `${studentDiaryClass.value} - ${studentDiaryDate.value}`;
+            diaryBuilderModal.classList.add('active');
+            diaryBuilderModal.setAttribute('aria-hidden', 'false');
+            renderDrafts();
+            diarySubjectInput.focus();
+        }
+
+        function closeDiaryBuilder() {
+            diaryBuilderModal.classList.remove('active');
+            diaryBuilderModal.setAttribute('aria-hidden', 'true');
+        }
+
+        function maybeAutoOpenBuilder() {
+            if (studentDiaryClass.value && studentDiaryDate.value && !diaryEditId) openDiaryBuilder(false);
+        }
+
+        function addDiaryDraft() {
+            const title = diarySubjectInput.value.trim();
+            const details = diaryDetailsInput.value.trim();
+            if (!title || !details) {
+                showAppAlert('Subject and diary details are required.', 'Missing Subject Diary');
+                return;
+            }
+            diaryDrafts.push({ title, details });
+            diarySubjectInput.value = '';
+            diaryDetailsInput.value = '';
+            renderDrafts();
+            diarySubjectInput.focus();
+        }
+
+        function removeDiaryDraft(index) {
+            diaryDrafts.splice(index, 1);
+            renderDrafts();
+        }
+
+        function render() {
+            const diaries = data(STUDENT_DIARY_KEY).sort((a, b) => `${b.date || ''}${b.updatedAt || ''}`.localeCompare(`${a.date || ''}${a.updatedAt || ''}`));
+            if (!diaries.length) { studentDiaryList.innerHTML = '<div class="empty-note">No class diary added yet.</div>'; return; }
+            const groups = groupDiaries(diaries);
+            studentDiaryList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Date</th><th>Subjects</th><th>Action</th></tr></thead><tbody>${groups.map((group) => `
+                <tr class="diary-group-row" onclick="toggleDiaryGroup('${group.key}')">
+                    <td><span class="diary-group-title"><i data-lucide="chevron-down" width="16"></i>${esc(group.classGrade)}</span></td>
+                    <td>${esc(group.date)}</td>
+                    <td>${group.items.length} subject${group.items.length === 1 ? '' : 's'}</td>
+                    <td><button type="button" class="schedule-action-btn edit" onclick="event.stopPropagation(); toggleDiaryGroup('${group.key}')"><i data-lucide="book-open" width="14"></i> Open</button></td>
+                </tr>
+                <tr class="diary-detail-row" id="${group.key}">
+                    <td colspan="4">
+                        <div class="diary-detail-wrap">
+                            ${group.items.map((item) => `
+                                <article class="diary-subject-card">
+                                    <div class="schedule-section-title" style="margin-bottom:.4rem;">
+                                        <strong>${esc(item.title)}</strong>
+                                        <div class="schedule-actions">
+                                            <button class="schedule-action-btn edit" onclick="editDiary('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
+                                            <button class="schedule-action-btn delete" onclick="deleteDiary('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button>
+                                        </div>
+                                    </div>
+                                    <p>${esc(item.details)}</p>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </td>
+                </tr>
+            `).join('')}</tbody></table>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function editDiary(id) {
+            const item = data(STUDENT_DIARY_KEY).find((entry) => entry.id === id);
+            if (!item) return;
+            diaryEditId = item.id;
+            diaryDrafts = [{ title: item.title || '', details: item.details || '' }];
+            studentDiaryId.value = item.id;
+            studentDiaryClass.value = item.classGrade || '';
+            studentDiaryDate.value = item.date || '';
+            openDiaryBuilder(true);
+        }
+
+        function deleteDiary(id) {
+            save(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY).filter((item) => item.id !== id));
+            render();
+        }
+
+        function groupDiaries(diaries) {
+            const groups = new Map();
+            diaries.forEach((item) => {
+                const key = `${item.classGrade || '-'}|${item.date || '-'}`;
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        key: `DIARY-GROUP-${groups.size}`,
+                        classGrade: item.classGrade || '-',
+                        date: item.date || '-',
+                        items: []
+                    });
+                }
+                groups.get(key).items.push(item);
+            });
+            return Array.from(groups.values());
+        }
+
+        function toggleDiaryGroup(key) {
+            document.getElementById(key)?.classList.toggle('open');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function saveDiaryDrafts() {
+            if (!studentDiaryClass.value || !studentDiaryDate.value) {
+                showAppAlert('Please select class and diary date first.', 'Missing Diary Info');
+                return;
+            }
+            if (!diaryDrafts.length) {
+                showAppAlert('Please add at least one subject diary.', 'Missing Subject Diary');
+                return;
+            }
+
+            const now = new Date().toISOString();
+            const items = data(STUDENT_DIARY_KEY);
+            if (diaryEditId) {
+                const index = items.findIndex((entry) => entry.id === diaryEditId);
+                if (index >= 0) {
+                    items[index] = {
+                        ...items[index],
+                        classGrade: studentDiaryClass.value,
+                        date: studentDiaryDate.value,
+                        title: diaryDrafts[0].title,
+                        details: diaryDrafts[0].details,
+                        file: null,
+                        updatedAt: now
+                    };
+                }
+            } else {
+                diaryDrafts.forEach((entry, index) => {
+                    items.push({
+                        id: `DIARY-${Date.now()}-${index}`,
+                        classGrade: studentDiaryClass.value,
+                        date: studentDiaryDate.value,
+                        title: entry.title,
+                        details: entry.details,
+                        file: null,
+                        createdAt: now,
+                        updatedAt: now
+                    });
+                });
+            }
+
+            if (!save(STUDENT_DIARY_KEY, items)) return;
+            diaryDrafts = [];
+            diaryEditId = '';
+            studentDiaryId.value = '';
+            studentDiaryForm.reset();
+            closeDiaryBuilder();
+            render();
+            showSuccessModal('Diary Saved!', 'Subject-wise class diary is visible in student portal.');
+        }
+
+        openDiaryBuilderBtn.addEventListener('click', () => openDiaryBuilder(true));
+        addDiarySubjectBtn.addEventListener('click', addDiaryDraft);
+        saveDiaryBuilderBtn.addEventListener('click', saveDiaryDrafts);
+        closeDiaryBuilderBtn.addEventListener('click', closeDiaryBuilder);
+        cancelDiaryBuilderBtn.addEventListener('click', closeDiaryBuilder);
+        studentDiaryClass.addEventListener('change', maybeAutoOpenBuilder);
+        studentDiaryDate.addEventListener('change', maybeAutoOpenBuilder);
+        diaryBuilderModal.addEventListener('click', (event) => {
+            if (event.target === diaryBuilderModal) closeDiaryBuilder();
+        });
+
+        populateClasses();
+        render();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

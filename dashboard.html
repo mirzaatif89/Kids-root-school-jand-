@@ -4,10 +4,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Apexiums School management</title>
+    <title>Dashboard - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .card.card-clickable {
+            cursor: pointer;
+        }
+
+        .session-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.45);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 1rem;
+        }
+
+        .session-modal-overlay.active {
+            display: flex;
+        }
+
+        .session-modal {
+            width: min(980px, 100%);
+            max-height: 85vh;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: auto 1fr;
+        }
+
+        .session-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .session-modal-header h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .session-modal-close {
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .session-modal-body {
+            overflow: auto;
+            padding: 0.9rem 1rem 1rem;
+        }
+
+        .session-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        .session-table th,
+        .session-table td {
+            padding: 0.6rem 0.55rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .session-table th {
+            background: #f8fbff;
+            font-weight: 700;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .session-meta {
+            display: grid;
+            gap: 0.15rem;
+        }
+
+        .session-meta small {
+            color: var(--text-secondary);
+            font-size: 0.76rem;
+        }
+
+        .session-actions .btn {
+            padding: 0.45rem 0.7rem;
+            font-size: 0.78rem;
+        }
+    </style>
 </head>
 
 <body>
@@ -15,7 +113,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -91,13 +189,13 @@
             <header class="header">
                 <h1>Overview</h1>
                 <div class="header-actions">
-                    <div class="search-bar">
+                    <div class="search-bar" style="width: 100%; max-width: 300px;">
                         <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
                         <input type="text" id="dashSearch" placeholder="Search students...">
                     </div>
-                    <div class="notification-bell" id="notificationBell">
-                        <i data-lucide="bell" size="22"></i>
-                        <span class="notification-badge" id="notifBadge">0</span>
+                    <div class="notification-bell" id="notificationBell" style="position: relative; margin-top: 1rem;">
+                        <i data-lucide="bell" size="24"></i>
+                        <span class="notification-badge" id="notifBadge" style="background-color: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">0</span>
 
                         <div class="notif-panel" id="notificationPanel">
                             <div class="notif-header">
@@ -158,7 +256,7 @@
                     </div>
                 </a>
 
-                <button type="button" class="card dashboard-action-card" id="activeLoginsCard" data-admin-only-card onclick="openActiveSessionsModal()">
+                <div class="card card-clickable" data-admin-only-card id="activeLoginsCard" title="View active sessions">
                     <div class="card-title">Active Portal Logins</div>
                     <div class="card-value" id="dashActiveLogins">...</div>
                     <div class="card-trend trend-up" id="dashActiveLoginsDetail">
@@ -167,7 +265,7 @@
                     <div class="card-icon">
                         <i data-lucide="monitor-up"></i>
                     </div>
-                </button>
+                </div>
 
 
             </div>
@@ -179,17 +277,14 @@
 
         </main>
     </div>
-
-    <div class="session-modal-overlay" id="sessionModalOverlay" aria-hidden="true">
-        <div class="session-modal" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+    <div class="session-modal-overlay" id="sessionModalOverlay">
+        <div class="session-modal">
             <div class="session-modal-header">
-                <h2 id="sessionModalTitle">Active Portal Logins</h2>
-                <button type="button" id="sessionModalClose" class="session-modal-close" aria-label="Close active sessions">
-                    <i data-lucide="x"></i>
-                </button>
+                <h3>Active Portal Logins</h3>
+                <button type="button" class="session-modal-close" id="sessionModalClose" aria-label="Close">x</button>
             </div>
-            <div class="table-container session-table-wrap">
-                <table>
+            <div class="session-modal-body">
+                <table class="session-table">
                     <thead>
                         <tr>
                             <th>User</th>
@@ -201,9 +296,7 @@
                         </tr>
                     </thead>
                     <tbody id="activeSessionsBody">
-                        <tr>
-                            <td colspan="6" style="text-align:center;">No active sessions found.</td>
-                        </tr>
+                        <tr><td colspan="6">Loading active sessions...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -211,7 +304,7 @@
     </div>
 
     <script src="auth.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260517-db-save-list-all"></script>
     <script>
         lucide.createIcons();
     </script>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Classes - Apexiums School management</title>
+    <title>Classes - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -125,6 +125,65 @@
         .promotion-history {
             margin-top: 1.5rem;
         }
+
+        .class-fee-setup {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.25rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .class-fee-form {
+            display: grid;
+            grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.6fr) minmax(140px, 0.5fr) auto;
+            gap: 0.75rem;
+            align-items: end;
+        }
+
+        .class-fee-form label {
+            display: grid;
+            gap: 0.4rem;
+            font-size: 0.84rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .class-fee-form select,
+        .class-fee-form input {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem;
+            font: inherit;
+            background: #fff;
+        }
+
+        .class-fee-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.9rem;
+        }
+
+        .class-fee-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: #155e75;
+            padding: 0.38rem 0.7rem;
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+
+        @media (max-width: 900px) {
+            .class-fee-form {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 
@@ -134,7 +193,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -227,6 +286,25 @@
                     </div>
                 </div>
             </header>
+
+            <section class="class-fee-setup">
+                <form id="classFeeForm" class="class-fee-form">
+                    <label>Class
+                        <select id="classFeeClassSelect" required></select>
+                    </label>
+                    <label>Monthly Fee
+                        <input type="number" id="classFeeAmount" placeholder="e.g. 5000" min="0" required>
+                    </label>
+                    <label>Frequency
+                        <select id="classFeeFrequency">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Yearly">Yearly</option>
+                        </select>
+                    </label>
+                    <button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Fee</button>
+                </form>
+                <div id="classFeeList" class="class-fee-list"></div>
+            </section>
 
             <!-- Classes Grid View -->
             <div id="classesGridView">
@@ -333,8 +411,8 @@
 
         const classList = [
             { id: 'play', name: 'Play Group', keywords: ['play', 'pg', 'playgroup', 'play group', 'play-group'] },
-            { id: 'nursery', name: 'Nursery', keywords: ['nursery', 'nursary', 'nur'] },
-            { id: 'prep', name: 'Prep', keywords: ['prep', 'preschool', 'pre'] },
+            { id: 'kg1', name: 'KG1', keywords: ['kg1', 'nursery', 'nursary', 'nur'] },
+            { id: 'kg2', name: 'KG2', keywords: ['kg2', 'prep', 'preschool', 'pre'] },
             { id: '1', name: 'Class One', keywords: ['1', 'one', '1st', 'class 1', 'class one'] },
             { id: '2', name: 'Class Two', keywords: ['2', 'two', '2nd', 'class 2', 'class two'] },
             { id: '3', name: 'Class Three', keywords: ['3', 'three', '3rd', 'class 3', 'class three'] },

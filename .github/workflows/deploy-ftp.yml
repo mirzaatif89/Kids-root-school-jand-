@@ -1,0 +1,77 @@
+name: Auto Deploy Live (cPanel FTP)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: live-deploy-ftp
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare restart marker
+        run: |
+          mkdir -p tmp
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > tmp/restart.txt
+
+      - name: Validate required FTP secrets
+        id: precheck
+        shell: bash
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ secrets.FTP_PORT }}
+        run: |
+          missing=()
+          for v in FTP_SERVER FTP_USERNAME FTP_PASSWORD FTP_PORT; do
+            if [ -z "${!v}" ]; then
+              missing+=("$v")
+            fi
+          done
+
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
+            echo "Missing required secrets: ${missing[*]}"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy via FTP
+        if: ${{ steps.precheck.outputs.ready == 'true' }}
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }}
+          protocol: ftp
+          local-dir: ./
+          server-dir: ./
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/.github/**
+            **/node_modules/**
+            **/.env
+            **/permissions.json
+            **/date_sheet.json
+            **/admin_credentials.json
+            **/.deploy-backup/**
+            **/server.log
+            **/stderr.log
+
+      - name: Skip deploy (missing required FTP secrets)
+        if: ${{ steps.precheck.outputs.ready != 'true' }}
+        run: |
+          echo "Skipping FTP deploy. Missing secrets: ${{ steps.precheck.outputs.missing }}"

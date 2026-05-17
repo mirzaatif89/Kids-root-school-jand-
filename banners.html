@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banners - My own Science school</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .banner-layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.85fr) minmax(460px, 1.15fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .banner-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .banner-field label {
+            display: block;
+            margin-bottom: 0.45rem;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .banner-field input,
+        .banner-field textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem 0.95rem;
+            font: inherit;
+            color: var(--text-primary);
+            background: #fff;
+        }
+
+        .banner-field textarea {
+            min-height: 84px;
+            resize: vertical;
+        }
+
+        .banner-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .banner-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .banner-list {
+            display: grid;
+            gap: 0.9rem;
+        }
+
+        .banner-card {
+            display: grid;
+            grid-template-columns: 170px 1fr;
+            gap: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: 0.85rem;
+        }
+
+        .banner-thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border-radius: 8px;
+            background: #eef2f7;
+        }
+
+        .banner-meta {
+            display: grid;
+            gap: 0.55rem;
+            min-width: 0;
+        }
+
+        .banner-meta h3 {
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .banner-meta p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        .banner-pill-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .banner-pill {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 0.25rem 0.6rem;
+            background: #dcfce7;
+            color: #166534;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .banner-pill.inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .banner-empty {
+            padding: 2rem;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            text-align: center;
+            background: #f8fafc;
+        }
+
+        @media (max-width: 980px) {
+            .banner-layout,
+            .banner-card {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="banners.html" class="nav-item active" data-banners-link="true"><i data-lucide="image"></i><span>Banners</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
+                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
+                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
+                <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
+                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Banners</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Manage website and portal banner images.</p>
+                </div>
+            </header>
+
+            <section class="banner-layout">
+                <div class="table-container">
+                    <form id="bannerForm" class="banner-form">
+                        <input type="hidden" id="bannerId">
+                        <div class="banner-field">
+                            <label for="bannerTitle">Title</label>
+                            <input type="text" id="bannerTitle" placeholder="Admissions Open" required>
+                        </div>
+                        <div class="banner-field">
+                            <label for="bannerSubtitle">Subtitle</label>
+                            <textarea id="bannerSubtitle" placeholder="Short banner text"></textarea>
+                        </div>
+                        <div class="banner-field">
+                            <label for="bannerImageFile">Upload Image</label>
+                            <input type="file" id="bannerImageFile" accept="image/*">
+                        </div>
+                        <div class="banner-field">
+                            <label for="bannerImageUrl">Image URL</label>
+                            <input type="url" id="bannerImageUrl" placeholder="https://example.com/banner.jpg">
+                        </div>
+                        <div class="banner-field">
+                            <label for="bannerLinkUrl">Link URL</label>
+                            <input type="url" id="bannerLinkUrl" placeholder="https://example.com/admissions">
+                        </div>
+                        <div class="banner-field">
+                            <label for="bannerDisplayOrder">Display Order</label>
+                            <input type="number" id="bannerDisplayOrder" value="0">
+                        </div>
+                        <label class="banner-toggle">
+                            <input type="checkbox" id="bannerIsActive" checked>
+                            Active banner
+                        </label>
+                        <div class="banner-actions">
+                            <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Banner</button>
+                            <button type="button" class="btn btn-outline" id="bannerResetBtn"><i data-lucide="rotate-ccw"></i> Reset</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <div id="bannerList" class="banner-list"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let bannerRecords = [];
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function readBannerFile(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) return resolve('');
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error('Image could not be read.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function resetBannerForm() {
+            document.getElementById('bannerId').value = '';
+            document.getElementById('bannerForm').reset();
+            document.getElementById('bannerDisplayOrder').value = '0';
+            document.getElementById('bannerIsActive').checked = true;
+        }
+
+        function renderBanners() {
+            const list = document.getElementById('bannerList');
+            if (!bannerRecords.length) {
+                list.innerHTML = '<div class="banner-empty">No banners saved yet.</div>';
+                return;
+            }
+
+            list.innerHTML = bannerRecords.map((banner) => `
+                <article class="banner-card">
+                    <img class="banner-thumb" src="${escapeHtml(banner.imageUrl)}" alt="${escapeHtml(banner.title)}">
+                    <div class="banner-meta">
+                        <div class="banner-pill-row">
+                            <span class="banner-pill${banner.isActive ? '' : ' inactive'}">${banner.isActive ? 'Active' : 'Inactive'}</span>
+                            <span class="banner-pill">Order ${Number(banner.displayOrder || 0)}</span>
+                        </div>
+                        <h3>${escapeHtml(banner.title)}</h3>
+                        <p>${escapeHtml(banner.subtitle || '')}</p>
+                        ${banner.linkUrl ? `<p>${escapeHtml(banner.linkUrl)}</p>` : ''}
+                        <div class="banner-actions">
+                            <button class="btn btn-outline" type="button" onclick="toggleBannerStatus('${escapeHtml(banner.id)}')">
+                                <i data-lucide="${banner.isActive ? 'eye-off' : 'eye'}"></i> ${banner.isActive ? 'Off' : 'On'}
+                            </button>
+                            <button class="btn btn-outline" type="button" onclick="editBanner('${escapeHtml(banner.id)}')"><i data-lucide="pencil"></i> Edit</button>
+                            <button class="btn btn-danger" type="button" onclick="deleteBanner('${escapeHtml(banner.id)}')"><i data-lucide="trash-2"></i> Delete</button>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadBanners() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/banners`);
+                const data = await response.json();
+                bannerRecords = Array.isArray(data.banners) ? data.banners : [];
+                renderBanners();
+            } catch (error) {
+                bannerRecords = [];
+                renderBanners();
+                console.error(error);
+            }
+        }
+
+        function editBanner(id) {
+            const banner = bannerRecords.find((item) => item.id === id);
+            if (!banner) return;
+            document.getElementById('bannerId').value = banner.id;
+            document.getElementById('bannerTitle').value = banner.title || '';
+            document.getElementById('bannerSubtitle').value = banner.subtitle || '';
+            document.getElementById('bannerImageUrl').value = banner.imageUrl || '';
+            document.getElementById('bannerLinkUrl').value = banner.linkUrl || '';
+            document.getElementById('bannerDisplayOrder').value = Number(banner.displayOrder || 0);
+            document.getElementById('bannerIsActive').checked = banner.isActive !== false;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        async function saveBannerPayload(payload) {
+            const response = await fetch(`${API_BASE_URL}/banners`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                throw new Error(data.message || 'Banner save failed.');
+            }
+            bannerRecords = Array.isArray(data.banners) ? data.banners : [];
+            renderBanners();
+            return data;
+        }
+
+        async function toggleBannerStatus(id) {
+            const banner = bannerRecords.find((item) => item.id === id);
+            if (!banner) return;
+
+            try {
+                await saveBannerPayload({
+                    ...banner,
+                    isActive: banner.isActive === false
+                });
+            } catch (error) {
+                alert(error.message || 'Banner status update failed.');
+            }
+        }
+
+        async function deleteBanner(id) {
+            if (!confirm('Delete this banner?')) return;
+            const response = await fetch(`${API_BASE_URL}/banners/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const data = await response.json();
+            if (!response.ok || data.success === false) {
+                alert(data.message || 'Banner delete failed.');
+                return;
+            }
+            bannerRecords = Array.isArray(data.banners) ? data.banners : [];
+            renderBanners();
+        }
+
+        document.getElementById('bannerForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const fileData = await readBannerFile(document.getElementById('bannerImageFile').files[0]);
+            const imageUrl = fileData || document.getElementById('bannerImageUrl').value.trim();
+            const payload = {
+                id: document.getElementById('bannerId').value.trim() || undefined,
+                title: document.getElementById('bannerTitle').value.trim(),
+                subtitle: document.getElementById('bannerSubtitle').value.trim(),
+                imageUrl,
+                linkUrl: document.getElementById('bannerLinkUrl').value.trim(),
+                displayOrder: Number(document.getElementById('bannerDisplayOrder').value || 0),
+                isActive: document.getElementById('bannerIsActive').checked
+            };
+
+            try {
+                await saveBannerPayload(payload);
+            } catch (error) {
+                alert(error.message || 'Banner save failed.');
+                return;
+            }
+            resetBannerForm();
+        });
+
+        document.getElementById('bannerResetBtn').addEventListener('click', resetBannerForm);
+
+        if (window.socket) {
+            window.socket.on('banners_update', (records) => {
+                bannerRecords = Array.isArray(records) ? records : [];
+                renderBanners();
+            });
+        }
+
+        loadBanners();
+    </script>
+</body>
+
+</html>

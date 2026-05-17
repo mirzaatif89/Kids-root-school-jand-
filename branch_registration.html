@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Branch Registration - Apexiums School management</title>
+    <title>Branch Registration - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -91,8 +91,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
-            </div>
+                    <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
 
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item">
@@ -190,16 +189,11 @@
                     <div class="form-grid">
                         <div class="input-group">
                             <label>Campus Name</label>
-                            <select id="branchCampusName" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
-                                <option value="">Select Campus</option>
-                                <option value="Main Campus">Main Campus</option>
-                                <option value="Ali campus">Ali campus</option>
-                                <option value="Fatima Campus">Fatima Campus</option>
-                            </select>
+                            <input type="text" id="branchCampusName" required placeholder="e.g. Campus 1">
                         </div>
                         <div class="input-group">
                             <label>Branch Display Name</label>
-                            <input type="text" id="branchDisplayName" placeholder="e.g. Ali campus Office">
+                            <input type="text" id="branchDisplayName" placeholder="e.g. Campus 1 Office">
                         </div>
                         <div class="input-group">
                             <label>Username</label>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Teachers - Apexiums School management</title>
+    <title>Manage Teachers - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -77,7 +77,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            min-width: 170px;
+            min-width: 120px;
         }
 
         .teacher-name-text {
@@ -86,10 +86,67 @@
             word-break: break-word;
         }
 
+        .teacher-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #f0bdd1;
+            color: #be185d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex: 0 0 auto;
+            overflow: hidden;
+        }
+
+        .teacher-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .profile-image-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+        }
+
+        .profile-image-preview {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #f0bdd1;
+            color: #be185d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.35rem;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .profile-image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .profile-image-picker input[type="file"] {
+            width: 100%;
+        }
+
         .teacher-login-details {
             line-height: 1.5;
             font-size: 0.85rem;
-            min-width: 180px;
+            min-width: 120px;
         }
 
         .teacher-login-details strong {
@@ -171,6 +228,18 @@
             text-align: center;
         }
 
+        @media (max-width: 1200px) {
+            .teacher-name-cell {
+                min-width: 100px;
+                gap: 0.5rem;
+            }
+
+            .teacher-login-details {
+                min-width: 100px;
+                font-size: 0.78rem;
+            }
+        }
+
         @media (max-width: 900px) {
             .schedule-row {
                 grid-template-columns: 1fr;
@@ -204,7 +273,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -311,9 +380,6 @@
                         <select id="teacherCampusFilter"
                             style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
                             <option value="">All Campuses</option>
-                            <option value="Main Campus">Main Campus</option>
-                            <option value="Ali campus">Ali campus</option>
-                            <option value="Fatima Campus">Fatima Campus</option>
                         </select>
                     </div>
                     <div class="input-group" style="min-width: 180px; margin: 0;">
@@ -334,7 +400,7 @@
             <!-- Add/Edit Form -->
             <div id="teacherFormContainer" class="form-container">
                 <h3 style="margin-bottom: 1.5rem;" id="teacherFormTitle">Add New Teacher</h3>
-                <form id="teacherForm">
+                <form id="teacherForm" novalidate>
                     <input type="hidden" id="teacherId"> <!-- Hidden ID for Editing -->
 
                     <div class="form-grid">
@@ -381,9 +447,6 @@
                             <select id="tCampusName" required
                                 style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
                                 <option value="">Select Campus</option>
-                                <option value="Main Campus">Main Campus</option>
-                                <option value="Ali campus">Ali campus</option>
-                                <option value="Fatima Campus">Fatima Campus</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -400,16 +463,21 @@
                             <select id="tDesignation" required
                                 style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
                                 <option value="Teacher" data-group-key="teacher">Teacher</option>
-                                <option value="Senior Teacher" data-group-key="senior_teacher">Senior Teacher</option>
-                                <option value="Coordinator" data-group-key="coordinator">Coordinator</option>
-                                <option value="Principal" data-group-key="principal">Principal</option>
-                                <option value="Branch Manager" data-group-key="branch_manager">Branch Manager</option>
-                                <option value="System Administrator" data-group-key="admin">System Administrator</option>
+                                <option value="Admin" data-group-key="admin">Admin</option>
+                                <option value="Superadmin" data-group-key="superadmin">Superadmin</option>
+                                <option value="Computer Operator" data-group-key="computer_operator">Computer Operator</option>
                             </select>
                         </div>
                         <div class="input-group">
                             <label>Subject</label>
                             <input type="text" id="tSubject" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Profile Image</label>
+                            <div class="profile-image-picker">
+                                <div class="profile-image-preview" id="teacherPhotoPreview">T</div>
+                                <input type="file" id="tProfileImage" accept="image/*">
+                            </div>
                         </div>
                         <div class="input-group">
                             <label>ID Card Front Image</label>
@@ -446,7 +514,7 @@
                             <i data-lucide="key"></i>
                             <span>Create Username & Password</span>
                         </div>
-                        <button type="submit" class="action-step-btn btn-save-activate">
+                        <button type="submit" class="action-step-btn btn-save-activate" id="saveTeacherBtn">
                             <i data-lucide="check-circle"></i>
                             <span>Save & Activate Teacher</span>
                         </button>
@@ -465,9 +533,6 @@
                                 <select id="tBankBranch"
                                     style="width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #f8fafc;">
                                     <option value="">Select Branch</option>
-                                    <option value="Main Campus">Main Campus</option>
-                                    <option value="Ali campus">Ali campus</option>
-                                    <option value="Fatima Campus">Fatima Campus</option>
                                 </select>
                             </div>
                         </div>
@@ -492,9 +557,6 @@
                                 </div>
                             </div>
                         </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
-                            These credentials will be used for login on the teacher portal.
-                        </p>
                     </div>
 
                     <div class="form-actions">
@@ -652,7 +714,7 @@
 
     <script src="auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260517-db-save-list-all"></script>
     <script>
         lucide.createIcons();
     </script>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Students - Apexiums School management</title>
+    <title>Manage Students - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -52,6 +52,15 @@
             background: #dbeafe;
         }
 
+        .btn-view {
+            background: #ecfeff;
+            color: #0f766e;
+        }
+
+        .btn-view:hover {
+            background: #cffafe;
+        }
+
         .btn-delete {
             background: #fee2e2;
             color: var(--danger-color);
@@ -59,6 +68,13 @@
 
         .btn-delete:hover {
             background: #fecaca;
+        }
+
+        .student-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
         }
 
         .toolbar {
@@ -113,11 +129,175 @@
             font: inherit;
         }
 
+        .student-filter-group .student-multifilter {
+            position: relative;
+        }
+
+        .student-filter-group .student-multifilter-trigger {
+            width: 100%;
+            padding: 0.9rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            background: white;
+            font: inherit;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            text-align: left;
+        }
+
+        .student-filter-group .student-multifilter-trigger::after {
+            content: "▾";
+            color: var(--text-secondary);
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .student-filter-group .student-multifilter.open .student-multifilter-trigger::after {
+            transform: rotate(180deg);
+        }
+
+        .student-filter-group .student-multifilter-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+            padding: 0.55rem;
+            max-height: 320px;
+            overflow: auto;
+            display: none;
+            z-index: 80;
+        }
+
+        .student-filter-group .student-multifilter.open .student-multifilter-menu {
+            display: block;
+        }
+
+        .student-filter-group .student-multifilter-group {
+            padding: 0.4rem 0.55rem 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .student-filter-group .student-multifilter-item {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.5rem 0.55rem;
+            border-radius: 0.6rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .student-filter-group .student-multifilter-item:hover {
+            background: rgba(32, 176, 164, 0.08);
+        }
+
+        .student-filter-group .student-multifilter-item input {
+            width: 16px;
+            height: 16px;
+        }
+
         .student-filter-group input:focus,
         .student-filter-group select:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        .student-filter-group .student-multifilter-trigger:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        .admin-records-panel {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem;
+            margin: 0 0 1.5rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .admin-records-head {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .admin-records-select {
+            min-width: min(100%, 280px);
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #fff;
+            font: inherit;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .admin-record-section {
+            display: none;
+            margin-top: 1rem;
+        }
+
+        .admin-record-section.active {
+            display: block;
+        }
+
+        .admin-record-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0.85rem;
+        }
+
+        .admin-record-table th,
+        .admin-record-table td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .admin-record-table th {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+        }
+
+        .admin-record-empty {
+            padding: 1rem;
+            border: 1px dashed var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            background: #f8fafc;
+            margin-top: 0.85rem;
+        }
+
+        .student-filter-group .student-multifilter.disabled .student-multifilter-trigger {
+            background: #f8fafc;
+            cursor: not-allowed;
+            color: var(--text-secondary);
+        }
+
+        .student-filter-group .student-multifilter.disabled .student-multifilter-trigger::after {
+            opacity: 0.5;
+        }
+
+        .student-filter-group .student-multifilter.disabled .student-multifilter-menu {
+            display: none !important;
         }
 
         .student-print-btn {
@@ -151,6 +331,42 @@
             display: block;
         }
 
+        .profile-image-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+        }
+
+        .profile-image-preview {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(32, 176, 164, 0.12);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.35rem;
+            overflow: hidden;
+            flex: 0 0 auto;
+        }
+
+        .profile-image-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .profile-image-picker input[type="file"] {
+            width: 100%;
+        }
+
         .login-details {
             line-height: 1.5;
             font-size: 0.85rem;
@@ -176,6 +392,168 @@
 
         .cell-compact {
             line-height: 1.45;
+        }
+
+        .student-th-with-search {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            white-space: nowrap;
+        }
+
+        .student-column-search-btn {
+            width: 18px;
+            height: 18px;
+            border: 0;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--primary-color);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .student-column-search-btn:hover,
+        .student-column-search-btn:focus {
+            background: rgba(32, 176, 164, 0.12);
+            color: var(--primary-color);
+            outline: none;
+        }
+
+        .student-column-search-btn i {
+            width: 11px;
+            height: 11px;
+            stroke-width: 2.4;
+        }
+
+        .student-search-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.42);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1200;
+        }
+
+        .student-search-overlay.active {
+            display: flex;
+        }
+
+        .student-search-modal {
+            width: min(420px, 100%);
+            background: #ffffff;
+            border: 1px solid rgba(32, 176, 164, 0.24);
+            border-radius: 1rem;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+            padding: 1.3rem;
+        }
+
+        .student-search-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .student-search-modal-title {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            margin: 0;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .student-search-modal-title span {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(32, 176, 164, 0.12);
+            color: var(--primary-color);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .student-search-modal-title i {
+            width: 16px;
+            height: 16px;
+        }
+
+        .student-search-close {
+            width: 30px;
+            height: 30px;
+            border: 0;
+            border-radius: 50%;
+            background: #f8fafc;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .student-search-close:hover,
+        .student-search-close:focus {
+            color: var(--primary-color);
+            background: rgba(32, 176, 164, 0.1);
+            outline: none;
+        }
+
+        .student-search-modal label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 0.45rem;
+        }
+
+        .student-search-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.8rem;
+            padding: 0 0.9rem;
+            background: #ffffff;
+        }
+
+        .student-search-input-wrap:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        .student-search-input-wrap i {
+            width: 16px;
+            height: 16px;
+            color: var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        .student-search-input-wrap input {
+            width: 100%;
+            border: 0;
+            outline: none;
+            padding: 0.9rem 0;
+            font: inherit;
+        }
+
+        .student-search-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.7rem;
+            margin-top: 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .student-search-actions .btn {
+            min-width: 95px;
         }
 
         @media (max-width: 900px) {
@@ -256,9 +634,9 @@
                 display: none !important;
             }
 
-            .student-name-cell {
-                gap: 0.4rem !important;
-            }
+        .student-name-cell {
+            gap: 0.4rem !important;
+        }
 
             .student-avatar {
                 width: 22px !important;
@@ -276,427 +654,68 @@
             }
         }
 
-        .student-toolbar {
-            align-items: center;
-            background: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 1rem;
-            box-shadow: var(--shadow-sm);
-            width: 100%;
-        }
-
-        .student-toolbar-left {
-            display: grid;
-            grid-template-columns: auto minmax(300px, 450px);
-            align-items: end;
-            column-gap: 1rem;
-            row-gap: 1.35rem;
-            flex: 1 1 560px;
-            min-width: 0;
-        }
-
-        .student-stat {
-            min-width: 150px;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-
-        .student-search-box {
-            min-width: min(360px, 100%);
-            flex: 1 1 320px;
-        }
-
-        .student-quick-filter {
-            grid-column: 1;
-            min-width: 210px;
-            width: 210px;
-        }
-
-        .student-filter-group select[multiple] {
-            min-height: 86px;
-            max-height: 86px;
-            padding: 0.55rem 0.75rem;
-            overflow-y: auto;
-            appearance: auto;
-        }
-
-        .student-toolbar-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .student-photo-field {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            min-width: 0;
-        }
-
-        .student-photo-field input[type="file"] {
-            min-width: 0;
-            max-width: 100%;
-        }
-
-        .student-photo-preview {
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            background: rgba(32, 176, 164, 0.12);
-            color: var(--primary-color);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 800;
-            overflow: hidden;
-            border: 2px solid rgba(32, 176, 164, 0.22);
-            flex: 0 0 auto;
-        }
-
-        .student-photo-preview img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .form-section-panel {
-            margin-top: 1rem;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: #fbfefd;
-        }
-
-        .step-panel {
+        .student-view-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
             display: none;
-        }
-
-        .step-panel.active {
-            display: block;
-        }
-
-        .action-steps {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            margin: 1.5rem 0 0.75rem;
-        }
-
-        .action-step-btn {
-            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1rem;
+            z-index: 1200;
+            padding: 1rem;
+        }
+
+        .student-view-modal {
+            width: min(760px, 95vw);
+            max-height: 90vh;
+            overflow: auto;
+            background: #fff;
+            border-radius: 16px;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: #ffffff;
-            color: var(--text-primary);
-            font: inherit;
-            font-weight: 700;
-            cursor: pointer;
-            min-width: 0;
-            text-align: center;
+            box-shadow: 0 20px 48px rgba(2, 6, 23, 0.26);
         }
 
-        .action-step-btn:hover,
-        .action-step-btn.active {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-            background: rgba(32, 176, 164, 0.08);
-        }
-
-        .btn-save-activate {
-            border-color: var(--primary-color);
-            background: var(--primary-color);
-            color: #ffffff;
-        }
-
-        .btn-save-activate:hover {
-            background: var(--primary-dark);
-            color: #ffffff;
-        }
-
-        .th-with-search {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            white-space: nowrap;
-        }
-
-        .column-search-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            border: 0;
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-        }
-
-        .column-search-btn:hover {
-            background: rgba(32, 176, 164, 0.1);
-            color: var(--primary-color);
-        }
-
-        .row-action-wrap {
-            position: relative;
-            display: inline-flex;
-        }
-
-        .row-action-menu {
-            position: absolute;
-            right: 0;
-            top: calc(100% + 0.35rem);
-            z-index: 80;
-            display: none;
-            min-width: 170px;
-            padding: 0.35rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: #ffffff;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .row-action-wrap.open .row-action-menu {
-            display: grid;
-        }
-
-        .row-action-menu button {
+        .student-view-header {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            width: 100%;
-            padding: 0.62rem 0.7rem;
-            border: 0;
-            border-radius: 6px;
-            background: transparent;
-            color: var(--text-primary);
-            text-align: left;
-            cursor: pointer;
-        }
-
-        .row-action-menu button:hover {
-            background: #f1f5f9;
-        }
-
-        .status-badge.status-active,
-        .status-badge.status-paid {
-            background: rgba(16, 185, 129, 0.12);
-            color: #047857;
-        }
-
-        .status-badge.status-pending {
-            background: rgba(245, 158, 11, 0.14);
-            color: #b45309;
-        }
-
-        .status-badge.status-late,
-        .status-badge.status-terminated,
-        .status-badge.status-failed {
-            background: rgba(239, 68, 68, 0.12);
-            color: #b91c1c;
-        }
-
-        .student-modal-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            justify-content: space-between;
             gap: 0.75rem;
-            text-align: left;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .student-modal-field {
-            padding: 0.75rem;
+        .student-view-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+        }
+
+        .student-view-item {
             border: 1px solid var(--border-color);
-            border-radius: 8px;
             background: #f8fafc;
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
         }
 
-        .student-modal-field span {
+        .student-view-item strong {
             display: block;
-            font-size: 0.75rem;
+            font-size: 0.78rem;
             color: var(--text-secondary);
             margin-bottom: 0.2rem;
+            letter-spacing: 0.01em;
         }
 
-        .student-modal-field strong {
+        .student-view-item span {
+            font-weight: 600;
+            color: var(--text-primary);
             word-break: break-word;
         }
 
-        @media (max-width: 1280px) {
-            .student-toolbar {
-                align-items: stretch;
-            }
-
-            .student-toolbar-left,
-            .student-toolbar-actions {
-                width: 100%;
-            }
-
-            .student-toolbar-left {
-                grid-template-columns: auto minmax(260px, 1fr);
-            }
-
-            .student-toolbar-actions {
-                justify-content: flex-start;
-            }
-        }
-
-        @media (max-width: 980px) {
-            .form-container {
-                padding: 1.25rem;
-                border-radius: 8px;
-            }
-
-            .student-toolbar {
-                padding: 0.85rem;
-            }
-
-            .student-stat,
-            .student-filter-group {
-                flex: 1 1 220px;
-            }
-
-            .action-steps {
-                display: grid;
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .btn-save-activate {
-                grid-column: 1 / -1;
-            }
-
-            .table-container {
-                overflow-x: auto;
-            }
-
-            #studentsTable {
-                min-width: 980px;
-            }
-        }
-
-        @media (max-width: 720px) {
-            .student-toolbar,
-            .student-toolbar-left {
-                display: grid;
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-            .student-quick-filter {
-                width: 100%;
-                grid-column: auto;
-            }
-
-            .student-toolbar-actions,
-            .student-toolbar-actions .btn,
-            .student-filter-group,
-            .student-search-box,
-            .student-stat {
-                width: 100%;
-                min-width: 0;
-            }
-
-            .student-filter-group input,
-            .student-filter-group select {
-                min-height: 44px;
-            }
-
-            .student-filter-group select[multiple] {
-                min-height: 132px;
-            }
-
-            .student-toolbar-actions {
-                display: grid;
-                grid-template-columns: 1fr;
-            }
-
-            .student-photo-field {
-                align-items: flex-start;
-                flex-direction: column;
-            }
-
-            .action-steps {
-                grid-template-columns: 1fr;
-            }
-
-            .action-step-btn,
-            .btn-save-activate {
-                width: 100%;
-            }
-
-            .student-modal-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .row-action-menu {
-                left: 0;
-                right: auto;
-            }
-        }
-
-        @media (max-width: 560px) {
-            .header {
-                padding-left: 3.25rem;
-            }
-
-            .student-toolbar {
-                margin-left: -0.15rem;
-                margin-right: -0.15rem;
-            }
-
-            .form-container {
-                padding: 1rem;
-                margin-left: -0.15rem;
-                margin-right: -0.15rem;
-            }
-
-            .student-photo-preview {
-                width: 64px;
-                height: 64px;
-                font-size: 1.25rem;
-            }
-
-            .form-section-panel {
-                padding: 0.85rem;
-            }
-
-            #studentsTable {
-                min-width: 900px;
-            }
-        }
-
-        @media (max-width: 420px) {
-            .student-stat {
-                padding: 0.65rem 0.75rem;
-            }
-
-            .student-filter-group label {
-                font-size: 0.78rem;
-            }
-
-            .student-filter-group input,
-            .student-filter-group select {
-                padding: 0.72rem 0.8rem;
-            }
-
-            .action-step-btn {
-                padding: 0.68rem 0.75rem;
-                font-size: 0.9rem;
-            }
-
-            #studentsTable {
-                min-width: 840px;
-            }
+        .student-view-footer {
+            padding: 0 1.25rem 1.1rem;
+            display: flex;
+            justify-content: flex-end;
         }
     </style>
 </head>
@@ -706,7 +725,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -804,25 +823,26 @@
                     <div class="student-stat">
                         Total Students: <span id="totalStudentCount" style="color: var(--primary-color);">0</span>
                     </div>
-                    <div class="student-filter-group student-search-box">
+                    <div class="student-filter-group">
                         <label for="studentSearchInput">Search Student</label>
                         <input type="text" id="studentSearchInput" placeholder="Search by name, roll no, or student ID">
                     </div>
-                    <div class="student-filter-group student-quick-filter">
-                        <label for="quickStudentFilter">Quick Filter</label>
-                        <select id="quickStudentFilter" multiple size="5">
-                            <option value="all">All Students</option>
-                            <option value="gender:Male">Male Students</option>
-                            <option value="gender:Female">Female Students</option>
-                            <option value="gender:Other">Other Gender</option>
-                            <option value="age:below5">Below 5 Years</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="student-toolbar-actions">
                     <div class="student-filter-group">
-                        <label for="studentPrintType">Print List</label>
-                        <select id="studentPrintType">
+                        <label for="studentQuickFilterTrigger">Quick Filter</label>
+                        <div class="student-multifilter" id="studentQuickFilterMulti">
+                            <button class="student-multifilter-trigger" type="button" id="studentQuickFilterTrigger"
+                                aria-haspopup="listbox" aria-expanded="false">
+                                All Students
+                            </button>
+                            <div class="student-multifilter-menu" id="studentQuickFilterMenu" role="listbox"
+                                aria-multiselectable="true"></div>
+                            <select id="studentQuickFilter" multiple style="display:none;"></select>
+                        </div>
+                    </div>
+                    <div class="student-filter-group">
+                        <label for="studentPrintMode">Print List</label>
+                        <select id="studentPrintMode"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #ffffff; font-weight: 700;">
                             <option value="school">School Student List</option>
                             <option value="outer">Outer Student List</option>
                         </select>
@@ -830,23 +850,23 @@
                     <button class="btn btn-outline student-print-btn" type="button" onclick="printStudentsList()">
                         <i data-lucide="printer"></i> Print Students
                     </button>
-                    <button class="btn btn-primary" type="button" onclick="toggleStudentForm()">
-                        <i data-lucide="plus"></i> Add New Student
-                    </button>
                 </div>
+                <button class="btn btn-primary" onclick="toggleStudentForm()">
+                    <i data-lucide="plus"></i> Add New Student
+                </button>
             </div>
 
             <!-- Add/Edit Form -->
             <div id="studentFormContainer" class="form-container">
                 <h3 style="margin-bottom: 1.5rem;" id="formTitle">Add New Student</h3>
-                <form id="studentForm">
+                <form id="studentForm" novalidate>
                     <input type="hidden" id="studentId"> <!-- Hidden ID for Editing -->
 
                     <div class="form-grid">
                         <div class="input-group">
                             <label>Profile Image</label>
-                            <div class="student-photo-field">
-                                <div class="student-photo-preview" id="studentPhotoPreview">S</div>
+                            <div class="profile-image-picker">
+                                <div class="profile-image-preview" id="studentPhotoPreview">S</div>
                                 <input type="file" id="studentProfileImage" accept="image/*">
                             </div>
                         </div>
@@ -883,9 +903,6 @@
                             <select id="campusName" required
                                 style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #f8fafc;">
                                 <option value="">Select Campus</option>
-                                <option value="Main Campus">Main Campus</option>
-                                <option value="Ali campus">Ali campus</option>
-                                <option value="Fatima Campus">Fatima Campus</option>
                             </select>
                         </div>
                         <div class="input-group">
@@ -933,7 +950,7 @@
                     </div>
 
                     <!-- Fee Panel -->
-                    <div id="feePanel" class="step-panel form-section-panel">
+                    <div id="feePanel" class="step-panel">
                         <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Set Student Fee</h4>
                         <div class="form-grid">
                             <div class="input-group">
@@ -952,7 +969,7 @@
                     </div>
 
                     <!-- Credentials Panel -->
-                    <div id="credPanel" class="step-panel form-section-panel">
+                    <div id="credPanel" class="step-panel">
                         <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Create Login Credentials</h4>
                         <div class="form-grid">
                             <div class="input-group">
@@ -986,15 +1003,15 @@
                 <table id="studentsTable">
                     <thead>
                         <tr>
-                            <th><span class="th-with-search">Student ID <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('studentCode', 'Student ID')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Roll No <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('rollNo', 'Roll No')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Name <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('fullName', 'Name')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Father Name <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('fatherName', 'Father Name')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">DOB <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('dob', 'DOB')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Class <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('classGrade', 'Class')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Campus <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('campusName', 'Campus')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Gender <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('gender', 'Gender')"><i data-lucide="search" size="14"></i></button></span></th>
-                            <th><span class="th-with-search">Status <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('status', 'Status')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="student-th-with-search">Student ID <button type="button" class="student-column-search-btn" title="Search Student ID" onclick="openStudentColumnSearch('studentCode', 'Student ID')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Roll No <button type="button" class="student-column-search-btn" title="Search Roll No" onclick="openStudentColumnSearch('rollNo', 'Roll No')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Name <button type="button" class="student-column-search-btn" title="Search Name" onclick="openStudentColumnSearch('fullName', 'Name')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Father Name <button type="button" class="student-column-search-btn" title="Search Father Name" onclick="openStudentColumnSearch('fatherName', 'Father Name')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">DOB <button type="button" class="student-column-search-btn" title="Search DOB" onclick="openStudentColumnSearch('dob', 'DOB')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Class <button type="button" class="student-column-search-btn" title="Search Class" onclick="openStudentColumnSearch('classGrade', 'Class')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Campus <button type="button" class="student-column-search-btn" title="Search Campus" onclick="openStudentColumnSearch('campusName', 'Campus')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Gender <button type="button" class="student-column-search-btn" title="Search Gender" onclick="openStudentColumnSearch('gender', 'Gender')"><i data-lucide="search"></i></button></span></th>
+                            <th><span class="student-th-with-search">Status <button type="button" class="student-column-search-btn" title="Search Status" onclick="openStudentColumnSearch('status', 'Status')"><i data-lucide="search"></i></button></span></th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1023,36 +1040,62 @@
         </div>
     </div>
 
-    <div id="studentViewModal" class="success-overlay">
-        <div class="success-modal" style="max-width: 720px;">
-            <div class="success-icon-wrap">
-                <i data-lucide="user"></i>
+    <div id="studentColumnSearchModal" class="student-search-overlay" role="dialog" aria-modal="true"
+        aria-labelledby="studentColumnSearchTitle" onclick="if(event.target===this) closeStudentColumnSearchModal()">
+        <form class="student-search-modal" onsubmit="applyStudentColumnSearch(event)">
+            <div class="student-search-modal-header">
+                <h2 class="student-search-modal-title" id="studentColumnSearchTitle">
+                    <span><i data-lucide="search"></i></span>
+                    Search
+                </h2>
+                <button type="button" class="student-search-close" aria-label="Close search"
+                    onclick="closeStudentColumnSearchModal()">
+                    <i data-lucide="x"></i>
+                </button>
             </div>
-            <h2>Student Details</h2>
-            <div id="studentViewContent" class="student-modal-grid" style="margin: 1.25rem 0;"></div>
-            <button class="btn btn-primary" style="width: 100%;" onclick="closeStudentViewModal()">Close</button>
-        </div>
+            <label for="studentColumnSearchInput" id="studentColumnSearchLabel">Search</label>
+            <div class="student-search-input-wrap">
+                <i data-lucide="search"></i>
+                <input type="text" id="studentColumnSearchInput" autocomplete="off" placeholder="Type to search">
+            </div>
+            <div class="student-search-actions">
+                <button type="button" class="btn btn-outline" onclick="clearStudentColumnSearch()">Clear</button>
+                <button type="button" class="btn btn-outline" onclick="closeStudentColumnSearchModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" onclick="applyStudentColumnSearch(event)">Search</button>
+            </div>
+        </form>
     </div>
 
-    <div id="studentColumnSearchModal" class="success-overlay">
-        <div class="success-modal" style="max-width: 440px;">
-            <div class="success-icon-wrap">
-                <i data-lucide="search"></i>
+    <div id="studentViewModal" class="student-view-overlay" onclick="if(event.target===this) closeStudentViewModal()">
+        <div class="student-view-modal">
+            <div class="student-view-header">
+                <h2 style="margin: 0; font-size: 1.2rem;">Student Details</h2>
+                <button type="button" class="action-btn btn-delete" onclick="closeStudentViewModal()">
+                    <i data-lucide="x" width="14"></i> Close
+                </button>
             </div>
-            <h2 id="studentColumnSearchTitle">Search Column</h2>
-            <div class="input-group" style="text-align: left; margin: 1.25rem 0;">
-                <label for="studentColumnSearchInput">Search Value</label>
-                <input type="text" id="studentColumnSearchInput" placeholder="Type to filter this column">
+            <div class="student-view-grid">
+                <div class="student-view-item"><strong>Student ID</strong><span id="viewStudentCode">-</span></div>
+                <div class="student-view-item"><strong>Roll No</strong><span id="viewStudentRollNo">-</span></div>
+                <div class="student-view-item"><strong>Name</strong><span id="viewStudentName">-</span></div>
+                <div class="student-view-item"><strong>Father Name</strong><span id="viewStudentFatherName">-</span></div>
+                <div class="student-view-item"><strong>Date of Birth</strong><span id="viewStudentDob">-</span></div>
+                <div class="student-view-item"><strong>Class</strong><span id="viewStudentClass">-</span></div>
+                <div class="student-view-item"><strong>Campus</strong><span id="viewStudentCampus">-</span></div>
+                <div class="student-view-item"><strong>Gender</strong><span id="viewStudentGender">-</span></div>
+                <div class="student-view-item"><strong>Status</strong><span id="viewStudentStatus">-</span></div>
+                <div class="student-view-item"><strong>Parent Phone</strong><span id="viewStudentPhone">-</span></div>
+                <div class="student-view-item"><strong>Email</strong><span id="viewStudentEmail">-</span></div>
+                <div class="student-view-item"><strong>Username</strong><span id="viewStudentUsername">-</span></div>
             </div>
-            <div class="form-actions" style="justify-content: stretch;">
-                <button type="button" class="btn btn-outline" onclick="clearStudentColumnSearch()">Clear</button>
-                <button type="button" class="btn btn-primary" onclick="applyStudentColumnSearch()">Apply</button>
+            <div class="student-view-footer">
+                <button type="button" class="btn btn-outline" onclick="closeStudentViewModal()">Close</button>
             </div>
         </div>
     </div>
 
     <script src="auth.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260517-db-save-list-fix"></script>
     <script>
         // Init Icons
         lucide.createIcons();

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Timetable - My own Science school</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="student_schedule_theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+            </div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info"><h4>Admin User</h4><p>Admin</p></div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <div class="schedule-toolbar">
+                <a class="schedule-back-link" href="student_scheduling.html"><i data-lucide="arrow-left"></i> Back to Student Scheduling</a>
+            </div>
+            <header class="header">
+                <div>
+                    <h1>Class Timetable</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Set class-wise lectures, teachers, timing, rooms, and notes.</p>
+                </div>
+            </header>
+
+            <section class="schedule-panel">
+                <form id="studentScheduleForm">
+                    <input type="hidden" id="studentScheduleId">
+                    <div class="schedule-grid">
+                        <div>
+                            <label>Class</label>
+                            <select id="studentScheduleClass" required></select>
+                        </div>
+                        <div>
+                            <label>Day</label>
+                            <select id="studentScheduleDay" required>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                                <option value="Sunday">Sunday</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Lecture / Subject</label>
+                            <input type="text" id="studentScheduleSubject" required placeholder="e.g. English">
+                        </div>
+                        <div>
+                            <label>Teacher</label>
+                            <select id="studentScheduleTeacher"></select>
+                        </div>
+                        <div>
+                            <label>Start Time</label>
+                            <input type="time" id="studentScheduleStart" required>
+                        </div>
+                        <div>
+                            <label>End Time</label>
+                            <input type="time" id="studentScheduleEnd" required>
+                        </div>
+                        <div>
+                            <label>Room</label>
+                            <input type="text" id="studentScheduleRoom" placeholder="Room">
+                        </div>
+                        <div>
+                            <label>Note</label>
+                            <input type="text" id="studentScheduleNote" placeholder="Optional note">
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Schedule</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="schedule-panel">
+                <div class="schedule-section-title">
+                    <h3>Saved Timetable</h3>
+                    <span class="status-pill approved">Student Portal Visible</span>
+                </div>
+                <div id="studentScheduleList"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="successModal" class="success-overlay">
+        <div class="success-modal">
+            <div class="success-icon-wrap"><i data-lucide="check-circle"></i></div>
+            <h2 id="successTitle">Success!</h2>
+            <p id="successMessage" style="color: var(--text-secondary); margin: 1rem 0 2rem;"></p>
+            <button class="btn btn-primary" style="width: 100%;" onclick="closeSuccessModal()">Great!</button>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const STUDENT_SCHEDULE_KEY = 'eduCore_student_schedules';
+
+        function escapeLocalHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function getScheduleData(key) {
+            try {
+                return JSON.parse(localStorage.getItem(key) || '[]');
+            } catch (_error) {
+                return [];
+            }
+        }
+
+        function setScheduleData(key, data) {
+            try {
+                localStorage.setItem(key, JSON.stringify(data));
+                return true;
+            } catch (_error) {
+                showAppAlert('File/data is too large to save in browser storage. Please use a smaller file.', 'Storage Full');
+                return false;
+            }
+        }
+
+        function populateStudentSchedulingOptions() {
+            const classSelect = document.getElementById('studentScheduleClass');
+            const teacherSelect = document.getElementById('studentScheduleTeacher');
+            const students = getScheduleData('eduCore_students');
+            const classes = getScheduleData('eduCore_classes');
+            const teachers = getScheduleData('eduCore_teachers');
+            const classNames = [...new Set([
+                ...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                ...students.map((student) => student?.classGrade)
+            ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+
+            classSelect.innerHTML = '<option value="">Select Class</option>' + classNames.map((name) => `<option value="${escapeLocalHtml(name)}">${escapeLocalHtml(name)}</option>`).join('');
+            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => {
+                const name = escapeLocalHtml(teacher.fullName || 'Teacher');
+                const subject = teacher.subject ? ` - ${escapeLocalHtml(teacher.subject)}` : '';
+                return `<option value="${name}">${name}${subject}</option>`;
+            }).join('');
+        }
+
+        function renderStudentSchedules() {
+            const list = document.getElementById('studentScheduleList');
+            const schedules = getScheduleData(STUDENT_SCHEDULE_KEY)
+                .sort((a, b) => `${a.classGrade}${a.day}${a.startTime}`.localeCompare(`${b.classGrade}${b.day}${b.startTime}`));
+            if (!schedules.length) {
+                list.innerHTML = '<div class="empty-note">No class schedules added yet.</div>';
+                return;
+            }
+
+            list.innerHTML = `
+                <div class="schedule-table-wrap">
+                    <table class="schedule-table">
+                        <thead><tr><th>Class</th><th>Day</th><th>Lecture</th><th>Teacher</th><th>Time</th><th>Room</th><th>Action</th></tr></thead>
+                        <tbody>
+                            ${schedules.map((item) => `
+                                <tr>
+                                    <td>${escapeLocalHtml(item.classGrade || '-')}</td>
+                                    <td>${escapeLocalHtml(item.day || '-')}</td>
+                                    <td>${escapeLocalHtml(item.subject || '-')}</td>
+                                    <td>${escapeLocalHtml(item.teacherName || '-')}</td>
+                                    <td>${escapeLocalHtml(item.startTime || '-')} - ${escapeLocalHtml(item.endTime || '-')}</td>
+                                    <td>${escapeLocalHtml(item.room || '-')}</td>
+                                    <td>
+                                        <div class="schedule-actions">
+                                            <button class="schedule-action-btn edit" onclick="editStudentSchedule('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
+                                            <button class="schedule-action-btn delete" onclick="deleteStudentSchedule('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function deleteStudentSchedule(id) {
+            setScheduleData(STUDENT_SCHEDULE_KEY, getScheduleData(STUDENT_SCHEDULE_KEY).filter((item) => item.id !== id));
+            renderStudentSchedules();
+        }
+
+        function editStudentSchedule(id) {
+            const schedule = getScheduleData(STUDENT_SCHEDULE_KEY).find((item) => item.id === id);
+            if (!schedule) return;
+
+            document.getElementById('studentScheduleId').value = schedule.id;
+            document.getElementById('studentScheduleClass').value = schedule.classGrade || '';
+            document.getElementById('studentScheduleDay').value = schedule.day || 'Monday';
+            document.getElementById('studentScheduleSubject').value = schedule.subject || '';
+            document.getElementById('studentScheduleTeacher').value = schedule.teacherName || '';
+            document.getElementById('studentScheduleStart').value = schedule.startTime || '';
+            document.getElementById('studentScheduleEnd').value = schedule.endTime || '';
+            document.getElementById('studentScheduleRoom').value = schedule.room || '';
+            document.getElementById('studentScheduleNote').value = schedule.note || '';
+            document.querySelector('#studentScheduleForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Update Schedule';
+            document.getElementById('studentScheduleForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        document.getElementById('studentScheduleForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const editId = document.getElementById('studentScheduleId').value;
+            const schedule = {
+                id: editId || `SCH-${Date.now()}`,
+                classGrade: document.getElementById('studentScheduleClass').value,
+                day: document.getElementById('studentScheduleDay').value,
+                subject: document.getElementById('studentScheduleSubject').value.trim(),
+                teacherName: document.getElementById('studentScheduleTeacher').value,
+                startTime: document.getElementById('studentScheduleStart').value,
+                endTime: document.getElementById('studentScheduleEnd').value,
+                room: document.getElementById('studentScheduleRoom').value.trim(),
+                note: document.getElementById('studentScheduleNote').value.trim()
+            };
+            if (!schedule.classGrade || !schedule.subject || !schedule.startTime || !schedule.endTime) {
+                showAppAlert('Class, lecture, start time, and end time are required.', 'Missing Schedule');
+                return;
+            }
+            const schedules = getScheduleData(STUDENT_SCHEDULE_KEY);
+            const existingIndex = schedules.findIndex((item) => item.id === editId);
+            if (existingIndex >= 0) {
+                schedules[existingIndex] = schedule;
+            } else {
+                schedules.push(schedule);
+            }
+            if (!setScheduleData(STUDENT_SCHEDULE_KEY, schedules)) return;
+            event.target.reset();
+            document.getElementById('studentScheduleId').value = '';
+            document.querySelector('#studentScheduleForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';
+            populateStudentSchedulingOptions();
+            renderStudentSchedules();
+            showSuccessModal(editId ? 'Schedule Updated!' : 'Schedule Saved!', editId ? 'Student class schedule has been updated successfully.' : 'Student class schedule has been saved successfully.');
+        });
+
+        populateStudentSchedulingOptions();
+        renderStudentSchedules();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

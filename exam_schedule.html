@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Schedule - Apexiums School management</title>
+    <title>Exam Schedule - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -14,7 +14,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -153,12 +153,18 @@
                             <div class="result-form-section">
                                 <h4>Date Sheet Header</h4>
                                 <div class="result-form-fields">
-                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="MY OWN Science School"></label>
-                                    <label>Exam Title<input type="text" id="dateSheetExamTitle" value="Mid Term Examination 2026"></label>
-                                    <label>Session<input type="text" id="dateSheetSession" value="2025-26"></label>
-                                    <label>Target Class / Group<input type="text" id="dateSheetClassGroup" value="Grade 5 / Section A"></label>
-                                    <label>Campus / Branch<input type="text" id="dateSheetCampus" value="Main Campus"></label>
-                                    <label>General Start Time<input type="time" id="dateSheetDefaultStart" value="09:00"></label>
+                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="My own Science school" placeholder="Enter school name"></label>
+                                    <label>Exam Title<input type="text" id="dateSheetExamTitle" placeholder="Enter exam title"></label>
+                                    <label>Session<input type="text" id="dateSheetSession" placeholder="Enter session"></label>
+                                    <label>Target Class / Group<input type="text" id="dateSheetClassGroup" placeholder="Enter class / group"></label>
+                                    <label>Campus / Branch
+                                        <select id="dateSheetCampus">
+                                            <option value="Main Campus">Main Campus</option>
+                                            <option value="Ali campus">Ali campus</option>
+                                            <option value="Fatima Campus">Fatima Campus</option>
+                                        </select>
+                                    </label>
+                                    <label>General Start Time<input type="time" id="dateSheetDefaultStart"></label>
                                 </div>
                             </div>
 
@@ -207,12 +213,17 @@
                         <div class="date-sheet-preview" id="dateSheetPreview">
                             <div class="date-sheet-frame">
                                 <div class="date-sheet-header">
-                                    <h2 id="previewDateSheetSchoolName">MY OWN Science School</h2>
-                                    <p id="previewDateSheetCampus">Main Campus</p>
-                                    <h3 id="previewDateSheetExamTitle">Mid Term Examination 2026</h3>
+                                    <div class="date-sheet-header-top">
+                                        <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
+                                        <div class="date-sheet-header-text">
+                                            <h2 id="previewDateSheetSchoolName">My own Science school</h2>
+                                            <p id="previewDateSheetCampus"></p>
+                                        </div>
+                                    </div>
+                                    <h3 id="previewDateSheetExamTitle"></h3>
                                     <div class="date-sheet-meta">
-                                        <span>Session: <strong id="previewDateSheetSession">2025-26</strong></span>
-                                        <span>Class: <strong id="previewDateSheetClassGroup">Grade 5 / Section A</strong></span>
+                                        <span>Session: <strong id="previewDateSheetSession"></strong></span>
+                                        <span>Class: <strong id="previewDateSheetClassGroup"></strong></span>
                                     </div>
                                 </div>
 
@@ -231,7 +242,7 @@
 
                                 <div class="date-sheet-instructions">
                                     <h4>Instructions</h4>
-                                    <p id="previewDateSheetInstructions">Students must arrive 30 minutes before the paper starts.</p>
+                                    <p id="previewDateSheetInstructions"></p>
                                 </div>
                             </div>
                         </div>
@@ -261,10 +272,10 @@
                         <div class="result-form-section">
                             <h4>School Header</h4>
                             <div class="result-form-fields">
-                                <label>School Name<input type="text" id="schoolName" value="MY OWN Science School"></label>
-                                <label>Campus / Branch<input type="text" id="campusName" value="Campus: Moh Dara / Khana Malkani Road"></label>
-                                <label>Contact Line<input type="text" id="schoolContact" value="0322-222222 / 0341-123456"></label>
-                                <label>Term Title<input type="text" id="termTitle" value="3rd Term 2025-26"></label>
+                                <label>School Name<input type="text" id="schoolName" value="My own Science school" placeholder="Enter school name"></label>
+                                <label>Campus / Branch<input type="text" id="campusName" placeholder="Enter campus / branch"></label>
+                                <label>Contact Line<input type="text" id="schoolContact" placeholder="Enter contact line"></label>
+                                <label>Term Title<input type="text" id="termTitle" placeholder="Enter term title"></label>
                                 <label>Left Logo URL<input type="text" id="leftLogoUrl" placeholder="https://... or assets/logo-left.png"></label>
                                 <label>Right Logo URL<input type="text" id="rightLogoUrl" placeholder="https://... or assets/logo-right.png"></label>
                             </div>
@@ -273,14 +284,14 @@
                         <div class="result-form-section">
                             <h4>Student Info</h4>
                             <div class="result-form-fields">
-                                <label>Student Name<input type="text" id="studentName" value="Muhammad Ali"></label>
-                                <label>Father's Name<input type="text" id="fatherName" value="Ahmed Ali"></label>
-                                <label>Grade / Class<input type="text" id="studentGrade" value="TWO"></label>
-                                <label>Position / Grade<input type="text" id="positionGrade" value="1st Position / A+"></label>
-                                <label>Teacher's Remarks<input type="text" id="teacherRemarks" value="Excellent performance. Keep it up."></label>
-                                <label>Teacher Signature Name<input type="text" id="teacherSignature" value="Class Teacher"></label>
-                                <label>Principal Signature Name<input type="text" id="principalSignature" value="Principal"></label>
-                                <label>Parent Signature Name<input type="text" id="parentSignature" value="Parent / Guardian"></label>
+                                <label>Student Name<input type="text" id="studentName" placeholder="Enter student name"></label>
+                                <label>Father's Name<input type="text" id="fatherName" placeholder="Enter father's name"></label>
+                                <label>Grade / Class<input type="text" id="studentGrade" placeholder="Enter grade / class"></label>
+                                <label>Position / Grade<input type="text" id="positionGrade" placeholder="Enter position / grade"></label>
+                                <label>Teacher's Remarks<input type="text" id="teacherRemarks" placeholder="Enter teacher remarks"></label>
+                                <label>Teacher Signature Name<input type="text" id="teacherSignature" placeholder="Enter teacher signature name"></label>
+                                <label>Principal Signature Name<input type="text" id="principalSignature" placeholder="Enter principal signature name"></label>
+                                <label>Parent Signature Name<input type="text" id="parentSignature" placeholder="Enter parent signature name"></label>
                             </div>
                         </div>
 
@@ -331,27 +342,27 @@
                             <div class="result-card-topbar">
                                 <div class="result-logo-box"><img id="previewLeftLogo" alt="Left school logo"></div>
                                 <div class="result-school-center">
-                                    <h2 id="previewSchoolName">MY OWN Science School</h2>
-                                    <p id="previewCampusName">Campus: Moh Dara / Khana Malkani Road</p>
-                                    <p id="previewSchoolContact">0322-222222 / 0341-123456</p>
+                                    <h2 id="previewSchoolName">My own Science school</h2>
+                                    <p id="previewCampusName"></p>
+                                    <p id="previewSchoolContact"></p>
                                 </div>
                                 <div class="result-logo-box"><img id="previewRightLogo" alt="Right school logo"></div>
                             </div>
 
-                            <div class="result-term-title" id="previewTermTitle">3rd Term 2025-26</div>
+                            <div class="result-term-title" id="previewTermTitle"></div>
 
                             <div class="student-meta-row">
                                 <div class="meta-field">
                                     <span>Student's Name:</span>
-                                    <strong id="previewStudentName">Muhammad Ali</strong>
+                                    <strong id="previewStudentName"></strong>
                                 </div>
                                 <div class="meta-field">
                                     <span>Father's Name:</span>
-                                    <strong id="previewFatherName">Ahmed Ali</strong>
+                                    <strong id="previewFatherName"></strong>
                                 </div>
                             </div>
 
-                            <div class="grade-chip">GRADE: <span id="previewStudentGrade">TWO</span></div>
+                            <div class="grade-chip">GRADE: <span id="previewStudentGrade"></span></div>
 
                             <table class="result-marks-table">
                                 <thead>
@@ -366,32 +377,32 @@
                                 <tfoot>
                                     <tr>
                                         <td>Total Marks</td>
-                                        <td id="previewTotalMax">300</td>
-                                        <td id="previewTotalObtained">297</td>
-                                        <td id="previewTotalBest">298.5</td>
+                                        <td id="previewTotalMax">0</td>
+                                        <td id="previewTotalObtained">0</td>
+                                        <td id="previewTotalBest">0</td>
                                     </tr>
                                     <tr>
                                         <td>Total Percentage</td>
-                                        <td>100%</td>
-                                        <td id="previewPercentage">99%</td>
-                                        <td id="previewBestPercentage">99.5%</td>
+                                        <td>0%</td>
+                                        <td id="previewPercentage">0%</td>
+                                        <td id="previewBestPercentage">0%</td>
                                     </tr>
                                 </tfoot>
                             </table>
 
                             <div class="position-row">
                                 <div class="position-label">Position / Grade</div>
-                                <div class="position-value" id="previewPositionGrade">1st Position / A+</div>
+                                <div class="position-value" id="previewPositionGrade"></div>
                             </div>
 
                             <div class="remarks-signatures">
                                 <div class="remarks-block">
                                     <span>Class Teacher's Remarks:</span>
-                                    <strong id="previewTeacherRemarks">Excellent performance. Keep it up.</strong>
+                                    <strong id="previewTeacherRemarks"></strong>
                                 </div>
                                 <div class="signature-block">
                                     <span>Teacher's Signature:</span>
-                                    <strong id="previewTeacherSignature">Class Teacher</strong>
+                                    <strong id="previewTeacherSignature"></strong>
                                 </div>
                             </div>
 
@@ -422,11 +433,11 @@
 
                             <div class="bottom-signatures">
                                 <div class="signature-line">
-                                    <strong id="previewPrincipalSignature">Principal</strong>
+                                    <strong id="previewPrincipalSignature"></strong>
                                     <span>Principal's Signature</span>
                                 </div>
                                 <div class="signature-line">
-                                    <strong id="previewParentSignature">Parent / Guardian</strong>
+                                    <strong id="previewParentSignature"></strong>
                                     <span>Parent's Signature</span>
                                 </div>
                             </div>
@@ -739,6 +750,24 @@
             border-bottom: 2px solid #2a2a2a;
             padding-bottom: 1rem;
             margin-bottom: 1rem;
+        }
+
+        .date-sheet-header-top {
+            display: grid;
+            grid-template-columns: 82px minmax(0, 1fr);
+            align-items: center;
+            gap: 0.9rem;
+        }
+
+        .date-sheet-logo {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .date-sheet-header-text {
+            min-width: 0;
         }
 
         .date-sheet-header h2,
@@ -1155,32 +1184,32 @@
     <script>
         const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
         const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
-        const defaultScheduleRows = [
-            { subject: 'English', className: 'Grade 5', examDate: '2026-05-10', startTime: '09:00', endTime: '10:30' },
-            { subject: 'Mathematics', className: 'Grade 5', examDate: '2026-05-12', startTime: '09:00', endTime: '10:30' },
-            { subject: 'Science', className: 'Grade 5', examDate: '2026-05-14', startTime: '09:00', endTime: '10:30' }
-        ];
-        const defaultSubjects = [
-            { subject: 'English', max: '50', obtained: '49', best: '49.5' },
-            { subject: 'Urdu', max: '50', obtained: '50', best: '50' },
-            { subject: 'Mathematics', max: '50', obtained: '50', best: '50' },
-            { subject: 'Islamiat', max: '50', obtained: '49', best: '49.5' },
-            { subject: 'Nazra Quran', max: '50', obtained: '50', best: '50' },
-            { subject: 'G.K', max: '50', obtained: '49', best: '49.5' }
-        ];
-        const defaultBehaviors = [
-            { title: 'Punctuality', grade: 'A+' },
-            { title: 'Responsibility', grade: 'A' },
-            { title: 'Initiative', grade: 'A' },
-            { title: 'Confidence', grade: 'A+' },
-            { title: 'Neatness', grade: 'A' },
-            { title: 'Sociability', grade: 'A' },
-            { title: 'Any other Observation', grade: 'Excellent' }
-        ];
+        const DATE_SHEET_DEFAULT_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
+        const defaultScheduleRows = [];
+        const defaultSubjects = [];
+        const defaultBehaviors = [];
+
+        function isLegacyDemoDateSheetState(saved = {}) {
+            return saved.dateSheetSchoolName === 'My own Science school' &&
+                saved.dateSheetExamTitle === 'Mid Term Examination 2026' &&
+                saved.dateSheetSession === '2025-26' &&
+                saved.dateSheetClassGroup === 'Grade 5 / Section A';
+        }
+
+        function isLegacyDemoResultState(saved = {}) {
+            return saved.schoolName === 'My own Science school' &&
+                saved.studentName === 'Muhammad Ali' &&
+                saved.fatherName === 'Ahmed Ali' &&
+                saved.termTitle === '3rd Term 2025-26';
+        }
 
         function loadDateSheetState() {
             try {
                 const saved = JSON.parse(localStorage.getItem(DATE_SHEET_STORAGE_KEY) || '{}');
+                if (saved && typeof saved === 'object' && isLegacyDemoDateSheetState(saved)) {
+                    localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
+                    return {};
+                }
                 return saved && typeof saved === 'object' ? saved : {};
             } catch (error) {
                 return {};
@@ -1190,6 +1219,10 @@
         function loadResultCardState() {
             try {
                 const saved = JSON.parse(localStorage.getItem(RESULT_CARD_STORAGE_KEY) || '{}');
+                if (saved && typeof saved === 'object' && isLegacyDemoResultState(saved)) {
+                    localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
+                    return {};
+                }
                 return saved && typeof saved === 'object' ? saved : {};
             } catch (error) {
                 return {};
@@ -1226,7 +1259,48 @@
             lucide.createIcons();
         }
 
+        function collectDateSheetCampuses() {
+            const campusMap = new Map();
+            const addCampus = (campusName) => {
+                const normalized = String(campusName || '').trim();
+                if (!normalized) return;
+                const key = normalized.toLowerCase();
+                if (!campusMap.has(key)) campusMap.set(key, normalized);
+            };
+
+            DATE_SHEET_DEFAULT_CAMPUSES.forEach(addCampus);
+            if (typeof DEFAULT_CAMPUS_NAMES !== 'undefined' && Array.isArray(DEFAULT_CAMPUS_NAMES)) {
+                DEFAULT_CAMPUS_NAMES.forEach(addCampus);
+            }
+
+            ['eduCore_students', 'eduCore_staff', 'eduCore_teachers'].forEach((storageKey) => {
+                try {
+                    const records = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    if (!Array.isArray(records)) return;
+                    records.forEach((record) => addCampus(record?.campusName));
+                } catch (error) {
+                    // Ignore invalid localStorage payloads and keep default campus list.
+                }
+            });
+
+            return Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+        }
+
+        function populateDateSheetCampusOptions(selectedCampus = '') {
+            const campusSelect = document.getElementById('dateSheetCampus');
+            if (!campusSelect) return;
+
+            const previousValue = selectedCampus || campusSelect.value || 'Main Campus';
+            const campuses = collectDateSheetCampuses();
+            if (!campuses.length) campuses.push('Main Campus');
+
+            campusSelect.innerHTML = campuses.map((campusName) => `<option value="${campusName}">${campusName}</option>`).join('');
+            const hasPrevious = campuses.some((campusName) => campusName.toLowerCase() === previousValue.toLowerCase());
+            campusSelect.value = hasPrevious ? previousValue : campuses[0];
+        }
+
         function fillDateSheetForm(savedState = {}) {
+            populateDateSheetCampusOptions(savedState.dateSheetCampus);
             [
                 'dateSheetSchoolName',
                 'dateSheetExamTitle',
@@ -1409,12 +1483,12 @@
 
         function refreshDateSheetPreview() {
             const rows = readScheduleRows();
-            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'School Name';
-            document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || 'Exam Title';
-            document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '-';
-            document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '-';
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'My own Science school';
+            document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
+            document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
+            document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
             document.getElementById('previewDateSheetCampus').textContent = document.getElementById('dateSheetCampus').value || '';
-            document.getElementById('previewDateSheetInstructions').textContent = document.getElementById('dateSheetInstructions').value || 'No additional instructions.';
+            document.getElementById('previewDateSheetInstructions').textContent = document.getElementById('dateSheetInstructions').value || '';
 
             const defaultStart = document.getElementById('dateSheetDefaultStart').value;
             document.getElementById('previewDateSheetBody').innerHTML = rows.length ? rows.map((row) => `
@@ -1445,6 +1519,7 @@
         function resetDateSheet() {
             localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
             document.getElementById('dateSheetForm').reset();
+            populateDateSheetCampusOptions('Main Campus');
             renderScheduleRows({});
             refreshDateSheetPreview();
         }
@@ -1568,20 +1643,20 @@
             const subjects = readSubjectRows();
             const behaviors = readBehaviorRows();
 
-            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'School Name';
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'My own Science school';
             document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
-            document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || 'Term';
+            document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
             updateLogo('previewLeftLogo', document.getElementById('leftLogoUrl').value.trim());
             updateLogo('previewRightLogo', document.getElementById('rightLogoUrl').value.trim());
-            document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || 'Student Name';
-            document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || 'Father Name';
-            document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '-';
-            document.getElementById('previewPositionGrade').textContent = document.getElementById('positionGrade').value || '-';
-            document.getElementById('previewTeacherRemarks').textContent = document.getElementById('teacherRemarks').value || '-';
-            document.getElementById('previewTeacherSignature').textContent = document.getElementById('teacherSignature').value || '-';
-            document.getElementById('previewPrincipalSignature').textContent = document.getElementById('principalSignature').value || '-';
-            document.getElementById('previewParentSignature').textContent = document.getElementById('parentSignature').value || '-';
+            document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
+            document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
+            document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';
+            document.getElementById('previewPositionGrade').textContent = document.getElementById('positionGrade').value || '';
+            document.getElementById('previewTeacherRemarks').textContent = document.getElementById('teacherRemarks').value || '';
+            document.getElementById('previewTeacherSignature').textContent = document.getElementById('teacherSignature').value || '';
+            document.getElementById('previewPrincipalSignature').textContent = document.getElementById('principalSignature').value || '';
+            document.getElementById('previewParentSignature').textContent = document.getElementById('parentSignature').value || '';
 
             const totalMax = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
             const totalObtained = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);

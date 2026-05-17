@@ -9,6 +9,12 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const QRCode = require('qrcode');
+const { getSmtpConfig, sendSmtpEmail } = require('./api/_lib/mailer');
+const {
+    sendFeePaymentConfirmationEmail,
+    sendPendingFeeReminderEmails,
+    startPendingFeeReminderScheduler
+} = require('./api/_lib/fee-reminders');
 
 require('dotenv').config();
 
@@ -18,38 +24,83 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eduCore_secret_key_2026';
 const PERMISSIONS_FILE = path.join(__dirname, 'permissions.json');
+const DETAILED_PERMISSIONS_FILE = path.join(__dirname, 'permissions-detailed.json');
 const DATE_SHEET_FILE = path.join(__dirname, 'date_sheet.json');
+const ADMIN_CREDENTIALS_FILE = path.join(__dirname, 'admin_credentials.json');
 const PRINCIPAL_USERNAME = process.env.PRINCIPAL_USERNAME || 'principal@school.com';
 const PRINCIPAL_PASSWORD = process.env.PRINCIPAL_PASSWORD || 'Principal123';
 
 app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+const RESERVED_ROUTE_NAMES = new Set(['api', 'health', 'socket.io']);
+
+function resolvePageFileByRoute(routeName = '') {
+    const normalized = String(routeName || '').trim().toLowerCase();
+    if (!normalized) return '';
+    if (RESERVED_ROUTE_NAMES.has(normalized)) return '';
+    if (normalized === 'login' || normalized === 'index') return 'index.html';
+    if (!/^[a-z0-9_-]+$/i.test(normalized)) return '';
+
+    const candidate = `${normalized}.html`;
+    const candidatePath = path.join(__dirname, candidate);
+    return fs.existsSync(candidatePath) ? candidate : '';
+}
+
+app.get('/', (_req, res) => {
+    res.sendFile(path.join(__dirname, 'website.html'));
+});
+
+app.get('/:pageName([a-zA-Z0-9_-]+).html', (req, res, next) => {
+    const pageName = String(req.params.pageName || '').toLowerCase();
+    if (RESERVED_ROUTE_NAMES.has(pageName)) return next();
+
+    const targetRoute = pageName === 'index' ? 'login' : pageName;
+    const targetFile = resolvePageFileByRoute(targetRoute);
+    if (!targetFile) return next();
+
+    return res.redirect(302, `/${targetRoute}`);
+});
+
+app.get('/:routeName([a-zA-Z0-9_-]+)', (req, res, next) => {
+    const pageFile = resolvePageFileByRoute(req.params.routeName);
+    if (!pageFile) return next();
+    return res.sendFile(path.join(__dirname, pageFile));
+});
+
 app.use(express.static(__dirname));
 
-app.get('/', (req, res) => {
+app.get('/health', (_req, res) => {
     res.json({
         success: true,
-        message: 'Server is running.',
-        app: 'School Management System API'
+        initialized: isInitialized,
+        timestamp: new Date().toISOString()
     });
 });
 
 let sequelize;
 let startupPromise = null;
 let isInitialized = false;
+let pendingFeeReminderInterval = null;
 const ACTIVE_SESSION_TTL_MS = 90000;
 const activeSessions = new Map();
-const ADMIN_SESSION_ROLES = new Set(['admin', 'superadmin', 'super admin', 'system administrator', 'system_admin']);
 
 const MODULE_KEYS = [
     'dashboard',
     'students',
+    'student_scheduling',
+    'banners',
     'teachers',
+    'teacher_scheduling',
     'staff',
     'classes',
     'fees',
     'fee_challan',
+    'certificate',
+    'complain_box',
+    'diary',
+    'visitor_books',
+    'annual_charges',
     'teacher_salaries',
     'student_attendance',
     'teacher_attendance',
@@ -63,17 +114,30 @@ const MODULE_KEYS = [
     'permissions',
     'branch_registration',
     'aboutme',
-    'student_portal'
+    'student_portal',
+    'teacher_portal'
 ];
 const ACCESS_LEVELS = ['none', 'view', 'edit', 'manage'];
 const ALLOWED_HOME_PAGES = new Set([
     'dashboard.html',
     'students.html',
+    'student_scheduling.html',
+    'student_timetable.html',
+    'student_diary.html',
+    'student_leave_requests.html',
+    'student_courses.html',
+    'banners.html',
     'teachers.html',
+    'teacher_scheduling.html',
     'staff.html',
     'classes.html',
     'fees.html',
     'fee_challan.html',
+    'certificate.html',
+    'complain_box.html',
+    'diary.html',
+    'visitor_books.html',
+    'annual_charges.html',
     'teacher_salaries.html',
     'student_attendance.html',
     'teacher_attendance.html',
@@ -87,7 +151,8 @@ const ALLOWED_HOME_PAGES = new Set([
     'permissions.html',
     'branch_registration.html',
     'aboutme.html',
-    'student_portal.html'
+    'student_portal.html',
+    'teacher_portal.html'
 ]);
 
 function buildModuleSet(defaultAccess = 'none', overrides = {}) {
@@ -112,84 +177,87 @@ const defaultPermissions = {
         staff: true
     },
     roleGroups: {
-        Admin: 'admin',
-        Principal: 'principal',
-        Branch: 'branch_manager',
+        Admin: 'superadmin',
+        Principal: 'admin',
+        Branch: 'computer_operator',
         Teacher: 'teacher',
         Student: 'student',
-        Staff: 'staff'
+        Staff: 'computer_operator'
     },
     groups: {
-        admin: {
-            name: 'System Administrators',
+        superadmin: {
+            name: 'Superadmin',
             homePage: 'dashboard.html',
             permissions: buildModuleSet('manage')
         },
-        principal: {
-            name: 'Principal Group',
+        admin: {
+            name: 'Admin',
             homePage: 'dashboard.html',
             permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                students: 'view',
-                teachers: 'view',
-                staff: 'view',
-                classes: 'view',
-                notifications: 'view',
+                dashboard: 'manage',
+                students: 'manage',
+                student_scheduling: 'manage',
+                banners: 'manage',
+                teachers: 'manage',
+                teacher_scheduling: 'manage',
+                staff: 'manage',
+                classes: 'manage',
+                fees: 'manage',
+                fee_challan: 'manage',
+                certificate: 'manage',
+                complain_box: 'manage',
+                diary: 'manage',
+                visitor_books: 'manage',
+                annual_charges: 'manage',
+                teacher_salaries: 'manage',
+                student_attendance: 'manage',
+                teacher_attendance: 'manage',
+                student_attendance_report: 'view',
+                teacher_attendance_report: 'view',
+                notifications: 'manage',
                 special_notices: 'manage',
-                exams: 'view',
+                exams: 'manage',
                 revenue: 'view',
+                settings: 'view',
+                branch_registration: 'view',
+                permissions: 'view',
                 aboutme: 'view'
             })
         },
-        branch_manager: {
-            name: 'Branch Managers',
-            homePage: 'students.html',
+        computer_operator: {
+            name: 'Computer Operator',
+            homePage: 'dashboard.html',
             permissions: buildModuleSet('none', {
-                students: 'manage',
                 dashboard: 'view',
+                students: 'manage',
+                banners: 'none',
+                teachers: 'view',
+                staff: 'view',
                 classes: 'view',
+                fees: 'view',
+                fee_challan: 'manage',
+                certificate: 'view',
+                complain_box: 'view',
+                diary: 'view',
+                visitor_books: 'view',
+                annual_charges: 'view',
+                student_attendance: 'edit',
+                exams: 'view',
+                notifications: 'view',
                 aboutme: 'view'
             })
         },
         teacher: {
             name: 'Teachers',
-            homePage: 'dashboard.html',
+            homePage: 'teacher_portal.html',
             permissions: buildModuleSet('none', {
-                dashboard: 'view',
+                teacher_portal: 'manage',
                 students: 'view',
                 classes: 'view',
                 student_attendance: 'edit',
                 student_attendance_report: 'view',
-                exams: 'edit',
-                aboutme: 'view'
-            })
-        },
-        senior_teacher: {
-            name: 'Senior Teachers',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                students: 'view',
-                teachers: 'view',
-                classes: 'view',
-                student_attendance: 'edit',
-                student_attendance_report: 'view',
-                exams: 'edit',
-                aboutme: 'view'
-            })
-        },
-        coordinator: {
-            name: 'Coordinators',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                students: 'view',
-                teachers: 'view',
-                classes: 'manage',
-                student_attendance: 'manage',
-                student_attendance_report: 'view',
-                teacher_attendance: 'view',
-                exams: 'edit',
+                exams: 'view',
+                special_notices: 'view',
                 aboutme: 'view'
             })
         },
@@ -201,48 +269,7 @@ const defaultPermissions = {
                 fees: 'view',
                 fee_challan: 'view',
                 exams: 'view',
-                aboutme: 'view'
-            })
-        },
-        staff: {
-            name: 'Staff',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                aboutme: 'view'
-            })
-        },
-        accountant: {
-            name: 'Accountants',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                fees: 'manage',
-                fee_challan: 'manage',
-                revenue: 'view',
-                aboutme: 'view'
-            })
-        },
-        receptionist: {
-            name: 'Receptionists',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                students: 'view',
-                fees: 'view',
-                fee_challan: 'view',
-                notifications: 'view',
-                aboutme: 'view'
-            })
-        },
-        office_assistant: {
-            name: 'Office Assistants',
-            homePage: 'dashboard.html',
-            permissions: buildModuleSet('none', {
-                dashboard: 'view',
-                students: 'view',
-                classes: 'view',
-                notifications: 'view',
+                special_notices: 'view',
                 aboutme: 'view'
             })
         }
@@ -264,17 +291,22 @@ function normalizePermissionsConfig(input = {}) {
         const baseGroup = defaultPermissions.groups[key] || {
             name: key,
             homePage: 'dashboard.html',
-            permissions: buildModuleSet('none')
+            permissions: buildModuleSet('none'),
+            actionPermissions: undefined
         };
         const nextGroup = groupValue && typeof groupValue === 'object' ? groupValue : {};
         const requestedHomePage = String(nextGroup.homePage || baseGroup.homePage || 'dashboard.html');
+        const actionPermissions = nextGroup.actionPermissions && typeof nextGroup.actionPermissions === 'object'
+            ? nextGroup.actionPermissions
+            : (baseGroup.actionPermissions && typeof baseGroup.actionPermissions === 'object' ? baseGroup.actionPermissions : undefined);
         acc[key] = {
             name: String(nextGroup.name || baseGroup.name || key),
             homePage: allowedHomePages.has(requestedHomePage) ? requestedHomePage : 'dashboard.html',
             permissions: buildModuleSet('none', {
                 ...baseGroup.permissions,
                 ...(nextGroup.permissions || {})
-            })
+            }),
+            ...(actionPermissions ? { actionPermissions } : {})
         };
         return acc;
     }, {});
@@ -296,32 +328,6 @@ function normalizePermissionsConfig(input = {}) {
 function isPasswordHash(value) {
     return typeof value === 'string' && /^\$2[aby]\$/.test(value);
 }
-
-if (require.main === module) {
-    const PORT = process.env.PORT || 3000;
-    startServer().then(() => {
-        server.listen(PORT, '0.0.0.0', () => {
-            console.log(`Real-Time SQL Server running on all interfaces at port ${PORT}`);
-        }).on('error', (err) => {
-            if (err.code === 'EADDRINUSE') {
-                console.error(`Port ${PORT} is already in use. Stop the other process or change PORT in .env.`);
-            } else {
-                console.error('Server error:', err.message);
-            }
-        });
-    }).catch(() => {
-        process.exitCode = 1;
-    });
-}
-
-module.exports = {
-    app,
-    startServer,
-    server,
-    io,
-    getSequelize: () => sequelize,
-    isInitialized: () => isInitialized
-};
 
 function normalizeOptionalEmail(value) {
     const normalized = String(value || '').trim().toLowerCase();
@@ -389,30 +395,28 @@ async function ensureUniqueStudentIdentity(Student, User, item) {
     const normalizedEmail = normalizeOptionalEmail(item.email);
     const normalizedUsername = String(item.username || '').trim();
 
-    if (!normalizedUsername) {
-        throw new Error('Student username is required.');
-    }
+    if (normalizedUsername) {
+        const usernameConflict = await Student.findOne({
+            where: {
+                username: normalizedUsername,
+                ...(studentId ? { id: { [Op.ne]: studentId } } : {})
+            }
+        });
 
-    const usernameConflict = await Student.findOne({
-        where: {
-            username: normalizedUsername,
-            ...(studentId ? { id: { [Op.ne]: studentId } } : {})
+        if (usernameConflict) {
+            throw new Error('This student username is already assigned to another student.');
         }
-    });
 
-    if (usernameConflict) {
-        throw new Error('This student username is already assigned to another student.');
-    }
+        const userUsernameConflict = await User.findOne({
+            where: {
+                username: normalizedUsername,
+                ...(studentId ? { profileId: { [Op.ne]: studentId } } : {})
+            }
+        });
 
-    const userUsernameConflict = await User.findOne({
-        where: {
-            username: normalizedUsername,
-            ...(studentId ? { profileId: { [Op.ne]: studentId } } : {})
+        if (userUsernameConflict) {
+            throw new Error('This username is already used by another account.');
         }
-    });
-
-    if (userUsernameConflict) {
-        throw new Error('This username is already used by another account.');
     }
 
     if (normalizedEmail) {
@@ -440,15 +444,37 @@ async function ensureUniqueStudentIdentity(Student, User, item) {
     }
 }
 
+function isLocalDbHost(hostname) {
+    const host = String(hostname || '').toLowerCase();
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function shouldAutoCreateDatabase(hostname) {
+    const explicit = String(process.env.AUTO_CREATE_DB || '').trim().toLowerCase();
+    if (explicit === 'true') return true;
+    if (explicit === 'false') return false;
+    return isLocalDbHost(hostname);
+}
+
 async function initializeDatabase() {
+    const dbHost = process.env.DB_HOST || 'localhost';
+    const dbPort = Number(process.env.DB_PORT || 3306);
+    const dbName = process.env.DB_NAME || 'school_system';
+
+    if (!shouldAutoCreateDatabase(dbHost)) {
+        console.log('Skipping CREATE DATABASE on non-local/shared hosting.');
+        return;
+    }
+
     try {
         const connection = await mysql.createConnection({
-            host: process.env.DB_HOST || 'localhost',
+            host: dbHost,
+            port: dbPort,
             user: process.env.DB_USER || 'root',
             password: process.env.DB_PASSWORD || ''
         });
 
-        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME || 'school_system'}\`;`);
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\`;`);
         await connection.end();
     } catch (err) {
         console.warn('Database initialization warning:', err.message);
@@ -465,6 +491,20 @@ function authenticateToken(req, res, next) {
 
     try {
         req.user = jwt.verify(token, JWT_SECRET);
+
+        pruneActiveSessions();
+        const sessionId = String(req.user?.sessionId || '').trim();
+        const allowIfInactive = req.path === '/api/session/end';
+        if (sessionId && !activeSessions.has(sessionId) && !allowIfInactive) {
+            registerActiveSession(req, sessionId, {
+                id: req.user.id,
+                username: req.user.username || '',
+                fullName: req.user.fullName || req.user.username || req.user.role || 'User',
+                role: req.user.role,
+                campusName: req.user.campusName || ''
+            });
+        }
+
         next();
     } catch (error) {
         return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
@@ -480,29 +520,21 @@ function pruneActiveSessions() {
     });
 }
 
-setInterval(pruneActiveSessions, 30000);
-
 function createSessionId(role, id) {
     return `${String(role || 'user').toLowerCase()}_${String(id || '0')}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function isAdminSessionRole(role) {
-    return ADMIN_SESSION_ROLES.has(String(role || '').trim().toLowerCase());
 }
 
 function registerActiveSession(req, sessionId, user) {
     if (!sessionId || !user) return;
 
-    const existing = activeSessions.get(sessionId);
     activeSessions.set(sessionId, {
-        ...(existing || {}),
         sessionId,
         userId: String(user.id || ''),
         username: user.username || '',
         fullName: user.fullName || '',
         role: user.role || '',
         campusName: user.campusName || '',
-        loginAt: existing?.loginAt || Date.now(),
+        loginAt: Date.now(),
         lastSeen: Date.now(),
         ip: req.ip || req.socket?.remoteAddress || '',
         userAgent: req.get('user-agent') || ''
@@ -511,20 +543,27 @@ function registerActiveSession(req, sessionId, user) {
 
 function buildActiveSessionsSummary() {
     pruneActiveSessions();
-    const sessions = Array.from(activeSessions.values()).map((session) => ({
-        ...session,
-        loginAt: new Date(session.loginAt).toISOString(),
-        lastSeen: new Date(session.lastSeen).toISOString()
-    }));
+    const sessions = Array.from(activeSessions.values())
+        .sort((a, b) => Number(b.lastSeen || 0) - Number(a.lastSeen || 0))
+        .map((session) => ({
+            ...session,
+            loginAt: new Date(session.loginAt).toISOString(),
+            lastSeen: new Date(session.lastSeen).toISOString()
+        }));
     const byRole = sessions.reduce((acc, session) => {
         const role = session.role || 'Unknown';
         acc[role] = (acc[role] || 0) + 1;
         return acc;
     }, {});
     const uniqueUsers = new Set(sessions.map((session) => `${session.role}:${session.userId || session.username}`));
-    const uniqueSessions = sessions.filter((session, index, list) =>
-        list.findIndex((item) => item.sessionId === session.sessionId) === index
-    );
+    const uniqueSessionMap = new Map();
+    sessions.forEach((session) => {
+        const key = `${session.role}:${session.userId || session.username}`;
+        if (!uniqueSessionMap.has(key)) {
+            uniqueSessionMap.set(key, session);
+        }
+    });
+    const uniqueSessions = Array.from(uniqueSessionMap.values());
 
     return {
         success: true,
@@ -535,6 +574,15 @@ function buildActiveSessionsSummary() {
         sessions,
         uniqueSessions
     };
+}
+
+function canManageActiveSessions(user = {}) {
+    const role = String(user?.role || '').trim().toLowerCase();
+    return role === 'admin'
+        || role === 'superadmin'
+        || role === 'super admin'
+        || role === 'system administrator'
+        || role === 'system_admin';
 }
 
 function readPermissions() {
@@ -559,16 +607,285 @@ function writePermissions(data) {
     return nextPermissions;
 }
 
+function loadDetailedPermissions() {
+    try {
+        if (!fs.existsSync(DETAILED_PERMISSIONS_FILE)) {
+            return { system: {}, designations: {} };
+        }
+
+        const raw = fs.readFileSync(DETAILED_PERMISSIONS_FILE, 'utf8');
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : { system: {}, designations: {} };
+    } catch (error) {
+        console.warn('Failed to load detailed permissions:', error.message);
+        return { system: {}, designations: {} };
+    }
+}
+
+function saveDetailedPermissions(data) {
+    const payload = data && typeof data === 'object' ? data : {};
+    fs.writeFileSync(DETAILED_PERMISSIONS_FILE, JSON.stringify(payload, null, 2), 'utf8');
+    return payload;
+}
+
+function normalizeDesignationKey(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    return raw
+        .replace(/[\s-]+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/^_+|_+$/g, '');
+}
+
+function checkDesignationActionPermission(designationKey, moduleKey, actionKey) {
+    const detailed = loadDetailedPermissions();
+    const designation = detailed?.designations?.[designationKey];
+    const allowed = designation?.actionPermissions?.[moduleKey]?.[actionKey] === true;
+    return allowed;
+}
+
+async function resolveUserDesignationKey(user = {}) {
+    if (!sequelize) return '';
+    const role = String(user?.role || '').trim();
+    const id = String(user?.id || '').trim();
+    if (!id) return '';
+
+    try {
+        if (role === 'Teacher') {
+            const teacher = await sequelize.models.Teacher.findByPk(id);
+            return normalizeDesignationKey(teacher?.designation || 'teacher');
+        }
+        if (role === 'Staff') {
+            const staff = await sequelize.models.Staff.findByPk(id);
+            return normalizeDesignationKey(staff?.designation || 'staff');
+        }
+        return '';
+    } catch (error) {
+        console.warn('Failed to resolve user designation:', error.message);
+        return '';
+    }
+}
+
+async function enforceActionPermission(req, res, moduleKey, actionKey) {
+    const role = String(req.user?.role || '').trim();
+
+    if (role === 'Admin' || role === 'Principal') return true;
+    if (role === 'Branch') {
+        res.status(403).json({ success: false, message: 'Branch access denied.' });
+        return false;
+    }
+    if (role === 'Student') {
+        res.status(403).json({ success: false, message: 'Student access denied.' });
+        return false;
+    }
+
+    if (role === 'Teacher' || role === 'Staff') {
+        const designationKey = await resolveUserDesignationKey(req.user);
+        if (!designationKey) {
+            res.status(403).json({ success: false, message: 'Designation not set. Ask admin to assign a designation.' });
+            return false;
+        }
+
+        const allowed = checkDesignationActionPermission(designationKey, moduleKey, actionKey);
+        if (!allowed) {
+            res.status(403).json({
+                success: false,
+                message: `Permission denied: ${designationKey} cannot ${actionKey} in ${moduleKey}.`
+            });
+            return false;
+        }
+
+        return true;
+    }
+
+    // Keep legacy behavior for other roles (e.g., Branch) unless explicitly restricted.
+    return true;
+}
+
+function getDefaultAdminCredentials() {
+    return {
+        username: process.env.ADMIN_USERNAME || 'Myownschool',
+        password: process.env.ADMIN_PASSWORD || 'myownschool1122'
+    };
+}
+
+function readAdminCredentials() {
+    const defaults = getDefaultAdminCredentials();
+    try {
+        if (!fs.existsSync(ADMIN_CREDENTIALS_FILE)) {
+            return defaults;
+        }
+
+        const raw = fs.readFileSync(ADMIN_CREDENTIALS_FILE, 'utf8');
+        const parsed = JSON.parse(raw);
+        const username = String(parsed?.username || '').trim();
+        const password = String(parsed?.password || '');
+
+        if (!username || !password) {
+            return defaults;
+        }
+
+        return { username, password };
+    } catch (_error) {
+        return defaults;
+    }
+}
+
+function writeAdminCredentials(data = {}) {
+    const username = String(data.username || '').trim();
+    const password = String(data.password || '');
+
+    if (!username) {
+        const error = new Error('Admin username is required.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!password) {
+        const error = new Error('Admin password is required.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const next = { username, password };
+    fs.writeFileSync(ADMIN_CREDENTIALS_FILE, JSON.stringify(next, null, 2), 'utf8');
+    return next;
+}
+
+function verifyAdminAccessToken(req) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (!token) {
+        const error = new Error('Admin access required.');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    let user = null;
+    try {
+        user = jwt.verify(token, JWT_SECRET);
+    } catch (_error) {
+        const error = new Error('Admin access required.');
+        error.statusCode = 401;
+        throw error;
+    }
+
+    if (user.role !== 'Admin') {
+        const error = new Error('Admin access required.');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    return user;
+}
+
 app.get('/api/permissions', (req, res) => {
     res.json(readPermissions());
 });
 
 app.post('/api/permissions', (req, res) => {
     try {
+        verifyAdminAccessToken(req);
         const saved = writePermissions(req.body || {});
         res.json({ success: true, permissions: saved });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to save permissions.' });
+        res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to save permissions.' });
+    }
+});
+
+app.get('/api/designation-permissions', authenticateToken, async (req, res) => {
+    try {
+        const designationParam = req.query?.designation;
+        const actionParam = req.query?.action;
+        const designationKey = normalizeDesignationKey(designationParam);
+
+        if (designationKey && actionParam) {
+            const [moduleKeyRaw, actionKeyRaw] = String(actionParam).split('.');
+            const moduleKey = String(moduleKeyRaw || '').trim();
+            const actionKey = String(actionKeyRaw || '').trim();
+            const allowed = moduleKey && actionKey
+                ? checkDesignationActionPermission(designationKey, moduleKey, actionKey)
+                : false;
+            return res.json({ allowed });
+        }
+
+        if (designationKey) {
+            const detailed = loadDetailedPermissions();
+            const perms = detailed?.designations?.[designationKey] || null;
+            return res.json(perms || { key: designationKey, name: designationKey, description: '', actionPermissions: {} });
+        }
+
+        verifyAdminAccessToken(req);
+        const detailed = loadDetailedPermissions();
+        const designations = Object.entries(detailed?.designations || {}).map(([key, value]) => ({
+            key,
+            name: value?.name || key,
+            description: value?.description || ''
+        }));
+
+        return res.json({
+            designations,
+            permissions: detailed?.designations || {}
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load designation permissions.' });
+    }
+});
+
+app.post('/api/designation-permissions', authenticateToken, (req, res) => {
+    try {
+        verifyAdminAccessToken(req);
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        const incomingDesignations = body.permissions && typeof body.permissions === 'object'
+            ? body.permissions
+            : (body.designations && typeof body.designations === 'object' ? body.designations : null);
+
+        const existing = loadDetailedPermissions();
+        const next = incomingDesignations
+            ? { ...(existing || {}), designations: incomingDesignations }
+            : body;
+
+        const saved = saveDetailedPermissions(next);
+        const designations = Object.entries(saved?.designations || {}).map(([key, value]) => ({
+            key,
+            name: value?.name || key,
+            description: value?.description || ''
+        }));
+
+        res.json({
+            success: true,
+            designations,
+            permissions: saved?.designations || {}
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to save designation permissions.' });
+    }
+});
+
+app.get('/api/admin-credentials', (req, res) => {
+    try {
+        verifyAdminAccessToken(req);
+        const credentials = readAdminCredentials();
+        res.json({ success: true, credentials: { username: credentials.username } });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load admin credentials.' });
+    }
+});
+
+app.post('/api/admin-credentials', (req, res) => {
+    try {
+        verifyAdminAccessToken(req);
+        const current = readAdminCredentials();
+        const nextUsername = String(req.body?.username || '').trim();
+        const nextPassword = String(req.body?.password || '').trim();
+        const saved = writeAdminCredentials({
+            username: nextUsername || current.username,
+            password: nextPassword || current.password
+        });
+        res.json({ success: true, credentials: { username: saved.username } });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to save admin credentials.' });
     }
 });
 
@@ -634,23 +951,16 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const adminEmail = process.env.ADMIN_USERNAME || 'Myownschool';
-        const adminPass = process.env.ADMIN_PASSWORD || 'myownschool1122';
+        const adminCredentials = readAdminCredentials();
+        const adminUsername = adminCredentials.username;
+        const adminPass = adminCredentials.password;
 
-        if (username === adminEmail && password === adminPass) {
+        if (username === adminUsername && password === adminPass) {
             const permissions = readPermissions();
             const groupKey = permissions.roleGroups.Admin || 'admin';
             const sessionId = createSessionId('Admin', 'admin');
-            const user = { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey };
-            const token = jwt.sign({
-                id: user.id,
-                userId: user.id,
-                username: user.username,
-                fullName: user.fullName,
-                role: user.role,
-                campusName: '',
-                sessionId
-            }, JWT_SECRET, { expiresIn: '1d' });
+            const token = jwt.sign({ id: 'admin', role: 'Admin', sessionId }, JWT_SECRET, { expiresIn: '1d' });
+            const user = { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminUsername, groupKey };
             registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
@@ -668,16 +978,8 @@ app.post('/api/login', async (req, res) => {
             }
             const groupKey = permissions.roleGroups.Principal || 'principal';
             const sessionId = createSessionId('Principal', 'principal');
+            const token = jwt.sign({ id: 'principal', role: 'Principal', sessionId }, JWT_SECRET, { expiresIn: '1d' });
             const user = { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey };
-            const token = jwt.sign({
-                id: user.id,
-                userId: user.id,
-                username: user.username,
-                fullName: user.fullName,
-                role: user.role,
-                campusName: '',
-                sessionId
-            }, JWT_SECRET, { expiresIn: '1d' });
             registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
@@ -719,6 +1021,7 @@ app.post('/api/login', async (req, res) => {
 
             if (isMatch) {
                 let profileName = user.fullName;
+                let designationKey = '';
 
                 if (user.role === 'Student') {
                     const student = await Student.findByPk(user.profileId);
@@ -726,29 +1029,24 @@ app.post('/api/login', async (req, res) => {
                 } else if (user.role === 'Teacher') {
                     const teacher = await Teacher.findByPk(user.profileId);
                     profileName = teacher?.fullName || profileName;
+                    designationKey = normalizeDesignationKey(teacher?.designation || 'teacher');
                 } else if (user.role === 'Staff') {
                     const staff = await sequelize.models.Staff.findByPk(user.profileId);
                     profileName = staff?.fullName || profileName;
+                    designationKey = normalizeDesignationKey(staff?.designation || 'staff');
                 }
 
                 const sessionId = createSessionId(user.role, user.profileId);
+                const token = jwt.sign({ id: user.profileId, role: user.role, campusName: user.campusName || '', sessionId }, JWT_SECRET, { expiresIn: '1d' });
                 const responseUser = {
                     id: user.profileId,
                     fullName: profileName,
                     role: user.role,
                     username: user.username,
                     campusName: user.campusName || '',
-                    groupKey: user.groupKey || permissions.roleGroups[user.role] || roleKey
+                    groupKey: user.groupKey || permissions.roleGroups[user.role] || roleKey,
+                    ...(designationKey ? { designation: designationKey } : {})
                 };
-                const token = jwt.sign({
-                    id: responseUser.id,
-                    userId: responseUser.id,
-                    username: responseUser.username,
-                    fullName: responseUser.fullName,
-                    role: responseUser.role,
-                    campusName: responseUser.campusName || '',
-                    sessionId
-                }, JWT_SECRET, { expiresIn: '1d' });
                 registerActiveSession(req, sessionId, responseUser);
                 return res.json({
                     success: true,
@@ -777,8 +1075,6 @@ app.post('/api/session/heartbeat', authenticateToken, (req, res) => {
         ...(existing || {}),
         sessionId,
         userId: String(req.user.id || existing?.userId || ''),
-        username: req.user.username || existing?.username || '',
-        fullName: req.user.fullName || existing?.fullName || '',
         role: req.user.role || existing?.role || '',
         campusName: req.user.campusName || existing?.campusName || '',
         loginAt: existing?.loginAt || Date.now(),
@@ -799,37 +1095,51 @@ app.post('/api/session/end', authenticateToken, (req, res) => {
 });
 
 app.get('/api/active-sessions', authenticateToken, (req, res) => {
-    if (!isAdminSessionRole(req.user.role)) {
+    if (!canManageActiveSessions(req.user)) {
         return res.status(403).json({ success: false, message: 'Admin access required.' });
     }
 
     res.json(buildActiveSessionsSummary());
 });
 
-app.post('/api/active-sessions/logout', authenticateToken, (req, res) => {
-    if (!isAdminSessionRole(req.user.role)) {
+app.delete('/api/active-sessions/:sessionId', authenticateToken, (req, res) => {
+    if (!canManageActiveSessions(req.user)) {
         return res.status(403).json({ success: false, message: 'Admin access required.' });
     }
 
-    const sessionId = String(req.body?.sessionId || '').trim();
-    if (!sessionId) {
-        return res.status(400).json({ success: false, message: 'Session id required.' });
+    const targetSessionId = decodeURIComponent(String(req.params.sessionId || '').trim());
+    if (!targetSessionId) {
+        return res.status(400).json({ success: false, message: 'Session id is required.' });
     }
 
-    const existed = activeSessions.delete(sessionId);
-    io.emit('session_forced_logout', { sessionId });
-    res.json({ success: true, removed: existed, sessionId });
+    const hadSession = activeSessions.delete(targetSessionId);
+    if (hadSession) {
+        io.emit('session_forced_logout', { sessionId: targetSessionId });
+    }
+    return res.json({
+        success: true,
+        message: hadSession ? 'Session has been logged out.' : 'Session was already inactive.'
+    });
 });
 
-app.delete('/api/active-sessions/:sessionId', authenticateToken, (req, res) => {
-    if (!isAdminSessionRole(req.user.role)) {
+app.post('/api/active-sessions/logout', authenticateToken, (req, res) => {
+    if (!canManageActiveSessions(req.user)) {
         return res.status(403).json({ success: false, message: 'Admin access required.' });
     }
 
-    const sessionId = String(req.params.sessionId || '').trim();
-    const existed = activeSessions.delete(sessionId);
-    io.emit('session_forced_logout', { sessionId });
-    res.json({ success: true, removed: existed, sessionId });
+    const targetSessionId = decodeURIComponent(String(req.body?.sessionId || '').trim());
+    if (!targetSessionId) {
+        return res.status(400).json({ success: false, message: 'Session id is required.' });
+    }
+
+    const hadSession = activeSessions.delete(targetSessionId);
+    if (hadSession) {
+        io.emit('session_forced_logout', { sessionId: targetSessionId });
+    }
+    return res.json({
+        success: true,
+        message: hadSession ? 'Session has been logged out.' : 'Session was already inactive.'
+    });
 });
 
 app.get('/api/students', async (req, res) => {
@@ -840,6 +1150,30 @@ app.get('/api/students', async (req, res) => {
         res.json(students);
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/teacher/me', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) {
+            return res.status(503).json({ success: false, message: 'Database not available' });
+        }
+
+        if (req.user.role !== 'Teacher') {
+            return res.status(403).json({ success: false, message: 'Teacher access only.' });
+        }
+
+        const teacher = await sequelize.models.Teacher.findByPk(req.user.id, {
+            attributes: { exclude: ['password'] }
+        });
+
+        if (!teacher) {
+            return res.status(404).json({ success: false, message: 'Teacher record not found.' });
+        }
+
+        return res.json(teacher);
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Teacher profile could not be loaded.' });
     }
 });
 
@@ -868,6 +1202,15 @@ function formatSpecialNotice(record) {
     return {
         ...raw,
         targetPortals: normalizeNoticeTargets(targetPortals)
+    };
+}
+
+function formatBanner(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : record;
+    return {
+        ...raw,
+        displayOrder: Number(raw.displayOrder || 0),
+        isActive: raw.isActive !== false
     };
 }
 
@@ -947,6 +1290,131 @@ app.delete('/api/special-notices/:id', async (req, res) => {
             deleted: deletedCount > 0,
             notices
         });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/banners', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const banners = await sequelize.models.Banner.findAll({
+            order: [['displayOrder', 'ASC'], ['updatedAt', 'DESC']]
+        });
+        res.json({ success: true, banners: banners.map(formatBanner) });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/banners', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const payload = req.body || {};
+        const title = String(payload.title || '').trim();
+        const imageUrl = String(payload.imageUrl || '').trim();
+
+        if (!title || !imageUrl) {
+            return res.status(400).json({ success: false, message: 'Banner title and image URL are required.' });
+        }
+
+        const banner = {
+            id: payload.id || `BANNER-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title,
+            subtitle: String(payload.subtitle || '').trim(),
+            imageUrl,
+            linkUrl: String(payload.linkUrl || '').trim(),
+            displayOrder: Number(payload.displayOrder || 0),
+            isActive: payload.isActive !== false
+        };
+
+        await sequelize.models.Banner.upsert(banner);
+        const records = await sequelize.models.Banner.findAll({
+            order: [['displayOrder', 'ASC'], ['updatedAt', 'DESC']]
+        });
+        const banners = records.map(formatBanner);
+        io.emit('banners_update', banners);
+        res.json({ success: true, banner: formatBanner(banner), banners });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/banners/:id', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const deletedCount = await sequelize.models.Banner.destroy({ where: { id: req.params.id } });
+        const records = await sequelize.models.Banner.findAll({
+            order: [['displayOrder', 'ASC'], ['updatedAt', 'DESC']]
+        });
+        const banners = records.map(formatBanner);
+        io.emit('banners_update', banners);
+        res.json({ success: true, deleted: deletedCount > 0, banners });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+function normalizeClassFeeConfig(input = {}) {
+    const raw = input && typeof input === 'object' ? input : {};
+    return Object.entries(raw).reduce((acc, [className, config]) => {
+        const name = String(className || '').trim();
+        if (!name) return acc;
+        const monthlyFee = String(config?.monthlyFee ?? config?.fee ?? '').trim();
+        const feeFrequency = String(config?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        if (!monthlyFee) return acc;
+        acc[name] = { monthlyFee, feeFrequency };
+        return acc;
+    }, {});
+}
+
+async function readClassFeeConfig() {
+    const row = await sequelize.models.AppSetting.findByPk('class_fees');
+    if (!row?.settingValue) return {};
+    try {
+        return normalizeClassFeeConfig(JSON.parse(row.settingValue));
+    } catch (_error) {
+        return {};
+    }
+}
+
+app.get('/api/class-fees', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        res.json({ success: true, classFees: await readClassFeeConfig() });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/class-fees', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    if (req.user.role !== 'Admin' && req.user.role !== 'Principal') {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    try {
+        const className = String(req.body?.className || '').trim();
+        const monthlyFee = String(req.body?.monthlyFee || '').trim();
+        const feeFrequency = String(req.body?.feeFrequency || 'Monthly').trim() || 'Monthly';
+
+        if (!className || !monthlyFee) {
+            return res.status(400).json({ success: false, message: 'Class and monthly fee are required.' });
+        }
+
+        const classFees = await readClassFeeConfig();
+        classFees[className] = { monthlyFee, feeFrequency };
+
+        await sequelize.models.AppSetting.upsert({
+            settingKey: 'class_fees',
+            settingValue: JSON.stringify(classFees)
+        });
+
+        res.json({ success: true, classFees });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -1102,7 +1570,7 @@ app.get('/api/student/me', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/students', async (req, res) => {
+app.post('/api/students', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
     try {
@@ -1110,14 +1578,45 @@ app.post('/api/students', async (req, res) => {
         const Student = sequelize.models.Student;
         const User = sequelize.models.User;
 
+        const ids = data.map((item) => String(item?.id || '').trim()).filter(Boolean);
+        const existingRows = ids.length
+            ? await Student.findAll({ where: { id: ids }, attributes: ['id'] })
+            : [];
+        const existingIds = new Set(existingRows.map((row) => String(row.id)));
+
+        const needsEdit = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return id && existingIds.has(id);
+        });
+        const needsAdd = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return !id || !existingIds.has(id);
+        });
+
+        if (needsAdd) {
+            const ok = await enforceActionPermission(req, res, 'students', 'add');
+            if (!ok) return;
+        }
+        if (needsEdit) {
+            const ok = await enforceActionPermission(req, res, 'students', 'edit');
+            if (!ok) return;
+        }
+
         for (const item of data) {
+            const normalizedUsername = String(item.username || '').trim();
             const rawPassword = item.plainPassword || item.password || '';
             item.email = normalizeOptionalEmail(item.email);
+            item.username = normalizedUsername || null;
             await ensureUniqueStudentIdentity(Student, User, item);
-            if (item.password && !isPasswordHash(item.password)) {
+            if (normalizedUsername && item.password && !isPasswordHash(item.password)) {
                 item.password = await bcrypt.hash(item.password, 10);
             }
-            item.plainPassword = rawPassword;
+            if (!normalizedUsername) {
+                item.password = null;
+                item.plainPassword = null;
+            } else {
+                item.plainPassword = rawPassword || null;
+            }
 
             await Student.upsert(item);
             await upsertAuthUser(User, {
@@ -1135,9 +1634,42 @@ app.post('/api/students', async (req, res) => {
 
         const allStudents = await Student.findAll();
         io.emit('students_update', allStudents);
-        res.json({ success: true });
+        res.json({ success: true, students: allStudents });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/students/:id', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ error: 'Database offline' });
+
+    try {
+        const ok = await enforceActionPermission(req, res, 'students', 'delete');
+        if (!ok) return;
+
+        const { id } = req.params;
+        const Student = sequelize.models.Student;
+        const User = sequelize.models.User;
+
+        const deletedCount = await Student.destroy({ where: { id } });
+        await User.destroy({
+            where: {
+                [Op.or]: [
+                    { profileId: id, role: 'Student' },
+                    { id: `student_${id}` }
+                ]
+            }
+        });
+
+        if (!deletedCount) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        const allStudents = await Student.findAll();
+        io.emit('students_update', allStudents);
+        res.json({ success: true, message: 'Student deleted successfully.' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -1201,35 +1733,6 @@ app.post('/api/student-attendance', async (req, res) => {
     }
 });
 
-app.delete('/api/students/:id', async (req, res) => {
-    if (!sequelize) return res.status(503).json({ error: 'Database offline' });
-
-    try {
-        const { id } = req.params;
-        const Student = sequelize.models.Student;
-        const User = sequelize.models.User;
-
-        const deletedCount = await Student.destroy({ where: { id } });
-        await User.destroy({
-            where: {
-                [Op.or]: [
-                    { profileId: id, role: 'Student' },
-                    { id: `student_${id}` }
-                ]
-            }
-        });
-
-        if (!deletedCount) {
-            return res.status(404).json({ success: false, message: 'Student not found.' });
-        }
-
-        const allStudents = await Student.findAll();
-        io.emit('students_update', allStudents);
-        res.json({ success: true, message: 'Student deleted successfully.' });
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    }
-});
 
 app.get('/api/teacher-attendance', async (req, res) => {
     if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
@@ -1299,8 +1802,10 @@ app.post('/api/fees/challan-token', async (req, res) => {
             rollNo,
             classGrade,
             feeMonth,
+            feeMonths,
             session,
             amount,
+            fullAmount,
             challanNumber
         } = req.body || {};
 
@@ -1314,8 +1819,10 @@ app.post('/api/fees/challan-token', async (req, res) => {
             rollNo: rollNo || '',
             classGrade: classGrade || '',
             feeMonth,
+            feeMonths: Array.isArray(feeMonths) ? feeMonths : [],
             session: session || '',
             amount: Number(amount || 0),
+            fullAmount: Number(fullAmount || amount || 0),
             challanNumber
         }, JWT_SECRET, { expiresIn: '120d' });
 
@@ -1337,6 +1844,207 @@ app.post('/api/fees/challan-token', async (req, res) => {
     }
 });
 
+app.post('/api/fees/challan-tokens', async (req, res) => {
+    try {
+        const payload = req.body;
+        const items = Array.isArray(payload) ? payload : payload?.items;
+
+        if (!Array.isArray(items) || !items.length) {
+            return res.status(400).json({ success: false, message: 'items array is required.' });
+        }
+
+        if (items.length > 250) {
+            return res.status(400).json({ success: false, message: 'Too many challans requested at once.' });
+        }
+
+        const baseUrl = getRequestBaseUrl(req);
+
+        const mapWithConcurrency = async (list, limit, mapper) => {
+            const results = new Array(list.length);
+            let index = 0;
+
+            const workerCount = Math.min(limit, list.length);
+            const workers = Array.from({ length: workerCount }, async () => {
+                while (true) {
+                    const current = index++;
+                    if (current >= list.length) return;
+                    results[current] = await mapper(list[current], current);
+                }
+            });
+
+            await Promise.all(workers);
+            return results;
+        };
+
+        const tokens = await mapWithConcurrency(items, 6, async (item) => {
+            const studentId = String(item?.studentId || '').trim();
+            const feeMonth = String(item?.feeMonth || '').trim();
+            const challanNumber = String(item?.challanNumber || '').trim();
+
+            if (!studentId || !feeMonth || !challanNumber) {
+                const err = new Error('studentId, feeMonth, and challanNumber are required.');
+                err.statusCode = 400;
+                throw err;
+            }
+
+            const token = jwt.sign({
+                studentId,
+                studentName: item?.studentName || '',
+                rollNo: item?.rollNo || '',
+                classGrade: item?.classGrade || '',
+                feeMonth,
+                feeMonths: Array.isArray(item?.feeMonths) ? item.feeMonths : [],
+                session: item?.session || '',
+                amount: Number(item?.amount || 0),
+                fullAmount: Number(item?.fullAmount || item?.amount || 0),
+                challanNumber
+            }, JWT_SECRET, { expiresIn: '120d' });
+
+            const paymentUrl = `${baseUrl}/api/fees/pay/${encodeURIComponent(token)}`;
+            const qrDataUrl = await QRCode.toDataURL(paymentUrl, {
+                errorCorrectionLevel: 'M',
+                margin: 1,
+                width: 220
+            });
+
+            return { challanNumber, token, paymentUrl, qrDataUrl };
+        });
+
+        return res.json({ success: true, tokens });
+    } catch (error) {
+        const status = error?.statusCode || 500;
+        return res.status(status).json({ success: false, message: error.message || 'Bulk QR code could not be generated.' });
+    }
+});
+
+app.post('/api/fees/manual-payment', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const {
+            studentId,
+            studentName,
+            rollNo,
+            classGrade,
+            feeMonth,
+            feeMonths,
+            session,
+            amount,
+            fullAmount,
+            challanNumber
+        } = req.body || {};
+
+        if (!studentId) {
+            return res.status(400).json({ success: false, message: 'studentId is required.' });
+        }
+
+        const Student = sequelize.models.Student;
+        const FeePayment = sequelize.models.FeePayment;
+        const FeeDueBalance = sequelize.models.FeeDueBalance;
+
+        const student = await Student.findByPk(studentId);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        const paymentAmount = Number(amount || 0);
+        const safeFullAmount = Number(fullAmount || amount || student.monthlyFee || 0);
+        const remainingDue = Math.max(safeFullAmount - paymentAmount, 0);
+        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
+
+        const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        const normalizeMonthList = (value) => Array.isArray(value)
+            ? value.map((item) => String(item || '').trim()).filter(Boolean)
+            : [];
+        const extractMonthList = (value) => {
+            const lower = String(value || '').toLowerCase();
+            return MONTHS.filter((month) => {
+                const full = month.toLowerCase();
+                const short = month.slice(0, 3).toLowerCase();
+                return lower.includes(full) || lower.includes(short);
+            });
+        };
+
+        let selectedMonths = normalizeMonthList(feeMonths);
+        if (!selectedMonths.length) selectedMonths = extractMonthList(feeMonth);
+
+        const feeMonthRecorded = selectedMonths.length ? selectedMonths.join(', ') : 'Dues';
+        const safeChallanNumber = String(challanNumber || '').trim() || `MAN-${Date.now()}`;
+
+        const existingPayment = await FeePayment.findByPk(safeChallanNumber);
+        const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
+        const paidAt = existingPayment?.paidAt || new Date();
+        const paymentDateLabel = paidAt.toLocaleDateString('en-GB');
+
+        const paymentRow = {
+            challanNumber: safeChallanNumber,
+            studentId,
+            studentName: studentName || student.fullName || '',
+            rollNo: rollNo || student.rollNo || '',
+            classGrade: classGrade || student.classGrade || '',
+            session: session || '',
+            feeMonth: feeMonthRecorded,
+            amount: paymentAmount,
+            status: resolvedStatus,
+            paidAt,
+            paymentDateLabel,
+            paymentSource: 'Manual'
+        };
+
+        await FeePayment.upsert(paymentRow);
+
+        if (!alreadyRecorded && FeeDueBalance) {
+            const existingDue = await FeeDueBalance.findByPk(studentId);
+            const currentBalance = existingDue ? Number(existingDue.balance || 0) : 0;
+            const safeCurrent = Number.isFinite(currentBalance) ? currentBalance : 0;
+            const reducedBalance = Math.max(safeCurrent - paymentAmount, 0);
+
+            await FeeDueBalance.upsert({
+                studentId,
+                balance: reducedBalance,
+                updatedAtLabel: new Date().toLocaleString('en-GB')
+            });
+        }
+
+        const currentMonthName = MONTHS[new Date().getMonth()];
+        const currentLower = currentMonthName.toLowerCase();
+        const currentShortLower = currentMonthName.slice(0, 3).toLowerCase();
+        const currentMonthPaid = selectedMonths.some((month) => {
+            const lower = String(month || '').toLowerCase();
+            return lower === currentLower || lower === currentShortLower;
+        });
+
+        if (currentMonthPaid && resolvedStatus === 'Paid') {
+            await Student.update({
+                feesStatus: 'Paid',
+                paymentDate: paymentDateLabel
+            }, {
+                where: { id: studentId }
+            });
+        }
+
+        let emailResult = null;
+        if (!alreadyRecorded && resolvedStatus === 'Paid') {
+            try {
+                emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
+            } catch (error) {
+                emailResult = { success: false, message: error.message || 'Fee paid email could not be sent.' };
+            }
+        }
+
+        const allStudents = await Student.findAll();
+        io.emit('students_update', allStudents);
+        io.emit('fee_payment_update', { payment: paymentRow });
+
+        return res.json({ success: true, payment: paymentRow, alreadyRecorded, emailResult });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Manual payment failed.' });
+    }
+});
+
 app.get('/api/fees/payments', async (req, res) => {
     if (!sequelize) {
         return res.status(503).json({ success: false, message: 'Database offline' });
@@ -1345,7 +2053,7 @@ app.get('/api/fees/payments', async (req, res) => {
     try {
         const FeePayment = sequelize.models.FeePayment;
         const payments = await FeePayment.findAll({
-            where: { status: 'Paid' },
+            where: { status: { [Op.in]: ['Paid', 'Partial'] } },
             order: [['paidAt', 'DESC']]
         });
 
@@ -1357,6 +2065,116 @@ app.get('/api/fees/payments', async (req, res) => {
         return res.status(500).json({
             success: false,
             message: error.message || 'Fee payments could not be loaded.'
+        });
+    }
+});
+
+app.post('/api/fees/mark-unpaid', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const { studentId, feeMonth, challanNumbers } = req.body || {};
+        const sid = String(studentId || '').trim();
+        const month = String(feeMonth || '').trim();
+
+        if (!sid || !month) {
+            return res.status(400).json({ success: false, message: 'studentId and feeMonth are required.' });
+        }
+
+        const Student = sequelize.models.Student;
+        const FeePayment = sequelize.models.FeePayment;
+        const FeeDueBalance = sequelize.models.FeeDueBalance;
+        const student = await Student.findByPk(sid);
+
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        const cleanChallans = Array.isArray(challanNumbers)
+            ? challanNumbers.map((item) => String(item || '').trim()).filter(Boolean)
+            : [];
+
+        const where = {
+            studentId: sid,
+            status: { [Op.in]: ['Paid', 'Partial'] }
+        };
+
+        if (cleanChallans.length) {
+            where.challanNumber = { [Op.in]: cleanChallans };
+        } else {
+            where.feeMonth = { [Op.like]: `%${month}%` };
+        }
+
+        const payments = await FeePayment.findAll({ where });
+        if (!payments.length) {
+            return res.status(404).json({ success: false, message: 'No paid payment record found for this month.' });
+        }
+
+        const removedAmount = payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+        await FeePayment.update({
+            status: 'Voided',
+            paymentSource: 'Correction'
+        }, { where });
+
+        if (FeeDueBalance && removedAmount > 0) {
+            const existingDue = await FeeDueBalance.findByPk(sid);
+            const currentBalance = existingDue ? Number(existingDue.balance || 0) : 0;
+            const safeCurrent = Number.isFinite(currentBalance) ? currentBalance : 0;
+
+            await FeeDueBalance.upsert({
+                studentId: sid,
+                balance: safeCurrent + removedAmount,
+                updatedAtLabel: new Date().toLocaleString('en-GB')
+            });
+        }
+
+        const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        if (month.toLowerCase() === MONTHS[new Date().getMonth()].toLowerCase()) {
+            await Student.update({ feesStatus: 'Pending', paymentDate: null }, { where: { id: sid } });
+        }
+
+        const allStudents = await Student.findAll();
+        io.emit('students_update', allStudents);
+        io.emit('fee_payment_update', { studentId: sid, feeMonth: month, status: 'Voided' });
+
+        return res.json({
+            success: true,
+            message: 'Fee marked as unpaid.',
+            removedCount: payments.length,
+            removedAmount
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Could not mark unpaid.' });
+    }
+});
+
+app.get('/api/fees/due-balances', async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const FeeDueBalance = sequelize.models.FeeDueBalance;
+        if (!FeeDueBalance) {
+            return res.json({ success: true, balances: {} });
+        }
+
+        const rows = await FeeDueBalance.findAll();
+        const balances = rows.reduce((acc, row) => {
+            const studentId = String(row.studentId || '').trim();
+            if (!studentId) return acc;
+            const balance = Number(row.balance || 0);
+            acc[studentId] = Number.isFinite(balance) ? balance : 0;
+            return acc;
+        }, {});
+
+        return res.json({ success: true, balances });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Due balances could not be loaded.'
         });
     }
 });
@@ -1374,6 +2192,7 @@ app.get('/api/fees/pay/:token', async (req, res) => {
         const payload = jwt.verify(req.params.token, JWT_SECRET);
         const Student = sequelize.models.Student;
         const FeePayment = sequelize.models.FeePayment;
+        const FeeDueBalance = sequelize.models.FeeDueBalance;
 
         const student = await Student.findByPk(payload.studentId);
         if (!student) {
@@ -1385,46 +2204,110 @@ app.get('/api/fees/pay/:token', async (req, res) => {
         }
 
         const existingPayment = await FeePayment.findByPk(payload.challanNumber);
+        const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
         const paidAt = existingPayment?.paidAt || new Date();
         const paymentDateLabel = paidAt.toLocaleDateString('en-GB');
 
-        await FeePayment.upsert({
+        const paymentAmount = Number(payload.amount || student.monthlyFee || 0);
+        const fullAmount = Number(payload.fullAmount || payload.amount || student.monthlyFee || 0);
+        const remainingDue = Math.max(fullAmount - paymentAmount, 0);
+        const resolvedStatus = remainingDue > 0 ? 'Partial' : 'Paid';
+
+        const normalizeMonthList = (value) => Array.isArray(value)
+            ? value.map((item) => String(item || '').trim()).filter(Boolean)
+            : [];
+
+        const extractMonthList = (value) => {
+            const lower = String(value || '').toLowerCase();
+            return MONTHS.filter((month) => {
+                const full = month.toLowerCase();
+                const short = month.slice(0, 3).toLowerCase();
+                return lower.includes(full) || lower.includes(short);
+            });
+        };
+
+        let selectedMonths = normalizeMonthList(payload.feeMonths);
+        if (!selectedMonths.length) selectedMonths = extractMonthList(payload.feeMonth);
+        const monthsPaid = selectedMonths;
+        const feeMonthRecorded = monthsPaid.length ? monthsPaid.join(', ') : 'Dues';
+
+        const paymentRow = {
             challanNumber: payload.challanNumber,
             studentId: payload.studentId,
             studentName: payload.studentName || student.fullName || '',
             rollNo: payload.rollNo || student.rollNo || '',
             classGrade: payload.classGrade || student.classGrade || '',
             session: payload.session || '',
-            feeMonth: payload.feeMonth || '',
-            amount: Number(payload.amount || student.monthlyFee || 0),
-            status: 'Paid',
+            feeMonth: feeMonthRecorded,
+            amount: paymentAmount,
+            status: resolvedStatus,
             paidAt,
             paymentDateLabel,
             paymentSource: 'QR Scan'
-        });
+        };
 
-        await Student.update({
-            feesStatus: 'Paid',
-            paymentDate: paymentDateLabel
-        }, {
-            where: { id: payload.studentId }
+        await FeePayment.upsert(paymentRow);
+
+        if (!alreadyRecorded && FeeDueBalance) {
+            const existingDue = await FeeDueBalance.findByPk(payload.studentId);
+            const currentBalance = existingDue ? Number(existingDue.balance || 0) : 0;
+            const safeCurrent = Number.isFinite(currentBalance) ? currentBalance : 0;
+            const reducedBalance = Math.max(safeCurrent - paymentAmount, 0);
+
+            await FeeDueBalance.upsert({
+                studentId: payload.studentId,
+                balance: reducedBalance,
+                updatedAtLabel: new Date().toLocaleString('en-GB')
+            });
+        }
+
+        const currentMonthName = MONTHS[new Date().getMonth()];
+        const feeMonthRaw = String(payload.feeMonth || '');
+        const feeMonthLower = feeMonthRaw.toLowerCase();
+        const currentLower = currentMonthName.toLowerCase();
+        const currentShortLower = currentMonthName.slice(0, 3).toLowerCase();
+        const shouldUpdateCurrentMonthStatus = feeMonthLower.includes(currentLower) || feeMonthLower.includes(currentShortLower);
+
+        const currentMonthPaid = monthsPaid.some((month) => {
+            const lower = String(month || '').toLowerCase();
+            return lower === currentLower || lower === currentShortLower;
         });
+        if (resolvedStatus === 'Paid' && (shouldUpdateCurrentMonthStatus || currentMonthPaid) && monthsPaid.length) {
+            await Student.update({
+                feesStatus: 'Paid',
+                paymentDate: paymentDateLabel
+            }, {
+                where: { id: payload.studentId }
+            });
+        }
+
+        if (!alreadyRecorded && resolvedStatus === 'Paid') {
+            try {
+                await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
+            } catch (error) {
+                console.warn(`Fee paid email skipped for ${payload.studentId}: ${error.message || error}`);
+            }
+        }
 
         const allStudents = await Student.findAll();
         io.emit('students_update', allStudents);
+        io.emit('fee_payment_update', { payment: paymentRow });
 
         return res.send(renderFeePaymentPage({
-            title: existingPayment?.status === 'Paid' ? 'Already Marked Paid' : 'Fee Marked Paid',
-            message: existingPayment?.status === 'Paid'
+            title: alreadyRecorded ? 'Already Recorded' : (paymentRow.status === 'Paid' ? 'Fee Marked Paid' : 'Payment Recorded'),
+            message: alreadyRecorded
                 ? 'This challan was already scanned earlier. The payment remains recorded in the system.'
-                : 'The fee has been marked as paid successfully in the system.',
+                : (paymentRow.status === 'Paid'
+                    ? 'The fee has been marked as paid successfully in the system.'
+                    : 'Payment has been recorded. Remaining amount is still due.'),
             details: [
                 { label: 'Student', value: payload.studentName || student.fullName || '-' },
                 { label: 'Roll No', value: payload.rollNo || student.rollNo || '-' },
                 { label: 'Class', value: payload.classGrade || student.classGrade || '-' },
                 { label: 'Fee Month', value: payload.feeMonth || '-' },
                 { label: 'Session', value: payload.session || '-' },
-                { label: 'Amount', value: `PKR ${Number(payload.amount || student.monthlyFee || 0).toLocaleString('en-PK')}` },
+                { label: 'Amount', value: `PKR ${Number(paymentAmount || 0).toLocaleString('en-PK')}` },
+                ...(remainingDue > 0 ? [{ label: 'Remaining Due', value: `PKR ${Number(remainingDue || 0).toLocaleString('en-PK')}` }] : []),
                 { label: 'Challan No.', value: payload.challanNumber || '-' },
                 { label: 'Paid On', value: paymentDateLabel }
             ],
@@ -1468,7 +2351,7 @@ app.get('/api/staff', async (req, res) => {
     }
 });
 
-app.post('/api/teachers', async (req, res) => {
+app.post('/api/teachers', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
     try {
@@ -1476,10 +2359,34 @@ app.post('/api/teachers', async (req, res) => {
         const Teacher = sequelize.models.Teacher;
         const User = sequelize.models.User;
 
+        const ids = data.map((item) => String(item?.id || '').trim()).filter(Boolean);
+        const existingRows = ids.length
+            ? await Teacher.findAll({ where: { id: ids }, attributes: ['id'] })
+            : [];
+        const existingIds = new Set(existingRows.map((row) => String(row.id)));
+
+        const needsEdit = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return id && existingIds.has(id);
+        });
+        const needsAdd = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return !id || !existingIds.has(id);
+        });
+
+        if (needsAdd) {
+            const ok = await enforceActionPermission(req, res, 'teachers', 'add');
+            if (!ok) return;
+        }
+        if (needsEdit) {
+            const ok = await enforceActionPermission(req, res, 'teachers', 'edit');
+            if (!ok) return;
+        }
+
         for (const item of data) {
             const rawPassword = item.plainPassword || item.password || '';
             item.email = normalizeOptionalEmail(item.email);
-            await ensureUniqueTeacherIdentity(Teacher, User, item);
+            await ensureUniqueTeacherIdentity(Teacher, User, item, Op);
             if (item.password && !isPasswordHash(item.password)) {
                 item.password = await bcrypt.hash(item.password, 10);
             }
@@ -1512,16 +2419,19 @@ app.post('/api/teachers', async (req, res) => {
             ]
         });
         io.emit('teachers_update', allTeachers);
-        res.json({ success: true });
+        res.json({ success: true, teachers: allTeachers });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/teachers/:id', async (req, res) => {
+app.delete('/api/teachers/:id', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
     try {
+        const ok = await enforceActionPermission(req, res, 'teachers', 'delete');
+        if (!ok) return;
+
         const { id } = req.params;
         const Teacher = sequelize.models.Teacher;
         const User = sequelize.models.User;
@@ -1555,13 +2465,37 @@ app.delete('/api/teachers/:id', async (req, res) => {
     }
 });
 
-app.post('/api/staff', async (req, res) => {
+app.post('/api/staff', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
     try {
         const data = Array.isArray(req.body) ? req.body : [req.body];
         const Staff = sequelize.models.Staff;
         const User = sequelize.models.User;
+
+        const ids = data.map((item) => String(item?.id || '').trim()).filter(Boolean);
+        const existingRows = ids.length
+            ? await Staff.findAll({ where: { id: ids }, attributes: ['id'] })
+            : [];
+        const existingIds = new Set(existingRows.map((row) => String(row.id)));
+
+        const needsEdit = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return id && existingIds.has(id);
+        });
+        const needsAdd = data.some((item) => {
+            const id = String(item?.id || '').trim();
+            return !id || !existingIds.has(id);
+        });
+
+        if (needsAdd) {
+            const ok = await enforceActionPermission(req, res, 'staff', 'add');
+            if (!ok) return;
+        }
+        if (needsEdit) {
+            const ok = await enforceActionPermission(req, res, 'staff', 'edit');
+            if (!ok) return;
+        }
 
         for (const item of data) {
             const rawPassword = item.plainPassword || item.password || '';
@@ -1589,16 +2523,19 @@ app.post('/api/staff', async (req, res) => {
 
         const allStaff = await Staff.findAll();
         io.emit('staff_update', allStaff);
-        res.json({ success: true });
+        res.json({ success: true, staff: allStaff });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/staff/:id', async (req, res) => {
+app.delete('/api/staff/:id', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
     try {
+        const ok = await enforceActionPermission(req, res, 'staff', 'delete');
+        if (!ok) return;
+
         const { id } = req.params;
         const Staff = sequelize.models.Staff;
         const User = sequelize.models.User;
@@ -1622,6 +2559,58 @@ app.delete('/api/staff/:id', async (req, res) => {
         res.json({ success: true, message: 'Staff deleted successfully.' });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/email/config', authenticateToken, (req, res) => {
+    const config = getSmtpConfig();
+    res.json({
+        success: true,
+        configured: Boolean(config.host && config.port && config.user && config.pass && config.fromEmail),
+        host: config.host || '',
+        port: config.port || 587,
+        secure: config.secure,
+        user: config.user ? config.user.replace(/^(.{2}).*(@.*)?$/, '$1***$2') : '',
+        fromEmail: config.fromEmail || '',
+        fromName: config.fromName || ''
+    });
+});
+
+app.post('/api/email/send', authenticateToken, async (req, res) => {
+    try {
+        const result = await sendSmtpEmail(req.body || {});
+        res.json({
+            success: true,
+            message: 'Email sent successfully.',
+            ...result
+        });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Email could not be sent.'
+        });
+    }
+});
+
+app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const result = await sendPendingFeeReminderEmails(sequelize, {
+            force: req.body?.force === true
+        });
+        return res.json({
+            success: true,
+            message: `Pending fee reminders sent: ${result.sent}.`,
+            ...result
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Pending fee reminders could not be sent.'
+        });
     }
 });
 
@@ -1776,6 +2765,14 @@ function defineFeePaymentModel(db) {
     });
 }
 
+function defineFeeDueBalanceModel(db) {
+    return db.define('FeeDueBalance', {
+        studentId: { type: DataTypes.STRING, primaryKey: true },
+        balance: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+        updatedAtLabel: DataTypes.STRING
+    });
+}
+
 function defineStudentAttendanceModel(db) {
     return db.define('StudentAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -1803,6 +2800,25 @@ function defineSpecialNoticeModel(db) {
         status: { type: DataTypes.STRING, defaultValue: 'draft' },
         executedAt: { type: DataTypes.DATE, allowNull: true },
         createdAtLabel: DataTypes.STRING
+    });
+}
+
+function defineBannerModel(db) {
+    return db.define('Banner', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        title: { type: DataTypes.STRING, allowNull: false },
+        subtitle: { type: DataTypes.STRING, allowNull: true },
+        imageUrl: { type: DataTypes.TEXT('long'), allowNull: false },
+        linkUrl: { type: DataTypes.STRING, allowNull: true },
+        displayOrder: { type: DataTypes.INTEGER, defaultValue: 0 },
+        isActive: { type: DataTypes.BOOLEAN, defaultValue: true }
+    });
+}
+
+function defineAppSettingModel(db) {
+    return db.define('AppSetting', {
+        settingKey: { type: DataTypes.STRING, primaryKey: true },
+        settingValue: { type: DataTypes.TEXT('long'), allowNull: false }
     });
 }
 
@@ -2065,7 +3081,10 @@ async function ensureLegacySchema() {
         username: { type: DataTypes.STRING, allowNull: true },
         password: { type: DataTypes.STRING, allowNull: true },
         plainPassword: { type: DataTypes.STRING, allowNull: true },
-        role: { type: DataTypes.STRING, allowNull: true }
+        role: { type: DataTypes.STRING, allowNull: true },
+        enrollmentStatus: { type: DataTypes.STRING, allowNull: true },
+        terminatedAt: { type: DataTypes.STRING, allowNull: true },
+        terminationNote: { type: DataTypes.TEXT, allowNull: true }
     });
 
     await ensureTableColumns('Users', {
@@ -2153,6 +3172,7 @@ async function startServer() {
             process.env.DB_PASSWORD || '',
             {
                 host: process.env.DB_HOST || 'localhost',
+                port: Number(process.env.DB_PORT || 3306),
                 dialect: 'mysql',
                 logging: false
             }
@@ -2163,9 +3183,12 @@ async function startServer() {
         defineUserModel(sequelize);
         defineStaffModel(sequelize);
         defineFeePaymentModel(sequelize);
+        defineFeeDueBalanceModel(sequelize);
         defineStudentAttendanceModel(sequelize);
         defineTeacherAttendanceModel(sequelize);
         defineSpecialNoticeModel(sequelize);
+        defineBannerModel(sequelize);
+        defineAppSettingModel(sequelize);
 
         // Avoid Sequelize's repeated ALTER-based index churn on MySQL.
         // Missing legacy columns are handled separately in ensureLegacySchema().
@@ -2175,6 +3198,9 @@ async function startServer() {
         console.log('✅ Database synced successfully');
 
         isInitialized = true;
+        if (!pendingFeeReminderInterval) {
+            pendingFeeReminderInterval = startPendingFeeReminderScheduler(() => sequelize);
+        }
     } catch (err) {
         startupPromise = null;
         console.error('Database connection error:', err.message);
@@ -2184,4 +3210,27 @@ async function startServer() {
     })();
 
     return startupPromise;
+}
+
+module.exports = {
+    app,
+    startServer,
+    server,
+    io,
+    getSequelize: () => sequelize,
+    isInitialized: () => isInitialized
+};
+
+if (require.main === module) {
+    const PORT = Number(process.env.PORT || 3000);
+    startServer()
+        .then(() => {
+            server.listen(PORT, '0.0.0.0', () => {
+                console.log(`Real-Time SQL Server running on port ${PORT}`);
+            });
+        })
+        .catch((err) => {
+            console.error('Startup failed:', err?.message || err);
+            process.exit(1);
+        });
 }

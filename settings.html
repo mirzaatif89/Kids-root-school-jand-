@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Apexiums School management</title>
+    <title>Settings - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -29,13 +29,6 @@
             gap: 0.5rem;
         }
 
-        .verification-box {
-            background-color: #fef2f2;
-            border: 1px dashed #fee2e2;
-            padding: 1.5rem;
-            border-radius: var(--radius-md);
-            margin-top: 1.5rem;
-        }
     </style>
 </head>
 
@@ -45,7 +38,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -202,62 +195,10 @@
                         </div>
                     </div>
 
-                    <!-- Security & Credentials -->
-                    <div class="settings-card">
-                        <h3 class="settings-section-title">
-                            <i data-lucide="shield-check" size="18"></i> Security & Credentials
-                        </h3>
-                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                            <div class="input-group">
-                                <label>New Admin Email</label>
-                                <input type="email" id="sContactEmail" placeholder="new-admin@email.com">
-                            </div>
-                            <div class="input-group">
-                                <label>New Admin Password</label>
-                                <div class="password-field">
-                                    <input type="password" id="sPassword" placeholder="Enter new password">
-                                    <button type="button" class="password-toggle" data-toggle-password="sPassword"
-                                        aria-label="Show password" aria-pressed="false">
-                                        <i data-lucide="eye"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="verification-box">
-                            <h4
-                                style="color: var(--danger-color); font-size: 0.9rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                                <i data-lucide="lock" size="16"></i> Identity Verification Required
-                            </h4>
-                            <p style="font-size: 0.8rem; color: #7f1d1d; margin-bottom: 1.25rem;">
-                                For your security, please enter your <b>current</b> login credentials to authorize these
-                                changes.
-                            </p>
-                            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                                <div class="input-group">
-                                    <label>Current Email</label>
-                                    <input type="email" id="vOldEmail" required placeholder="Verify current email"
-                                        style="background: white;">
-                                </div>
-                                <div class="input-group">
-                                    <label>Current Password</label>
-                                    <div class="password-field">
-                                        <input type="password" id="vOldPassword" required
-                                            placeholder="Verify current password" style="background: white;">
-                                        <button type="button" class="password-toggle" data-toggle-password="vOldPassword"
-                                            aria-label="Show password" aria-pressed="false">
-                                            <i data-lucide="eye"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                         <button type="button" class="btn btn-outline"
                             onclick="window.location.href='dashboard.html'">Discard</button>
-                        <button type="submit" class="btn btn-primary">Update Account</button>
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
                     </div>
                 </form>
             </div>

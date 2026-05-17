@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Permissions - Apexiums School System</title>
+    <title>Permissions - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -98,6 +98,84 @@
             overflow-x: auto;
         }
 
+        .permission-tabs {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+        }
+
+        .tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.65rem 1rem;
+            border-radius: 999px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-color);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .tab-section[hidden] {
+            display: none !important;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-row.single {
+            grid-template-columns: 1fr;
+        }
+
+        .designation-actions-table th,
+        .designation-actions-table td {
+            text-align: center;
+        }
+
+        .designation-actions-table th:first-child,
+        .designation-actions-table td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: var(--surface-color);
+        }
+
+        .table-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .role-access-table th,
+        .role-access-table td {
+            text-align: center;
+        }
+
+        .role-access-table th:first-child,
+        .role-access-table td:first-child {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: var(--surface-color);
+        }
+
+        .table-radio {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
         .login-access-list {
             display: grid;
             gap: 0.75rem;
@@ -183,7 +261,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -241,11 +319,21 @@
             <header class="header">
                 <div>
                     <h1>Permissions</h1>
-                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Manage role groups, choose login access, and assign module rights to each role.</p>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Manage role groups (module access) and designation actions (Add/Edit/Delete).</p>
+                    <div class="permission-tabs">
+                        <button class="tab-btn active" type="button" id="tabRoleBtn">
+                            <i data-lucide="layout-panel-left"></i>
+                            Role Modules
+                        </button>
+                        <button class="tab-btn" type="button" id="tabDesignationBtn">
+                            <i data-lucide="shield-check"></i>
+                            Designation Actions
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            <section class="permissions-panel">
+            <section class="permissions-panel tab-section" id="rolePermissionsSection">
                 <div class="permissions-sidebar">
                     <div class="permission-card">
                         <div class="permission-card-header">
@@ -253,11 +341,11 @@
                                 <h2>Role-based permission editor</h2>
                                 <p>Assign module access to a role group and save for everyone.</p>
                             </div>
-                            <button id="addRoleBtn" class="btn btn-secondary" type="button">+ New Role</button>
                         </div>
 
                         <label for="roleGroupSelect">Select role group</label>
                         <select id="roleGroupSelect" class="form-control"></select>
+                        <button id="addRoleBtn" class="btn btn-outline" type="button">Add Role Group</button>
 
                         <div class="permission-group-details">
                             <label for="roleGroupName">Group display name</label>
@@ -276,6 +364,12 @@
                             <div id="loginAccessList" class="login-access-list"></div>
                         </div>
 
+                        <div class="permission-section">
+                            <h3>Role → Group mapping</h3>
+                            <p>Which role uses which role group (screen/module access).</p>
+                            <div id="roleGroupMappingList" class="login-access-list"></div>
+                        </div>
+
                         <button id="savePermissionsBtn" class="btn btn-success" type="button">Save Permissions</button>
                     </div>
                 </div>
@@ -284,17 +378,106 @@
                     <div class="permission-card">
                         <div class="permission-card-header">
                             <div>
-                                <h2>Module permissions</h2>
-                                <p>Choose the access level for each module in the selected role group.</p>
+                                <h2>Role actions matrix</h2>
+                                <p>Toggle what this role group can do per module.</p>
+                            </div>
+                        </div>
+
+                        <label for="roleModuleSearch">Search module</label>
+                        <input id="roleModuleSearch" class="form-control" type="text" placeholder="Search module (e.g., students)">
+
+                        <div class="form-row single" style="margin-bottom: 0.5rem;">
+                            <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <button class="btn btn-outline" type="button" id="setAllNoneBtn">All None</button>
+                                <button class="btn btn-outline" type="button" id="setAllViewBtn">All View</button>
+                                <button class="btn btn-outline" type="button" id="setAllEditBtn">All Edit</button>
+                                <button class="btn btn-outline" type="button" id="setAllManageBtn">All Full</button>
                             </div>
                         </div>
 
                         <div class="permission-table-wrapper">
-                            <table id="permissionsTable" class="permissions-table">
+                            <table id="permissionsTable" class="permissions-table role-access-table">
                                 <thead>
                                     <tr>
                                         <th>Module</th>
-                                        <th>Access</th>
+                                        <th>View</th>
+                                        <th>Add</th>
+                                        <th>Edit</th>
+                                        <th>Delete</th>
+                                        <th>Export</th>
+                                        <th>Import</th>
+                                        <th>Bulk</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="permissions-panel tab-section" id="designationPermissionsSection" hidden>
+                <div class="permissions-sidebar">
+                    <div class="permission-card">
+                        <div class="permission-card-header">
+                            <div>
+                                <h2>Designation action permissions</h2>
+                                <p>Example: Computer Operator can add students but cannot delete.</p>
+                            </div>
+                        </div>
+
+                        <label for="designationSelect">Select designation</label>
+                        <select id="designationSelect" class="form-control"></select>
+
+                        <div class="permission-group-details">
+                            <div class="form-row">
+                                <div>
+                                    <label for="designationName">Designation name</label>
+                                    <input id="designationName" class="form-control" type="text" placeholder="Computer Operator">
+                                </div>
+                                <div>
+                                    <label for="designationKey">Designation key</label>
+                                    <input id="designationKey" class="form-control" type="text" placeholder="computer_operator" disabled>
+                                </div>
+                            </div>
+
+                            <div class="form-row single">
+                                <label for="designationDescription">Description</label>
+                                <textarea id="designationDescription" class="form-control" rows="3" placeholder="Short description..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <button id="addDesignationBtn" class="btn btn-outline" type="button">Add Designation</button>
+                            <button id="saveDesignationBtn" class="btn btn-success" type="button">Save Action Permissions</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="permissions-content">
+                    <div class="permission-card">
+                        <div class="permission-card-header">
+                            <div>
+                                <h2>Actions matrix</h2>
+                                <p>Toggle what this designation can do per module.</p>
+                            </div>
+                        </div>
+
+                        <label for="designationModuleSearch">Search module</label>
+                        <input id="designationModuleSearch" class="form-control" type="text" placeholder="Search module (e.g., students)">
+
+                        <div class="permission-table-wrapper">
+                            <table id="designationActionsTable" class="permissions-table designation-actions-table">
+                                <thead>
+                                    <tr>
+                                        <th>Module</th>
+                                        <th>View</th>
+                                        <th>Add</th>
+                                        <th>Edit</th>
+                                        <th>Delete</th>
+                                        <th>Export</th>
+                                        <th>Import</th>
+                                        <th>Bulk</th>
                                     </tr>
                                 </thead>
                                 <tbody></tbody>
@@ -314,13 +497,51 @@
         const permissionState = {
             config: null,
             moduleKeys: [],
-            selectedGroupKey: null
+            selectedGroupKey: null,
+            actionKeys: ['view', 'add', 'edit', 'delete', 'export', 'import', 'bulk_action'],
+            filter: ''
+        };
+
+        const designationState = {
+            payload: null,
+            selectedKey: null,
+            moduleKeys: [],
+            actionKeys: ['view', 'add', 'edit', 'delete', 'export', 'import', 'bulk_action'],
+            filter: ''
         };
 
         function toLabel(value) {
             return String(value || '')
-                .replace(/_/g, ' ')
+                .replace(/\.html$/i, '')
+                .replace(/[-_]+/g, ' ')
                 .replace(/\b\w/g, (match) => match.toUpperCase());
+        }
+
+        function normalizeKey(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[\s-]+/g, '_')
+                .replace(/[^a-z0-9_]/g, '')
+                .replace(/^_+|_+$/g, '');
+        }
+
+        function getAuthToken() {
+            return sessionStorage.getItem('eduCore_token') || '';
+        }
+
+        async function parseJsonResponseCompat(response, fallbackMessage = 'Unexpected server response.') {
+            if (typeof window.parseJsonResponse === 'function') {
+                return window.parseJsonResponse(response, fallbackMessage);
+            }
+
+            const responseText = await response.text();
+            try {
+                return responseText ? JSON.parse(responseText) : null;
+            } catch (error) {
+                const bodyPreview = String(responseText || '').trim().slice(0, 160);
+                throw new Error(bodyPreview || fallbackMessage);
+            }
         }
 
         function getPermissionsConfig() {
@@ -341,8 +562,223 @@
                 if (group && group.permissions) {
                     Object.keys(group.permissions).forEach((moduleKey) => keys.add(moduleKey));
                 }
+                if (group && group.actionPermissions && typeof group.actionPermissions === 'object') {
+                    Object.keys(group.actionPermissions).forEach((moduleKey) => keys.add(moduleKey));
+                }
             });
             return [...keys].sort();
+        }
+
+        function getDesignationMap() {
+            return designationState.payload?.permissions && typeof designationState.payload.permissions === 'object'
+                ? designationState.payload.permissions
+                : {};
+        }
+
+        function getSelectedDesignationKey() {
+            return designationState.selectedKey || '';
+        }
+
+        function getSelectedDesignation() {
+            const key = getSelectedDesignationKey();
+            const map = getDesignationMap();
+            return key && map[key] ? map[key] : null;
+        }
+
+        function buildDesignationModuleKeys() {
+            const keys = new Set();
+            const selected = getSelectedDesignation();
+            if (selected?.actionPermissions && typeof selected.actionPermissions === 'object') {
+                Object.keys(selected.actionPermissions).forEach((moduleKey) => keys.add(moduleKey));
+            }
+            (permissionState.moduleKeys || []).forEach((moduleKey) => keys.add(moduleKey));
+            return [...keys].sort();
+        }
+
+        function ensureSelectedDesignationMatrix() {
+            const designation = getSelectedDesignation();
+            if (!designation) return;
+            if (!designation.actionPermissions || typeof designation.actionPermissions !== 'object') {
+                designation.actionPermissions = {};
+            }
+
+            designationState.moduleKeys.forEach((moduleKey) => {
+                if (!designation.actionPermissions[moduleKey] || typeof designation.actionPermissions[moduleKey] !== 'object') {
+                    designation.actionPermissions[moduleKey] = {};
+                }
+                designationState.actionKeys.forEach((actionKey) => {
+                    if (typeof designation.actionPermissions[moduleKey][actionKey] !== 'boolean') {
+                        designation.actionPermissions[moduleKey][actionKey] = false;
+                    }
+                });
+            });
+        }
+
+        function renderDesignationSelect() {
+            const select = document.getElementById('designationSelect');
+            if (!select) return;
+            select.innerHTML = '';
+
+            const designations = Array.isArray(designationState.payload?.designations)
+                ? designationState.payload.designations
+                : [];
+            const map = getDesignationMap();
+
+            const options = designations.length
+                ? designations.map((d) => ({
+                    key: d.key,
+                    name: map?.[d.key]?.name || d.name || d.key
+                }))
+                : Object.keys(map).sort().map((key) => ({ key, name: map[key]?.name || key }));
+
+            options.forEach((d) => {
+                const opt = document.createElement('option');
+                opt.value = d.key;
+                opt.textContent = `${d.name} (${d.key})`;
+                select.appendChild(opt);
+            });
+
+            if (!designationState.selectedKey || !map[designationState.selectedKey]) {
+                designationState.selectedKey = options[0]?.key || null;
+            }
+            select.value = designationState.selectedKey || '';
+        }
+
+        function renderDesignationDetails() {
+            const designation = getSelectedDesignation();
+            const nameInput = document.getElementById('designationName');
+            const keyInput = document.getElementById('designationKey');
+            const descInput = document.getElementById('designationDescription');
+            if (!nameInput || !keyInput || !descInput) return;
+
+            if (!designation) {
+                nameInput.value = '';
+                keyInput.value = '';
+                descInput.value = '';
+                return;
+            }
+
+            nameInput.value = designation.name || designationState.selectedKey || '';
+            keyInput.value = designationState.selectedKey || '';
+            descInput.value = designation.description || '';
+        }
+
+        function renderDesignationActionsTable() {
+            const tbody = document.querySelector('#designationActionsTable tbody');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            const designation = getSelectedDesignation();
+            if (!designation) return;
+
+            ensureSelectedDesignationMatrix();
+
+            const searchValue = String(designationState.filter || '').trim().toLowerCase();
+            const visibleModules = designationState.moduleKeys.filter((moduleKey) => {
+                if (!searchValue) return true;
+                return toLabel(moduleKey).toLowerCase().includes(searchValue) || String(moduleKey).toLowerCase().includes(searchValue);
+            });
+
+            visibleModules.forEach((moduleKey) => {
+                const tr = document.createElement('tr');
+                const labelTd = document.createElement('td');
+                labelTd.innerHTML = `<strong>${toLabel(moduleKey)}</strong><div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">${moduleKey}</div>`;
+                tr.appendChild(labelTd);
+
+                designationState.actionKeys.forEach((actionKey) => {
+                    const td = document.createElement('td');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'table-checkbox';
+                    checkbox.checked = designation.actionPermissions?.[moduleKey]?.[actionKey] === true;
+                    checkbox.dataset.moduleKey = moduleKey;
+                    checkbox.dataset.actionKey = actionKey;
+                    checkbox.addEventListener('change', () => {
+                        if (!designation.actionPermissions[moduleKey]) designation.actionPermissions[moduleKey] = {};
+                        designation.actionPermissions[moduleKey][actionKey] = checkbox.checked;
+                    });
+                    td.appendChild(checkbox);
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderDesignationEditor() {
+            renderDesignationSelect();
+            designationState.moduleKeys = buildDesignationModuleKeys();
+            renderDesignationDetails();
+            renderDesignationActionsTable();
+        }
+
+        async function loadDesignationPermissionsFromServer() {
+            const token = getAuthToken();
+            if (!token) return null;
+
+            const response = await fetch(`${API_BASE_URL}/designation-permissions`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const result = await parseJsonResponseCompat(response, 'Failed to load designation permissions.');
+            if (!response.ok) {
+                throw new Error(result?.message || 'Failed to load designation permissions.');
+            }
+            designationState.payload = result || { designations: [], permissions: {} };
+
+            const map = getDesignationMap();
+            const firstKey = Array.isArray(designationState.payload?.designations) && designationState.payload.designations[0]?.key
+                ? designationState.payload.designations[0].key
+                : Object.keys(map)[0];
+            designationState.selectedKey = designationState.selectedKey || firstKey || null;
+
+            renderDesignationEditor();
+            return designationState.payload;
+        }
+
+        async function saveDesignationPermissionsToServer() {
+            const token = getAuthToken();
+            if (!token) throw new Error('Please login first.');
+
+            const payload = {
+                permissions: getDesignationMap()
+            };
+
+            const response = await fetch(`${API_BASE_URL}/designation-permissions`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const result = await parseJsonResponseCompat(response, 'Failed to save designation permissions.');
+            if (!response.ok || result?.success === false) {
+                throw new Error(result?.message || 'Failed to save designation permissions.');
+            }
+
+            designationState.payload = result || designationState.payload;
+            const currentKey = designationState.selectedKey;
+            renderDesignationEditor();
+            if (currentKey) {
+                designationState.selectedKey = currentKey;
+                renderDesignationEditor();
+            }
+        }
+
+        function setActiveTab(which) {
+            const roleBtn = document.getElementById('tabRoleBtn');
+            const desigBtn = document.getElementById('tabDesignationBtn');
+            const roleSection = document.getElementById('rolePermissionsSection');
+            const desigSection = document.getElementById('designationPermissionsSection');
+
+            const showRole = which === 'role';
+            if (roleBtn) roleBtn.classList.toggle('active', showRole);
+            if (desigBtn) desigBtn.classList.toggle('active', !showRole);
+            if (roleSection) roleSection.hidden = !showRole;
+            if (desigSection) desigSection.hidden = showRole;
+
+            if (window.lucide) window.lucide.createIcons();
         }
 
         function renderRoleGroups() {
@@ -381,7 +817,7 @@
                 if (!alreadyExists) {
                     const extraOpt = document.createElement('option');
                     extraOpt.value = currentValue;
-                    extraOpt.textContent = currentValue;
+                    extraOpt.textContent = toLabel(currentValue);
                     select.appendChild(extraOpt);
                 }
                 select.value = currentValue;
@@ -414,33 +850,157 @@
             });
         }
 
+        function getRoleKeysForMapping(config) {
+            const keys = new Set();
+            ['Admin', 'Principal', 'Branch', 'Teacher', 'Student', 'Staff'].forEach((key) => keys.add(key));
+            Object.keys(config.roleGroups || {}).forEach((key) => keys.add(key));
+            return [...keys].sort((a, b) => a.localeCompare(b));
+        }
+
+        function renderRoleGroupMapping() {
+            const list = document.getElementById('roleGroupMappingList');
+            if (!list) return;
+            list.innerHTML = '';
+
+            const config = getPermissionsConfig();
+            if (!config.roleGroups || typeof config.roleGroups !== 'object') {
+                config.roleGroups = {};
+            }
+
+            const groupKeys = Object.keys(config.groups || {}).sort((a, b) => a.localeCompare(b));
+            const roleKeys = getRoleKeysForMapping(config);
+
+            roleKeys.forEach((roleKey) => {
+                const row = document.createElement('div');
+                row.className = 'login-access-row';
+                row.innerHTML = `
+                    <div style="min-width: 140px;"><strong>${toLabel(roleKey)}</strong></div>
+                    <select class="form-control" style="margin:0; max-width: 240px;">
+                        ${groupKeys.map((groupKey) => `<option value="${groupKey}">${config.groups[groupKey]?.name || groupKey} (${groupKey})</option>`).join('')}
+                    </select>
+                `;
+
+                const select = row.querySelector('select');
+                select.value = config.roleGroups[roleKey] || '';
+                if (!select.value && groupKeys.length) {
+                    select.value = groupKeys[0];
+                    config.roleGroups[roleKey] = select.value;
+                }
+
+                select.addEventListener('change', () => {
+                    config.roleGroups[roleKey] = select.value;
+                });
+
+                list.appendChild(row);
+            });
+        }
+
         function renderPermissionsTable() {
             const tbody = document.querySelector('#permissionsTable tbody');
             if (!tbody) return;
             const group = getSelectedGroup();
             tbody.innerHTML = '';
             if (!group) return;
-            permissionState.moduleKeys.forEach((moduleKey) => {
+            const visibleModules = getVisibleRoleModuleKeys();
+
+            visibleModules.forEach((moduleKey) => {
                 const tr = document.createElement('tr');
                 const label = document.createElement('td');
-                label.textContent = toLabel(moduleKey);
-                const accessCell = document.createElement('td');
-                accessCell.innerHTML = `
-                    <select class="form-control permission-select" data-module-key="${moduleKey}">
-                        <option value="none">No Access</option>
-                        <option value="view">View</option>
-                        <option value="edit">Edit</option>
-                        <option value="manage">Full</option>
-                    </select>
-                `;
-                const select = accessCell.querySelector('select');
-                select.value = group.permissions[moduleKey] || 'none';
-                select.addEventListener('change', () => {
-                    group.permissions[moduleKey] = select.value;
-                });
+                label.innerHTML = `<strong>${toLabel(moduleKey)}</strong><div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 0.15rem;">${moduleKey}</div>`;
                 tr.appendChild(label);
-                tr.appendChild(accessCell);
+
+                ensureRoleGroupActionMatrix(group, moduleKey);
+                const actions = group.actionPermissions[moduleKey];
+                permissionState.actionKeys.forEach((actionKey) => {
+                    const td = document.createElement('td');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.className = 'table-checkbox';
+                    checkbox.checked = actions?.[actionKey] === true;
+                    checkbox.addEventListener('change', () => {
+                        applyRoleActionToggle(group, moduleKey, actionKey, checkbox.checked);
+                        renderPermissionsTable();
+                    });
+                    td.appendChild(checkbox);
+                    tr.appendChild(td);
+                });
+
                 tbody.appendChild(tr);
+            });
+        }
+
+        function ensureRoleGroupActionMatrix(group, moduleKey) {
+            if (!group.actionPermissions || typeof group.actionPermissions !== 'object') {
+                group.actionPermissions = {};
+            }
+            if (!group.actionPermissions[moduleKey] || typeof group.actionPermissions[moduleKey] !== 'object') {
+                group.actionPermissions[moduleKey] = deriveRoleActionsFromAccess(group.permissions?.[moduleKey] || 'none');
+            }
+            permissionState.actionKeys.forEach((actionKey) => {
+                if (typeof group.actionPermissions[moduleKey][actionKey] !== 'boolean') {
+                    group.actionPermissions[moduleKey][actionKey] = false;
+                }
+            });
+            // Keep module access synced for navigation/page access.
+            group.permissions[moduleKey] = deriveAccessFromRoleActions(group.actionPermissions[moduleKey]);
+        }
+
+        function deriveRoleActionsFromAccess(accessLevel) {
+            const level = String(accessLevel || 'none').toLowerCase();
+            if (level === 'manage') {
+                return { view: true, add: true, edit: true, delete: true, export: true, import: true, bulk_action: true };
+            }
+            if (level === 'edit') {
+                return { view: true, add: true, edit: true, delete: false, export: false, import: false, bulk_action: false };
+            }
+            if (level === 'view') {
+                return { view: true, add: false, edit: false, delete: false, export: false, import: false, bulk_action: false };
+            }
+            return { view: false, add: false, edit: false, delete: false, export: false, import: false, bulk_action: false };
+        }
+
+        function deriveAccessFromRoleActions(actions = {}) {
+            const a = actions && typeof actions === 'object' ? actions : {};
+            const hasAny = permissionState.actionKeys.some((key) => a[key] === true);
+            if (!hasAny) return 'none';
+            const isFull = permissionState.actionKeys.every((key) => a[key] === true);
+            if (isFull) return 'manage';
+            const hasEditLike = a.add || a.edit || a.delete || a.import || a.bulk_action;
+            if (hasEditLike) return 'edit';
+            return 'view';
+        }
+
+        function applyRoleActionToggle(group, moduleKey, actionKey, nextValue) {
+            if (!group.actionPermissions || typeof group.actionPermissions !== 'object') {
+                group.actionPermissions = {};
+            }
+            if (!group.actionPermissions[moduleKey] || typeof group.actionPermissions[moduleKey] !== 'object') {
+                group.actionPermissions[moduleKey] = deriveRoleActionsFromAccess(group.permissions?.[moduleKey] || 'none');
+            }
+
+            const actions = group.actionPermissions[moduleKey];
+            actions[actionKey] = !!nextValue;
+
+            // Keep actions consistent.
+            if (actionKey === 'view' && nextValue === false) {
+                permissionState.actionKeys.forEach((key) => {
+                    actions[key] = false;
+                });
+            }
+
+            if (actionKey !== 'view' && nextValue === true) {
+                actions.view = true;
+            }
+
+            // Derive module access for navigation/page gating.
+            group.permissions[moduleKey] = deriveAccessFromRoleActions(actions);
+        }
+
+        function getVisibleRoleModuleKeys() {
+            const searchValue = String(permissionState.filter || '').trim().toLowerCase();
+            return permissionState.moduleKeys.filter((moduleKey) => {
+                if (!searchValue) return true;
+                return toLabel(moduleKey).toLowerCase().includes(searchValue) || String(moduleKey).toLowerCase().includes(searchValue);
             });
         }
 
@@ -466,6 +1026,7 @@
             permissionState.selectedGroupKey = permissionState.selectedGroupKey || Object.keys(config.groups || {})[0];
             renderRoleGroups();
             renderLoginAccess();
+            renderRoleGroupMapping();
             attachPermissionEvents();
         }
 
@@ -475,6 +1036,11 @@
             const homePageSelect = document.getElementById('roleHomePage');
             const saveBtn = document.getElementById('savePermissionsBtn');
             const addRoleBtn = document.getElementById('addRoleBtn');
+            const moduleSearch = document.getElementById('roleModuleSearch');
+            const setAllNoneBtn = document.getElementById('setAllNoneBtn');
+            const setAllViewBtn = document.getElementById('setAllViewBtn');
+            const setAllEditBtn = document.getElementById('setAllEditBtn');
+            const setAllManageBtn = document.getElementById('setAllManageBtn');
 
             if (select) {
                 select.addEventListener('change', () => {
@@ -488,6 +1054,7 @@
                     const selected = getSelectedGroup();
                     if (selected) selected.name = nameInput.value.trim();
                     renderRoleGroups();
+                    renderRoleGroupMapping();
                 });
             }
 
@@ -497,6 +1064,31 @@
                     if (selected) selected.homePage = homePageSelect.value;
                 });
             }
+
+            if (moduleSearch) {
+                moduleSearch.addEventListener('input', () => {
+                    permissionState.filter = moduleSearch.value || '';
+                    renderPermissionsTable();
+                });
+            }
+
+            const applyAllAccessLevel = (level) => {
+                const group = getSelectedGroup();
+                if (!group) return;
+                const visibleModules = getVisibleRoleModuleKeys();
+                visibleModules.forEach((moduleKey) => {
+                    ensureRoleGroupActionMatrix(group, moduleKey);
+                    const preset = deriveRoleActionsFromAccess(level);
+                    group.actionPermissions[moduleKey] = { ...preset };
+                    group.permissions[moduleKey] = deriveAccessFromRoleActions(group.actionPermissions[moduleKey]);
+                });
+                renderPermissionsTable();
+            };
+
+            if (setAllNoneBtn) setAllNoneBtn.addEventListener('click', () => applyAllAccessLevel('none'));
+            if (setAllViewBtn) setAllViewBtn.addEventListener('click', () => applyAllAccessLevel('view'));
+            if (setAllEditBtn) setAllEditBtn.addEventListener('click', () => applyAllAccessLevel('edit'));
+            if (setAllManageBtn) setAllManageBtn.addEventListener('click', () => applyAllAccessLevel('manage'));
 
             if (addRoleBtn) {
                 addRoleBtn.addEventListener('click', async () => {
@@ -526,6 +1118,7 @@
                     permissionState.selectedGroupKey = groupKey;
                     renderRoleGroups();
                     renderLoginAccess();
+                    renderRoleGroupMapping();
                 });
             }
 
@@ -535,10 +1128,12 @@
                     try {
                         saveBtn.disabled = true;
                         saveBtn.textContent = 'Saving...';
+                        const token = sessionStorage.getItem('eduCore_token') || '';
                         const response = await fetch(`${API_BASE_URL}/permissions`, {
                             method: 'POST',
                             headers: {
-                                'Content-Type': 'application/json'
+                                'Content-Type': 'application/json',
+                                ...(token ? { Authorization: `Bearer ${token}` } : {})
                             },
                             body: JSON.stringify(config)
                         });
@@ -550,6 +1145,7 @@
                         sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(permissionState.config));
                         renderRoleGroups();
                         renderLoginAccess();
+                        renderRoleGroupMapping();
                         showAppAlert('Permissions saved successfully.', 'Saved');
                     } catch (error) {
                         showAppAlert(error.message || 'Failed to save permissions.', 'Error');
@@ -589,6 +1185,109 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const config = await loadPermissionConfigFromServer();
             initializePermissionEditor(config);
+
+            const tabRoleBtn = document.getElementById('tabRoleBtn');
+            const tabDesignationBtn = document.getElementById('tabDesignationBtn');
+            if (tabRoleBtn) tabRoleBtn.addEventListener('click', () => setActiveTab('role'));
+            if (tabDesignationBtn) tabDesignationBtn.addEventListener('click', () => setActiveTab('designation'));
+            setActiveTab('role');
+
+            const designationSelect = document.getElementById('designationSelect');
+            if (designationSelect) {
+                designationSelect.addEventListener('change', () => {
+                    designationState.selectedKey = designationSelect.value;
+                    designationState.filter = '';
+                    const searchInput = document.getElementById('designationModuleSearch');
+                    if (searchInput) searchInput.value = '';
+                    renderDesignationEditor();
+                });
+            }
+
+            const designationName = document.getElementById('designationName');
+            if (designationName) {
+                designationName.addEventListener('input', () => {
+                    const selected = getSelectedDesignation();
+                    if (!selected) return;
+                    selected.name = designationName.value.trim();
+                    renderDesignationSelect();
+                });
+            }
+
+            const designationDescription = document.getElementById('designationDescription');
+            if (designationDescription) {
+                designationDescription.addEventListener('input', () => {
+                    const selected = getSelectedDesignation();
+                    if (!selected) return;
+                    selected.description = designationDescription.value.trim();
+                });
+            }
+
+            const moduleSearch = document.getElementById('designationModuleSearch');
+            if (moduleSearch) {
+                moduleSearch.addEventListener('input', () => {
+                    designationState.filter = moduleSearch.value || '';
+                    renderDesignationActionsTable();
+                });
+            }
+
+            const addDesignationBtn = document.getElementById('addDesignationBtn');
+            if (addDesignationBtn) {
+                addDesignationBtn.addEventListener('click', async () => {
+                    const name = prompt('Designation name (e.g., Computer Operator)');
+                    if (!name) return;
+                    const key = normalizeKey(prompt('Designation key (e.g., computer_operator)') || name);
+                    if (!key) {
+                        showAppAlert('A valid designation key is required.', 'Error');
+                        return;
+                    }
+
+                    const map = getDesignationMap();
+                    if (map[key]) {
+                        showAppAlert('This designation key already exists.', 'Error');
+                        return;
+                    }
+
+                    map[key] = {
+                        name: String(name).trim(),
+                        description: '',
+                        actionPermissions: {}
+                    };
+
+                    if (!designationState.payload) designationState.payload = { designations: [], permissions: map };
+                    if (!Array.isArray(designationState.payload.designations)) designationState.payload.designations = [];
+                    designationState.payload.designations.push({
+                        key,
+                        name: String(name).trim(),
+                        description: ''
+                    });
+
+                    designationState.selectedKey = key;
+                    renderDesignationEditor();
+                });
+            }
+
+            const saveDesignationBtn = document.getElementById('saveDesignationBtn');
+            if (saveDesignationBtn) {
+                saveDesignationBtn.addEventListener('click', async () => {
+                    try {
+                        saveDesignationBtn.disabled = true;
+                        saveDesignationBtn.textContent = 'Saving...';
+                        await saveDesignationPermissionsToServer();
+                        showAppAlert('Designation action permissions saved successfully.', 'Saved');
+                    } catch (error) {
+                        showAppAlert(error.message || 'Failed to save designation permissions.', 'Error');
+                    } finally {
+                        saveDesignationBtn.disabled = false;
+                        saveDesignationBtn.textContent = 'Save Action Permissions';
+                    }
+                });
+            }
+
+            try {
+                await loadDesignationPermissionsFromServer();
+            } catch (error) {
+                console.warn('Designation permissions load failed:', error.message);
+            }
         });
     </script>
 </body>

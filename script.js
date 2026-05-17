@@ -12,6 +12,7 @@ const STORAGE_KEY_TEACHER_SALARIES = 'eduCore_teacher_salaries';
 const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher credentials
 const STORAGE_KEY_PROMOTION_HISTORY = 'eduCore_promotion_history';
 const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
+const STORAGE_KEY_ALUMNI = 'eduCore_alumni';
 let teacherScheduleDraft = [];
 
 // === REAL-TIME SQL CONFIGURATION ===
@@ -24,13 +25,99 @@ const isLocalhost = window.location.hostname === 'localhost' ||
     window.location.protocol === 'file:';
 
 const BACKEND_URL = isLocalhost
-    ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
+    ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin)
     : (window.ENV_BACKEND_URL || window.location.origin);
 
 const API_BASE_URL = `${BACKEND_URL}/api`;
 let socket;
-let activeSessionsCache = [];
-let activeSessionsModalBound = false;
+let activePortalSessionsCache = [];
+let dashboardActiveSessionsInterval = null;
+let activeSessionsModalEventsBound = false;
+const DEFAULT_CAMPUS_NAMES = ['Main Campus'];
+const DEFAULT_STUDENT_CLASS_ORDER = [
+    'Play Group', 'Nursery', 'Prep',
+    'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
+    'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'
+];
+let studentQuickFilterBranchCampuses = [];
+let studentColumnSearchFilter = null;
+let classFeeDefaults = {};
+const FALLBACK_ROUTE_TO_PAGE = {
+    login: 'index.html',
+    index: 'index.html',
+    dashboard: 'dashboard.html',
+    students: 'students.html',
+    student_scheduling: 'student_scheduling.html',
+    student_timetable: 'student_timetable.html',
+    student_diary: 'student_diary.html',
+    student_leave_requests: 'student_leave_requests.html',
+    student_courses: 'student_courses.html',
+    banners: 'banners.html',
+    teachers: 'teachers.html',
+    teacher_scheduling: 'teacher_scheduling.html',
+    staff: 'staff.html',
+    classes: 'classes.html',
+    fees: 'fees.html',
+    fee_challan: 'fee_challan.html',
+    certificate: 'certificate.html',
+    complain_box: 'complain_box.html',
+    diary: 'diary.html',
+    visitor_books: 'visitor_books.html',
+    annual_charges: 'annual_charges.html',
+    teacher_salaries: 'teacher_salaries.html',
+    student_attendance: 'student_attendance.html',
+    teacher_attendance: 'teacher_attendance.html',
+    student_attendance_report: 'student_attendance_report.html',
+    teacher_attendance_report: 'teacher_attendance_report.html',
+    notifications: 'notifications.html',
+    special_notices: 'special_notices.html',
+    exams: 'exams.html',
+    revenue: 'revenue.html',
+    settings: 'settings.html',
+    permissions: 'permissions.html',
+    branch_registration: 'branch_registration.html',
+    aboutme: 'aboutme.html',
+    student_portal: 'student_portal.html',
+    teacher_portal: 'teacher_portal.html'
+};
+
+function normalizeClientPageName(pageValue = '') {
+    if (window.eduCoreAuth?.resolvePageNameFromPath) {
+        return window.eduCoreAuth.resolvePageNameFromPath(pageValue);
+    }
+
+    const rawValue = String(pageValue || '').trim().toLowerCase();
+    if (!rawValue || rawValue === '/' || rawValue === '.') return 'index.html';
+
+    const withoutHash = rawValue.split('#')[0];
+    const withoutQuery = withoutHash.split('?')[0];
+    const trimmedPath = withoutQuery.replace(/^\/+|\/+$/g, '');
+    if (!trimmedPath) return 'index.html';
+
+    const segment = trimmedPath.split('/').pop() || '';
+    if (!segment) return 'index.html';
+    if (FALLBACK_ROUTE_TO_PAGE[segment]) return FALLBACK_ROUTE_TO_PAGE[segment];
+    if (segment.endsWith('.html')) return segment;
+    return `${segment}.html`;
+}
+
+function getCurrentPageName() {
+    return normalizeClientPageName(window.location.pathname);
+}
+
+function isCurrentPage(...pageNames) {
+    const currentPage = getCurrentPageName();
+    return pageNames.some((pageName) => normalizeClientPageName(pageName) === currentPage);
+}
+
+function toRoutePath(pageName = '') {
+    if (window.eduCoreAuth?.toRoutePath) {
+        return window.eduCoreAuth.toRoutePath(pageName);
+    }
+    const normalizedPage = normalizeClientPageName(pageName);
+    if (normalizedPage === 'index.html') return '/login';
+    return `/${normalizedPage.replace(/\.html$/i, '')}`;
+}
 
 (function installAppPopups() {
     if (window.showAppAlert && window.showAppConfirm) return;
@@ -164,28 +251,34 @@ let activeSessionsModalBound = false;
 if (typeof io !== 'undefined') {
     socket = io(BACKEND_URL);
 
-    socket.on('session_forced_logout', (payload = {}) => {
-        const currentSessionId = sessionStorage.getItem('eduCore_session_id');
-        if (payload.sessionId && currentSessionId && payload.sessionId === currentSessionId) {
-            alert('This login session has been logged out by admin.');
-            logoutUser();
-        }
-    });
-
     // Listen for Real-Time SQL Updates
     socket.on('students_update', (data) => {
         localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(mergeStudentRecords(data)));
-        if (window.location.pathname.includes('students.html')) renderStudents();
+        if (isCurrentPage('students.html')) renderStudents();
+        if (isCurrentPage('dashboard.html')) updateDashboardStats();
     });
 
     socket.on('teachers_update', (data) => {
         localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(mergeTeacherRecords(data)));
-        if (window.location.pathname.includes('teachers.html')) renderTeachers();
+        if (isCurrentPage('teachers.html')) renderTeachers();
+        if (isCurrentPage('dashboard.html')) updateDashboardStats();
     });
 
     socket.on('staff_update', (data) => {
         localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergeStaffRecords(data)));
-        if (window.location.pathname.includes('staff.html')) renderStaff();
+        if (isCurrentPage('staff.html')) renderStaff();
+        if (isCurrentPage('dashboard.html')) updateDashboardStats();
+    });
+
+    socket.on('session_forced_logout', (payload) => {
+        const targetSessionId = String(payload?.sessionId || '').trim();
+        const currentSessionId = String(sessionStorage.getItem('eduCore_session_id') || '').trim();
+        if (!targetSessionId || !currentSessionId || targetSessionId !== currentSessionId) return;
+
+        showAppAlert('This login session has been logged out by admin.', 'Session Ended')
+            .finally(() => {
+                logoutUser();
+            });
     });
 }
 
@@ -211,21 +304,32 @@ async function syncToSQL(endpoint, data) {
 
 async function syncToSQLDetailed(endpoint, data) {
     try {
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        console.log(`Syncing ${endpoint}: Sending ${Array.isArray(data) ? data.length : 1} items`);
+        
         const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
             body: JSON.stringify(data)
         });
 
+        console.log(`API response status for ${endpoint}: ${response.status}`);
+        
         const result = await parseJsonResponse(response, 'Server sync failed.');
 
         if (!response.ok || result?.success === false) {
-            throw new Error(result?.message || result?.error || 'Server sync failed.');
+            const errorMsg = result?.message || result?.error || 'Server sync failed.';
+            console.error(`Sync failed for ${endpoint}:`, errorMsg);
+            throw new Error(errorMsg);
         }
 
+        console.log(`Sync successful for ${endpoint}:`, result);
         return { success: true, result };
     } catch (e) {
-        console.warn(`SQL sync failed for ${endpoint}: ${e.message}`);
+        console.error(`SQL sync failed for ${endpoint}: ${e.message}`);
         return { success: false, error: e.message };
     }
 }
@@ -240,7 +344,10 @@ function getMissingRecords(localRecords, serverRecords) {
 
 async function initialSQLSync() {
     try {
-        const sRes = await fetch(`${API_BASE_URL}/students`);
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const sRes = await fetch(`${API_BASE_URL}/students`, { headers: authHeaders });
         if (sRes.ok) {
             const data = await sRes.json();
             const mergedStudents = mergeStudentRecords(data);
@@ -250,17 +357,23 @@ async function initialSQLSync() {
                 await syncToSQL('students', missingStudents);
             }
             if (typeof renderStudents === 'function') renderStudents();
+            if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
-        const tRes = await fetch(`${API_BASE_URL}/teachers`);
+        const tRes = await fetch(`${API_BASE_URL}/teachers`, { headers: authHeaders });
         if (tRes.ok) {
             const data = await tRes.json();
             const mergedTeachers = mergeTeacherRecords(data);
             localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(mergedTeachers));
+            const missingTeachers = getMissingRecords(mergedTeachers, data);
+            if (missingTeachers.length) {
+                await syncToSQL('teachers', missingTeachers);
+            }
             if (typeof renderTeachers === 'function') renderTeachers();
+            if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
-        const staffRes = await fetch(`${API_BASE_URL}/staff`);
+        const staffRes = await fetch(`${API_BASE_URL}/staff`, { headers: authHeaders });
         if (staffRes.ok) {
             const data = await staffRes.json();
             const mergedStaff = mergeStaffRecords(data);
@@ -270,6 +383,7 @@ async function initialSQLSync() {
                 await syncToSQL('staff', missingStaff);
             }
             if (typeof renderStaff === 'function') renderStaff();
+            if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
         await Promise.all([
@@ -279,7 +393,61 @@ async function initialSQLSync() {
     } catch (e) {
         console.warn("SQL Server Connection Failed: Ensure 'node server.js' is running and MySQL is active.");
         console.log("SQL Initial Sync skipped (server offline). Using LocalStorage fallback.");
+        if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
     }
+}
+
+async function refreshStudentsFromSQL() {
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    console.log('Fetching students from SQL API...');
+    
+    const response = await fetch(`${API_BASE_URL}/students`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    
+    console.log(`API response status: ${response.status}`);
+    
+    const result = await parseJsonResponse(response, 'Students could not be loaded.');
+    
+    if (!response.ok || !Array.isArray(result)) {
+        throw new Error(result?.message || result?.error || 'Students could not be loaded.');
+    }
+    
+    console.log(`API returned ${Array.isArray(result) ? result.length : 0} students`);
+    
+    const mergedStudents = mergeStudentRecords(result);
+    console.log(`After merge: ${mergedStudents.length} students total`);
+    
+    localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(mergedStudents));
+    return mergedStudents;
+}
+
+async function refreshTeachersFromSQL() {
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    const response = await fetch(`${API_BASE_URL}/teachers`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    const result = await parseJsonResponse(response, 'Teachers could not be loaded.');
+    if (!response.ok || !Array.isArray(result)) {
+        throw new Error(result?.message || result?.error || 'Teachers could not be loaded.');
+    }
+    const mergedTeachers = mergeTeacherRecords(result);
+    localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(mergedTeachers));
+    return mergedTeachers;
+}
+
+async function refreshStaffFromSQL() {
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    const response = await fetch(`${API_BASE_URL}/staff`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+    const result = await parseJsonResponse(response, 'Staff could not be loaded.');
+    if (!response.ok || !Array.isArray(result)) {
+        throw new Error(result?.message || result?.error || 'Staff could not be loaded.');
+    }
+    const mergedStaff = mergeStaffRecords(result);
+    localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergedStaff));
+    return mergedStaff;
 }
 
 function normalizeAttendanceStatus(status) {
@@ -374,20 +542,36 @@ async function saveTeacherAttendanceToSQLRecord(teacherId, date, status) {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+    initializeDashboardHome();
 
     // Perform initial sync from SQL Server
-    initialSQLSync();
+    if (sessionStorage.getItem('eduCore_token')) {
+        initialSQLSync();
+    }
+    populateCampusDropdowns();
     ensureBranchRegistrationNav();
+    ensureBannersNav();
+    ensureSchedulingNav();
+    ensureAdminRecordsNav();
     ensureAttendanceNav();
     ensureNotificationsNav();
     ensureSpecialNoticesNav();
-    ensureResetDataNav();
     applyBranchScopedStudentsView();
+    if (sessionStorage.getItem('eduCore_token')) {
+        loadDesignationPermissionsForCurrentUser()
+            .catch(() => null)
+            .finally(() => {
+                applyStudentActionPermissions();
+                if (typeof renderStudents === 'function') renderStudents();
+            });
+    }
 
     // === INIT ICONS ===
     if (typeof lucide !== 'undefined' && window.lucide && window.lucide.createIcons) {
         window.lucide.createIcons();
     }
+
+    showWelcomeAnimationIfNeeded();
 
     // === NOTIFICATION SYSTEM ===
     const bell = document.getElementById('notificationBell');
@@ -487,10 +671,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Store JWT and User Info
                     sessionStorage.setItem('eduCore_token', result.token);
-                    if (result.sessionId) {
-                        sessionStorage.setItem('eduCore_session_id', result.sessionId);
-                    }
                     sessionStorage.setItem('loggedInUser', JSON.stringify(result.user));
+                    if (result.sessionId) {
+                        sessionStorage.setItem('eduCore_session_id', String(result.sessionId));
+                    } else {
+                        sessionStorage.removeItem('eduCore_session_id');
+                    }
                     sessionStorage.removeItem('eduCore_permissions_config');
                     if (result.permissions) {
                         sessionStorage.setItem('eduCore_permissions_config', JSON.stringify(result.permissions));
@@ -500,21 +686,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     const loginTracking = JSON.parse(localStorage.getItem('EDUCORE_LOGIN_TRACKING')) || { count: 0, lastLogin: null };
                     loginTracking.count += 1;
                     loginTracking.lastLogin = new Date().toISOString();
-                    localStorage.setItem('EDUCORE_LOGIN_TRACKING', JSON.stringify(loginTracking));
-
-                    pushNotification('System Access', `${result.user.role} logged in: ${result.user.fullName}`, 'login');
-
-                    btn.innerText = 'Redirecting...';
+                     localStorage.setItem('EDUCORE_LOGIN_TRACKING', JSON.stringify(loginTracking));
+ 
+                     pushNotification('System Access', `${result.user.role} logged in: ${result.user.fullName}`, 'login');
+                    queueWelcomeAnimationForNextPage(result.user);
+ 
+                     btn.innerText = 'Redirecting...';
 
                     const getDefaultRoleHome = () => {
                         if (result.user.role === 'Admin') return 'dashboard.html';
                         if (result.user.role === 'Branch') return 'students.html';
                         if (result.user.role === 'Student') return 'student_portal.html';
+                        if (result.user.role === 'Teacher') return 'teacher_portal.html';
                         return 'dashboard.html';
                     };
 
                     const getPermissionHome = () => {
                         if (!result.permissions) return '';
+                        if (result.user.role === 'Student') return 'student_portal.html';
+                        if (result.user.role === 'Teacher') return 'teacher_portal.html';
                         const groupKey = result.user.groupKey || result.permissions.roleGroups?.[result.user.role];
                         const group = result.permissions.groups?.[groupKey];
                         const pageRegistry = window.eduCoreAuth?.pageRegistry || {};
@@ -528,7 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     };
 
                     setTimeout(() => {
-                        window.location.href = getPermissionHome() || getDefaultRoleHome();
+                        window.location.href = toRoutePath(getPermissionHome() || getDefaultRoleHome());
                     }, 800);
                 } else {
                     throw new Error(result.message || 'Invalid Username or Password');
@@ -552,37 +742,84 @@ document.addEventListener('DOMContentLoaded', () => {
     // === STUDENT PAGE ===
     const studentForm = document.getElementById('studentForm');
     if (studentForm) {
-        const existingStudents = getData(STORAGE_KEY_STUDENTS);
+        const existingStudents = getArrayData(STORAGE_KEY_STUDENTS);
         const normalizedStudents = mergeStudentRecords(existingStudents);
         if (JSON.stringify(existingStudents) !== JSON.stringify(normalizedStudents)) {
             localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(normalizedStudents));
         }
         renderStudents(); // Initial Load
+        refreshStudentsFromSQL()
+            .then(() => renderStudents())
+            .catch((error) => {
+                console.warn('Students could not be refreshed from database:', error.message);
+                renderStudents();
+            });
+        loadStudentQuickFilterBranchCampuses();
+        loadClassFeeDefaults().then(() => {
+            bindStudentClassFeeAutoFill();
+        }).catch(() => {
+            bindStudentClassFeeAutoFill();
+        });
         studentForm.addEventListener('submit', handleStudentFormSubmit);
         const studentSearch = document.getElementById('studentSearchInput');
-        const quickFilter = document.getElementById('quickStudentFilter');
-        const studentPhotoInput = document.getElementById('studentProfileImage');
-        const classSelect = document.getElementById('classGrade');
-        const fullNameInput = document.getElementById('fullName');
-        if (studentSearch) {
-            studentSearch.addEventListener('input', renderStudents);
+        const quickFilter = document.getElementById('studentQuickFilter');
+        const printMode = document.getElementById('studentPrintMode');
+        const studentProfileImage = document.getElementById('studentProfileImage');
+        const studentNameInput = document.getElementById('fullName');
+        bindStudentQuickFilterMultiSelect();
+        if (studentProfileImage) {
+            studentProfileImage.addEventListener('change', handleStudentPhotoSelection);
         }
-        if (quickFilter) quickFilter.addEventListener('change', renderStudents);
-        if (studentPhotoInput) studentPhotoInput.addEventListener('change', handleStudentPhotoSelection);
-        if (classSelect) classSelect.addEventListener('change', applySelectedClassFee);
-        if (fullNameInput) fullNameInput.addEventListener('input', () => setStudentPhotoPreview('', fullNameInput.value));
-        populateStudentFormOptions();
-        populateQuickStudentFilters();
+        if (studentNameInput) {
+            studentNameInput.addEventListener('input', () => {
+                const currentImage = document.querySelector('#studentPhotoPreview img')?.getAttribute('src') || '';
+                setStudentPhotoPreview(currentImage, studentNameInput.value);
+            });
+        }
+        if (studentSearch) {
+            studentSearch.addEventListener('input', () => {
+                studentColumnSearchFilter = null;
+                studentSearch.placeholder = 'Search by name, roll no, or student ID';
+                renderStudents();
+            });
+        }
+        if (quickFilter) {
+            quickFilter.addEventListener('change', renderStudents);
+        }
+        if (printMode) {
+            const saved = String(localStorage.getItem('eduCore_student_print_mode') || '').trim();
+            printMode.value = (saved === 'outer' || saved === 'school') ? saved : 'school';
+            printMode.addEventListener('change', () => {
+                localStorage.setItem('eduCore_student_print_mode', String(printMode.value || 'school'));
+            });
+        }
     }
 
     // === TEACHER PAGE ===
     const teacherForm = document.getElementById('teacherForm');
     if (teacherForm) {
         renderTeachers(); // Initial Load
+        refreshTeachersFromSQL()
+            .then(() => renderTeachers())
+            .catch((error) => {
+                console.warn('Teachers could not be refreshed from database:', error.message);
+                renderTeachers();
+            });
         teacherForm.addEventListener('submit', handleTeacherFormSubmit);
         const tSearch = document.getElementById('teacherSearchInput');
         const tCampusFilter = document.getElementById('teacherCampusFilter');
         const tGenderFilter = document.getElementById('teacherGenderFilter');
+        const teacherProfileImage = document.getElementById('tProfileImage');
+        const teacherNameInput = document.getElementById('tFullName');
+        if (teacherProfileImage) {
+            teacherProfileImage.addEventListener('change', handleTeacherPhotoSelection);
+        }
+        if (teacherNameInput) {
+            teacherNameInput.addEventListener('input', () => {
+                const currentImage = document.querySelector('#teacherPhotoPreview img')?.getAttribute('src') || '';
+                setTeacherPhotoPreview(currentImage, teacherNameInput.value);
+            });
+        }
         if (tSearch) {
             tSearch.addEventListener('input', (e) => renderTeachers(e.target.value.toLowerCase()));
         }
@@ -602,6 +839,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const staffForm = document.getElementById('staffForm');
     if (staffForm) {
         renderStaff(); // Initial Load
+        refreshStaffFromSQL()
+            .then(() => renderStaff())
+            .catch((error) => {
+                console.warn('Staff could not be refreshed from database:', error.message);
+                renderStaff();
+            });
         staffForm.addEventListener('submit', handleStaffFormSubmit);
         const sSearch = document.getElementById('staffSearchInput');
         if (sSearch) {
@@ -634,18 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // === DASHBOARD HOME LOGIC ===
-    const dashStudentCount = document.getElementById('dashStudentCount');
-    if (dashStudentCount) {
-        // We are on the dashboard
-        updateDashboardStats();
-        window.setInterval(updateActivePortalLogins, 30000);
-        // renderDashboardTable(); // Table removed by user request
-
-        const dSearch = document.getElementById('dashSearch');
-        if (dSearch) {
-            dSearch.addEventListener('input', (e) => { }); // renderDashboardTable(e.target.value.toLowerCase())
-        }
-    }
+    initializeDashboardHome();
 
     // === FINANCE PAGE ===
     const financeTable = document.getElementById('financeTable');
@@ -666,7 +898,111 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function getData(key) {
     const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    try {
+        return JSON.parse(data);
+    } catch (error) {
+        console.warn(`Invalid local data for ${key}: ${error.message}`);
+        return [];
+    }
+}
+
+function getArrayData(key) {
+    const value = getData(key);
+    return Array.isArray(value) ? value : [];
+}
+
+function getUniqueCampusNames(extraCampuses = []) {
+    const campusMap = new Map();
+    const addCampus = (campusName) => {
+        const normalized = String(campusName || '').trim();
+        if (!normalized) return;
+        const key = normalized.toLowerCase();
+        if (!campusMap.has(key)) campusMap.set(key, normalized);
+    };
+
+    DEFAULT_CAMPUS_NAMES.forEach(addCampus);
+    extraCampuses.forEach(addCampus);
+    getArrayData(STORAGE_KEY_STUDENTS).forEach((student) => addCampus(student.campusName));
+    getArrayData(STORAGE_KEY_TEACHERS).forEach((teacher) => addCampus(teacher.campusName || teacher.bankBranch));
+    getData(STORAGE_KEY_STAFF).forEach((staff) => addCampus(staff.campusName || staff.bankBranch));
+
+    return Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+}
+
+function populateCampusSelect(selectId, campuses, placeholder, selectedValue = '') {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const previousValue = selectedValue || select.value || '';
+    select.innerHTML = `<option value="">${placeholder}</option>`;
+
+    campuses.forEach((campusName) => {
+        const option = document.createElement('option');
+        option.value = campusName;
+        option.textContent = campusName;
+        select.appendChild(option);
+    });
+
+    if (previousValue && !campuses.some((campusName) => campusName.toLowerCase() === previousValue.toLowerCase())) {
+        const option = document.createElement('option');
+        option.value = previousValue;
+        option.textContent = previousValue;
+        select.appendChild(option);
+    }
+
+    select.value = previousValue;
+
+    if (!select.value && (selectId === 'campusName' || selectId === 'tCampusName') && campuses.length === 1) {
+        select.value = campuses[0];
+    }
+}
+
+async function loadRegisteredCampusNames() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/branches`);
+        const result = await parseJsonResponse(response, 'Branches could not be loaded.');
+        if (!response.ok || !Array.isArray(result)) {
+            throw new Error('Branches could not be loaded.');
+        }
+        return getUniqueCampusNames(result.map((branch) => branch.campusName));
+    } catch (error) {
+        return getUniqueCampusNames();
+    }
+}
+
+async function populateCampusDropdowns() {
+    const campuses = await loadRegisteredCampusNames();
+    populateCampusSelect('campusName', campuses, campuses.length ? 'Select Campus' : 'Add campus in Branch Registration first');
+    populateCampusSelect('tCampusName', campuses, campuses.length ? 'Select Campus' : 'Add campus in Branch Registration first');
+    populateCampusSelect('teacherCampusFilter', campuses, 'All Campuses');
+    populateCampusSelect('tBankBranch', campuses, campuses.length ? 'Select Branch' : 'Add campus in Branch Registration first');
+    populateCampusSelect('sBankBranch', campuses, campuses.length ? 'Select Branch' : 'Add campus in Branch Registration first');
+}
+
+function ensureStudentCampusDefault() {
+    const campusSelect = document.getElementById('campusName');
+    if (!campusSelect) return;
+
+    const campuses = getUniqueCampusNames();
+    const defaultCampus = campuses[0] || DEFAULT_CAMPUS_NAMES[0] || 'Main Campus';
+    if (![...campusSelect.options].some((option) => option.value === defaultCampus)) {
+        const option = document.createElement('option');
+        option.value = defaultCampus;
+        option.textContent = defaultCampus;
+        campusSelect.appendChild(option);
+    }
+    if (!campusSelect.value) campusSelect.value = defaultCampus;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    }[char]));
 }
 
 function isHashedPassword(value) {
@@ -692,12 +1028,12 @@ function formatScheduleTime(startTime = '', endTime = '') {
 }
 
 function mergeStudentRecords(incomingStudents) {
-    const existingStudents = getData(STORAGE_KEY_STUDENTS);
+    const existingStudents = getArrayData(STORAGE_KEY_STUDENTS);
     const incomingList = Array.isArray(incomingStudents) ? incomingStudents : [];
     let nextStudentCodeNumber = 1;
 
     existingStudents.forEach(student => {
-        const match = String(student.studentCode || '').match(/(\d+)$/);
+        const match = String(student.studentCode || '').trim().match(/^STU-(\d{1,5})$/i);
         if (match) {
             const parsed = parseInt(match[1], 10);
             if (!Number.isNaN(parsed) && parsed >= nextStudentCodeNumber) {
@@ -721,40 +1057,121 @@ function mergeStudentRecords(incomingStudents) {
             profileImage: student.profileImage || localStudent.profileImage || '',
             admissionDate: student.admissionDate || localStudent.admissionDate || '',
             gender: student.gender || localStudent.gender || '',
-            campusName: student.campusName || localStudent.campusName || 'Main Campus',
-            enrollmentStatus: student.enrollmentStatus || localStudent.enrollmentStatus || 'Active',
+        campusName: student.campusName || localStudent.campusName || '',
+            enrollmentStatus: student.enrollmentStatus || localStudent.enrollmentStatus || (student.isTerminated ? 'Terminated' : 'Active'),
+            terminatedAt: student.terminatedAt || localStudent.terminatedAt || '',
+            terminationNote: student.terminationNote || localStudent.terminationNote || '',
             plainPassword: student.plainPassword || localStudent.plainPassword ||
                 (localStudent.password && !isHashedPassword(localStudent.password) ? localStudent.password : '')
         };
-    });
-
-    existingStudents.forEach((student) => {
-        if (!mergedStudents.some(item => item.id === student.id)) {
-            mergedStudents.push(student);
-        }
     });
 
     return mergedStudents;
 }
 
 function mergeTeacherRecords(incomingTeachers) {
-    const existingTeachers = getData(STORAGE_KEY_TEACHERS);
+    const existingTeachers = getArrayData(STORAGE_KEY_TEACHERS);
     const incomingList = Array.isArray(incomingTeachers) ? incomingTeachers : [];
-
-    return incomingList.map((teacher) => {
+    const mergedTeachers = incomingList.map((teacher) => {
         const localTeacher = existingTeachers.find(item => item.id === teacher.id) || {};
+        const normalizedDesignation = normalizeTeacherDesignation(
+            teacher.designation || localTeacher.designation,
+            teacher.groupKey || localTeacher.groupKey
+        );
 
         return {
             ...localTeacher,
             ...teacher,
-            designation: teacher.designation || localTeacher.designation || 'Teacher',
-            groupKey: teacher.groupKey || localTeacher.groupKey || 'teacher',
+            designation: normalizedDesignation.designation,
+            groupKey: normalizedDesignation.groupKey,
             profileImage: teacher.profileImage || localTeacher.profileImage || '',
             schedule: normalizeTeacherSchedule(teacher.schedule || localTeacher.schedule),
             plainPassword: teacher.plainPassword || localTeacher.plainPassword ||
                 (localTeacher.password && !isHashedPassword(localTeacher.password) ? localTeacher.password : '')
         };
     });
+
+    existingTeachers.forEach((teacher) => {
+        if (!mergedTeachers.some(item => item.id === teacher.id)) {
+            mergedTeachers.push(teacher);
+        }
+    });
+
+    return mergedTeachers;
+}
+
+function isStudentTerminated(student) {
+    const enrollmentStatus = String(student?.enrollmentStatus || '').trim().toLowerCase();
+    if (enrollmentStatus === 'terminated' || enrollmentStatus === 'left' || enrollmentStatus === 'inactive') return true;
+    if (student?.isTerminated === true) return true; // legacy
+    return String(student?.feesStatus || '').trim().toLowerCase() === 'terminated';
+}
+
+function terminateStudent(studentId) {
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const index = students.findIndex((s) => String(s?.id || '') === String(studentId || ''));
+    if (index === -1) return;
+
+    const student = students[index];
+    if (isStudentTerminated(student)) {
+        showAppAlert('Student is already marked as terminated.', 'No Changes');
+        return;
+    }
+
+    const confirmText = `Mark "${student.fullName || 'Student'}" as terminated (left school)?\n\nAfter termination, fee calculation and challan generation will be disabled for this student.`;
+    const ok = typeof showAppConfirm === 'function' ? showAppConfirm(confirmText) : Promise.resolve(window.confirm(confirmText));
+
+    Promise.resolve(ok).then((confirmed) => {
+        if (!confirmed) return;
+
+        const today = new Date().toISOString().split('T')[0];
+        const updatedStudent = {
+            ...student,
+            enrollmentStatus: 'Terminated',
+            terminatedAt: today,
+            terminationNote: student.terminationNote || ''
+        };
+
+        students[index] = updatedStudent;
+        saveData(STORAGE_KEY_STUDENTS, students, { skipSync: true });
+        syncToSQLDetailed('students', [updatedStudent]).catch(() => {});
+        pushNotification('Student Updated', `"${updatedStudent.fullName || 'Student'}" marked as terminated.`, 'info');
+        renderStudents();
+        renderAdminRecordPanels();
+    }).catch(() => {});
+}
+
+function reactivateStudent(studentId) {
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const index = students.findIndex((s) => String(s?.id || '') === String(studentId || ''));
+    if (index === -1) return;
+
+    const student = students[index];
+    if (!isStudentTerminated(student)) {
+        showAppAlert('Student is not marked as terminated.', 'No Changes');
+        return;
+    }
+
+    const confirmText = `Reactivate "${student.fullName || 'Student'}"?\n\nThis will include the student again in fee calculations and challan generation.`;
+    const ok = typeof showAppConfirm === 'function' ? showAppConfirm(confirmText) : Promise.resolve(window.confirm(confirmText));
+
+    Promise.resolve(ok).then((confirmed) => {
+        if (!confirmed) return;
+
+        const updatedStudent = {
+            ...student,
+            enrollmentStatus: 'Active',
+            terminatedAt: '',
+            terminationNote: ''
+        };
+
+        students[index] = updatedStudent;
+        saveData(STORAGE_KEY_STUDENTS, students, { skipSync: true });
+        syncToSQLDetailed('students', [updatedStudent]).catch(() => {});
+        pushNotification('Student Updated', `"${updatedStudent.fullName || 'Student'}" reactivated.`, 'success');
+        renderStudents();
+        renderAdminRecordPanels();
+    }).catch(() => {});
 }
 
 function mergeStaffRecords(incomingStaff) {
@@ -786,11 +1203,22 @@ function getStudentInitial(name) {
     return (String(name || 'S').trim().charAt(0) || 'S').toUpperCase();
 }
 
+function getTeacherInitial(name) {
+    return (String(name || 'T').trim().charAt(0) || 'T').toUpperCase();
+}
+
 function buildStudentAvatarMarkup(student) {
     if (student.profileImage) {
         return `<img src="${student.profileImage}" alt="${student.fullName || 'Student'}">`;
     }
     return getStudentInitial(student.fullName);
+}
+
+function buildTeacherAvatarMarkup(teacher) {
+    if (teacher.profileImage) {
+        return `<img src="${teacher.profileImage}" alt="${teacher.fullName || 'Teacher'}">`;
+    }
+    return getTeacherInitial(teacher.fullName);
 }
 
 function setStudentPhotoPreview(imageSrc = '', fullName = '') {
@@ -805,6 +1233,18 @@ function setStudentPhotoPreview(imageSrc = '', fullName = '') {
     preview.textContent = getStudentInitial(fullName);
 }
 
+function setTeacherPhotoPreview(imageSrc = '', fullName = '') {
+    const preview = document.getElementById('teacherPhotoPreview');
+    if (!preview) return;
+
+    if (imageSrc) {
+        preview.innerHTML = `<img src="${imageSrc}" alt="${fullName || 'Teacher'}">`;
+        return;
+    }
+
+    preview.textContent = getTeacherInitial(fullName);
+}
+
 function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -812,6 +1252,19 @@ function readFileAsDataUrl(file) {
         reader.onerror = () => reject(new Error('There was a problem reading the image.'));
         reader.readAsDataURL(file);
     });
+}
+
+async function readImageInputDataUrl(inputId, existingImage = '') {
+    const input = document.getElementById(inputId);
+    const file = input?.files?.[0];
+    if (!file) return existingImage || '';
+
+    if (!file.type.startsWith('image/')) {
+        if (input) input.value = '';
+        throw new Error('Please upload an image file only.');
+    }
+
+    return readFileAsDataUrl(file);
 }
 
 async function handleStudentPhotoSelection(event) {
@@ -833,6 +1286,30 @@ async function handleStudentPhotoSelection(event) {
     try {
         const imageSrc = await readFileAsDataUrl(file);
         setStudentPhotoPreview(imageSrc, fullName);
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+async function handleTeacherPhotoSelection(event) {
+    const file = event.target?.files?.[0];
+    const fullName = document.getElementById('tFullName')?.value || '';
+
+    if (!file) {
+        setTeacherPhotoPreview('', fullName);
+        return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file only.');
+        event.target.value = '';
+        setTeacherPhotoPreview('', fullName);
+        return;
+    }
+
+    try {
+        const imageSrc = await readFileAsDataUrl(file);
+        setTeacherPhotoPreview(imageSrc, fullName);
     } catch (error) {
         alert(error.message);
     }
@@ -909,9 +1386,9 @@ function normalizeOptionalIdentityValue(value, mode = 'text') {
 }
 
 function validateTeacherIdentityInputs({ teacherId = '', username = '', email = '' }) {
-    const teachers = getData(STORAGE_KEY_TEACHERS);
-    const students = getData(STORAGE_KEY_STUDENTS);
-    const staffMembers = getData(STORAGE_KEY_STAFF);
+    let teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const staffMembers = getArrayData(STORAGE_KEY_STAFF);
     const normalizedUsername = normalizeOptionalIdentityValue(username);
     const normalizedEmail = normalizeOptionalIdentityValue(email, 'email');
 
@@ -961,6 +1438,33 @@ function getDesignationGroup(selectId, fallbackGroupKey) {
     return option?.dataset?.groupKey || fallbackGroupKey;
 }
 
+function normalizeTeacherDesignation(designationValue = '', groupKeyValue = '') {
+    const designation = String(designationValue || '').trim().toLowerCase();
+    const groupKey = String(groupKeyValue || '').trim().toLowerCase();
+
+    if (designation === 'superadmin' || designation === 'super admin' || designation === 'super_admin' || groupKey === 'superadmin' || groupKey === 'super_admin') {
+        return { designation: 'Superadmin', groupKey: 'superadmin' };
+    }
+
+    if (designation === 'computer operator' || designation === 'computer_operator' || designation === 'computer opetaor' || groupKey === 'computer_operator' || groupKey === 'computeroperator') {
+        return { designation: 'Computer Operator', groupKey: 'computer_operator' };
+    }
+
+    if (
+        designation === 'admin' ||
+        designation === 'system administrator' ||
+        designation === 'principal' ||
+        designation === 'branch manager' ||
+        groupKey === 'admin' ||
+        groupKey === 'principal' ||
+        groupKey === 'branch_manager'
+    ) {
+        return { designation: 'Admin', groupKey: 'admin' };
+    }
+
+    return { designation: 'Teacher', groupKey: 'teacher' };
+}
+
 function setDesignationSelectValue(selectId, value, fallbackGroupKey) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -982,26 +1486,34 @@ function setDesignationSelectValue(selectId, value, fallbackGroupKey) {
 }
 
 function validateStudentIdentityInputs({ studentId = '', username = '', email = '' }) {
-    const students = getData(STORAGE_KEY_STUDENTS);
-    const teachers = getData(STORAGE_KEY_TEACHERS);
-    const staffMembers = getData(STORAGE_KEY_STAFF);
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    let teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const staffMembers = getArrayData(STORAGE_KEY_STAFF);
     const normalizedUsername = normalizeOptionalIdentityValue(username);
     const normalizedEmail = normalizeOptionalIdentityValue(email, 'email');
 
-    const usernameConflict = normalizedUsername && students.find(student =>
-        student.id !== studentId && normalizeOptionalIdentityValue(student.username) === normalizedUsername
-    );
+    if (normalizedUsername) {
+        const usernameConflict = students.find(student =>
+            student.id !== studentId &&
+            normalizeOptionalIdentityValue(student.username) === normalizedUsername
+        );
 
-    if (usernameConflict) {
-        return 'This student username is already assigned to another student.';
+        if (usernameConflict) {
+            return 'This student username is already assigned to another student.';
+        }
+
+        const crossRoleUsernameConflict = [...teachers, ...staffMembers].find(account =>
+            normalizeOptionalIdentityValue(account.username) === normalizedUsername
+        );
+
+        if (crossRoleUsernameConflict) {
+            return 'This username is already used by another account.';
+        }
     }
 
-    const crossRoleUsernameConflict = normalizedUsername && [...teachers, ...staffMembers].find(account =>
-        normalizeOptionalIdentityValue(account.username) === normalizedUsername
-    );
-
-    if (crossRoleUsernameConflict) {
-        return 'This username is already used by another account.';
+    const classFeeForm = document.getElementById('classFeeForm');
+    if (classFeeForm) {
+        setupClassFeeSettings();
     }
 
     if (normalizedEmail) {
@@ -1198,6 +1710,92 @@ function showSuccessModal(title, message) {
     }
 }
 
+const EDUCORE_WELCOME_SESSION_KEY = 'eduCore_welcome_payload';
+
+function queueWelcomeAnimationForNextPage(user) {
+    try {
+        const displayName = user?.fullName || user?.username || user?.role || 'User';
+        const role = user?.role || 'User';
+        sessionStorage.setItem(
+            EDUCORE_WELCOME_SESSION_KEY,
+            JSON.stringify({ displayName, role, at: Date.now() })
+        );
+    } catch (error) {
+        // Ignore
+    }
+}
+
+function showWelcomeAnimationIfNeeded() {
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) return;
+
+    const token = sessionStorage.getItem('eduCore_token');
+    if (!token) return;
+
+    let payload = null;
+    try {
+        payload = JSON.parse(sessionStorage.getItem(EDUCORE_WELCOME_SESSION_KEY) || 'null');
+    } catch (error) {
+        payload = null;
+    }
+
+    if (!payload || !payload.at) return;
+    if (Date.now() - Number(payload.at) > 5 * 60 * 1000) {
+        sessionStorage.removeItem(EDUCORE_WELCOME_SESSION_KEY);
+        return;
+    }
+
+    sessionStorage.removeItem(EDUCORE_WELCOME_SESSION_KEY);
+
+    const existing = document.getElementById('eduWelcomeOverlay');
+    if (existing) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'eduWelcomeOverlay';
+    overlay.className = 'edu-welcome-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const safeName = String(payload.displayName || 'User').trim() || 'User';
+    const safeRole = String(payload.role || 'User').trim() || 'User';
+    const escape = typeof escapeSessionText === 'function' ? escapeSessionText : (value) => String(value ?? '');
+
+    overlay.innerHTML = `
+        <div class="edu-welcome-card">
+            <div class="edu-welcome-glow" aria-hidden="true"></div>
+            <div class="edu-welcome-icon"><i data-lucide="hand" width="28" height="28"></i></div>
+            <h2 class="edu-welcome-title">Welcome, ${escape(safeName)}!</h2>
+            <p class="edu-welcome-subtitle">${escape(safeRole)} dashboard is ready.</p>
+            <div class="edu-welcome-divider" aria-hidden="true"></div>
+            <button type="button" class="edu-welcome-skip">Get Started</button>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const close = () => {
+        if (!overlay.classList.contains('active')) return;
+        overlay.classList.add('closing');
+        window.setTimeout(() => {
+            overlay.remove();
+        }, 240);
+    };
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) close();
+    });
+
+    const btn = overlay.querySelector('.edu-welcome-skip');
+    if (btn) btn.addEventListener('click', close);
+
+    overlay.classList.add('active');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
+
+    window.setTimeout(close, 1800);
+}
+
 function closeSuccessModal() {
     const modal = document.getElementById('successModal');
     if (modal) modal.style.display = 'none';
@@ -1211,23 +1809,165 @@ function getLoggedInUser() {
     }
 }
 
+function normalizeDesignationKey(value) {
+    const raw = String(value || '').trim().toLowerCase();
+    if (!raw) return '';
+    return raw
+        .replace(/[\s-]+/g, '_')
+        .replace(/[^a-z0-9_]/g, '')
+        .replace(/^_+|_+$/g, '');
+}
+
+function getCurrentUserDesignationKey() {
+    const user = getLoggedInUser();
+    if (!user) return '';
+    if (user.role !== 'Teacher' && user.role !== 'Staff') return '';
+    return normalizeDesignationKey(user.designation || user.role);
+}
+
+function getCachedDesignationPermissions(designationKey) {
+    if (!designationKey) return null;
+    const cacheKey = `eduCore_designation_permissions:${designationKey}`;
+    try {
+        const raw = sessionStorage.getItem(cacheKey);
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function cacheDesignationPermissions(designationKey, payload) {
+    if (!designationKey) return;
+    const cacheKey = `eduCore_designation_permissions:${designationKey}`;
+    try {
+        sessionStorage.setItem(cacheKey, JSON.stringify(payload || null));
+    } catch (_error) {
+        // ignore storage failures
+    }
+}
+
+async function loadDesignationPermissionsForCurrentUser() {
+    const designationKey = getCurrentUserDesignationKey();
+    if (!designationKey) return null;
+
+    const cached = getCachedDesignationPermissions(designationKey);
+    if (cached) return cached;
+
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    if (!token) return null;
+
+    const response = await fetch(`${API_BASE_URL}/designation-permissions?designation=${encodeURIComponent(designationKey)}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    const result = await parseJsonResponse(response, 'Failed to load designation permissions.');
+    if (!response.ok) {
+        throw new Error(result?.message || 'Failed to load designation permissions.');
+    }
+
+    cacheDesignationPermissions(designationKey, result);
+    return result;
+}
+
+function canCurrentUserPerformAction(moduleKey, actionKey) {
+    const user = getLoggedInUser();
+    if (!user) return false;
+
+    if (user.role === 'Admin' || user.role === 'Principal') return true;
+
+    // Branch is handled separately (hard-restricted in UI).
+    if (user.role === 'Branch') return false;
+
+    if (user.role === 'Teacher' || user.role === 'Staff') {
+        const designationKey = getCurrentUserDesignationKey();
+        const designationPerms = getCachedDesignationPermissions(designationKey);
+        return designationPerms?.actionPermissions?.[moduleKey]?.[actionKey] === true;
+    }
+
+    return false;
+}
+
+function ensureDesignationPermissionsNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.querySelector('[data-designation-permissions-link]')) return;
+
+    const visitorBooksLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'visitor_books.html');
+    const permissionsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'permissions.html');
+
+    const designationLink = document.createElement('a');
+    designationLink.href = toRoutePath('designation-permissions.html');
+    designationLink.className = 'nav-item';
+    designationLink.dataset.designationPermissionsLink = 'true';
+    designationLink.innerHTML = '<i data-lucide="shield-check"></i><span>Designation Permissions</span>';
+
+    if (permissionsLink) {
+        permissionsLink.insertAdjacentElement('afterend', designationLink);
+    } else {
+        navLinks.appendChild(designationLink);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
 function ensureBranchRegistrationNav() {
     const navLinks = document.querySelector('.nav-links');
     const loggedInUser = getLoggedInUser();
     if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
     if (navLinks.querySelector('[data-branch-registration-link]')) return;
 
-    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
+    const teachersLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'teachers.html');
     const branchLink = document.createElement('a');
-    branchLink.href = 'branch_registration.html';
+    branchLink.href = toRoutePath('branch_registration.html');
     branchLink.className = 'nav-item';
     branchLink.dataset.branchRegistrationLink = 'true';
     branchLink.innerHTML = '<i data-lucide="building-2"></i><span>Branch Registration</span>';
 
-    if (permissionsLink) {
-        permissionsLink.insertAdjacentElement('beforebegin', branchLink);
+    if (teachersLink) {
+        teachersLink.insertAdjacentElement('afterend', branchLink);
     } else {
         navLinks.appendChild(branchLink);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureAdminRecordsNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.querySelector('[data-admin-records-link]')) return;
+
+    const currentPage = getCurrentPageName();
+    const adminRecordLinks = [
+        { page: 'certificate.html', label: 'Certificate', icon: 'award' },
+        { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { page: 'visitor_books.html', label: 'Visitor Books', icon: 'clipboard-list' },
+        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+    ];
+    const fragment = document.createDocumentFragment();
+
+    adminRecordLinks.forEach((item) => {
+        const link = document.createElement('a');
+        link.href = toRoutePath(item.page);
+        link.className = `nav-item${currentPage === item.page ? ' active' : ''}`;
+        link.dataset.adminRecordsLink = 'true';
+        link.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
+        fragment.appendChild(link);
+    });
+
+    const branchRegistrationLink = navLinks.querySelector('[data-branch-registration-link]');
+    const teachersLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'teachers.html');
+    const insertAfter = branchRegistrationLink || teachersLink;
+
+    if (insertAfter) {
+        insertAfter.parentNode.insertBefore(fragment, insertAfter.nextSibling);
+    } else {
+        navLinks.appendChild(fragment);
     }
 
     if (window.lucide) window.lucide.createIcons();
@@ -1239,8 +1979,9 @@ function ensureAttendanceNav() {
     if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
     if (navLinks.querySelector('[data-attendance-nav]')) return;
 
-    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
-    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
+    const permissionsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'permissions.html');
+    const currentPage = getCurrentPageName();
     const isAttendancePage = currentPage === 'student_attendance.html' || currentPage === 'teacher_attendance.html';
     const isAttendanceReportPage = currentPage === 'student_attendance_report.html' || currentPage === 'teacher_attendance_report.html';
 
@@ -1265,19 +2006,19 @@ function ensureAttendanceNav() {
     const submenu = document.createElement('div');
     submenu.className = 'nav-submenu';
     submenu.innerHTML = `
-        <a href="student_attendance.html" class="nav-subitem${currentPage === 'student_attendance.html' ? ' active' : ''}">
+        <a href="${toRoutePath('student_attendance.html')}" class="nav-subitem${currentPage === 'student_attendance.html' ? ' active' : ''}">
             <i data-lucide="users"></i>
             <span>Student Attendance</span>
         </a>
-        <a href="teacher_attendance.html" class="nav-subitem${currentPage === 'teacher_attendance.html' ? ' active' : ''}">
+        <a href="${toRoutePath('teacher_attendance.html')}" class="nav-subitem${currentPage === 'teacher_attendance.html' ? ' active' : ''}">
             <i data-lucide="user-check"></i>
             <span>Teacher Attendance</span>
         </a>
-        <a href="student_attendance_report.html" class="nav-subitem${currentPage === 'student_attendance_report.html' ? ' active' : ''}">
+        <a href="${toRoutePath('student_attendance_report.html')}" class="nav-subitem${currentPage === 'student_attendance_report.html' ? ' active' : ''}">
             <i data-lucide="file-bar-chart-2"></i>
             <span>Student Attendance Report</span>
         </a>
-        <a href="teacher_attendance_report.html" class="nav-subitem${currentPage === 'teacher_attendance_report.html' ? ' active' : ''}">
+        <a href="${toRoutePath('teacher_attendance_report.html')}" class="nav-subitem${currentPage === 'teacher_attendance_report.html' ? ' active' : ''}">
             <i data-lucide="file-check-2"></i>
             <span>Teacher Attendance Report</span>
         </a>
@@ -1286,7 +2027,9 @@ function ensureAttendanceNav() {
     wrapper.appendChild(toggle);
     wrapper.appendChild(submenu);
 
-    if (permissionsLink) {
+    if (visitorBooksLink) {
+        visitorBooksLink.insertAdjacentElement('afterend', wrapper);
+    } else if (permissionsLink) {
         permissionsLink.insertAdjacentElement('beforebegin', wrapper);
     } else {
         navLinks.appendChild(wrapper);
@@ -1314,16 +2057,21 @@ function ensureNotificationsNav() {
 
     if (!canAccessNotifications) return;
 
-    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
-    const revenueLink = navLinks.querySelector('a[href="revenue.html"]');
-    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
+    const currentPage = getCurrentPageName();
+    const attendanceNav = navLinks.querySelector('[data-attendance-nav]');
+    const revenueLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'revenue.html');
+    const permissionsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'permissions.html');
     const notificationLink = document.createElement('a');
-    notificationLink.href = 'notifications.html';
+    notificationLink.href = toRoutePath('notifications.html');
     notificationLink.className = `nav-item${currentPage === 'notifications.html' ? ' active' : ''}`;
     notificationLink.dataset.notificationsLink = 'true';
     notificationLink.innerHTML = '<i data-lucide="bell-ring"></i><span>Notifications</span>';
 
-    if (revenueLink) {
+    if (attendanceNav) {
+        attendanceNav.insertAdjacentElement('afterend', notificationLink);
+    } else if (revenueLink) {
         revenueLink.insertAdjacentElement('afterend', notificationLink);
     } else if (permissionsLink) {
         permissionsLink.insertAdjacentElement('beforebegin', notificationLink);
@@ -1353,12 +2101,15 @@ function ensureSpecialNoticesNav() {
 
     if (!canAccessSpecialNotices) return;
 
-    const currentPage = (window.location.pathname.split('/').pop() || '').toLowerCase();
-    const notificationsLink = navLinks.querySelector('a[href="notifications.html"]');
-    const revenueLink = navLinks.querySelector('a[href="revenue.html"]');
-    const permissionsLink = navLinks.querySelector('a[href="permissions.html"]');
+    const currentPage = getCurrentPageName();
+    const notificationsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'notifications.html');
+    const revenueLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'revenue.html');
+    const permissionsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'permissions.html');
     const noticeLink = document.createElement('a');
-    noticeLink.href = 'special_notices.html';
+    noticeLink.href = toRoutePath('special_notices.html');
     noticeLink.className = `nav-item${currentPage === 'special_notices.html' ? ' active' : ''}`;
     noticeLink.dataset.specialNoticesLink = 'true';
     noticeLink.innerHTML = '<i data-lucide="megaphone"></i><span>Special Notices</span>';
@@ -1459,7 +2210,7 @@ async function resetSystemData(event) {
 
         clearLocalSystemData();
         await showAppAlert('System data has been reset successfully. Please sign in again.', 'Reset Complete');
-        window.location.href = 'index.html';
+        window.location.href = toRoutePath('index.html');
     } catch (error) {
         await showAppAlert(error.message || 'System data could not be reset.', 'Reset Failed');
     }
@@ -1467,25 +2218,24 @@ async function resetSystemData(event) {
 
 function applyBranchScopedStudentsView() {
     const loggedInUser = getLoggedInUser();
-    if (!loggedInUser || loggedInUser.role !== 'Branch' || !window.location.pathname.toLowerCase().includes('students.html')) {
+    if (!loggedInUser || loggedInUser.role !== 'Branch' || !isCurrentPage('students.html')) {
         return;
     }
 
     const allowedCampus = loggedInUser.campusName || '';
-    const quickFilter = document.getElementById('quickStudentFilter');
-    const addStudentButton = document.querySelector('.student-toolbar .btn.btn-primary');
+    const quickFilter = document.getElementById('studentQuickFilter');
+    const addStudentButton = document.querySelector('.student-toolbar > .btn.btn-primary');
     const formContainer = document.getElementById('studentFormContainer');
 
     document.querySelectorAll('.nav-links .nav-item').forEach((link) => {
         const href = link.getAttribute('href') || '';
-        const keepVisible = href === 'students.html' || href === '#' || href === 'settings.html';
+        const normalizedHref = normalizeClientPageName(href);
+        const keepVisible = href === '#' || normalizedHref === 'students.html' || normalizedHref === 'settings.html';
         link.style.display = keepVisible ? '' : 'none';
     });
 
     if (quickFilter && allowedCampus) {
-        Array.from(quickFilter.options).forEach((option) => {
-            option.selected = option.value === `campus:${allowedCampus}`;
-        });
+        quickFilter.value = `campus:${allowedCampus}`;
         quickFilter.disabled = true;
     }
 
@@ -1495,6 +2245,192 @@ function applyBranchScopedStudentsView() {
     const headerTitle = document.querySelector('.header h1');
     if (headerTitle && allowedCampus) {
         headerTitle.textContent = `${allowedCampus} Students`;
+    }
+}
+
+function ensureBannersNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser) return;
+    if (navLinks.querySelector('[data-banners-link]')) return;
+
+    const permissions = (() => {
+        try {
+            return JSON.parse(sessionStorage.getItem('eduCore_permissions_config') || '{}');
+        } catch (error) {
+            return {};
+        }
+    })();
+    const canAccessBanners = loggedInUser.role === 'Admin' ||
+        loggedInUser.role === 'Principal' ||
+        (window.eduCoreAuth && window.eduCoreAuth.canAccessPage(loggedInUser, permissions, 'banners.html'));
+
+    if (!canAccessBanners) return;
+
+    const currentPage = getCurrentPageName();
+    const studentsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
+    const bannersLink = document.createElement('a');
+    bannersLink.href = toRoutePath('banners.html');
+    bannersLink.className = `nav-item${currentPage === 'banners.html' ? ' active' : ''}`;
+    bannersLink.dataset.bannersLink = 'true';
+    bannersLink.innerHTML = '<i data-lucide="image"></i><span>Banners</span>';
+
+    if (studentsLink) {
+        studentsLink.insertAdjacentElement('afterend', bannersLink);
+    } else {
+        navLinks.appendChild(bannersLink);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureStudentRecordsNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.querySelector('[data-student-records-nav]')) return;
+
+    const studentsLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
+    if (!studentsLink) return;
+
+    const currentPage = getCurrentPageName();
+    const currentHash = String(window.location.hash || '').replace('#', '');
+    const recordKeys = ['stuckoff', 'resigned', 'alumni'];
+    const isRecordsActive = currentPage === 'students.html' && recordKeys.includes(currentHash);
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `nav-dropdown${isRecordsActive ? ' open' : ''}`;
+    wrapper.dataset.studentRecordsNav = 'true';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = `nav-item nav-dropdown-toggle${isRecordsActive ? ' active' : ''}`;
+    toggle.innerHTML = `
+        <span class="nav-item-main">
+            <i data-lucide="folder-open"></i>
+            <span>Student Records</span>
+        </span>
+        <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+    `;
+    toggle.addEventListener('click', () => {
+        wrapper.classList.toggle('open');
+    });
+
+    const submenu = document.createElement('div');
+    submenu.className = 'nav-submenu';
+    submenu.innerHTML = `
+        <a href="${toRoutePath('students.html')}#stuckoff" class="nav-subitem${currentHash === 'stuckoff' ? ' active' : ''}">
+            <i data-lucide="user-x"></i>
+            <span>Stuck Off Students</span>
+        </a>
+        <a href="${toRoutePath('students.html')}#resigned" class="nav-subitem${currentHash === 'resigned' ? ' active' : ''}">
+            <i data-lucide="user-minus"></i>
+            <span>Resigned Teachers</span>
+        </a>
+        <a href="${toRoutePath('students.html')}#alumni" class="nav-subitem${currentHash === 'alumni' ? ' active' : ''}">
+            <i data-lucide="award"></i>
+            <span>Alumni</span>
+        </a>
+    `;
+
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(submenu);
+    studentsLink.insertAdjacentElement('afterend', wrapper);
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureSchedulingNav() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.querySelector('[data-scheduling-nav]')) return;
+
+    const currentPage = getCurrentPageName();
+    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html'];
+    const isSchedulingPage = studentSchedulingPages.includes(currentPage) || currentPage === 'teacher_scheduling.html';
+    const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `nav-dropdown${isSchedulingPage ? ' open' : ''}`;
+    wrapper.dataset.schedulingNav = 'true';
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = `nav-item nav-dropdown-toggle${isSchedulingPage ? ' active' : ''}`;
+    toggle.innerHTML = `
+        <span class="nav-item-main">
+            <i data-lucide="calendar-clock"></i>
+            <span>Scheduling</span>
+        </span>
+        <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+    `;
+    toggle.addEventListener('click', () => {
+        wrapper.classList.toggle('open');
+    });
+
+    const submenu = document.createElement('div');
+    submenu.className = 'nav-submenu';
+    submenu.innerHTML = `
+        <a href="${toRoutePath('student_scheduling.html')}" class="nav-subitem${currentPage === 'student_scheduling.html' ? ' active' : ''}">
+            <i data-lucide="users"></i>
+            <span>Student Scheduling</span>
+        </a>
+        <a href="${toRoutePath('student_timetable.html')}" class="nav-subitem${currentPage === 'student_timetable.html' ? ' active' : ''}">
+            <i data-lucide="calendar-clock"></i>
+            <span>Class Timetable</span>
+        </a>
+        <a href="${toRoutePath('student_diary.html')}" class="nav-subitem${currentPage === 'student_diary.html' ? ' active' : ''}">
+            <i data-lucide="book-open"></i>
+            <span>Class Diary</span>
+        </a>
+        <a href="${toRoutePath('student_leave_requests.html')}" class="nav-subitem${currentPage === 'student_leave_requests.html' ? ' active' : ''}">
+            <i data-lucide="calendar-check"></i>
+            <span>Leave Requests</span>
+        </a>
+        <a href="${toRoutePath('student_courses.html')}" class="nav-subitem${currentPage === 'student_courses.html' ? ' active' : ''}">
+            <i data-lucide="library"></i>
+            <span>Class Course</span>
+        </a>
+        <a href="${toRoutePath('teacher_scheduling.html')}" class="nav-subitem${currentPage === 'teacher_scheduling.html' ? ' active' : ''}">
+            <i data-lucide="book-open"></i>
+            <span>Teacher Scheduling</span>
+        </a>
+    `;
+
+    wrapper.appendChild(toggle);
+    wrapper.appendChild(submenu);
+
+    if (insertAfter) {
+        insertAfter.insertAdjacentElement('afterend', wrapper);
+    } else {
+        navLinks.appendChild(wrapper);
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function applyStudentActionPermissions() {
+    if (!isCurrentPage('students.html')) return;
+
+    const loggedInUser = getLoggedInUser();
+    if (!loggedInUser) return;
+
+    if (loggedInUser.role !== 'Teacher' && loggedInUser.role !== 'Staff') return;
+
+    const canAdd = canCurrentUserPerformAction('students', 'add');
+    const addStudentButton = document.querySelector('.student-toolbar > .btn.btn-primary');
+    const formContainer = document.getElementById('studentFormContainer');
+
+    if (addStudentButton) {
+        addStudentButton.style.display = canAdd ? '' : 'none';
+    }
+
+    if (!canAdd && formContainer) {
+        formContainer.style.display = 'none';
     }
 }
 
@@ -1584,6 +2520,7 @@ async function handleBranchRegistrationSubmit(event) {
         pushNotification('Branch Registered', `${campusName} branch login has been created.`, 'user');
         resetBranchRegistrationForm();
         renderBranches();
+        populateCampusDropdowns();
         showSuccessModal(recordId ? 'Branch Updated!' : 'Branch Registered!', recordId
             ? `${campusName} branch login details have been updated.`
             : `${campusName} can now log in with its branch username and password.`);
@@ -1594,7 +2531,7 @@ async function handleBranchRegistrationSubmit(event) {
 
 function editBranch(branch) {
     document.getElementById('branchRecordId').value = branch.id || '';
-    document.getElementById('branchCampusName').value = branch.campusName || 'Main Campus';
+    document.getElementById('branchCampusName').value = branch.campusName || '';
     document.getElementById('branchDisplayName').value = branch.fullName || '';
     document.getElementById('branchUsername').value = branch.username || '';
     document.getElementById('branchPassword').value = branch.plainPassword || '';
@@ -1613,7 +2550,7 @@ function resetBranchRegistrationForm() {
 
     form.reset();
     document.getElementById('branchRecordId').value = '';
-    document.getElementById('branchCampusName').value = 'Main Campus';
+    document.getElementById('branchCampusName').value = '';
 
     const submitButton = document.querySelector('#branchRegistrationForm button[type="submit"]');
     if (submitButton) {
@@ -1645,6 +2582,7 @@ async function deleteBranch(branchId) {
 
         resetBranchRegistrationForm();
         renderBranches();
+        populateCampusDropdowns();
         pushNotification('Branch Deleted', 'The branch login was removed successfully.', 'user');
     } catch (error) {
         alert(error.message);
@@ -1660,7 +2598,7 @@ function renderDashboardTable(term = '') {
     if (!tbody) return;
 
     // Use students data for the "Activity" table
-    const students = getData(STORAGE_KEY_STUDENTS);
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
     const filtered = students.filter(s =>
         s.fullName.toLowerCase().includes(term) ||
         s.rollNo.toLowerCase().includes(term)
@@ -2089,17 +3027,20 @@ document.addEventListener('submit', (e) => {
 });
 
 function updateDashboardStats() {
-    const s = getData(STORAGE_KEY_STUDENTS);
-    const t = getData(STORAGE_KEY_TEACHERS);
+    const s = getArrayData(STORAGE_KEY_STUDENTS);
+    const t = getArrayData(STORAGE_KEY_TEACHERS);
     const staff = getData(STORAGE_KEY_STAFF);
+    const students = Array.isArray(s) ? s : [];
+    const teachers = Array.isArray(t) ? t : [];
+    const staffMembers = Array.isArray(staff) ? staff : [];
 
-    if (document.getElementById('dashStudentCount')) document.getElementById('dashStudentCount').innerText = s.length || '0';
-    if (document.getElementById('dashTeacherCount')) document.getElementById('dashTeacherCount').innerText = t.length || '0';
-    if (document.getElementById('dashStaffCount')) document.getElementById('dashStaffCount').innerText = staff.length || '0';
+    if (document.getElementById('dashStudentCount')) document.getElementById('dashStudentCount').innerText = students.length || '0';
+    if (document.getElementById('dashTeacherCount')) document.getElementById('dashTeacherCount').innerText = teachers.length || '0';
+    if (document.getElementById('dashStaffCount')) document.getElementById('dashStaffCount').innerText = staffMembers.length || '0';
 
     // Calculate Total Revenue (Sum of monthlyFee for students with feesStatus === 'Paid')
     if (document.getElementById('dashRevenue')) {
-        const totalRevenue = s.reduce((sum, student) => {
+        const totalRevenue = students.reduce((sum, student) => {
             if (student.feesStatus === 'Paid') {
                 return sum + (parseInt(student.monthlyFee) || 0);
             }
@@ -2109,22 +3050,183 @@ function updateDashboardStats() {
     }
 
     updateActivePortalLogins();
+}
+
+function initializeDashboardHome() {
+    const dashStudentCount = document.getElementById('dashStudentCount');
+    if (!dashStudentCount) return;
+
+    updateDashboardStats();
+    if (!dashboardActiveSessionsInterval) {
+        dashboardActiveSessionsInterval = window.setInterval(updateActivePortalLogins, 30000);
+    }
     bindActiveSessionsModalEvents();
+
+    const dSearch = document.getElementById('dashSearch');
+    if (dSearch && !dSearch.dataset.dashboardSearchBound) {
+        dSearch.dataset.dashboardSearchBound = 'true';
+        dSearch.addEventListener('input', (e) => { }); // renderDashboardTable(e.target.value.toLowerCase())
+    }
+}
+
+function escapeSessionText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function formatSessionTimestamp(value) {
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return '-';
+    return `${dt.toLocaleDateString()} ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function getSessionLocationLabel(session = {}) {
+    const ip = String(session.ip || '').trim();
+    if (!ip) return 'Unknown';
+    if (ip === '::1' || ip === '127.0.0.1' || ip.includes('localhost')) return `Localhost (${ip})`;
+    if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) return `Private Network (${ip})`;
+    return ip;
+}
+
+function bindActiveSessionsModalEvents() {
+    const card = document.getElementById('activeLoginsCard');
+    const overlay = document.getElementById('sessionModalOverlay');
+    const closeBtn = document.getElementById('sessionModalClose');
+    if (!card || !overlay || !closeBtn) return;
+    if (activeSessionsModalEventsBound) return;
+    activeSessionsModalEventsBound = true;
+
+    card.addEventListener('click', () => {
+        overlay.classList.add('active');
+        renderActiveSessionsTable(activePortalSessionsCache);
+    });
+
+    closeBtn.addEventListener('click', () => {
+        overlay.classList.remove('active');
+    });
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) overlay.classList.remove('active');
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && overlay.classList.contains('active')) {
+            overlay.classList.remove('active');
+        }
+    });
+}
+
+function renderActiveSessionsTable(sessions = []) {
+    const tbody = document.getElementById('activeSessionsBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!Array.isArray(sessions) || !sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="6">No active sessions found.</td></tr>';
+        return;
+    }
+
+    sessions.forEach((session) => {
+        const tr = document.createElement('tr');
+        const shortUA = String(session.userAgent || '-').slice(0, 120);
+        const sessionPreview = String(session.sessionId || '').slice(0, 12) || '-';
+        tr.innerHTML = `
+            <td>
+                <div class="session-meta">
+                    <strong>${escapeSessionText(session.fullName || session.username || 'Unknown')}</strong>
+                    <small>${escapeSessionText(session.username || '-')}</small>
+                    <small>Session: ${escapeSessionText(sessionPreview)}</small>
+                </div>
+            </td>
+            <td>${escapeSessionText(session.role || '-')}</td>
+            <td>
+                <div class="session-meta">
+                    <span>${escapeSessionText(getSessionLocationLabel(session))}</span>
+                    <small>${escapeSessionText(session.campusName || 'No campus')}</small>
+                </div>
+            </td>
+            <td title="${escapeSessionText(session.userAgent || '-')}">${escapeSessionText(shortUA || '-')}</td>
+            <td>
+                <div class="session-meta">
+                    <span>${escapeSessionText(formatSessionTimestamp(session.lastSeen))}</span>
+                    <small>Login: ${escapeSessionText(formatSessionTimestamp(session.loginAt))}</small>
+                </div>
+            </td>
+            <td class="session-actions">
+                <button type="button" class="btn btn-outline" data-session-logout="${escapeSessionText(session.sessionId || '')}">Logout</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll('[data-session-logout]').forEach((btn) => {
+        btn.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const sessionId = btn.getAttribute('data-session-logout');
+            await forceLogoutActiveSession(sessionId);
+        });
+    });
+}
+
+function getUniqueActiveUsersFromSessions(sessions = []) {
+    const unique = new Map();
+    (Array.isArray(sessions) ? sessions : []).forEach((session) => {
+        const key = `${session.role || ''}:${session.userId || session.username || ''}`;
+        if (!unique.has(key)) unique.set(key, session);
+    });
+    return Array.from(unique.values());
+}
+
+async function forceLogoutActiveSession(sessionId) {
+    if (!sessionId) return;
+    const token = sessionStorage.getItem('eduCore_token');
+    if (!token) return;
+
+    const shouldLogout = await showAppConfirm('Log out this active session?', 'Force Logout');
+    if (!shouldLogout) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/active-sessions/logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sessionId })
+        });
+        let result = await parseJsonResponse(response, 'Session logout failed.');
+
+        if (!response.ok || result?.success === false) {
+            // Backward compatibility fallback for environments still using DELETE endpoint.
+            const fallback = await fetch(`${API_BASE_URL}/active-sessions/${encodeURIComponent(sessionId)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            result = await parseJsonResponse(fallback, 'Session logout failed.');
+            if (!fallback.ok || result?.success === false) {
+                throw new Error(result?.message || 'Session logout failed.');
+            }
+        }
+        await updateActivePortalLogins();
+    } catch (error) {
+        await showAppAlert(error.message || 'Session logout failed.', 'Error');
+    }
 }
 
 async function updateActivePortalLogins() {
     const countEl = document.getElementById('dashActiveLogins');
     const detailEl = document.getElementById('dashActiveLoginsDetail');
-    const cardEl = document.getElementById('activeLoginsCard');
     if (!countEl || !detailEl) return;
 
     const token = sessionStorage.getItem('eduCore_token');
     if (!token) {
         countEl.innerText = '0';
         detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> No active admin token';
-        if (cardEl) cardEl.title = 'No active admin token';
-        activeSessionsCache = [];
-        renderActiveSessionsTable(activeSessionsCache);
         if (window.lucide) window.lucide.createIcons();
         return;
     }
@@ -2142,359 +3244,71 @@ async function updateActivePortalLogins() {
         const roleCounts = Object.entries(result.byRole || {})
             .map(([role, count]) => `${role}: ${count}`)
             .join(' | ');
-        const sessions = Array.isArray(result.sessions) ? result.sessions : [];
-        const uniqueUsers = result.uniqueActiveUsers ?? getUniqueActiveUsersFromSessions(sessions);
 
-        activeSessionsCache = sessions;
-        countEl.innerText = String(result.totalActiveSessions ?? result.totalActiveLogins ?? sessions.length);
-        const tooltip = `${roleCounts}${roleCounts ? ' | ' : ''}Unique users: ${uniqueUsers}`;
-        detailEl.title = tooltip;
-        if (cardEl) cardEl.title = tooltip;
-        detailEl.innerHTML = `<i data-lucide="monitor-up" size="16"></i> ${countEl.innerText} systems active now`;
-        renderActiveSessionsTable(activeSessionsCache);
+        const allSessions = Array.isArray(result.sessions) ? result.sessions : [];
+        const uniqueUsersCount = Number(result.uniqueActiveUsers || getUniqueActiveUsersFromSessions(allSessions).length || 0);
+        const activeSessionCount = Number(result.totalActiveSessions || allSessions.length || 0);
+
+        activePortalSessionsCache = allSessions;
+        countEl.innerText = String(activeSessionCount);
+        detailEl.title = `${roleCounts}${roleCounts ? ' | ' : ''}Unique users: ${uniqueUsersCount}`;
+        detailEl.innerHTML = `<i data-lucide="monitor-up" size="16"></i> ${activeSessionCount} systems active now`;
+        const overlay = document.getElementById('sessionModalOverlay');
+        if (overlay?.classList.contains('active')) {
+            renderActiveSessionsTable(activePortalSessionsCache);
+        }
     } catch (error) {
+        activePortalSessionsCache = [];
         countEl.innerText = '0';
         detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> Live sessions unavailable';
-        if (cardEl) cardEl.title = 'Live sessions unavailable';
-        activeSessionsCache = [];
-        renderActiveSessionsTable(activeSessionsCache);
+        const overlay = document.getElementById('sessionModalOverlay');
+        if (overlay?.classList.contains('active')) {
+            renderActiveSessionsTable([]);
+        }
     }
 
     if (window.lucide) window.lucide.createIcons();
-}
-
-function bindActiveSessionsModalEvents() {
-    if (activeSessionsModalBound) return;
-    const overlay = document.getElementById('sessionModalOverlay');
-    const closeBtn = document.getElementById('sessionModalClose');
-    if (!overlay || !closeBtn) return;
-
-    const closeModal = () => {
-        overlay.classList.remove('active');
-        overlay.setAttribute('aria-hidden', 'true');
-    };
-
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', (event) => {
-        if (event.target === overlay) closeModal();
-    });
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && overlay.classList.contains('active')) closeModal();
-    });
-    activeSessionsModalBound = true;
-}
-
-function openActiveSessionsModal() {
-    bindActiveSessionsModalEvents();
-    const overlay = document.getElementById('sessionModalOverlay');
-    if (!overlay) return;
-    renderActiveSessionsTable(activeSessionsCache);
-    overlay.classList.add('active');
-    overlay.setAttribute('aria-hidden', 'false');
-    updateActivePortalLogins();
-}
-
-function renderActiveSessionsTable(sessions) {
-    const tbody = document.getElementById('activeSessionsBody');
-    if (!tbody) return;
-
-    const list = Array.isArray(sessions) ? sessions : [];
-    if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1.5rem;">No active sessions found.</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = list.map((session) => {
-        const sessionId = session.sessionId || '';
-        const userAgent = session.userAgent || '-';
-        const shortUserAgent = userAgent.length > 120 ? `${userAgent.slice(0, 120)}...` : userAgent;
-        const campus = session.campusName || 'No campus';
-        return `
-            <tr>
-                <td class="session-user-cell">
-                    <strong>${escapeHtml(session.fullName || session.username || 'Unknown User')}</strong>
-                    <small>${escapeHtml(session.username || '-')}</small>
-                    <small>Session: ${escapeHtml(sessionId.slice(0, 12))}...</small>
-                </td>
-                <td>${escapeHtml(session.role || '-')}</td>
-                <td>
-                    <strong>${escapeHtml(getSessionLocationLabel(session))}</strong>
-                    <span class="session-meta">${escapeHtml(campus)}</span>
-                </td>
-                <td class="session-device-cell" title="${escapeHtml(userAgent)}">${escapeHtml(shortUserAgent)}</td>
-                <td>
-                    <strong>${escapeHtml(formatSessionTimestamp(session.lastSeen))}</strong>
-                    <span class="session-meta">Login: ${escapeHtml(formatSessionTimestamp(session.loginAt))}</span>
-                </td>
-                <td>
-                    <button type="button" class="action-btn btn-delete" onclick="forceLogoutActiveSession('${escapeHtml(sessionId)}')">
-                        <i data-lucide="log-out" width="14"></i> Logout
-                    </button>
-                </td>
-            </tr>
-        `;
-    }).join('');
-    if (window.lucide) window.lucide.createIcons();
-}
-
-async function forceLogoutActiveSession(sessionId) {
-    if (!sessionId) return;
-    if (!(await showAppConfirm('Log out this active session?'))) return;
-
-    const token = sessionStorage.getItem('eduCore_token');
-    if (!token) {
-        alert('No active admin token');
-        return;
-    }
-
-    try {
-        let response = await fetch(`${API_BASE_URL}/active-sessions/logout`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ sessionId })
-        });
-
-        if (response.status === 404) {
-            response = await fetch(`${API_BASE_URL}/active-sessions/${encodeURIComponent(sessionId)}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-        }
-
-        const result = await parseJsonResponse(response, 'Session logout failed.');
-        if (!response.ok || result?.success === false) {
-            throw new Error(result?.message || 'Session logout failed.');
-        }
-
-        activeSessionsCache = activeSessionsCache.filter((session) => session.sessionId !== sessionId);
-        renderActiveSessionsTable(activeSessionsCache);
-        updateActivePortalLogins();
-    } catch (error) {
-        alert(error.message || 'Session logout failed.');
-    }
-}
-
-function getUniqueActiveUsersFromSessions(sessions) {
-    return new Set((Array.isArray(sessions) ? sessions : []).map((session) =>
-        `${session.role || ''}:${session.userId || session.username || session.sessionId || ''}`
-    )).size;
-}
-
-function formatSessionTimestamp(value) {
-    if (!value) return '-';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return String(value);
-    return parsed.toLocaleString();
-}
-
-function getSessionLocationLabel(session) {
-    const rawIp = String(session?.ip || '').replace(/^::ffff:/, '');
-    if (!rawIp) return 'Unknown';
-    if (rawIp === '::1' || rawIp === '127.0.0.1' || rawIp.toLowerCase() === 'localhost') {
-        return `Localhost (${rawIp})`;
-    }
-    if (
-        rawIp.startsWith('192.168.') ||
-        rawIp.startsWith('10.') ||
-        /^172\.(1[6-9]|2\d|3[01])\./.test(rawIp)
-    ) {
-        return `Private Network (${rawIp})`;
-    }
-    return rawIp;
 }
 // =======================================================
 // ==================== STUDENT LOGIC ====================
 // =======================================================
 
-const studentColumnSearchState = { column: '', label: '', value: '' };
-
-function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    }[char]));
-}
-
-function getDefaultStudentClasses() {
-    return [
-        { label: 'Play Group', value: 'Play Group' },
-        { label: 'Nursery', value: 'Nursery' },
-        { label: 'Prep', value: 'Prep' },
-        ...Array.from({ length: 10 }, (_, index) => ({ label: `Class ${index + 1}`, value: `Class ${index + 1}` }))
-    ];
-}
-
-function getClassLabelAndFee(classRecord) {
-    const name = classRecord.section ? `${classRecord.name} (${classRecord.section})` : classRecord.name;
-    const fee = classRecord.defaultFee || classRecord.monthlyFee || classRecord.fee || classRecord.classFee || '';
-    return { name, fee };
-}
-
-function populateStudentFormOptions() {
-    const classSelect = document.getElementById('classGrade');
-    const campusSelect = document.getElementById('campusName');
-
-    if (classSelect) {
-        const selected = classSelect.value;
-        const seen = new Set();
-        const storedClasses = getData(STORAGE_KEY_CLASSES);
-        const storedClassFees = new Map();
-        storedClasses.forEach((record) => {
-            if (!record?.name) return;
-            const { name, fee } = getClassLabelAndFee(record);
-            if (fee) storedClassFees.set(name, fee);
-        });
-        classSelect.innerHTML = '<option value="">Select Class</option>';
-
-        getDefaultStudentClasses().forEach((item) => {
-            const fee = storedClassFees.get(item.value);
-            const option = new Option(fee ? `${item.label} - PKR ${fee}` : item.label, item.value);
-            if (fee) option.dataset.fee = fee;
-            seen.add(item.value);
-            classSelect.appendChild(option);
-        });
-
-        storedClasses.forEach((record) => {
-            if (!record?.name) return;
-            const { name, fee } = getClassLabelAndFee(record);
-            if (seen.has(name)) return;
-            const option = new Option(fee ? `${name} - PKR ${fee}` : name, name);
-            if (fee) option.dataset.fee = fee;
-            classSelect.appendChild(option);
-            seen.add(name);
-        });
-
-        if (selected && Array.from(classSelect.options).some((option) => option.value === selected)) {
-            classSelect.value = selected;
-        }
-    }
-
-    if (campusSelect) {
-        const selected = campusSelect.value;
-        const campuses = getStudentCampusOptions();
-        campusSelect.innerHTML = '<option value="">Select Campus</option>';
-        campuses.forEach((campus) => campusSelect.appendChild(new Option(campus, campus)));
-        if (selected && campuses.includes(selected)) campusSelect.value = selected;
-    }
-}
-
-function getStudentCampusOptions() {
-    const campuses = new Set(['Main Campus', 'Ali campus', 'Fatima Campus']);
-    getData(STORAGE_KEY_STUDENTS).forEach((student) => {
-        if (student.campusName) campuses.add(student.campusName);
-    });
-    getData(STORAGE_KEY_TEACHERS).forEach((teacher) => {
-        if (teacher.campusName) campuses.add(teacher.campusName);
-    });
-    try {
-        const branches = JSON.parse(localStorage.getItem('eduCore_branches') || '[]');
-        branches.forEach((branch) => {
-            if (branch.campusName) campuses.add(branch.campusName);
-        });
-    } catch (error) {
-        // Keep default campuses if branch storage is invalid.
-    }
-    return [...campuses].filter(Boolean).sort((a, b) => a.localeCompare(b));
-}
-
-function populateQuickStudentFilters() {
-    const filter = document.getElementById('quickStudentFilter');
-    if (!filter) return;
-
-    const currentValues = new Set(Array.from(filter.selectedOptions).map((option) => option.value));
-    const baseOptions = [
-        ['all', 'All Students'],
-        ['gender:Male', 'Male Students'],
-        ['gender:Female', 'Female Students'],
-        ['gender:Other', 'Other Gender'],
-        ['age:below5', 'Below 5 Years']
-    ];
-    const campuses = getStudentCampusOptions().map((campus) => [`campus:${campus}`, `Campus: ${campus}`]);
-    const classes = [...new Set([
-        ...getDefaultStudentClasses().map((item) => item.value),
-        ...getData(STORAGE_KEY_CLASSES).map((record) => record?.section ? `${record.name} (${record.section})` : record?.name).filter(Boolean),
-        ...getData(STORAGE_KEY_STUDENTS).map((student) => student.classGrade).filter(Boolean)
-    ])].sort((a, b) => a.localeCompare(b)).map((className) => [`class:${className}`, `Class: ${className}`]);
-
-    filter.innerHTML = [...baseOptions, ...campuses, ...classes]
-        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${currentValues.has(value) ? 'selected' : ''}>${escapeHtml(label)}</option>`)
-        .join('');
-}
-
-function getSelectedQuickStudentFilters() {
-    const filter = document.getElementById('quickStudentFilter');
-    if (!filter) return [];
-    const values = Array.from(filter.selectedOptions).map((option) => option.value);
-    return values.includes('all') ? [] : values;
-}
-
-function matchesQuickStudentFilters(student, filters) {
-    if (!filters.length) return true;
-    return filters.every((filter) => {
-        const [type, rawValue] = filter.split(/:(.*)/s);
-        const value = String(rawValue || '').toLowerCase();
-        if (type === 'gender') return String(student.gender || '').toLowerCase() === value;
-        if (type === 'age') return value === 'below5' ? isStudentBelowAge(student, 5) : true;
-        if (type === 'campus') return String(student.campusName || '').toLowerCase() === value;
-        if (type === 'class') return String(student.classGrade || '').toLowerCase() === value;
-        return true;
-    });
-}
-
-function applySelectedClassFee() {
-    const classSelect = document.getElementById('classGrade');
-    const monthlyFee = document.getElementById('monthlyFee');
-    if (!classSelect || !monthlyFee) return;
-    const selectedOption = classSelect.options[classSelect.selectedIndex];
-    if (selectedOption?.dataset?.fee) monthlyFee.value = selectedOption.dataset.fee;
-}
-
-function isStudentTerminated(student) {
-    return String(student.enrollmentStatus || '').toLowerCase() === 'terminated';
-}
-
-function getStudentDisplayStatus(student) {
-    if (isStudentTerminated(student)) return 'Terminated';
-    return student.feesStatus || student.enrollmentStatus || 'Active';
-}
-
-function getStudentStatusClass(status) {
-    const normalized = String(status || '').toLowerCase();
-    if (normalized === 'paid') return 'status-paid';
-    if (normalized === 'active') return 'status-active';
-    if (normalized === 'pending') return 'status-pending';
-    if (normalized === 'late') return 'status-late';
-    if (normalized === 'terminated') return 'status-terminated';
-    return 'status-pending';
-}
-
-function matchesStudentColumnSearch(student, status) {
-    if (!studentColumnSearchState.column || !studentColumnSearchState.value) return true;
-    const column = studentColumnSearchState.column;
-    const lookup = column === 'status' ? status : student[column];
-    const displayValue = column === 'dob' ? formatDateForDisplay(lookup) : lookup;
-    return String(displayValue || '').toLowerCase().includes(studentColumnSearchState.value.toLowerCase());
-}
-
 function toggleStudentForm(editMode = false) {
     const container = document.getElementById('studentFormContainer');
     const form = document.getElementById('studentForm');
     const title = document.getElementById('formTitle');
-    if (!container || !form) return;
+    const loggedInUser = getLoggedInUser();
+
+    if (editMode) {
+        if (!canCurrentUserPerformAction('students', 'edit')) {
+            showAppAlert('You do not have permission to edit students.', 'Permission Denied');
+            return;
+        }
+    } else if (loggedInUser?.role === 'Teacher' || loggedInUser?.role === 'Staff') {
+        if (!canCurrentUserPerformAction('students', 'add')) {
+            showAppAlert('You do not have permission to add students.', 'Permission Denied');
+            return;
+        }
+    }
 
     if (container.style.display === 'block' && !editMode) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('studentId').value = '';
+        if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
         setStudentPhotoPreview('');
     } else {
-        populateStudentFormOptions();
+        const classSelect = document.getElementById('classGrade');
+        if (classSelect && classSelect.tagName === 'SELECT') {
+            classSelect.innerHTML = '<option value="">Select Class</option>';
+            getAvailableStudentClassOptions().forEach(cls => {
+                const feeDefault = getClassFeeDefault(cls);
+                const opt = document.createElement('option');
+                opt.value = cls;
+                opt.textContent = feeDefault ? `${cls} - PKR ${Number(feeDefault.monthlyFee || 0).toLocaleString('en-PK')}` : cls;
+                classSelect.appendChild(opt);
+            });
+        }
         container.style.display = 'block';
         // Reset Panels
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
@@ -2507,23 +3321,55 @@ function toggleStudentForm(editMode = false) {
             if (studentCodeField) studentCodeField.value = generateStudentCode();
             const admissionDateField = document.getElementById('admissionDate');
             if (admissionDateField) admissionDateField.value = new Date().toISOString().split('T')[0];
-            if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = 'Monthly';
-            setStudentPhotoPreview('');
+            const monthlyFeeField = document.getElementById('monthlyFee');
+            if (monthlyFeeField) monthlyFeeField.dataset.autoClassFee = '';
+            if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
+            setStudentPhotoPreview('', '');
+            ensureStudentCampusDefault();
             title.innerText = 'Add New Student';
         } else {
             title.innerText = 'Edit Student Details';
         }
-        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
+async function validateStudentRequiredFields() {
+    ensureStudentCampusDefault();
+
+    const requiredFields = [
+        ['fullName', 'Full Name'],
+        ['fatherName', "Father's Name"],
+        ['studentDob', 'Date of Birth'],
+        ['classGrade', 'Class'],
+        ['campusName', 'Campus'],
+        ['parentPhone', 'Contact Phone'],
+        ['gender', 'Gender'],
+        ['rollNo', 'Roll No']
+    ];
+
+    const missingField = requiredFields.find(([fieldId]) => {
+        const field = document.getElementById(fieldId);
+        return field && !String(field.value || '').trim();
+    });
+
+    if (missingField) {
+        const field = document.getElementById(missingField[0]);
+        field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        field?.focus();
+        await showAppAlert(`${missingField[1]} is required.`, 'Missing Student Detail');
+        return false;
+    }
+
+    return true;
+}
+
 function generateStudentCode() {
-    const students = getData(STORAGE_KEY_STUDENTS);
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
     let maxNumber = 0;
 
     students.forEach(student => {
-        const rawCode = student.studentCode || '';
-        const match = rawCode.match(/(\d+)$/);
+        const rawCode = String(student.studentCode || '').trim();
+        const match = rawCode.match(/^STU-(\d{1,5})$/i);
         if (match) {
             const parsed = parseInt(match[1], 10);
             if (!Number.isNaN(parsed) && parsed > maxNumber) {
@@ -2535,6 +3381,165 @@ function generateStudentCode() {
     return `STU-${String(maxNumber + 1).padStart(3, '0')}`;
 }
 
+function normalizeClassFeeKey(className = '') {
+    return String(className || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+}
+
+function getAvailableStudentClassOptions() {
+    const seen = new Set();
+    const classes = [];
+    const addClass = (className) => {
+        const value = String(className || '').trim();
+        if (!value) return;
+        const key = normalizeClassFeeKey(value);
+        if (seen.has(key)) return;
+        seen.add(key);
+        classes.push(value);
+    };
+
+    DEFAULT_STUDENT_CLASS_ORDER.forEach(addClass);
+    getData(STORAGE_KEY_CLASSES).forEach((item) => {
+        const val = item?.section ? `${item.name} (${item.section})` : item?.name;
+        addClass(val);
+    });
+
+    return classes;
+}
+
+function normalizeClassFeeConfig(input = {}) {
+    const raw = input && typeof input === 'object' ? input : {};
+    return Object.entries(raw).reduce((acc, [className, config]) => {
+        const name = String(className || '').trim();
+        const monthlyFee = String(config?.monthlyFee ?? config?.fee ?? '').trim();
+        const feeFrequency = String(config?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        if (name && monthlyFee) acc[name] = { monthlyFee, feeFrequency };
+        return acc;
+    }, {});
+}
+
+async function loadClassFeeDefaults() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/class-fees`);
+        const result = await parseJsonResponse(response, 'Class fee defaults unavailable.');
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Class fee defaults unavailable.');
+        }
+        classFeeDefaults = normalizeClassFeeConfig(result.classFees || {});
+    } catch (error) {
+        classFeeDefaults = {};
+    }
+    renderClassFeeSettings();
+    return classFeeDefaults;
+}
+
+function getClassFeeDefault(className = '') {
+    const selectedKey = normalizeClassFeeKey(className);
+    if (!selectedKey) return null;
+    const match = Object.entries(classFeeDefaults)
+        .find(([name]) => normalizeClassFeeKey(name) === selectedKey);
+    return match ? match[1] : null;
+}
+
+function bindStudentClassFeeAutoFill() {
+    const classSelect = document.getElementById('classGrade');
+    if (!classSelect || classSelect.dataset.classFeeBound === '1') return;
+    classSelect.dataset.classFeeBound = '1';
+    classSelect.addEventListener('change', () => applyClassFeeDefaultToStudentForm(true));
+}
+
+function applyClassFeeDefaultToStudentForm(force = false) {
+    const classSelect = document.getElementById('classGrade');
+    const monthlyFeeInput = document.getElementById('monthlyFee');
+    const feeFrequencyInput = document.getElementById('feeFrequency');
+    if (!classSelect || !monthlyFeeInput) return;
+
+    const feeDefault = getClassFeeDefault(classSelect.value);
+    if (!feeDefault) return;
+
+    const currentFee = String(monthlyFeeInput.value || '').trim();
+    if (force || !currentFee || currentFee === '0' || monthlyFeeInput.dataset.autoClassFee === '1') {
+        monthlyFeeInput.value = feeDefault.monthlyFee;
+        monthlyFeeInput.dataset.autoClassFee = '1';
+        if (feeFrequencyInput) feeFrequencyInput.value = feeDefault.feeFrequency || 'Monthly';
+    }
+}
+
+async function setupClassFeeSettings() {
+    const form = document.getElementById('classFeeForm');
+    const classSelect = document.getElementById('classFeeClassSelect');
+    const amountInput = document.getElementById('classFeeAmount');
+    const frequencyInput = document.getElementById('classFeeFrequency');
+    if (!form || !classSelect || !amountInput) return;
+
+    populateClassFeeSelect();
+    await loadClassFeeDefaults();
+
+    classSelect.addEventListener('change', () => {
+        const feeDefault = getClassFeeDefault(classSelect.value);
+        amountInput.value = feeDefault?.monthlyFee || '';
+        if (frequencyInput) frequencyInput.value = feeDefault?.feeFrequency || 'Monthly';
+    });
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const className = String(classSelect.value || '').trim();
+        const monthlyFee = String(amountInput.value || '').trim();
+        const feeFrequency = String(frequencyInput?.value || 'Monthly').trim() || 'Monthly';
+        if (!className || !monthlyFee) {
+            await showAppAlert('Please select a class and enter monthly fee.', 'Missing Fee');
+            return;
+        }
+
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        try {
+            const response = await fetch(`${API_BASE_URL}/class-fees`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ className, monthlyFee, feeFrequency })
+            });
+            const result = await parseJsonResponse(response, 'Class fee could not be saved.');
+            if (!response.ok || result?.success === false) {
+                throw new Error(result?.message || 'Class fee could not be saved.');
+            }
+            classFeeDefaults = normalizeClassFeeConfig(result.classFees || {});
+            renderClassFeeSettings();
+            pushNotification('Class Fee Updated', `${className} fee set to PKR ${Number(monthlyFee).toLocaleString('en-PK')}.`, 'success');
+        } catch (error) {
+            await showAppAlert(error.message || 'Class fee could not be saved.', 'Save Failed');
+        }
+    });
+}
+
+function populateClassFeeSelect() {
+    const classSelect = document.getElementById('classFeeClassSelect');
+    if (!classSelect) return;
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    getAvailableStudentClassOptions().forEach((className) => {
+        const opt = document.createElement('option');
+        opt.value = className;
+        opt.textContent = className;
+        classSelect.appendChild(opt);
+    });
+}
+
+function renderClassFeeSettings() {
+    const list = document.getElementById('classFeeList');
+    if (!list) return;
+    const entries = Object.entries(classFeeDefaults).sort((a, b) => compareStudentClassNames(a[0], b[0]));
+    if (!entries.length) {
+        list.innerHTML = '<span style="color: var(--text-secondary); font-size: 0.9rem;">No class fee defaults saved yet.</span>';
+        return;
+    }
+    list.innerHTML = entries.map(([className, config]) => `
+        <span class="class-fee-pill">
+            ${escapeHtml(className)}: PKR ${Number(config.monthlyFee || 0).toLocaleString('en-PK')} ${escapeHtml(config.feeFrequency || 'Monthly')}
+        </span>
+    `).join('');
+}
+
 function normalizeDateInputValue(value) {
     if (!value) return '';
     const parsed = new Date(value);
@@ -2544,51 +3549,55 @@ function normalizeDateInputValue(value) {
 
 async function handleStudentFormSubmit(e) {
     e.preventDefault();
+    console.log('=== Student Form Submit Started ===');
+    
     const idField = document.getElementById('studentId');
     const isEdit = idField.value !== '';
+    const loggedInUser = getLoggedInUser();
 
-    const existingStudents = getData(STORAGE_KEY_STUDENTS);
-    const existingStudent = isEdit ? existingStudents.find(s => s.id === idField.value) : null;
-    const currentStatus = isEdit && existingStudent ? (existingStudent.feesStatus || 'Pending') : 'Pending';
-    const enrollmentStatus = isEdit && existingStudent ? (existingStudent.enrollmentStatus || 'Active') : 'Active';
-
-    const studentCode = document.getElementById('studentCode').value || generateStudentCode();
-    const parentPhone = document.getElementById('parentPhone').value.trim();
-    let usernameInput = document.getElementById('username').value.trim();
-    let studentPasswordInput = document.getElementById('studentPassword').value;
-    const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '';
-    const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
-
-    const requiredFields = [
-        ['fullName', 'Full Name is required.'],
-        ['fatherName', "Father's Name is required."],
-        ['studentDob', 'Date of Birth is required.'],
-        ['classGrade', 'Class is required.'],
-        ['campusName', 'Campus Name is required.'],
-        ['parentPhone', 'Contact Phone is required.'],
-        ['gender', 'Gender is required.'],
-        ['rollNo', 'Roll No is required.']
-    ];
-
-    for (const [fieldId, message] of requiredFields) {
-        const field = document.getElementById(fieldId);
-        if (!String(field?.value || '').trim()) {
-            alert(message);
-            field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            field?.focus();
+    if (isEdit) {
+        if (!canCurrentUserPerformAction('students', 'edit')) {
+            showAppAlert('You do not have permission to edit students.', 'Permission Denied');
+            return;
+        }
+    } else if (loggedInUser?.role === 'Teacher' || loggedInUser?.role === 'Staff') {
+        if (!canCurrentUserPerformAction('students', 'add')) {
+            showAppAlert('You do not have permission to add students.', 'Permission Denied');
             return;
         }
     }
 
+    if (!(await validateStudentRequiredFields())) {
+        return;
+    }
+
+    const existingStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    const existingStudent = isEdit ? existingStudents.find(s => s.id === idField.value) : null;
+    const currentStatus = isEdit && existingStudent ? existingStudent.feesStatus : 'Pending';
+
+    const studentCodeValue = document.getElementById('studentCode').value || generateStudentCode();
+    let usernameInput = document.getElementById('username').value.trim();
+    let studentPasswordInput = document.getElementById('studentPassword').value.trim();
+    let monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value.trim() : '0';
+    const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
+
     if (!usernameInput) {
-        usernameInput = studentCode.toLowerCase().replace(/[^a-z0-9]/g, '');
-        document.getElementById('username').value = usernameInput;
+        usernameInput = studentCodeValue.toLowerCase().replace(/[^a-z0-9]+/g, '');
+        const usernameField = document.getElementById('username');
+        if (usernameField) usernameField.value = usernameInput;
     }
 
     if (!studentPasswordInput) {
-        const digits = parentPhone.replace(/\D/g, '');
-        studentPasswordInput = `Student${digits.length >= 4 ? digits.slice(-4) : '123'}`;
-        document.getElementById('studentPassword').value = studentPasswordInput;
+        const phoneDigits = String(document.getElementById('parentPhone')?.value || '').replace(/\D/g, '');
+        studentPasswordInput = phoneDigits.slice(-4) ? `Student${phoneDigits.slice(-4)}` : 'Student123';
+        const passwordField = document.getElementById('studentPassword');
+        if (passwordField) passwordField.value = studentPasswordInput;
+    }
+
+    if (!monthlyFeeInput) {
+        monthlyFeeInput = '0';
+        const monthlyFeeField = document.getElementById('monthlyFee');
+        if (monthlyFeeField) monthlyFeeField.value = monthlyFeeInput;
     }
 
     const studentIdentityError = validateStudentIdentityInputs({
@@ -2598,17 +3607,13 @@ async function handleStudentFormSubmit(e) {
     });
 
     if (studentIdentityError) {
-        alert(studentIdentityError);
-        if (studentIdentityError.toLowerCase().includes('username')) document.getElementById('username')?.focus();
-        if (studentIdentityError.toLowerCase().includes('email')) document.getElementById('studentEmail')?.focus();
+        await showAppAlert(studentIdentityError, 'Duplicate Login');
         return;
     }
 
-    const photoInput = document.getElementById('studentProfileImage');
     let profileImage = existingStudent?.profileImage || '';
-
     try {
-        if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
+        profileImage = await readImageInputDataUrl('studentProfileImage', profileImage);
     } catch (error) {
         alert(error.message);
         return;
@@ -2616,28 +3621,39 @@ async function handleStudentFormSubmit(e) {
 
     const newStudent = {
         id: isEdit ? idField.value : generateUniqueRecordId('STU'),
-        studentCode,
-        fullName: document.getElementById('fullName').value.trim(),
+        studentCode: studentCodeValue,
+        fullName: document.getElementById('fullName').value,
         profileImage,
-        fatherName: document.getElementById('fatherName').value.trim(),
+        fatherName: document.getElementById('fatherName').value,
         dob: document.getElementById('studentDob').value,
         admissionDate: document.getElementById('admissionDate') ? document.getElementById('admissionDate').value : (existingStudent?.admissionDate || ''),
         classGrade: document.getElementById('classGrade').value,
         campusName: document.getElementById('campusName').value,
-        parentPhone,
+        parentPhone: document.getElementById('parentPhone').value,
         email: studentEmailInput,
         gender: document.getElementById('gender').value,
-        rollNo: document.getElementById('rollNo').value.trim(),
-        formB: document.getElementById('formB').value.trim(),
+        rollNo: document.getElementById('rollNo').value,
+        formB: document.getElementById('formB').value,
         feesStatus: currentStatus,
-        enrollmentStatus,
-        monthlyFee: monthlyFeeInput || '0',
+        enrollmentStatus: existingStudent?.enrollmentStatus || 'Active',
+        terminatedAt: existingStudent?.terminatedAt || '',
+        terminationNote: existingStudent?.terminationNote || '',
+        monthlyFee: monthlyFeeInput,
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
         username: usernameInput,
         password: studentPasswordInput,
         plainPassword: studentPasswordInput,
         role: 'Student'
     };
+
+    console.log('Created newStudent object:', {
+        id: newStudent.id,
+        fullName: newStudent.fullName,
+        username: newStudent.username,
+        classGrade: newStudent.classGrade,
+        campusName: newStudent.campusName,
+        monthlyFee: newStudent.monthlyFee
+    });
 
     // Auto-set payment date if status is Paid
     if (currentStatus === 'Paid') {
@@ -2650,20 +3666,637 @@ async function handleStudentFormSubmit(e) {
         newStudent.paymentDate = '';
     }
 
-    let students = getData(STORAGE_KEY_STUDENTS);
+    let students = getArrayData(STORAGE_KEY_STUDENTS);
     if (isEdit) {
         const index = students.findIndex(s => s.id === newStudent.id);
         if (index !== -1) students[index] = newStudent;
     } else {
         students.push(newStudent);
     }
-    saveData(STORAGE_KEY_STUDENTS, students);
+    console.log(`After local update: Total students = ${students.length}, isEdit = ${isEdit}`);
+    
+    let localSaveResult;
+    try {
+        localSaveResult = saveStudentsWithLocalFallback(students, newStudent);
+        students = localSaveResult.students;
+        console.log(`LocalStorage save successful. Total students in storage = ${students.length}`);
+    } catch (error) {
+        await showAppAlert(error.message || 'Student could not be saved in the browser.', 'Save Failed');
+        return;
+    }
+    renderStudents();
+
+    if (localSaveResult.strippedProfileImage) {
+        await showAppAlert(
+            'Student saved, but the profile image was too large for browser storage, so it was skipped. Use a smaller image if you need to attach it.',
+            'Student Saved'
+        );
+    }
+
+    const syncResult = await syncToSQLDetailed('students', [localSaveResult.student]);
+    console.log('Student sync result:', syncResult);
+    
+    if (syncResult.success) {
+        try {
+            students = await refreshStudentsFromSQL();
+            console.log(`Students refreshed from SQL. Total: ${students.length}`);
+            
+            // Verify the new student is in the list
+            const savedStudent = students.find(s => s.id === newStudent.id);
+            if (!savedStudent) {
+                console.warn(`Warning: Saved student with ID ${newStudent.id} not found in refreshed list`);
+            } else {
+                console.log(`Verified: Student ${newStudent.id} is in the refreshed list`);
+            }
+        } catch (error) {
+            console.error('Student refresh failed:', error.message);
+            await showAppAlert(
+                'Student was saved but could not refresh the list from the database. Please refresh the page to see the new student.',
+                'Partial Success'
+            );
+        }
+    } else {
+        console.error('Student sync to database failed:', syncResult.error);
+        await showAppAlert(
+            syncResult.error || 'The student was saved locally, but database sync failed. Check login and server connection.',
+            'Student Saved Locally'
+        );
+        renderStudents();
+        // Keep the form open on sync failure
+        return;
+    }
 
     pushNotification('Student Updated', `Account for "${newStudent.fullName}" saved and activated.`, 'user');
     toggleStudentForm();
-    populateQuickStudentFilters();
     renderStudents();
-    showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
+    if (usernameInput && studentPasswordInput) {
+        showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
+    } else {
+        showSuccessModal('Student Registered!', `The record for ${newStudent.fullName} is saved without login credentials.`);
+    }
+}
+
+function decodeRowPayload(encodedPayload) {
+    try {
+        return JSON.parse(decodeURIComponent(String(encodedPayload || '')));
+    } catch (error) {
+        return null;
+    }
+}
+
+function editStudentFromEncoded(encodedPayload) {
+    const payload = decodeRowPayload(encodedPayload);
+    if (!payload) {
+        alert('Unable to load student details for editing.');
+        return;
+    }
+    editStudent(payload);
+}
+
+function viewStudentFromEncoded(encodedPayload) {
+    const payload = decodeRowPayload(encodedPayload);
+    if (!payload) {
+        alert('Unable to load student details.');
+        return;
+    }
+    viewStudent(payload);
+}
+
+function handleStudentActionSelect(selectElement, encodedPayload, studentId, isBranchUser = 0) {
+    const action = String(selectElement?.value || '').trim().toLowerCase();
+    if (!action) return;
+
+    if (selectElement) selectElement.value = '';
+
+    if (action === 'view') {
+        viewStudentFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (Number(isBranchUser) === 1) {
+        return;
+    }
+
+    if (action === 'edit') {
+        if (!canCurrentUserPerformAction('students', 'edit')) {
+            showAppAlert('You do not have permission to edit students.', 'Permission Denied');
+            return;
+        }
+        editStudentFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'terminate') {
+        if (!canCurrentUserPerformAction('students', 'edit')) {
+            showAppAlert('You do not have permission to update student status.', 'Permission Denied');
+            return;
+        }
+        terminateStudent(studentId);
+        return;
+    }
+
+    if (action === 'reactivate') {
+        if (!canCurrentUserPerformAction('students', 'edit')) {
+            showAppAlert('You do not have permission to update student status.', 'Permission Denied');
+            return;
+        }
+        reactivateStudent(studentId);
+        return;
+    }
+
+    if (action === 'delete') {
+        if (!canCurrentUserPerformAction('students', 'delete')) {
+            showAppAlert('You do not have permission to delete students.', 'Permission Denied');
+            return;
+        }
+        deleteStudent(studentId);
+    }
+}
+
+function viewStudent(student) {
+    const modal = document.getElementById('studentViewModal');
+    if (!modal) {
+        const compactDetails = `ID: ${student.studentCode || '-'} | Roll: ${student.rollNo || '-'} | Name: ${student.fullName || '-'} | Class: ${student.classGrade || '-'} | Campus: ${student.campusName || '-'}`;
+        showAppAlert(compactDetails, 'Student Details');
+        return;
+    }
+
+    const detailsMap = {
+        viewStudentCode: student.studentCode || '-',
+        viewStudentRollNo: student.rollNo || '-',
+        viewStudentName: student.fullName || '-',
+        viewStudentFatherName: student.fatherName || '-',
+        viewStudentDob: formatDateForDisplay(student.dob),
+        viewStudentClass: student.classGrade || '-',
+        viewStudentCampus: student.campusName || '-',
+        viewStudentGender: student.gender || '-',
+        viewStudentStatus: isStudentTerminated(student) ? 'Terminated' : (student.feesStatus || 'Pending'),
+        viewStudentPhone: student.parentPhone || '-',
+        viewStudentEmail: student.email || '-',
+        viewStudentUsername: student.username || '-'
+    };
+
+    Object.entries(detailsMap).forEach(([id, value]) => {
+        const target = document.getElementById(id);
+        if (target) target.textContent = value;
+    });
+
+    modal.style.display = 'flex';
+    if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+    }
+}
+
+function closeStudentViewModal() {
+    const modal = document.getElementById('studentViewModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function editTeacherFromEncoded(encodedPayload) {
+    const payload = decodeRowPayload(encodedPayload);
+    if (!payload) {
+        alert('Unable to load teacher details for editing.');
+        return;
+    }
+    editTeacher(payload);
+}
+
+function viewTeacherAttendanceFromEncoded(encodedPayload) {
+    const payload = decodeRowPayload(encodedPayload);
+    if (!payload) {
+        alert('Unable to load teacher attendance details.');
+        return;
+    }
+    viewTeacherAttendance(payload);
+}
+
+function bindStudentQuickFilterMultiSelect() {
+    const container = document.getElementById('studentQuickFilterMulti');
+    const trigger = document.getElementById('studentQuickFilterTrigger');
+    const menu = document.getElementById('studentQuickFilterMenu');
+    const select = document.getElementById('studentQuickFilter');
+
+    if (!container || !trigger || !menu || !select) return;
+    if (container.dataset.bound === '1') return;
+    container.dataset.bound = '1';
+
+    trigger.addEventListener('click', () => {
+        if (container.classList.contains('disabled')) return;
+        toggleStudentQuickFilterMultiMenu();
+    });
+
+    if (!window.__eduCoreStudentQuickFilterBound) {
+        window.__eduCoreStudentQuickFilterBound = true;
+
+        document.addEventListener('click', (event) => {
+            const active = document.getElementById('studentQuickFilterMulti');
+            if (!active || !active.classList.contains('open')) return;
+            if (active.contains(event.target)) return;
+            closeStudentQuickFilterMultiMenu();
+        }, true);
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape') return;
+            closeStudentQuickFilterMultiMenu();
+        });
+    }
+}
+
+function openStudentQuickFilterMultiMenu() {
+    const container = document.getElementById('studentQuickFilterMulti');
+    const trigger = document.getElementById('studentQuickFilterTrigger');
+    if (!container || !trigger) return;
+    if (container.classList.contains('disabled')) return;
+    container.classList.add('open');
+    trigger.setAttribute('aria-expanded', 'true');
+}
+
+function closeStudentQuickFilterMultiMenu() {
+    const container = document.getElementById('studentQuickFilterMulti');
+    const trigger = document.getElementById('studentQuickFilterTrigger');
+    if (!container || !trigger) return;
+    container.classList.remove('open');
+    trigger.setAttribute('aria-expanded', 'false');
+}
+
+function toggleStudentQuickFilterMultiMenu() {
+    const container = document.getElementById('studentQuickFilterMulti');
+    if (!container) return;
+    if (container.classList.contains('open')) {
+        closeStudentQuickFilterMultiMenu();
+        return;
+    }
+    openStudentQuickFilterMultiMenu();
+}
+
+function normalizeStudentQuickFilterValues(values) {
+    const uniqueValues = Array.from(new Set((values || []).map((value) => String(value || '').trim()).filter(Boolean)));
+    if (uniqueValues.length === 0) return ['all'];
+
+    if (uniqueValues.includes('all') && uniqueValues.length > 1) {
+        const withoutAll = uniqueValues.filter((value) => value !== 'all');
+        return withoutAll.length ? withoutAll : ['all'];
+    }
+
+    return uniqueValues;
+}
+
+function getStudentQuickFilterSelectedValues(selectElement) {
+    const quickFilter = selectElement || document.getElementById('studentQuickFilter');
+    if (!quickFilter) return ['all'];
+
+    const selected = Array.from(quickFilter.selectedOptions || []).map((option) => option.value);
+    return normalizeStudentQuickFilterValues(selected);
+}
+
+function setStudentQuickFilterSelectedValues(values) {
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!quickFilter) return;
+
+    const normalized = normalizeStudentQuickFilterValues(values);
+    const optionByValue = new Map(Array.from(quickFilter.options || []).map((option) => [String(option.value), option]));
+
+    Array.from(optionByValue.values()).forEach((option) => {
+        option.selected = false;
+    });
+
+    let selectedCount = 0;
+    normalized.forEach((value) => {
+        const option = optionByValue.get(String(value));
+        if (!option) return;
+        option.selected = true;
+        selectedCount += 1;
+    });
+
+    if (selectedCount === 0) {
+        const allOption = optionByValue.get('all');
+        if (allOption) allOption.selected = true;
+    }
+}
+
+function parseStudentQuickFilterValues(values) {
+    const normalizedValues = normalizeStudentQuickFilterValues(values);
+    const genders = [];
+    const campuses = [];
+    const classes = [];
+    let below5 = false;
+
+    normalizedValues.forEach((value) => {
+        if (value.startsWith('gender:')) {
+            const gender = value.split(':')[1];
+            if (gender) genders.push(gender);
+            return;
+        }
+
+        if (value.startsWith('campus:')) {
+            const campus = value.slice('campus:'.length);
+            if (campus) campuses.push(campus);
+            return;
+        }
+
+        if (value.startsWith('class:')) {
+            const className = value.slice('class:'.length);
+            if (className) classes.push(className);
+            return;
+        }
+
+        if (value === 'age:below5') {
+            below5 = true;
+        }
+    });
+
+    return {
+        genders,
+        campuses,
+        classes,
+        below5
+    };
+}
+
+function getStudentClassSortRank(className) {
+    const normalized = String(className || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+    const defaultIndex = DEFAULT_STUDENT_CLASS_ORDER.findIndex((name) => name.toLowerCase() === normalized);
+    if (defaultIndex !== -1) return defaultIndex;
+
+    const aliasRanks = {
+        play: 0,
+        pg: 0,
+        playgroup: 0,
+        'play group': 0,
+        kg1: 1,
+        nursery: 1,
+        nursary: 1,
+        kg2: 2,
+        prep: 2,
+        preschool: 2
+    };
+    if (Object.prototype.hasOwnProperty.call(aliasRanks, normalized)) return aliasRanks[normalized];
+
+    const wordNumbers = {
+        one: 1,
+        two: 2,
+        three: 3,
+        four: 4,
+        five: 5,
+        six: 6,
+        seven: 7,
+        eight: 8,
+        nine: 9,
+        ten: 10
+    };
+    const classMatch = normalized.match(/^(?:class|grade)\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/);
+    if (classMatch) {
+        const classNumber = wordNumbers[classMatch[1]] || Number.parseInt(classMatch[1], 10);
+        if (Number.isFinite(classNumber)) return 2 + classNumber;
+    }
+
+    return 1000;
+}
+
+function compareStudentClassNames(a, b) {
+    const rankA = getStudentClassSortRank(a);
+    const rankB = getStudentClassSortRank(b);
+    if (rankA !== rankB) return rankA - rankB;
+    return String(a || '').localeCompare(String(b || ''), undefined, { numeric: true, sensitivity: 'base' });
+}
+
+function getStudentQuickFilterClassLabel(className) {
+    const normalized = String(className || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+    if (normalized === 'nursery' || normalized === 'nursary' || normalized === 'kg1') return 'KG1';
+    if (normalized === 'prep' || normalized === 'kg2') return 'KG2';
+    return className;
+}
+
+function getStudentQuickFilterLabelForValue(value) {
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!quickFilter) return '';
+    const option = Array.from(quickFilter.options || []).find((opt) => String(opt.value) === String(value));
+    return option ? String(option.textContent || '').trim() : '';
+}
+
+function buildStudentQuickFilterTriggerLabel(selectedValues) {
+    const normalized = normalizeStudentQuickFilterValues(selectedValues);
+    if (normalized.length === 0 || (normalized.length === 1 && normalized[0] === 'all')) return 'All Students';
+
+    const labels = normalized
+        .map((value) => getStudentQuickFilterLabelForValue(value))
+        .filter(Boolean);
+
+    if (!labels.length) return 'Filters';
+    if (labels.length <= 2) return labels.join(', ');
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`;
+}
+
+function syncStudentQuickFilterMultiUI() {
+    const container = document.getElementById('studentQuickFilterMulti');
+    const trigger = document.getElementById('studentQuickFilterTrigger');
+    const menu = document.getElementById('studentQuickFilterMenu');
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!container || !trigger || !menu || !quickFilter) return;
+
+    const selectedValues = getStudentQuickFilterSelectedValues(quickFilter);
+    trigger.textContent = buildStudentQuickFilterTriggerLabel(selectedValues);
+
+    const selectedSet = new Set(selectedValues);
+    menu.querySelectorAll('input[type="checkbox"][data-filter-value]').forEach((checkbox) => {
+        const value = checkbox.getAttribute('data-filter-value');
+        checkbox.checked = selectedSet.has(value);
+    });
+}
+
+function handleStudentQuickFilterCheckboxToggle(event) {
+    const checkbox = event?.target;
+    if (!checkbox || checkbox.tagName !== 'INPUT') return;
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!quickFilter) return;
+
+    const value = String(checkbox.getAttribute('data-filter-value') || '').trim();
+    if (!value) return;
+
+    const optionByValue = new Map(Array.from(quickFilter.options || []).map((option) => [String(option.value), option]));
+    const allOption = optionByValue.get('all');
+
+    if (value === 'all' && checkbox.checked) {
+        Array.from(optionByValue.values()).forEach((option) => {
+            option.selected = option.value === 'all';
+        });
+        syncStudentQuickFilterMultiUI();
+        quickFilter.dispatchEvent(new Event('change'));
+        return;
+    }
+
+    const option = optionByValue.get(value);
+    if (option) option.selected = checkbox.checked;
+    if (checkbox.checked && allOption) allOption.selected = false;
+
+    const selectedValues = getStudentQuickFilterSelectedValues(quickFilter);
+    if (!selectedValues.length || (selectedValues.length === 1 && selectedValues[0] === 'all')) {
+        if (allOption) allOption.selected = true;
+    }
+
+    syncStudentQuickFilterMultiUI();
+    quickFilter.dispatchEvent(new Event('change'));
+}
+
+function buildStudentQuickFilterMultiMenu(forceRebuild = false) {
+    const container = document.getElementById('studentQuickFilterMulti');
+    const menu = document.getElementById('studentQuickFilterMenu');
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!container || !menu || !quickFilter) return;
+
+    const signature = String(quickFilter.dataset.signature || '');
+    const shouldRebuild = forceRebuild || menu.dataset.signature !== signature || !menu.children.length;
+    if (!shouldRebuild) {
+        syncStudentQuickFilterMultiUI();
+        return;
+    }
+
+    const wasOpen = container.classList.contains('open');
+    menu.innerHTML = '';
+
+    const fragment = document.createDocumentFragment();
+    Array.from(quickFilter.children || []).forEach((child) => {
+        const tagName = String(child.tagName || '').toUpperCase();
+        if (tagName === 'OPTION') {
+            fragment.appendChild(createStudentQuickFilterMenuItem(child));
+            return;
+        }
+        if (tagName === 'OPTGROUP') {
+            const groupLabel = document.createElement('div');
+            groupLabel.className = 'student-multifilter-group';
+            groupLabel.textContent = child.label || '';
+            fragment.appendChild(groupLabel);
+            Array.from(child.children || []).forEach((option) => {
+                fragment.appendChild(createStudentQuickFilterMenuItem(option));
+            });
+        }
+    });
+
+    menu.appendChild(fragment);
+    menu.dataset.signature = signature;
+    syncStudentQuickFilterMultiUI();
+
+    if (wasOpen && !container.classList.contains('disabled')) {
+        openStudentQuickFilterMultiMenu();
+    } else {
+        closeStudentQuickFilterMultiMenu();
+    }
+
+    // Keep clicks inside the menu from closing it.
+    if (menu.dataset.bound !== '1') {
+        menu.dataset.bound = '1';
+        menu.addEventListener('click', (event) => event.stopPropagation());
+    }
+}
+
+function createStudentQuickFilterMenuItem(optionElement) {
+    const value = String(optionElement?.value || '').trim();
+    const labelText = String(optionElement?.textContent || '').trim();
+
+    const label = document.createElement('label');
+    label.className = 'student-multifilter-item';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.setAttribute('data-filter-value', value);
+    checkbox.checked = Boolean(optionElement?.selected);
+    checkbox.addEventListener('change', handleStudentQuickFilterCheckboxToggle);
+
+    const text = document.createElement('span');
+    text.textContent = labelText || value || '-';
+
+    label.appendChild(checkbox);
+    label.appendChild(text);
+    return label;
+}
+
+function getStudentStatusLabel(student) {
+    return isStudentTerminated(student) ? 'Terminated' : (student?.feesStatus || 'Pending');
+}
+
+function getStudentColumnSearchText(student, field) {
+    if (!student) return '';
+    if (field === 'status') return getStudentStatusLabel(student);
+    if (field === 'campusName') return student.campusName || '-';
+    if (field === 'dob') return `${student.dob || ''} ${formatDateForDisplay(student.dob)}`;
+    return student[field] || '';
+}
+
+function openStudentColumnSearch(field, label) {
+    const modal = document.getElementById('studentColumnSearchModal');
+    const title = document.getElementById('studentColumnSearchTitle');
+    const labelEl = document.getElementById('studentColumnSearchLabel');
+    const input = document.getElementById('studentColumnSearchInput');
+    const searchInput = document.getElementById('studentSearchInput');
+    const previousValue = studentColumnSearchFilter?.field === field
+        ? studentColumnSearchFilter.rawValue
+        : (searchInput?.value || '');
+
+    if (!modal || !input) {
+        applyStudentColumnSearchValue(field, label, previousValue);
+        return;
+    }
+
+    modal.dataset.field = field;
+    modal.dataset.label = label;
+    if (title) {
+        title.innerHTML = `<span><i data-lucide="search"></i></span> Search ${label}`;
+    }
+    if (labelEl) labelEl.textContent = `Search ${label}`;
+    input.value = previousValue || '';
+    input.placeholder = `Enter ${label}`;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    if (window.lucide) lucide.createIcons();
+    setTimeout(() => {
+        input.focus();
+        input.select();
+    }, 0);
+}
+
+function closeStudentColumnSearchModal() {
+    const modal = document.getElementById('studentColumnSearchModal');
+    if (modal) modal.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function applyStudentColumnSearchValue(field, label, value) {
+    const searchInput = document.getElementById('studentSearchInput');
+
+    const normalizedValue = String(value || '').trim();
+    studentColumnSearchFilter = normalizedValue
+        ? { field, label, rawValue: normalizedValue, value: normalizedValue.toLowerCase() }
+        : null;
+
+    if (searchInput) {
+        searchInput.value = normalizedValue;
+        searchInput.placeholder = studentColumnSearchFilter
+            ? `Searching ${label}...`
+            : 'Search by name, roll no, or student ID';
+    }
+
+    renderStudents();
+}
+
+function applyStudentColumnSearch(event) {
+    if (event) event.preventDefault();
+    const modal = document.getElementById('studentColumnSearchModal');
+    const input = document.getElementById('studentColumnSearchInput');
+    const field = modal?.dataset?.field || '';
+    const label = modal?.dataset?.label || 'Column';
+    if (!field) return;
+    applyStudentColumnSearchValue(field, label, input?.value || '');
+    closeStudentColumnSearchModal();
+}
+
+function clearStudentColumnSearch() {
+    const modal = document.getElementById('studentColumnSearchModal');
+    const field = modal?.dataset?.field || studentColumnSearchFilter?.field || '';
+    const label = modal?.dataset?.label || studentColumnSearchFilter?.label || 'Column';
+    if (field) {
+        applyStudentColumnSearchValue(field, label, '');
+    }
+    closeStudentColumnSearchModal();
 }
 
 function renderStudents(term = '') {
@@ -2671,8 +4304,11 @@ function renderStudents(term = '') {
     if (!tbody) return;
 
     const searchInput = document.getElementById('studentSearchInput');
-    const quickFilter = document.getElementById('quickStudentFilter');
+    const quickFilter = document.getElementById('studentQuickFilter');
     const loggedInUser = getLoggedInUser();
+    const isBranchUser = loggedInUser?.role === 'Branch';
+    const canEditStudents = !isBranchUser && canCurrentUserPerformAction('students', 'edit');
+    const canDeleteStudents = !isBranchUser && canCurrentUserPerformAction('students', 'delete');
 
     if (typeof term !== 'string') {
         term = searchInput ? searchInput.value.toLowerCase().trim() : '';
@@ -2680,17 +4316,38 @@ function renderStudents(term = '') {
         term = term.toLowerCase().trim();
     }
 
-    const filters = getSelectedQuickStudentFilters();
-    const students = getData(STORAGE_KEY_STUDENTS);
-    const filtered = students.filter((s) => {
-        const status = getStudentDisplayStatus(s);
-        const searchable = `${s.fullName || ''} ${s.rollNo || ''} ${s.studentCode || ''}`.toLowerCase();
-        const branchMatch = loggedInUser?.role !== 'Branch' || (s.campusName || 'Main Campus').toLowerCase() === String(loggedInUser.campusName || '').toLowerCase();
-        return branchMatch &&
-            (!term || searchable.includes(term)) &&
-            matchesQuickStudentFilters(s, filters) &&
-            matchesStudentColumnSearch(s, status);
-    });
+    const columnSearch = studentColumnSearchFilter;
+    const activeSearchTerm = columnSearch ? columnSearch.value : term;
+    populateStudentQuickFilterOptions();
+    const selectedQuickValues = getStudentQuickFilterSelectedValues(quickFilter);
+    const parsedFilters = parseStudentQuickFilterValues(selectedQuickValues);
+
+    const genderSet = new Set(parsedFilters.genders.map((gender) => String(gender || '').toLowerCase()));
+    let campusSet = new Set(parsedFilters.campuses.map((campus) => String(campus || '').toLowerCase()));
+    const classSet = new Set(parsedFilters.classes.map((className) => String(className || '').toLowerCase()));
+    const requireBelow5 = parsedFilters.below5;
+
+    if (loggedInUser?.role === 'Branch' && loggedInUser.campusName) {
+        campusSet = new Set([String(loggedInUser.campusName).toLowerCase()]);
+    }
+
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const filtered = students.filter(s =>
+        (
+            !activeSearchTerm ||
+            (columnSearch
+                ? String(getStudentColumnSearchText(s, columnSearch.field)).toLowerCase().includes(activeSearchTerm)
+                : (
+                    (s.fullName && s.fullName.toLowerCase().includes(activeSearchTerm)) ||
+                    (s.rollNo && s.rollNo.toString().toLowerCase().includes(activeSearchTerm)) ||
+                    (s.studentCode && s.studentCode.toLowerCase().includes(activeSearchTerm))
+                ))
+        ) &&
+        (genderSet.size === 0 || genderSet.has(String(s.gender || '').toLowerCase())) &&
+        (!requireBelow5 || isStudentBelowAge(s, 5)) &&
+        (classSet.size === 0 || classSet.has(String(s.classGrade || '').toLowerCase())) &&
+        (campusSet.size === 0 || campusSet.has(String(s.campusName || '').toLowerCase()))
+    );
 
     // Update total count display - Use filtered results length as requested
     const totalCountEl = document.getElementById('totalStudentCount');
@@ -2700,44 +4357,577 @@ function renderStudents(term = '') {
     const noData = document.getElementById('noDataMessage');
 
     if (filtered.length === 0) {
-        noData.style.display = 'block';
+        if (noData) noData.style.display = 'block';
     } else {
-        noData.style.display = 'none';
+        if (noData) noData.style.display = 'none';
         filtered.forEach(s => {
-            const status = getStudentDisplayStatus(s);
-            const statusClass = getStudentStatusClass(status);
+            const terminated = isStudentTerminated(s);
+            const statusLabel = getStudentStatusLabel(s);
+            let statusClass = terminated
+                ? 'status-failed'
+                : (s.feesStatus === 'Paid' ? 'status-paid' : (s.feesStatus === 'Late' ? 'status-failed' : 'status-pending'));
+            const encodedStudent = encodeURIComponent(JSON.stringify(s));
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><b>${s.studentCode || '-'}</b></td>
-                <td><b>${s.rollNo || '-'}</b></td>
+                <td><b>${s.rollNo}</b></td>
                 <td><div class="student-name-cell">
                     <div class="student-avatar">${buildStudentAvatarMarkup(s)}</div>
-                    <div class="student-name-text">${escapeHtml(s.fullName || '-')}</div>
+                    <div class="student-name-text">${s.fullName}</div>
                 </div></td>
-                <td class="cell-compact">${escapeHtml(s.fatherName || '-')}</td>
+                <td class="cell-compact">${s.fatherName || '-'}</td>
                 <td>${formatDateForDisplay(s.dob)}</td>
-                <td class="cell-compact">${escapeHtml(s.classGrade || '-')}</td>
-                <td class="cell-compact">${escapeHtml(s.campusName || '-')}</td>
-                <td>${escapeHtml(s.gender || '-')}</td>
-                <td><span class="status-badge ${statusClass}">${escapeHtml(status)}</span></td>
-                <td>${loggedInUser?.role === 'Branch'
-                    ? '<span style="color: var(--text-secondary); font-size: 0.85rem;">View Only</span>'
-                    : `<div class="row-action-wrap">
-                        <button class="action-btn btn-edit" type="button" onclick="toggleStudentActionMenu(event)">
-                            Actions <i data-lucide="chevron-down" width="14"></i>
-                        </button>
-                        <div class="row-action-menu">
-                            <button type="button" onclick="viewStudent('${s.id}')"><i data-lucide="eye" width="14"></i> View</button>
-                            <button type="button" onclick="editStudentById('${s.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
-                            <button type="button" onclick="toggleStudentEnrollment('${s.id}')"><i data-lucide="${isStudentTerminated(s) ? 'rotate-ccw' : 'user-x'}" width="14"></i> ${isStudentTerminated(s) ? 'Reactivate' : 'Mark Terminated'}</button>
-                            <button type="button" onclick="deleteStudent('${s.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button>
-                        </div>
-                    </div>`}
+                <td class="cell-compact">${s.classGrade}</td>
+                <td class="cell-compact">${s.campusName || '-'}</td>
+                <td>${s.gender || '-'}</td>
+                <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                <td><div class="table-action-wrap">
+                    <select class="table-action-select" onchange="handleStudentActionSelect(this, '${encodedStudent}', '${s.id}', ${isBranchUser ? 1 : 0})">
+                        <option value="">Actions</option>
+                        <option value="view">View</option>
+                        ${canEditStudents ? '<option value="edit">Edit</option>' : ''}
+                        ${canEditStudents ? (terminated ? '<option value="reactivate">Reactivate</option>' : '<option value="terminate">Mark Terminated</option>') : ''}
+                        ${canDeleteStudents ? '<option value="delete">Delete</option>' : ''}
+                    </select>
+                </div>
                 </td>
             `;
             tbody.appendChild(tr);
         });
         window.lucide.createIcons();
+    }
+}
+
+function showAdminRecordsSection(sectionKey = '') {
+    const select = document.getElementById('adminRecordsSelect');
+    if (select && select.value !== sectionKey) select.value = sectionKey;
+
+    const sections = {
+        stuckoff: document.getElementById('stuckoffRecordSection'),
+        resigned: document.getElementById('resignedRecordSection'),
+        alumni: document.getElementById('alumniRecordSection')
+    };
+
+    Object.entries(sections).forEach(([key, section]) => {
+        if (section) section.classList.toggle('active', key === sectionKey);
+    });
+
+    renderAdminRecordPanels();
+}
+
+function handleStudentAdminRecordHash() {
+    if (!isCurrentPage('students.html')) return;
+    const sectionKey = String(window.location.hash || '').replace('#', '');
+    if (!['stuckoff', 'resigned', 'alumni'].includes(sectionKey)) return;
+
+    showAdminRecordsSection(sectionKey);
+    document.querySelector('.admin-records-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderAdminRecordPanels() {
+    renderStuckOffStudents();
+    renderResignedTeachers();
+    renderAlumniRecords();
+}
+
+function renderStuckOffStudents() {
+    const container = document.getElementById('stuckoffStudentsList');
+    if (!container) return;
+
+    const students = getArrayData(STORAGE_KEY_STUDENTS).filter(isStudentTerminated);
+    if (!students.length) {
+        container.innerHTML = '<div class="admin-record-empty">No stuck off students found.</div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="admin-record-table">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Class</th>
+                    <th>Campus</th>
+                    <th>Stuck Off Date</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${students.map((student) => `
+                    <tr>
+                        <td><strong>${escapeHtml(student.fullName || '-')}</strong><br><span style="color:var(--text-secondary);">${escapeHtml(student.studentCode || student.rollNo || '-')}</span></td>
+                        <td>${escapeHtml(student.classGrade || '-')}</td>
+                        <td>${escapeHtml(student.campusName || '-')}</td>
+                        <td>${escapeHtml(formatDateForDisplay(student.terminatedAt) || '-')}</td>
+                        <td><button type="button" class="action-btn btn-edit" onclick="reactivateStudent('${student.id}')">Unmark</button></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function isTeacherResigned(teacher) {
+    return teacher?.resigned === true || String(teacher?.employmentStatus || '').toLowerCase() === 'resigned';
+}
+
+function renderResignedTeachers() {
+    const container = document.getElementById('resignedTeachersList');
+    if (!container) return;
+
+    let teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    if (!teachers.length) {
+        container.innerHTML = '<div class="admin-record-empty">No teachers found.</div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="admin-record-table">
+            <thead>
+                <tr>
+                    <th>Teacher</th>
+                    <th>Subject</th>
+                    <th>Campus</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${teachers.map((teacher) => {
+                    const resigned = isTeacherResigned(teacher);
+                    return `
+                        <tr>
+                            <td><strong>${escapeHtml(teacher.fullName || '-')}</strong><br><span style="color:var(--text-secondary);">${escapeHtml(teacher.employeeCode || teacher.id || '-')}</span></td>
+                            <td>${escapeHtml(teacher.subject || '-')}</td>
+                            <td>${escapeHtml(teacher.campusName || '-')}</td>
+                            <td><span class="status-badge ${resigned ? 'status-failed' : 'status-paid'}">${resigned ? 'Resigned' : 'Active'}</span></td>
+                            <td>
+                                <button type="button" class="action-btn ${resigned ? 'btn-edit' : 'btn-delete'}" onclick="toggleTeacherResignedStatus('${teacher.id}', ${resigned ? 'false' : 'true'})">
+                                    ${resigned ? 'Unmark' : 'Mark Resigned'}
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function toggleTeacherResignedStatus(teacherId, shouldResign) {
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const index = teachers.findIndex((teacher) => String(teacher.id) === String(teacherId));
+    if (index === -1) return;
+
+    teachers[index] = {
+        ...teachers[index],
+        resigned: Boolean(shouldResign),
+        employmentStatus: shouldResign ? 'Resigned' : 'Active',
+        resignedAt: shouldResign ? new Date().toISOString().slice(0, 10) : ''
+    };
+
+    saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+    renderResignedTeachers();
+    if (typeof renderTeachers === 'function') renderTeachers();
+    showSuccessModal(shouldResign ? 'Teacher Marked Resigned!' : 'Teacher Unmarked!', shouldResign
+        ? `${teachers[index].fullName || 'Teacher'} has been marked as resigned.`
+        : `${teachers[index].fullName || 'Teacher'} is active again.`);
+}
+
+function bindAlumniForm() {
+    const form = document.getElementById('alumniForm');
+    if (!form || form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const alumni = getData(STORAGE_KEY_ALUMNI);
+        const record = {
+            id: generateUniqueRecordId('ALM'),
+            teacherName: document.getElementById('alumniTeacherName')?.value.trim() || '',
+            post: document.getElementById('alumniPost')?.value.trim() || '',
+            organization: document.getElementById('alumniOrganization')?.value.trim() || '',
+            contact: document.getElementById('alumniContact')?.value.trim() || '',
+            remarks: document.getElementById('alumniRemarks')?.value.trim() || '',
+            createdAt: new Date().toISOString()
+        };
+
+        if (!record.teacherName || !record.post) {
+            showAppAlert('Teacher name and current post are required.', 'Missing Alumni Detail');
+            return;
+        }
+
+        alumni.push(record);
+        localStorage.setItem(STORAGE_KEY_ALUMNI, JSON.stringify(alumni));
+        form.reset();
+        renderAlumniRecords();
+        showSuccessModal('Alumni Added!', `${record.teacherName} has been added to alumni records.`);
+    });
+}
+
+function renderAlumniRecords() {
+    const container = document.getElementById('alumniList');
+    if (!container) return;
+
+    const alumni = getData(STORAGE_KEY_ALUMNI);
+    if (!alumni.length) {
+        container.innerHTML = '<div class="admin-record-empty">No alumni records added yet.</div>';
+        return;
+    }
+
+    container.innerHTML = `
+        <table class="admin-record-table">
+            <thead>
+                <tr>
+                    <th>Teacher</th>
+                    <th>Current Post</th>
+                    <th>Organization</th>
+                    <th>Contact</th>
+                    <th>Remarks</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${alumni.map((record) => `
+                    <tr>
+                        <td><strong>${escapeHtml(record.teacherName || '-')}</strong></td>
+                        <td>${escapeHtml(record.post || '-')}</td>
+                        <td>${escapeHtml(record.organization || '-')}</td>
+                        <td>${escapeHtml(record.contact || '-')}</td>
+                        <td>${escapeHtml(record.remarks || '-')}</td>
+                        <td><button type="button" class="action-btn btn-delete" onclick="deleteAlumniRecord('${record.id}')">Delete</button></td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+}
+
+function deleteAlumniRecord(recordId) {
+    const alumni = getData(STORAGE_KEY_ALUMNI).filter((record) => String(record.id) !== String(recordId));
+    localStorage.setItem(STORAGE_KEY_ALUMNI, JSON.stringify(alumni));
+    renderAlumniRecords();
+}
+
+function printStudentsList() {
+    if (!isCurrentPage('students.html')) {
+        window.print();
+        return;
+    }
+
+    const searchInput = document.getElementById('studentSearchInput');
+    const quickFilter = document.getElementById('studentQuickFilter');
+    const printModeEl = document.getElementById('studentPrintMode');
+    const loggedInUser = getLoggedInUser();
+
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+
+    populateStudentQuickFilterOptions();
+
+    const term = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const selectedQuickValues = getStudentQuickFilterSelectedValues(quickFilter);
+    const parsedFilters = parseStudentQuickFilterValues(selectedQuickValues);
+
+    const printModeRaw = String(printModeEl ? printModeEl.value : (localStorage.getItem('eduCore_student_print_mode') || 'school')).trim().toLowerCase();
+    const printMode = (printModeRaw === 'outer' || printModeRaw === 'school') ? printModeRaw : 'school';
+    if (printModeEl && printModeEl.value !== printMode) printModeEl.value = printMode;
+    localStorage.setItem('eduCore_student_print_mode', printMode);
+
+    const genderSet = new Set(parsedFilters.genders.map((gender) => String(gender || '').toLowerCase()));
+    let campusSet = new Set(parsedFilters.campuses.map((campus) => String(campus || '').toLowerCase()));
+    const classSet = new Set(parsedFilters.classes.map((className) => String(className || '').toLowerCase()));
+    const requireBelow5 = parsedFilters.below5;
+
+    if (loggedInUser?.role === 'Branch' && loggedInUser.campusName) {
+        campusSet = new Set([String(loggedInUser.campusName).toLowerCase()]);
+    }
+
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const filtered = students
+        .filter((s) =>
+            (
+                !term ||
+                (s.fullName && s.fullName.toLowerCase().includes(term)) ||
+                (s.rollNo && s.rollNo.toString().toLowerCase().includes(term)) ||
+                (s.studentCode && s.studentCode.toLowerCase().includes(term))
+            ) &&
+            (genderSet.size === 0 || genderSet.has(String(s.gender || '').toLowerCase())) &&
+            (!requireBelow5 || isStudentBelowAge(s, 5)) &&
+            (classSet.size === 0 || classSet.has(String(s.classGrade || '').toLowerCase())) &&
+            (campusSet.size === 0 || campusSet.has(String(s.campusName || '').toLowerCase()))
+        )
+        .sort((a, b) => {
+            const rollA = Number.parseInt(String(a.rollNo || ''), 10);
+            const rollB = Number.parseInt(String(b.rollNo || ''), 10);
+            const rollAValid = Number.isFinite(rollA);
+            const rollBValid = Number.isFinite(rollB);
+            if (rollAValid && rollBValid && rollA !== rollB) return rollA - rollB;
+            if (rollAValid !== rollBValid) return rollAValid ? -1 : 1;
+            return String(a.fullName || '').localeCompare(String(b.fullName || ''));
+        });
+
+    const settings = getData(STORAGE_KEY_SETTINGS) || {};
+    const schoolName = settings.schoolName || 'Student List';
+    const printedAt = new Date().toLocaleString();
+    const modeLabel = printMode === 'outer' ? 'Outer Student List' : 'School Student List';
+
+    const formatDateSafe = (value) => {
+        try {
+            return escapeHtml(formatDateForDisplay(value));
+        } catch (_error) {
+            return escapeHtml(value || '-');
+        }
+    };
+
+    const rowsMarkup = filtered.length
+        ? filtered.map((s, idx) => {
+            if (printMode === 'outer') {
+                return `
+                    <tr>
+                        <td class="num">${idx + 1}</td>
+                        <td>${escapeHtml(s.fullName || '-')}</td>
+                        <td>${escapeHtml(s.fatherName || '-')}</td>
+                        <td>${escapeHtml(s.parentPhone || '-')}</td>
+                        <td>${escapeHtml(s.rollNo || '-')}</td>
+                    </tr>
+                `;
+            }
+
+            return `
+                <tr>
+                    <td class="num">${idx + 1}</td>
+                    <td>${escapeHtml(s.studentCode || '-')}</td>
+                    <td>${escapeHtml(s.rollNo || '-')}</td>
+                    <td>${escapeHtml(s.fullName || '-')}</td>
+                    <td>${escapeHtml(s.fatherName || '-')}</td>
+                    <td>${escapeHtml(s.parentPhone || '-')}</td>
+                    <td>${formatDateSafe(s.dob)}</td>
+                    <td>${formatDateSafe(s.admissionDate)}</td>
+                    <td>${escapeHtml(s.classGrade || '-')}</td>
+                    <td>${escapeHtml(s.campusName || '-')}</td>
+                    <td>${escapeHtml(s.gender || '-')}</td>
+                    <td>${escapeHtml(s.email || '-')}</td>
+                    <td>${escapeHtml(s.formB || '-')}</td>
+                    <td>${escapeHtml(s.monthlyFee || '-')}</td>
+                    <td>${escapeHtml(isStudentTerminated(s) ? 'Terminated' : (s.feesStatus || '-'))}</td>
+                </tr>
+            `;
+        }).join('')
+        : `<tr><td colspan="${printMode === 'outer' ? 5 : 15}" class="empty">No students match the current filter.</td></tr>`;
+
+    const html = `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>${escapeHtml(schoolName)} - Students</title>
+            <style>
+                :root { color-scheme: light; }
+                @page { size: ${printMode === 'school' ? 'A4 landscape' : 'A4'}; margin: 12mm; }
+                body { font-family: Arial, sans-serif; color: #111827; }
+                .header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+                .title { font-size: 18px; font-weight: 700; }
+                .meta { font-size: 12px; color: #475569; }
+                table { width: 100%; border-collapse: collapse; font-size: ${printMode === 'school' ? '10px' : '12px'}; }
+                th, td { border: 1px solid #64748b; padding: 6px 8px; }
+                th { background: #f1f5f9; text-align: left; }
+                td.num { width: 30px; text-align: center; }
+                td.empty { text-align: center; color: #475569; padding: 16px 8px; }
+                .nowrap { white-space: nowrap; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <div>
+                    <div class="title">${escapeHtml(schoolName)}</div>
+                    <div class="meta">${escapeHtml(modeLabel)}</div>
+                </div>
+                <div class="meta">Printed: ${escapeHtml(printedAt)} | Total: ${filtered.length}</div>
+            </div>
+            <table>
+                <thead>
+                    ${printMode === 'outer'
+        ? `
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th>Student Name</th>
+                            <th>Father Name</th>
+                            <th>Contact No</th>
+                            <th style="width:70px;">Roll No</th>
+                        </tr>
+                    `
+        : `
+                        <tr>
+                            <th style="width:30px;">#</th>
+                            <th class="nowrap">Student ID</th>
+                            <th class="nowrap">Roll No</th>
+                            <th>Student Name</th>
+                            <th>Father Name</th>
+                            <th class="nowrap">Contact No</th>
+                            <th class="nowrap">DOB</th>
+                            <th class="nowrap">Admission Date</th>
+                            <th>Class</th>
+                            <th>Campus</th>
+                            <th>Gender</th>
+                            <th>Email</th>
+                            <th class="nowrap">Form B</th>
+                            <th class="nowrap">Monthly Fee</th>
+                            <th class="nowrap">Fee Status</th>
+                        </tr>
+                    `}
+                </thead>
+                <tbody>
+                    ${rowsMarkup}
+                </tbody>
+            </table>
+            <script>
+                window.focus();
+                window.print();
+                window.onafterprint = () => window.close();
+            </script>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', 'eduCoreStudentPrint', 'width=1000,height=700');
+    if (!printWindow) {
+        alert('Popup blocked. Please allow popups to print the student list.');
+        return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+
+function populateStudentQuickFilterOptions() {
+    const quickFilter = document.getElementById('studentQuickFilter');
+    if (!quickFilter) return;
+    bindStudentQuickFilterMultiSelect();
+
+    const previousSelected = getStudentQuickFilterSelectedValues(quickFilter);
+    const loggedInUser = getLoggedInUser();
+
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const campusMap = new Map();
+    const classMap = new Map();
+    [...DEFAULT_CAMPUS_NAMES,
+        ...studentQuickFilterBranchCampuses,
+        ...students.map((student) => String(student.campusName || '').trim())
+    ]
+        .forEach((campusName) => {
+            const normalized = String(campusName || '').trim();
+            if (!normalized) return;
+            const key = normalized.toLowerCase();
+            if (!campusMap.has(key)) campusMap.set(key, normalized);
+        });
+
+    [
+        ...getData(STORAGE_KEY_CLASSES).map((item) => String(item?.name || '').trim()),
+        ...students.map((student) => String(student.classGrade || '').trim())
+    ]
+        .forEach((className) => {
+            const normalized = String(className || '').trim();
+            if (!normalized) return;
+            const key = normalized.toLowerCase();
+            if (!classMap.has(key)) classMap.set(key, normalized);
+        });
+
+    if (loggedInUser?.role === 'Branch' && loggedInUser.campusName) {
+        const normalizedBranchCampus = String(loggedInUser.campusName || '').trim();
+        if (normalizedBranchCampus) {
+            const key = normalizedBranchCampus.toLowerCase();
+            if (!campusMap.has(key)) campusMap.set(key, normalizedBranchCampus);
+        }
+    }
+
+    const campuses = Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+    const classes = Array.from(classMap.values()).sort(compareStudentClassNames);
+    const signature = [
+        `campuses:${campuses.map((name) => String(name || '').toLowerCase()).join('|')}`,
+        `classes:${classes.map((name) => String(name || '').toLowerCase()).join('|')}`
+    ].join('||');
+    const needsRebuild = quickFilter.dataset.signature !== signature || !quickFilter.options.length;
+
+    if (needsRebuild) {
+        quickFilter.innerHTML = `
+            <option value="all">All Students</option>
+            <option value="gender:Male">Male Students</option>
+            <option value="gender:Female">Female Students</option>
+            <option value="gender:Other">Other Gender</option>
+            <option value="age:below5">Below 5 Years</option>
+        `;
+
+        if (campuses.length) {
+            const campusGroup = document.createElement('optgroup');
+            campusGroup.label = 'Campus';
+            campuses.forEach((campusName) => {
+                const option = document.createElement('option');
+                option.value = `campus:${campusName}`;
+                option.textContent = campusName;
+                campusGroup.appendChild(option);
+            });
+            quickFilter.appendChild(campusGroup);
+        }
+
+        if (classes.length) {
+            const classGroup = document.createElement('optgroup');
+            classGroup.label = 'Classes';
+            classes.forEach((className) => {
+                const option = document.createElement('option');
+                option.value = `class:${className}`;
+                option.textContent = getStudentQuickFilterClassLabel(className);
+                classGroup.appendChild(option);
+            });
+            quickFilter.appendChild(classGroup);
+        }
+
+        quickFilter.dataset.signature = signature;
+    }
+
+    const container = document.getElementById('studentQuickFilterMulti');
+    const trigger = document.getElementById('studentQuickFilterTrigger');
+
+    if (loggedInUser?.role === 'Branch' && loggedInUser.campusName) {
+        const campusValue = `campus:${loggedInUser.campusName}`;
+        setStudentQuickFilterSelectedValues([campusValue]);
+        quickFilter.disabled = true;
+        if (trigger) trigger.disabled = true;
+        if (container) container.classList.add('disabled');
+        buildStudentQuickFilterMultiMenu(needsRebuild);
+        return;
+    }
+
+    quickFilter.disabled = false;
+    if (trigger) trigger.disabled = false;
+    if (container) container.classList.remove('disabled');
+
+    setStudentQuickFilterSelectedValues(previousSelected);
+    buildStudentQuickFilterMultiMenu(needsRebuild);
+}
+
+async function loadStudentQuickFilterBranchCampuses() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/branches`);
+        const responseText = await response.text();
+        const branches = responseText ? JSON.parse(responseText) : [];
+
+        if (!response.ok || !Array.isArray(branches)) {
+            throw new Error('Branch campuses unavailable.');
+        }
+
+        studentQuickFilterBranchCampuses = branches
+            .map((branch) => String(branch?.campusName || '').trim())
+            .filter(Boolean);
+        renderStudents();
+    } catch (error) {
+        studentQuickFilterBranchCampuses = [];
     }
 }
 
@@ -2750,140 +4940,39 @@ function editStudent(s) {
     if (document.getElementById('studentDob')) document.getElementById('studentDob').value = s.dob || '';
     if (document.getElementById('admissionDate')) document.getElementById('admissionDate').value = normalizeDateInputValue(s.admissionDate || s.createdAt || '');
     document.getElementById('classGrade').value = s.classGrade;
-    document.getElementById('campusName').value = s.campusName || 'Main Campus';
+    document.getElementById('campusName').value = s.campusName || '';
     document.getElementById('parentPhone').value = s.parentPhone;
     if (document.getElementById('studentEmail')) document.getElementById('studentEmail').value = s.email || '';
     document.getElementById('gender').value = s.gender || '';
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
+    if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').dataset.autoClassFee = '';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
     if (document.getElementById('username')) document.getElementById('username').value = s.username || '';
     if (document.getElementById('studentPassword')) document.getElementById('studentPassword').value = getVisibleStudentPassword(s);
-    setStudentPhotoPreview(s.profileImage || '', s.fullName || '');
     if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
-}
-
-function editStudentById(id) {
-    const student = getData(STORAGE_KEY_STUDENTS).find((item) => item.id === id);
-    if (student) editStudent(student);
-}
-
-function toggleStudentActionMenu(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    const wrap = event.currentTarget.closest('.row-action-wrap');
-    document.querySelectorAll('.row-action-wrap.open').forEach((item) => {
-        if (item !== wrap) item.classList.remove('open');
-    });
-    if (wrap) wrap.classList.toggle('open');
-}
-
-document.addEventListener('click', () => {
-    document.querySelectorAll('.row-action-wrap.open').forEach((item) => item.classList.remove('open'));
-});
-
-function viewStudent(id) {
-    const student = getData(STORAGE_KEY_STUDENTS).find((item) => item.id === id);
-    const modal = document.getElementById('studentViewModal');
-    const content = document.getElementById('studentViewContent');
-    if (!student || !modal || !content) return;
-
-    const fields = [
-        ['Student ID', student.studentCode || '-'],
-        ['Roll No', student.rollNo || '-'],
-        ['Name', student.fullName || '-'],
-        ['Father Name', student.fatherName || '-'],
-        ['Date of Birth', formatDateForDisplay(student.dob)],
-        ['Class', student.classGrade || '-'],
-        ['Campus', student.campusName || '-'],
-        ['Gender', student.gender || '-'],
-        ['Status', getStudentDisplayStatus(student)],
-        ['Parent Phone', student.parentPhone || '-'],
-        ['Email', student.email || '-'],
-        ['Username', student.username || '-']
-    ];
-
-    content.innerHTML = fields.map(([label, value]) => `
-        <div class="student-modal-field">
-            <span>${escapeHtml(label)}</span>
-            <strong>${escapeHtml(value)}</strong>
-        </div>
-    `).join('');
-    modal.style.display = 'flex';
-    if (window.lucide) window.lucide.createIcons();
-}
-
-function closeStudentViewModal() {
-    const modal = document.getElementById('studentViewModal');
-    if (modal) modal.style.display = 'none';
-}
-
-function openStudentColumnSearch(column, label) {
-    studentColumnSearchState.column = column;
-    studentColumnSearchState.label = label;
-    const modal = document.getElementById('studentColumnSearchModal');
-    const title = document.getElementById('studentColumnSearchTitle');
-    const input = document.getElementById('studentColumnSearchInput');
-    if (!modal || !title || !input) return;
-    title.innerText = `Search ${label}`;
-    input.value = studentColumnSearchState.value;
-    modal.style.display = 'flex';
-    input.focus();
-    if (window.lucide) window.lucide.createIcons();
-}
-
-function applyStudentColumnSearch() {
-    const input = document.getElementById('studentColumnSearchInput');
-    studentColumnSearchState.value = input ? input.value.trim() : '';
-    const modal = document.getElementById('studentColumnSearchModal');
-    if (modal) modal.style.display = 'none';
-    renderStudents();
-}
-
-function clearStudentColumnSearch() {
-    studentColumnSearchState.column = '';
-    studentColumnSearchState.label = '';
-    studentColumnSearchState.value = '';
-    const input = document.getElementById('studentColumnSearchInput');
-    if (input) input.value = '';
-    const modal = document.getElementById('studentColumnSearchModal');
-    if (modal) modal.style.display = 'none';
-    renderStudents();
-}
-
-function toggleStudentEnrollment(id) {
-    const students = getData(STORAGE_KEY_STUDENTS);
-    const index = students.findIndex((student) => student.id === id);
-    if (index === -1) return;
-
-    const student = students[index];
-    student.enrollmentStatus = isStudentTerminated(student) ? 'Active' : 'Terminated';
-    students[index] = student;
-    saveData(STORAGE_KEY_STUDENTS, students);
-    renderStudents();
-    pushNotification('Student Status Updated', `${student.fullName || 'Student'} is now ${student.enrollmentStatus}.`, 'user');
-}
-
-function printStudentsList() {
-    const printType = document.getElementById('studentPrintType')?.value || 'school';
-    document.body.dataset.studentPrintType = printType;
-    window.print();
+    setStudentPhotoPreview(s.profileImage || '', s.fullName || '');
 }
 
 async function deleteStudent(id) {
+    if (!canCurrentUserPerformAction('students', 'delete')) {
+        showAppAlert('You do not have permission to delete students.', 'Permission Denied');
+        return;
+    }
     if (!(await showAppConfirm('Delete this student?'))) return;
 
-    let students = getData(STORAGE_KEY_STUDENTS);
+    let students = getArrayData(STORAGE_KEY_STUDENTS);
     const existingStudents = [...students];
     students = students.filter(s => s.id !== id);
     localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
-    populateQuickStudentFilters();
     renderStudents();
 
     try {
+        const token = sessionStorage.getItem('eduCore_token') || '';
         const response = await fetch(`${API_BASE_URL}/students/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
         });
 
         if (response.status === 503) {
@@ -2907,7 +4996,6 @@ async function deleteStudent(id) {
         pushNotification('Student Deleted', result.message || 'Student deleted successfully.', 'user');
     } catch (error) {
         localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(existingStudents));
-        populateQuickStudentFilters();
         renderStudents();
         alert(error.message);
     }
@@ -2927,6 +5015,8 @@ function toggleTeacherForm(editMode = false) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('teacherId').value = '';
+        if (document.getElementById('tProfileImage')) document.getElementById('tProfileImage').value = '';
+        setTeacherPhotoPreview('', '');
     } else {
         container.style.display = 'block';
         // Reset Panels
@@ -2938,11 +5028,127 @@ function toggleTeacherForm(editMode = false) {
             document.getElementById('teacherId').value = '';
             const teacherCodeField = document.getElementById('teacherCode');
             if (teacherCodeField) teacherCodeField.value = generateEntityCode(STORAGE_KEY_TEACHERS, 'TCH');
+            if (document.getElementById('tProfileImage')) document.getElementById('tProfileImage').value = '';
+            setTeacherPhotoPreview('', '');
             title.innerText = 'Add New Teacher';
         } else {
             title.innerText = 'Edit Teacher Details';
         }
     }
+}
+
+function validateTeacherRequiredFields() {
+    const requiredFields = [
+        ['tFullName', 'Full Name'],
+        ['tFatherName', "Father's Name"],
+        ['tDob', 'Date of Birth'],
+        ['tCnic', 'CNIC'],
+        ['tAddress', 'Address'],
+        ['tQualification', 'Qualification'],
+        ['tCampusName', 'Campus'],
+        ['tGender', 'Gender'],
+        ['tDesignation', 'Designation'],
+        ['tSubject', 'Subject']
+    ];
+
+    const missingField = requiredFields.find(([fieldId]) => {
+        const field = document.getElementById(fieldId);
+        return field && !String(field.value || '').trim();
+    });
+
+    if (!missingField) return '';
+
+    const field = document.getElementById(missingField[0]);
+    field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    field?.focus();
+    return `${missingField[1]} is required.`;
+}
+
+function isStorageQuotaError(error) {
+    return error?.name === 'QuotaExceededError' ||
+        error?.code === 22 ||
+        String(error?.message || '').toLowerCase().includes('quota');
+}
+
+function saveStudentsWithLocalFallback(students, newStudent) {
+    try {
+        saveData(STORAGE_KEY_STUDENTS, students, { skipSync: true });
+        return { students, student: newStudent, strippedProfileImage: false };
+    } catch (error) {
+        if (!isStorageQuotaError(error)) throw error;
+
+        const compactStudent = {
+            ...newStudent,
+            profileImage: ''
+        };
+        const compactStudents = students.map((student) => (
+            student.id === compactStudent.id
+                ? compactStudent
+                : student
+        ));
+
+        saveData(STORAGE_KEY_STUDENTS, compactStudents, { skipSync: true });
+        return { students: compactStudents, student: compactStudent, strippedProfileImage: true };
+    }
+}
+
+function saveTeachersWithLocalFallback(teachers, newTeacher) {
+    try {
+        saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+        return { teachers, teacher: newTeacher, strippedDocuments: false, strippedProfileImage: false };
+    } catch (error) {
+        if (!isStorageQuotaError(error)) throw error;
+
+        const compactTeacher = {
+            ...newTeacher,
+            idCardFront: null,
+            idCardBack: null,
+            cvFile: null
+        };
+        const compactTeachers = teachers.map((teacher) => (
+            teacher.id === compactTeacher.id
+                ? compactTeacher
+                : {
+                    ...teacher,
+                    idCardFront: null,
+                    idCardBack: null,
+                    cvFile: null
+            }
+        ));
+
+        try {
+            saveData(STORAGE_KEY_TEACHERS, compactTeachers, { skipSync: true });
+            return { teachers: compactTeachers, teacher: compactTeacher, strippedDocuments: true, strippedProfileImage: false };
+        } catch (secondError) {
+            if (!isStorageQuotaError(secondError)) throw secondError;
+
+            const minimalTeacher = {
+                ...compactTeacher,
+                profileImage: ''
+            };
+            const minimalTeachers = compactTeachers.map((teacher) => (
+                teacher.id === minimalTeacher.id
+                    ? minimalTeacher
+                    : {
+                        ...teacher,
+                        profileImage: ''
+                    }
+            ));
+
+            saveData(STORAGE_KEY_TEACHERS, minimalTeachers, { skipSync: true });
+            return { teachers: minimalTeachers, teacher: minimalTeacher, strippedDocuments: true, strippedProfileImage: true };
+        }
+    }
+}
+
+function clearTeacherListFilters() {
+    const searchInput = document.getElementById('teacherSearchInput');
+    const campusFilter = document.getElementById('teacherCampusFilter');
+    const genderFilter = document.getElementById('teacherGenderFilter');
+
+    if (searchInput) searchInput.value = '';
+    if (campusFilter) campusFilter.value = '';
+    if (genderFilter) genderFilter.value = '';
 }
 
 async function handleTeacherFormSubmit(e) {
@@ -2956,13 +5162,18 @@ async function handleTeacherFormSubmit(e) {
     const teacherEmailInput = document.getElementById('tEmail') ? document.getElementById('tEmail').value.trim() : '';
 
     // Validation
+    const requiredFieldError = validateTeacherRequiredFields();
+    if (requiredFieldError) {
+        await showAppAlert(requiredFieldError, 'Missing Teacher Detail');
+        return;
+    }
     if (!usernameInput || !tPasswordInput) {
-        alert('Please create login credentials for the teacher.');
+        await showAppAlert('Please create login credentials for the teacher.', 'Missing Login');
         if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
         return;
     }
     if (!salaryValInput || salaryValInput === '0') {
-        alert('Please set the teacher salary.');
+        await showAppAlert('Please set the teacher salary.', 'Missing Salary');
         if (!document.getElementById('salaryPanel').classList.contains('active')) toggleStepPanel('salaryPanel');
         return;
     }
@@ -2974,11 +5185,11 @@ async function handleTeacherFormSubmit(e) {
     });
 
     if (teacherIdentityError) {
-        alert(teacherIdentityError);
+        await showAppAlert(teacherIdentityError, 'Duplicate Login');
         return;
     }
 
-    const teachers = getData(STORAGE_KEY_TEACHERS);
+    let teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const existingTeacher = isEdit ? teachers.find(t => t.id === idField.value) : null;
 
     let idCardFront = existingTeacher?.idCardFront || null;
@@ -2987,13 +5198,19 @@ async function handleTeacherFormSubmit(e) {
     let profileImage = existingTeacher?.profileImage || '';
 
     try {
+        profileImage = await readImageInputDataUrl('tProfileImage', profileImage);
         idCardFront = await getOptionalFilePayload('tIdCardFront', idCardFront);
         idCardBack = await getOptionalFilePayload('tIdCardBack', idCardBack);
         cvFile = await getOptionalFilePayload('tCvFile', cvFile);
     } catch (error) {
-        alert(error.message);
+        await showAppAlert(error.message, 'File Upload Error');
         return;
     }
+
+    const normalizedTeacherDesignation = normalizeTeacherDesignation(
+        document.getElementById('tDesignation')?.value || 'Teacher',
+        getDesignationGroup('tDesignation', 'teacher')
+    );
 
     const newTeacher = {
         id: isEdit ? idField.value : generateUniqueRecordId('TCH'),
@@ -3009,8 +5226,8 @@ async function handleTeacherFormSubmit(e) {
         qualification: document.getElementById('tQualification').value,
         campusName: document.getElementById('tCampusName').value,
         gender: document.getElementById('tGender').value,
-        designation: document.getElementById('tDesignation')?.value || 'Teacher',
-        groupKey: getDesignationGroup('tDesignation', 'teacher'),
+        designation: normalizedTeacherDesignation.designation,
+        groupKey: normalizedTeacherDesignation.groupKey,
         subject: document.getElementById('tSubject').value,
         salary: salaryValInput,
         username: usernameInput,
@@ -3034,17 +5251,48 @@ async function handleTeacherFormSubmit(e) {
         teachers.push(newTeacher);
     }
 
-    saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
-    const teacherSyncResult = await syncToSQLDetailed('teachers', [newTeacher]);
+    let localSaveResult;
+    try {
+        localSaveResult = saveTeachersWithLocalFallback(teachers, newTeacher);
+    } catch (error) {
+        await showAppAlert(error.message || 'Teacher could not be saved in the browser.', 'Save Failed');
+        return;
+    }
 
-    if (!teacherSyncResult.success) {
-        alert(teacherSyncResult.error || 'The teacher was saved to local storage, but database sync failed. Check the server and MySQL connection.');
+    if (localSaveResult.strippedDocuments) {
+        teachers = localSaveResult.teachers;
+        await showAppAlert(
+            localSaveResult.strippedProfileImage
+                ? 'Teacher saved, but uploaded files were too large for browser storage, so documents and profile images were skipped. Use smaller files if you need to attach them.'
+                : 'Teacher saved, but uploaded ID/CV files were too large for browser storage, so documents were skipped. Use smaller files if you need to attach them.',
+            'Teacher Saved'
+        );
     }
 
     pushNotification('Staff Updated', `Teacher account for "${newTeacher.fullName}" saved and activated.`, 'book');
     toggleTeacherForm();
+    if (!isEdit) clearTeacherListFilters();
     renderTeachers();
-    showSuccessModal('Teacher Registered!', `Professor ${newTeacher.fullName}'s account is active. They can now access their portal.`);
+    showSuccessModal(
+        isEdit ? 'Teacher Updated!' : 'Teacher Successfully Added!',
+        isEdit
+            ? `${newTeacher.fullName}'s teacher record has been updated successfully.`
+            : `${newTeacher.fullName} has been added successfully.`
+    );
+
+    syncToSQLDetailed('teachers', [localSaveResult.teacher]).then((teacherSyncResult) => {
+        if (!teacherSyncResult.success) {
+            console.warn('Teacher SQL sync failed:', teacherSyncResult.error);
+            showAppAlert(
+                teacherSyncResult.error || 'The teacher was saved locally, but database sync failed. Check the server and MySQL connection.',
+                'Teacher Saved Locally'
+            );
+            return;
+        }
+        return refreshTeachersFromSQL().then(() => renderTeachers());
+    }).catch((error) => {
+        console.warn('Teacher list refresh failed:', error.message);
+    });
 }
 
 function getTeacherScheduleSummary(teacher) {
@@ -3058,7 +5306,7 @@ function getTeacherScheduleSummary(teacher) {
 }
 
 function openTeacherSchedule(teacherId) {
-    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const teacher = teachers.find(item => item.id === teacherId);
     const modal = document.getElementById('teacherScheduleModal');
     if (!teacher || !modal) return;
@@ -3156,7 +5404,7 @@ function renderTeacherScheduleDraft() {
 
 async function saveTeacherSchedule() {
     const teacherId = document.getElementById('scheduleTeacherId').value;
-    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const teacher = teachers.find(item => item.id === teacherId);
     if (!teacher) return;
 
@@ -3182,7 +5430,7 @@ function renderTeachers(term = '') {
     const genderFilter = document.getElementById('teacherGenderFilter');
     const selectedCampus = campusFilter ? campusFilter.value : '';
     const selectedGender = genderFilter ? genderFilter.value : '';
-    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const filtered = teachers.filter(t =>
         (
             (t.fullName && t.fullName.toLowerCase().includes(term)) ||
@@ -3224,20 +5472,19 @@ function renderTeachers(term = '') {
     };
 
     if (filtered.length === 0) {
-        noData.style.display = 'block';
+        if (noData) noData.style.display = 'block';
     } else {
-        noData.style.display = 'none';
+        if (noData) noData.style.display = 'none';
         filtered.forEach(t => {
-            const teacherAvatar = t.profileImage
-                ? `<img src="${t.profileImage}" alt="${t.fullName}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid rgba(15,23,42,0.08);">`
-                : `<div style="width:30px;height:30px;background:#f0bdd1;color:#be185d;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${t.fullName.charAt(0).toUpperCase()}</div>`;
+            const encodedTeacher = encodeURIComponent(JSON.stringify(t));
+            const normalizedTeacherDesignation = normalizeTeacherDesignation(t.designation, t.groupKey);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><div class="teacher-name-cell">
-                    ${teacherAvatar}
+                    <div class="teacher-avatar">${buildTeacherAvatarMarkup(t)}</div>
                     <div class="teacher-name-text">
                         <div style="font-weight:500">${t.fullName}</div>
-                        <div style="font-size:0.75rem;color:var(--text-secondary)">${t.employeeCode || ''} ${t.designation ? ` - ${t.designation}` : ''}</div>
+                        <div style="font-size:0.75rem;color:var(--text-secondary)">${t.employeeCode || ''} ${normalizedTeacherDesignation.designation ? ` - ${normalizedTeacherDesignation.designation}` : ''}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary)">${t.qualification || ''}</div>
                     </div>
                 </div></td>
@@ -3259,13 +5506,13 @@ function renderTeachers(term = '') {
                 <td style="font-weight:600;">PKR ${parseInt(t.salary || 0).toLocaleString()}</td>
                 <td>${t.phone || '-'}</td>
                 <td>
-                    <button class="action-btn btn-view" onclick='viewTeacherAttendance(${JSON.stringify(t)})' title="View Attendance">
+                    <button class="action-btn btn-view" onclick="viewTeacherAttendanceFromEncoded('${encodedTeacher}')" title="View Attendance">
                         <i data-lucide="eye" width="14"></i>
                     </button>
                     <button class="action-btn btn-edit" onclick="openTeacherSchedule('${t.id}')" title="Assign Lectures">
                         <i data-lucide="calendar-clock" width="14"></i> Schedule
                     </button>
-                    <button class="action-btn btn-edit" onclick='editTeacher(${JSON.stringify(t)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
+                    <button class="action-btn btn-edit" onclick="editTeacherFromEncoded('${encodedTeacher}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
                     <button class="action-btn btn-delete" onclick="deleteTeacher('${t.id}')"><i data-lucide="trash-2" width="14"></i></button>
                 </td>
             `;
@@ -3277,6 +5524,7 @@ function renderTeachers(term = '') {
 
 function editTeacher(t) {
     toggleTeacherForm(true);
+    const normalizedTeacherDesignation = normalizeTeacherDesignation(t.designation, t.groupKey);
     document.getElementById('teacherId').value = t.id;
     document.getElementById('teacherCode').value = t.employeeCode || '';
     document.getElementById('tFullName').value = t.fullName;
@@ -3289,7 +5537,7 @@ function editTeacher(t) {
     document.getElementById('tQualification').value = t.qualification || '';
     document.getElementById('tCampusName').value = t.campusName || '';
     document.getElementById('tGender').value = t.gender || '';
-    setDesignationSelectValue('tDesignation', t.designation || 'Teacher', t.groupKey || 'teacher');
+    setDesignationSelectValue('tDesignation', normalizedTeacherDesignation.designation, normalizedTeacherDesignation.groupKey);
     document.getElementById('tSubject').value = t.subject;
     document.getElementById('tSalary').value = t.salary || '0';
     if (document.getElementById('tBankName')) document.getElementById('tBankName').value = t.bankName || '';
@@ -3298,6 +5546,8 @@ function editTeacher(t) {
     if (document.getElementById('tBankBranch')) document.getElementById('tBankBranch').value = t.bankBranch || '';
     if (document.getElementById('tUsername')) document.getElementById('tUsername').value = t.username || '';
     if (document.getElementById('tPassword')) document.getElementById('tPassword').value = t.plainPassword || t.password || '';
+    if (document.getElementById('tProfileImage')) document.getElementById('tProfileImage').value = '';
+    setTeacherPhotoPreview(t.profileImage || '', t.fullName || '');
     if (document.getElementById('tIdCardFront')) document.getElementById('tIdCardFront').value = '';
     if (document.getElementById('tIdCardBack')) document.getElementById('tIdCardBack').value = '';
     if (document.getElementById('tCvFile')) document.getElementById('tCvFile').value = '';
@@ -3306,13 +5556,15 @@ function editTeacher(t) {
 async function deleteTeacher(id) {
     if (!(await showAppConfirm('Delete this teacher?'))) return;
 
-    const existingTeachers = getData(STORAGE_KEY_TEACHERS);
+    const existingTeachers = getArrayData(STORAGE_KEY_TEACHERS);
     const updatedTeachers = existingTeachers.filter(t => t.id !== id);
     saveData(STORAGE_KEY_TEACHERS, updatedTeachers, { skipSync: true });
     renderTeachers();
 
+    const token = sessionStorage.getItem('eduCore_token') || '';
     fetch(`${API_BASE_URL}/teachers/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
         .then(async (response) => {
             if (response.status === 503) {
@@ -3476,7 +5728,7 @@ async function toggleTeacherAttendanceDay(teacherId, monthKey, dayIndex) {
     }
 
     // Refresh View
-    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const teacher = teachers.find(t => t.id === teacherId);
     if (teacher) viewTeacherAttendance(teacher, monthKey);
 }
@@ -3564,7 +5816,17 @@ async function handleStaffFormSubmit(e) {
     } else {
         staff.push(newStaff);
     }
-    saveData(STORAGE_KEY_STAFF, staff);
+    saveData(STORAGE_KEY_STAFF, staff, { skipSync: true });
+    const staffSyncResult = await syncToSQLDetailed('staff', [newStaff]);
+    if (!staffSyncResult.success) {
+        alert(staffSyncResult.error || 'The staff record was saved to local storage, but database sync failed. Check the server and MySQL connection.');
+    } else {
+        try {
+            await refreshStaffFromSQL();
+        } catch (error) {
+            console.warn('Staff list refresh failed:', error.message);
+        }
+    }
     pushNotification('Staff Updated', `Staff record for "${newStaff.fullName}" was added/updated.`, 'user');
     toggleStaffForm();
     renderStaff();
@@ -3694,8 +5956,10 @@ async function deleteStaff(id) {
     saveData(STORAGE_KEY_STAFF, updatedStaff, { skipSync: true });
     renderStaff();
 
+    const token = sessionStorage.getItem('eduCore_token') || '';
     fetch(`${API_BASE_URL}/staff/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
     })
         .then(async (response) => {
             if (response.status === 503) {
@@ -3841,10 +6105,10 @@ async function deleteClass(id) {
 function renderLoginHistory() {
     // Get Current User Info
     const authData = localStorage.getItem(STORAGE_KEY_AUTH);
-    const auth = authData ? JSON.parse(authData) : { email: 'Admin User' };
+    const auth = authData ? JSON.parse(authData) : { username: 'Admin User', email: 'Admin User' };
     const userDisplay = document.getElementById('currentUserDisplay');
     if (userDisplay) {
-        userDisplay.innerText = auth.email;
+        userDisplay.innerText = auth.username || auth.email || 'Admin User';
     }
 
     // Get History
@@ -3879,9 +6143,8 @@ function renderLoginHistory() {
 
 
 
-function loadSettings() {
+async function loadSettings() {
     const settings = localStorage.getItem(STORAGE_KEY_SETTINGS);
-    const auth = localStorage.getItem(STORAGE_KEY_AUTH);
 
     if (settings) {
         const data = JSON.parse(settings);
@@ -3889,56 +6152,21 @@ function loadSettings() {
         if (document.getElementById('sSession')) document.getElementById('sSession').value = data.session || '';
         if (document.getElementById('sPhone')) document.getElementById('sPhone').value = data.phone || '';
     }
-
-    if (auth) {
-        const authData = JSON.parse(auth);
-        if (document.getElementById('sContactEmail')) document.getElementById('sContactEmail').value = authData.email || 'apexiumstechnologies@gmail.com';
-    }
 }
 
-function handleSettingsSubmit(e) {
+async function handleSettingsSubmit(e) {
     e.preventDefault();
 
-    // 1. Get current values from storage for verification
-    const storedAuth = localStorage.getItem(STORAGE_KEY_AUTH);
-    const currentAuth = storedAuth ? JSON.parse(storedAuth) : { email: 'apexiumstechnologies@gmail.com', password: 'myownschool1122' };
-
-    // 2. Get verification inputs
-    const vEmail = document.getElementById('vOldEmail').value;
-    const vPass = document.getElementById('vOldPassword').value;
-
-    // 3. Verify
-    if (vEmail.toLowerCase() !== currentAuth.email.toLowerCase() || vPass !== currentAuth.password) {
-        alert('Verification Failed: Current Email or Password is incorrect. Changes not saved.');
-        return;
-    }
-
-    // 4. If verified, proceed with update
+    // Save settings values
     const settings = {};
     if (document.getElementById('sSchoolName')) settings.schoolName = document.getElementById('sSchoolName').value;
     if (document.getElementById('sSession')) settings.session = document.getElementById('sSession').value;
     if (document.getElementById('sPhone')) settings.phone = document.getElementById('sPhone').value;
 
-    const emailEl = document.getElementById('sContactEmail');
-    const passEl = document.getElementById('sPassword');
-
-    const newEmail = emailEl ? emailEl.value : currentAuth.email;
-    const newPassword = passEl ? passEl.value : '';
-
-    const updatedAuth = { ...currentAuth };
-    if (newEmail) updatedAuth.email = newEmail;
-    if (newPassword) updatedAuth.password = newPassword;
-
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
-    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(updatedAuth));
 
-    alert('Account Credentials Updated Successfully!');
-    pushNotification('Security Update', 'Admin credentials have been updated.', 'login');
-
-    // Reset security/verification fields
-    if (passEl) passEl.value = '';
-    if (document.getElementById('vOldEmail')) document.getElementById('vOldEmail').value = '';
-    if (document.getElementById('vOldPassword')) document.getElementById('vOldPassword').value = '';
+    alert('Settings saved successfully!');
+    pushNotification('Settings Updated', 'Settings have been saved.', 'info');
 
     // Refresh display
     renderLoginHistory();
@@ -4105,7 +6333,7 @@ function getSalaryBreakdown(entry, monthKey) {
 }
 
 function buildSalaryRoster() {
-    const teachers = getData(STORAGE_KEY_TEACHERS).map((teacher) => ({
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS).map((teacher) => ({
         id: teacher.id,
         entityType: 'teacher',
         roleLabel: 'Teacher',

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visitor Books - Apexiums School System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .module-panel{background:#fff;border:1px solid #cfe8e5;border-radius:14px;padding:1.25rem;box-shadow:0 12px 28px rgba(15,23,42,.06);margin-bottom:1rem}
+        .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;align-items:end}
+        .field label{display:block;color:#334155;font-size:.82rem;font-weight:800;margin-bottom:.4rem}
+        .field input,.field select,.field textarea{width:100%;min-height:42px;border:1px solid #cbd5e1;border-radius:10px;padding:.65rem .75rem;font:inherit;background:#fff}
+        .field textarea{min-height:90px;resize:vertical}
+        .table-wrap{overflow-x:auto}
+        .visitor-table{width:100%;min-width:980px;border-collapse:collapse}
+        .visitor-table th,.visitor-table td{border-bottom:1px solid #dbecea;padding:.8rem;text-align:left;vertical-align:top}
+        .visitor-table th{background:#f6fbfa;color:#475569;font-size:.78rem;text-transform:uppercase}
+        .action-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:1rem}
+        .mini-btn{min-height:36px;border:0;border-radius:8px;padding:.5rem .8rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem}
+        .mini-btn.primary{background:#14b8a6;color:#fff}
+        .mini-btn.delete{background:#fee2e2;color:#b91c1c}
+        .empty-note{padding:1rem;border:1px dashed #cbd5e1;border-radius:12px;color:var(--text-secondary);background:#f8fafc}
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
+                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
+                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
+                <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
+                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
+        </aside>
+        <main class="main-content">
+            <header class="header"><div><h1>Visitor Books</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Record who visited, who they came to meet, and complete visitor details.</p></div></header>
+            <section class="module-panel">
+                <form id="visitorForm">
+                    <input type="hidden" id="visitorId">
+                    <div class="form-grid">
+                        <div class="field"><label>Visitor Name</label><input id="visitorName" required placeholder="Full name"></div>
+                        <div class="field"><label>CNIC / ID</label><input id="visitorCnic" placeholder="CNIC or ID"></div>
+                        <div class="field"><label>Phone</label><input id="visitorPhone" required placeholder="Phone number"></div>
+                        <div class="field"><label>Relation</label><input id="visitorRelation" placeholder="Father, guardian, vendor, etc."></div>
+                        <div class="field"><label>Meet Type</label><select id="meetType" required><option value="">Select</option><option value="Student">Student</option><option value="Teacher">Teacher</option><option value="Other">Other</option></select></div>
+                        <div class="field"><label>Meeting Person</label><select id="meetPerson"></select></div>
+                        <div class="field"><label>Other Person</label><input id="meetOther" placeholder="If other"></div>
+                        <div class="field"><label>Visit Date</label><input type="date" id="visitDate" required></div>
+                        <div class="field"><label>In Time</label><input type="time" id="inTime" required></div>
+                        <div class="field"><label>Out Time</label><input type="time" id="outTime"></div>
+                        <div class="field" style="grid-column:1/-1;"><label>Address</label><textarea id="visitorAddress" placeholder="Visitor address"></textarea></div>
+                        <div class="field" style="grid-column:1/-1;"><label>Purpose / Details</label><textarea id="visitPurpose" required placeholder="Why did this person visit?"></textarea></div>
+                    </div>
+                    <div class="action-row">
+                        <button type="submit" class="mini-btn primary"><i data-lucide="save" width="14"></i> Save Visit</button>
+                        <button type="button" class="mini-btn" onclick="resetVisitorForm()">Clear</button>
+                    </div>
+                </form>
+            </section>
+            <section class="module-panel">
+                <h2 style="margin-top:0;">Visitor Records</h2>
+                <div id="visitorList"></div>
+            </section>
+        </main>
+    </div>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const VISITOR_KEY = 'eduCore_visitor_books';
+        function read(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function saveVisitors(items) { localStorage.setItem(VISITOR_KEY, JSON.stringify(items)); }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        function getPeople(type) {
+            if (type === 'Student') return read('eduCore_students').map((s) => ({ id: s.id || s.studentCode || s.rollNo || s.fullName, label: `${s.fullName || 'Student'} - ${s.classGrade || '-'} - Roll ${s.rollNo || '-'}` }));
+            if (type === 'Teacher') return read('eduCore_teachers').map((t) => ({ id: t.id || t.employeeCode || t.fullName, label: `${t.fullName || 'Teacher'} - ${t.subject || t.designation || '-'}` }));
+            return [];
+        }
+        function populateMeetPeople() {
+            const type = meetType.value;
+            const people = getPeople(type);
+            meetPerson.innerHTML = '<option value="">Select Person</option>' + people.map((p) => `<option value="${esc(p.label)}">${esc(p.label)}</option>`).join('');
+            meetPerson.disabled = type === 'Other';
+            meetOther.disabled = type !== 'Other';
+        }
+        function resetVisitorForm() {
+            visitorForm.reset();
+            visitorId.value = '';
+            visitDate.value = new Date().toISOString().slice(0, 10);
+            populateMeetPeople();
+        }
+        function renderVisitors() {
+            const visitors = read(VISITOR_KEY).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+            if (!visitors.length) { visitorList.innerHTML = '<div class="empty-note">No visitor records added yet.</div>'; return; }
+            visitorList.innerHTML = `<div class="table-wrap"><table class="visitor-table"><thead><tr><th>Date</th><th>Visitor</th><th>Contact</th><th>Meeting</th><th>Purpose</th><th>Time</th><th>Action</th></tr></thead><tbody>${visitors.map((item) => `<tr><td>${esc(item.visitDate)}</td><td><strong>${esc(item.visitorName)}</strong><br>${esc(item.relation || '-')}<br>${esc(item.cnic || '-')}</td><td>${esc(item.phone || '-')}<br>${esc(item.address || '-')}</td><td>${esc(item.meetType)}<br>${esc(item.meetPerson || item.meetOther || '-')}</td><td>${esc(item.purpose || '-')}</td><td>${esc(item.inTime || '-')} to ${esc(item.outTime || '-')}</td><td><div class="action-row" style="margin-top:0;"><button class="mini-btn primary" onclick="editVisitor('${esc(item.id)}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteVisitor('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table></div>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+        function editVisitor(id) {
+            const item = read(VISITOR_KEY).find((v) => v.id === id);
+            if (!item) return;
+            visitorId.value = item.id;
+            visitorName.value = item.visitorName || '';
+            visitorCnic.value = item.cnic || '';
+            visitorPhone.value = item.phone || '';
+            visitorRelation.value = item.relation || '';
+            meetType.value = item.meetType || '';
+            populateMeetPeople();
+            meetPerson.value = item.meetPerson || '';
+            meetOther.value = item.meetOther || '';
+            visitDate.value = item.visitDate || '';
+            inTime.value = item.inTime || '';
+            outTime.value = item.outTime || '';
+            visitorAddress.value = item.address || '';
+            visitPurpose.value = item.purpose || '';
+            visitorForm.scrollIntoView({ behavior:'smooth', block:'start' });
+        }
+        async function deleteVisitor(id) {
+            const confirmed = await showAppConfirm('Delete this visitor record?', 'Delete Visitor');
+            if (!confirmed) return;
+            saveVisitors(read(VISITOR_KEY).filter((v) => v.id !== id));
+            renderVisitors();
+        }
+        visitorForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const editId = visitorId.value;
+            const item = {
+                id: editId || `VISIT-${Date.now()}`,
+                visitorName: visitorName.value.trim(),
+                cnic: visitorCnic.value.trim(),
+                phone: visitorPhone.value.trim(),
+                relation: visitorRelation.value.trim(),
+                meetType: meetType.value,
+                meetPerson: meetPerson.value,
+                meetOther: meetOther.value.trim(),
+                visitDate: visitDate.value,
+                inTime: inTime.value,
+                outTime: outTime.value,
+                address: visitorAddress.value.trim(),
+                purpose: visitPurpose.value.trim(),
+                createdAt: editId ? (read(VISITOR_KEY).find((v) => v.id === editId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            if (!item.visitorName || !item.phone || !item.meetType || !item.visitDate || !item.inTime || !item.purpose) {
+                showAppAlert('Visitor name, phone, meet type, date, in time, and purpose are required.', 'Missing Visitor Detail');
+                return;
+            }
+            if (item.meetType !== 'Other' && !item.meetPerson) { showAppAlert('Please select who the visitor came to meet.', 'Missing Meeting Person'); return; }
+            if (item.meetType === 'Other' && !item.meetOther) { showAppAlert('Please enter the meeting person.', 'Missing Meeting Person'); return; }
+            const items = read(VISITOR_KEY);
+            const index = items.findIndex((v) => v.id === editId);
+            if (index >= 0) items[index] = item; else items.push(item);
+            saveVisitors(items);
+            resetVisitorForm();
+            renderVisitors();
+            showAppAlert(editId ? 'Visitor record updated.' : 'Visitor record saved.', 'Visitor Book');
+        });
+        meetType.addEventListener('change', populateMeetPeople);
+        resetVisitorForm();
+        renderVisitors();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

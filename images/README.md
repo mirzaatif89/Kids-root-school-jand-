@@ -1,5 +1,5 @@
-Put your result card logo in this folder with this exact file name:
+Put your logo in this folder with this exact file name:
 
-logo.jpeg
+logo.png
 
-After replacing or adding the file, refresh the result card page. The same logo will print on both sides of the result card header.
+After replacing or adding the file, refresh the page. The same logo will print wherever the school logo is used.

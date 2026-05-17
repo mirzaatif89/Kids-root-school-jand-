@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Course - My own Science school</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .schedule-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
+        .schedule-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; align-items:end; }
+        .schedule-panel label { display:block; color:#334155; font-size:.82rem; font-weight:800; margin-bottom:.45rem; }
+        .schedule-panel input,.schedule-panel select,.schedule-panel textarea { width:100%; min-height:42px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; padding:.65rem .75rem; font:inherit; outline:none; }
+        .schedule-panel input:focus,.schedule-panel select:focus,.schedule-panel textarea:focus { border-color:#14b8a6; box-shadow:0 0 0 3px rgba(20,184,166,.14); }
+        .schedule-textarea { min-height:130px; resize:vertical; }
+        .schedule-table { width:100%; border-collapse:collapse; }
+        .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.8rem; text-align:left; vertical-align:top; }
+        .schedule-table th { background:#f6fbfa; color:#475569; font-size:.78rem; text-transform:uppercase; }
+        .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
+        .schedule-actions { display:inline-flex; gap:.45rem; flex-wrap:wrap; }
+        .schedule-action-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
+        .schedule-action-btn.edit { background:#dbeafe; color:#1d4ed8; }
+        .schedule-action-btn.delete { background:#fee2e2; color:#b91c1c; }
+        .back-link { display:inline-flex; align-items:center; gap:.45rem; margin-bottom:1rem; color:#0f766e; font-weight:800; text-decoration:none; }
+    </style>
+    <link rel="stylesheet" href="student_schedule_theme.css">
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <a class="back-link" href="student_scheduling.html"><i data-lucide="arrow-left"></i> Back to Student Scheduling</a>
+            <header class="header"><div><h1>Class Course</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Add class-wise course outlines for student portal.</p></div></header>
+            <section class="schedule-panel">
+                <form id="studentCourseForm">
+                    <input type="hidden" id="studentCourseId">
+                    <div class="schedule-grid">
+                        <div><label>Class</label><select id="studentCourseClass" required></select></div>
+                        <div><label>Subject / Course Title</label><input type="text" id="studentCourseTitle" required placeholder="e.g. Mathematics"></div>
+                        <div><label>Attach File</label><input type="file" id="studentCourseFile"></div>
+                    </div>
+                    <div style="margin-top:1rem;"><label>Course Details</label><textarea id="studentCourseDetails" class="schedule-textarea" required placeholder="Add syllabus, book chapters, links, or course outline"></textarea></div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:1rem;"><i data-lucide="save"></i> Save Course</button>
+                </form>
+            </section>
+            <section class="schedule-panel"><h3 style="margin-bottom:1rem;">Saved Courses</h3><div id="studentCourseList"></div></section>
+        </main>
+    </div>
+    <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const STUDENT_COURSE_KEY = 'eduCore_student_courses';
+        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        function populateClasses() {
+            const students = data('eduCore_students');
+            const classes = data('eduCore_classes');
+            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+            studentCourseClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
+        function readFile(input) {
+            const file = input.files?.[0];
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve({ name: file.name, dataUrl: reader.result }); reader.onerror = reject; reader.readAsDataURL(file); });
+        }
+        function render() {
+            const courses = data(STUDENT_COURSE_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            if (!courses.length) { studentCourseList.innerHTML = '<div class="empty-note">No class course added yet.</div>'; return; }
+            studentCourseList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Title</th><th>Details</th><th>File</th><th>Action</th></tr></thead><tbody>${courses.map((item) => `<tr><td>${esc(item.classGrade)}</td><td>${esc(item.title)}</td><td>${esc(item.details)}</td><td>${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'file')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="editCourse('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="schedule-action-btn delete" onclick="deleteCourse('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            lucide.createIcons();
+        }
+        function editCourse(id) {
+            const item = data(STUDENT_COURSE_KEY).find((entry) => entry.id === id);
+            if (!item) return;
+            studentCourseId.value = item.id; studentCourseClass.value = item.classGrade || ''; studentCourseTitle.value = item.title || ''; studentCourseDetails.value = item.details || '';
+            document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Update Course';
+            studentCourseForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); lucide.createIcons();
+        }
+        function deleteCourse(id) { save(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY).filter((item) => item.id !== id)); render(); }
+        studentCourseForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const editId = studentCourseId.value;
+            const existing = data(STUDENT_COURSE_KEY).find((item) => item.id === editId);
+            const file = await readFile(studentCourseFile);
+            const item = { id: editId || `COURSE-${Date.now()}`, classGrade: studentCourseClass.value, title: studentCourseTitle.value.trim(), details: studentCourseDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+            if (!item.classGrade || !item.title || !item.details) { showAppAlert('Class, title, and details are required.', 'Missing Course'); return; }
+            const items = data(STUDENT_COURSE_KEY);
+            const index = items.findIndex((entry) => entry.id === editId);
+            if (index >= 0) items[index] = item; else items.push(item);
+            if (!save(STUDENT_COURSE_KEY, items)) return;
+            event.target.reset(); studentCourseId.value = ''; document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Course'; render(); showSuccessModal(editId ? 'Course Updated!' : 'Course Saved!', 'Class course is visible in student portal.');
+        });
+        populateClasses(); render(); lucide.createIcons();
+    </script>
+</body>
+
+</html>

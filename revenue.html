@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Revenue Report - Apexiums School management</title>
+    <title>Revenue Report - My own Science school</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -118,6 +118,82 @@
             color: var(--text-primary);
             cursor: pointer;
         }
+
+        .monthwise-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            table-layout: fixed;
+        }
+
+        .monthwise-table th,
+        .monthwise-table td {
+            text-align: left;
+            padding: 0.75rem 0.9rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: middle;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .monthwise-table th {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 700;
+            background: #f8fafc;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .monthwise-table tbody tr:hover {
+            background: rgba(32, 176, 164, 0.06);
+        }
+
+        .monthwise-wrap {
+            max-height: 420px;
+            overflow: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            overflow-x: hidden;
+        }
+
+        .overall-metrics {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        .overall-metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 1rem;
+            padding: 0.85rem 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            background: #ffffff;
+        }
+
+        .overall-metric .label {
+            color: var(--text-secondary);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .overall-metric .value {
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .overall-metric.profit .value {
+            color: #15803d;
+        }
+
+        .overall-metric.pending .value {
+            color: #dc2626;
+        }
     </style>
 </head>
 
@@ -127,7 +203,7 @@
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap"></i> Apexiums School System
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
             </div>
 
             <nav class="nav-links">
@@ -201,11 +277,17 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="header">
-                <div>
+                <div style="display:flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap;">
+                    <div>
                     <h1>Revenue Analytics</h1>
                     <p style="color: var(--text-secondary); margin-top: 0.25rem; font-size: 0.9rem;">
                         Real-time revenue tracking for <strong id="currentMonthDisplay"></strong>
                     </p>
+                    </div>
+                    <div style="display:flex; align-items:center; gap: 0.75rem;">
+                        <label for="revenueMonthSelect" style="font-weight: 700; color: var(--text-secondary); font-size: 0.85rem;">Month</label>
+                        <select id="revenueMonthSelect" class="month-selector" aria-label="Select revenue month"></select>
+                    </div>
                 </div>
             </header>
 
@@ -299,10 +381,70 @@
                 </div>
             </div>
 
-            <div class="class-revenue-list" style="margin-top: 2rem;">
-                <h3 style="margin-bottom: 1.5rem;">Collection by Class</h3>
-                <div id="classBreakdownContainer">
-                    <!-- Bars by JS -->
+            <div class="revenue-grid" style="margin-top: 2rem;">
+                <div>
+                    <div class="class-revenue-list">
+                        <h3 style="margin-bottom: 1.5rem;">Collection by Class</h3>
+                        <div id="classBreakdownContainer">
+                            <!-- Bars by JS -->
+                        </div>
+                    </div>
+
+                    <div class="class-revenue-list" style="margin-top: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem;">Month-wise Summary</h3>
+                        <div class="monthwise-wrap">
+                            <table class="monthwise-table" aria-label="Monthly revenue summary table">
+                                <thead>
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Expected</th>
+                                        <th>Collected</th>
+                                        <th>Pending</th>
+                                        <th>Salary Budget</th>
+                                        <th>Transferred</th>
+                                        <th>Net Collected</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthWiseRevenueBody">
+                                    <tr><td colspan="7" style="color: var(--text-secondary); padding: 1.25rem;">Loading…</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="class-revenue-list">
+                    <h3 style="margin-bottom: 1rem;">Overall (All Months)</h3>
+                    <div class="overall-metrics">
+                        <div class="overall-metric">
+                            <div class="label">Total Expected</div>
+                            <div class="value" id="overallExpectedRevenue">PKR 0</div>
+                        </div>
+                        <div class="overall-metric">
+                            <div class="label">Total Collected</div>
+                            <div class="value" id="overallCollectedRevenue">PKR 0</div>
+                        </div>
+                        <div class="overall-metric pending">
+                            <div class="label">Total Pending</div>
+                            <div class="value" id="overallPendingRevenue">PKR 0</div>
+                        </div>
+                        <div class="overall-metric">
+                            <div class="label">Salary Budget</div>
+                            <div class="value" id="overallSalaryBudget">PKR 0</div>
+                        </div>
+                        <div class="overall-metric">
+                            <div class="label">Salaries Transferred</div>
+                            <div class="value" id="overallTransferredSalaries">PKR 0</div>
+                        </div>
+                        <div class="overall-metric profit">
+                            <div class="label">Profit (Collected - Transfers)</div>
+                            <div class="value" id="overallProfit">PKR 0</div>
+                        </div>
+                        <div class="overall-metric profit">
+                            <div class="label">Profit Margin</div>
+                            <div class="value" id="overallMarginPct">0%</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -319,14 +461,11 @@
         ];
 
         let revenueRefreshTimer = null;
+        let selectedRevenueMonthKey = '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Display current month
-            const currentMonth = monthsNames[new Date().getMonth()];
-            const monthDisplay = document.getElementById('currentMonthDisplay');
-            if (monthDisplay) monthDisplay.innerText = currentMonth + ' ' + new Date().getFullYear();
-
             attachRevenueLiveUpdates();
+            initRevenueMonthSelector();
             updateRevenueReport();
             setTimeout(updateRevenueReport, 400);
             setTimeout(updateRevenueReport, 1200);
@@ -335,7 +474,7 @@
         function scheduleRevenueRefresh(delay = 150) {
             clearTimeout(revenueRefreshTimer);
             revenueRefreshTimer = setTimeout(() => {
-                updateRevenueReport();
+                updateRevenueReport(selectedRevenueMonthKey);
             }, delay);
         }
 
@@ -348,14 +487,15 @@
                 socket.on('students_update', () => scheduleRevenueRefresh());
                 socket.on('teachers_update', () => scheduleRevenueRefresh());
                 socket.on('staff_update', () => scheduleRevenueRefresh());
+                socket.on('fee_payment_update', () => scheduleRevenueRefresh());
             }
         }
 
         // Define standard class mapping (same as fees.html)
         const feeClasses = [
             { id: 'play', name: 'Play Group', keywords: ['play', 'pg', 'playgroup'] },
-            { id: 'nursery', name: 'Nursery', keywords: ['nursery', 'nursary'] },
-            { id: 'prep', name: 'Prep', keywords: ['prep', 'preschool'] },
+            { id: 'kg1', name: 'KG1', keywords: ['kg1', 'nursery', 'nursary'] },
+            { id: 'kg2', name: 'KG2', keywords: ['kg2', 'prep', 'preschool'] },
             { id: '1', name: 'Class One', keywords: ['1', 'one', '1st'] },
             { id: '2', name: 'Class Two', keywords: ['2', 'two', '2nd'] },
             { id: '3', name: 'Class Three', keywords: ['3', 'three', '3rd'] },
@@ -389,6 +529,162 @@
                 year: now.getFullYear(),
                 monthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
             };
+        }
+
+        function monthKeyToLabel(monthKey) {
+            const [y, m] = String(monthKey || '').split('-').map(Number);
+            if (!y || !m) return String(monthKey || '');
+            const idx = m - 1;
+            const name = monthsNames[idx] || 'Month';
+            return `${name} ${y}`;
+        }
+
+        function monthKeyFromYearMonth(year, monthIndex) {
+            return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+        }
+
+        function parseMonthKey(monthKey) {
+            const [y, m] = String(monthKey || '').split('-').map(Number);
+            if (!y || !m) return null;
+            return { year: y, monthIndex: m - 1 };
+        }
+
+        function getMonthKeyRange(startKey, endKey) {
+            const start = parseMonthKey(startKey);
+            const end = parseMonthKey(endKey);
+            if (!start || !end) return [];
+            const keys = [];
+            let y = start.year;
+            let m = start.monthIndex;
+            while (y < end.year || (y === end.year && m <= end.monthIndex)) {
+                keys.push(monthKeyFromYearMonth(y, m));
+                m += 1;
+                if (m > 11) {
+                    m = 0;
+                    y += 1;
+                }
+            }
+            return keys;
+        }
+
+        function extractMonthIndicesFromText(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return [];
+            const lower = raw.toLowerCase();
+            const hits = monthsNames
+                .map((m, idx) => ({ idx, full: m.toLowerCase(), short: m.slice(0, 3).toLowerCase() }))
+                .filter((m) => lower.includes(m.full) || lower.includes(m.short))
+                .map((m) => m.idx);
+            return Array.from(new Set(hits)).sort((a, b) => a - b);
+        }
+
+        function extractPaymentMonthKeys(payment) {
+            const feeMonthRaw = String(payment?.feeMonth || '').trim();
+            const monthIndices = extractMonthIndicesFromText(feeMonthRaw);
+
+            let year = null;
+            const yearMatch = feeMonthRaw.toLowerCase().match(/\b(20\d{2})\b/);
+            if (yearMatch) year = Number(yearMatch[1]);
+
+            if (!year) {
+                const paidAt = payment?.paidAt ? new Date(payment.paidAt) : null;
+                if (paidAt && !Number.isNaN(paidAt.getTime())) year = paidAt.getFullYear();
+            }
+
+            if (!year) year = new Date().getFullYear();
+
+            if (monthIndices.length) {
+                return monthIndices.map((idx) => monthKeyFromYearMonth(year, idx));
+            }
+
+            // Fallback: if feeMonth is a date string
+            const parsed = new Date(feeMonthRaw.replace(',', ' 1,'));
+            if (!Number.isNaN(parsed.getTime())) {
+                return [monthKeyFromYearMonth(parsed.getFullYear(), parsed.getMonth())];
+            }
+
+            return [];
+        }
+
+        function isStudentActiveForMonth(student, monthKey) {
+            const meta = parseMonthKey(monthKey);
+            if (!meta) return true;
+
+            const enrollmentStatus = String(student?.enrollmentStatus || '').trim().toLowerCase();
+            if (enrollmentStatus === 'terminated' || enrollmentStatus === 'left' || enrollmentStatus === 'inactive' || student?.isTerminated === true) {
+                const terminatedRaw = student?.terminatedAt || student?.terminationDate || '';
+                const terminatedDate = terminatedRaw ? new Date(String(terminatedRaw).slice(0, 10)) : null;
+                if (terminatedDate && !Number.isNaN(terminatedDate.getTime())) {
+                    const monthStart = new Date(meta.year, meta.monthIndex, 1, 0, 0, 0, 0);
+                    if (terminatedDate.getTime() <= monthStart.getTime()) return false;
+                } else {
+                    return false;
+                }
+            }
+
+            const admissionRaw = student?.admissionDate;
+            if (!admissionRaw) return true;
+            const admissionDate = new Date(admissionRaw);
+            if (Number.isNaN(admissionDate.getTime())) return true;
+            const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0, 23, 59, 59, 999);
+            return admissionDate.getTime() <= monthEnd.getTime();
+        }
+
+        function computeMonthlyFeeMetrics(students, payments, monthKeys) {
+            const studentsById = new Map((students || []).map((s) => [String(s?.id || ''), s]));
+            const expectedByMonth = {};
+            const collectedByMonth = {};
+            const classByMonth = {};
+
+            monthKeys.forEach((k) => {
+                expectedByMonth[k] = 0;
+                collectedByMonth[k] = 0;
+                classByMonth[k] = {};
+            });
+
+            monthKeys.forEach((monthKey) => {
+                let expected = 0;
+                (students || []).forEach((s) => {
+                    if (!isStudentActiveForMonth(s, monthKey)) return;
+                    expected += parseInt(s?.monthlyFee || 0, 10) || 0;
+                });
+                expectedByMonth[monthKey] = expected;
+            });
+
+            (payments || []).forEach((payment) => {
+                if (!payment?.studentId) return;
+                const keys = extractPaymentMonthKeys(payment);
+                if (!keys.length) return;
+                const amount = Number(payment.amount || 0);
+                if (!(amount > 0)) return;
+
+                const perMonthAmount = amount / keys.length;
+                const student = studentsById.get(String(payment.studentId));
+                const className = getStandardClassName(payment.classGrade || student?.classGrade || '');
+
+                keys.forEach((k) => {
+                    if (!collectedByMonth[k] && collectedByMonth[k] !== 0) return;
+                    collectedByMonth[k] += perMonthAmount;
+                    classByMonth[k][className] = (classByMonth[k][className] || 0) + perMonthAmount;
+                });
+            });
+
+            return { expectedByMonth, collectedByMonth, classByMonth };
+        }
+
+        function initRevenueMonthSelector() {
+            const select = document.getElementById('revenueMonthSelect');
+            if (!select) return;
+
+            const currentMeta = getCurrentMonthMeta();
+            selectedRevenueMonthKey = currentMeta.monthKey;
+
+            select.addEventListener('change', () => {
+                selectedRevenueMonthKey = String(select.value || currentMeta.monthKey);
+                updateRevenueReport(selectedRevenueMonthKey);
+            });
+
+            // Initial options will be set on first updateRevenueReport call.
         }
 
         function normalizeFeeMonthToKey(value) {
@@ -433,47 +729,85 @@
             return [];
         }
 
-        async function updateRevenueReport() {
-            // Always use current month for real-time data
-            const currentMonthMeta = getCurrentMonthMeta();
+        async function updateRevenueReport(monthKeyOverride = '') {
+            const currentMeta = getCurrentMonthMeta();
+            const monthKey = monthKeyOverride || selectedRevenueMonthKey || currentMeta.monthKey;
+            selectedRevenueMonthKey = monthKey;
+
+            const monthDisplay = document.getElementById('currentMonthDisplay');
+            if (monthDisplay) monthDisplay.innerText = monthKeyToLabel(monthKey);
+
             const students = getData(STORAGE_KEY_STUDENTS);
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
-            const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
+            const salarySummary = getMonthlySalarySummary(monthKey);
             const feePayments = await fetchCollectedFeePayments();
 
-            const backendCollectedMap = new Map();
-            feePayments.forEach(payment => {
-                if (!payment || !payment.studentId) return;
-                if (normalizeFeeMonthToKey(payment.feeMonth) !== currentMonthMeta.monthKey) return;
+            // Build the month range for the summary table (min admission/payment -> current month).
+            const paymentMonthKeys = feePayments.flatMap((p) => extractPaymentMonthKeys(p)).filter(Boolean);
+            const admissionMonthKeys = (students || []).map((s) => {
+                const d = s?.admissionDate ? new Date(s.admissionDate) : null;
+                if (!d || Number.isNaN(d.getTime())) return '';
+                return monthKeyFromYearMonth(d.getFullYear(), d.getMonth());
+            }).filter(Boolean);
 
-                const paidAmount = Number(payment.amount || 0);
-                const previousAmount = backendCollectedMap.get(payment.studentId) || 0;
-                backendCollectedMap.set(payment.studentId, Math.max(previousAmount, paidAmount));
-            });
+            const allKeys = [...paymentMonthKeys, ...admissionMonthKeys, currentMeta.monthKey].filter(Boolean);
+            const sortedAll = allKeys.sort();
+            const startKey = sortedAll[0] || currentMeta.monthKey;
+            const monthKeys = getMonthKeyRange(startKey, currentMeta.monthKey);
 
-            let totalExpected = 0;
-            let totalCollected = 0;
+            // Populate month selector options (latest first).
+            const select = document.getElementById('revenueMonthSelect');
+            if (select) {
+                const existing = Array.from(select.options).map((o) => o.value);
+                if (existing.length !== monthKeys.length || existing[0] !== monthKeys[monthKeys.length - 1]) {
+                    select.innerHTML = '';
+                    [...monthKeys].reverse().forEach((k) => {
+                        const opt = document.createElement('option');
+                        opt.value = k;
+                        opt.textContent = monthKeyToLabel(k);
+                        select.appendChild(opt);
+                    });
+                }
+                select.value = monthKey;
+            }
+
+            const metrics = computeMonthlyFeeMetrics(students, feePayments, monthKeys);
+            const totalExpected = metrics.expectedByMonth[monthKey] || 0;
+            let totalCollected = metrics.collectedByMonth[monthKey] || 0;
+
+            // Fallback to local store when backend is unavailable (keeps current behavior).
+            if (!(totalCollected > 0) && !feePayments.length) {
+                // Populate per-month collection from local Paid flags.
+                monthKeys.forEach((k) => {
+                    const meta = parseMonthKey(k);
+                    if (!meta) return;
+                    const monthName = monthsNames[meta.monthIndex];
+                    let sum = 0;
+                    (students || []).forEach((s) => {
+                        const fee = parseInt(s?.monthlyFee || 0, 10) || 0;
+                        if (!isStudentActiveForMonth(s, k)) return;
+                        if (monthlyFeesData[s.id] && monthlyFeesData[s.id][monthName] === 'Paid') {
+                            sum += fee;
+                        }
+                    });
+                    metrics.collectedByMonth[k] = sum;
+                });
+                totalCollected = metrics.collectedByMonth[monthKey] || 0;
+            }
 
             const classCollection = {}; // { className: { expected: 0, collected: 0 } }
-
-            students.forEach(s => {
+            (students || []).forEach((s) => {
                 const standardClass = getStandardClassName(s.classGrade);
                 const fee = parseInt(s.monthlyFee) || 0;
-                const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
-                const collectedAmount = backendCollectedMap.has(s.id)
-                    ? backendCollectedMap.get(s.id)
-                    : (isPaidLocally ? fee : 0);
-
-                totalExpected += fee;
-                if (collectedAmount > 0) {
-                    totalCollected += collectedAmount;
-                }
-
-                if (!classCollection[standardClass]) {
-                    classCollection[standardClass] = { expected: 0, collected: 0 };
-                }
+                if (!isStudentActiveForMonth(s, monthKey)) return;
+                if (!classCollection[standardClass]) classCollection[standardClass] = { expected: 0, collected: 0 };
                 classCollection[standardClass].expected += fee;
-                if (collectedAmount > 0) classCollection[standardClass].collected += collectedAmount;
+            });
+
+            const classCollected = metrics.classByMonth[monthKey] || {};
+            Object.keys(classCollected).forEach((className) => {
+                if (!classCollection[className]) classCollection[className] = { expected: 0, collected: 0 };
+                classCollection[className].collected += classCollected[className] || 0;
             });
 
             // Update UI Stats
@@ -525,6 +859,70 @@
                     barContainer.appendChild(row);
                 });
             }
+
+            // Render month-wise summary table (latest first).
+            const body = document.getElementById('monthWiseRevenueBody');
+            if (body) {
+                body.innerHTML = '';
+                [...monthKeys].reverse().forEach((k) => {
+                    const exp = metrics.expectedByMonth[k] || 0;
+                    const col = metrics.collectedByMonth[k] || 0;
+                    const pend = Math.max(exp - col, 0);
+                    const salary = getMonthlySalarySummary(k);
+                    const netCol = (col - salary.transferred);
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-weight: 700; color: var(--text-primary); cursor: pointer;" data-monthkey="${k}">${monthKeyToLabel(k)}</td>
+                        <td>PKR ${Math.round(exp).toLocaleString('en-PK')}</td>
+                        <td>PKR ${Math.round(col).toLocaleString('en-PK')}</td>
+                        <td style="color:#dc2626; font-weight:700;">PKR ${Math.round(pend).toLocaleString('en-PK')}</td>
+                        <td>PKR ${Math.round(salary.expected).toLocaleString('en-PK')}</td>
+                        <td>PKR ${Math.round(salary.transferred).toLocaleString('en-PK')}</td>
+                        <td style="font-weight:700;">PKR ${Math.round(netCol).toLocaleString('en-PK')}</td>
+                    `;
+                    tr.querySelector('td')?.addEventListener('click', () => {
+                        selectedRevenueMonthKey = k;
+                        if (select) select.value = k;
+                        updateRevenueReport(k);
+                    });
+                    body.appendChild(tr);
+                });
+
+                if (!monthKeys.length) {
+                    body.innerHTML = '<tr><td colspan="7" style="color: var(--text-secondary); padding: 1.25rem;">No data.</td></tr>';
+                }
+            }
+
+            // Render overall (all months) totals.
+            let overallExpected = 0;
+            let overallCollected = 0;
+            let overallSalaryBudget = 0;
+            let overallTransferred = 0;
+            monthKeys.forEach((k) => {
+                overallExpected += Number(metrics.expectedByMonth[k] || 0);
+                overallCollected += Number(metrics.collectedByMonth[k] || 0);
+                const sal = getMonthlySalarySummary(k);
+                overallSalaryBudget += Number(sal?.expected || 0);
+                overallTransferred += Number(sal?.transferred || 0);
+            });
+
+            const overallPending = Math.max(overallExpected - overallCollected, 0);
+            const overallProfit = overallCollected - overallTransferred;
+            const overallMarginPct = overallCollected > 0 ? (overallProfit / overallCollected) * 100 : 0;
+
+            const setText = (id, text) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = text;
+            };
+
+            setText('overallExpectedRevenue', `PKR ${Math.round(overallExpected).toLocaleString('en-PK')}`);
+            setText('overallCollectedRevenue', `PKR ${Math.round(overallCollected).toLocaleString('en-PK')}`);
+            setText('overallPendingRevenue', `PKR ${Math.round(overallPending).toLocaleString('en-PK')}`);
+            setText('overallSalaryBudget', `PKR ${Math.round(overallSalaryBudget).toLocaleString('en-PK')}`);
+            setText('overallTransferredSalaries', `PKR ${Math.round(overallTransferred).toLocaleString('en-PK')}`);
+            setText('overallProfit', `PKR ${Math.round(overallProfit).toLocaleString('en-PK')}`);
+            setText('overallMarginPct', `${overallMarginPct.toFixed(1)}%`);
 
             if (window.lucide) lucide.createIcons();
         }

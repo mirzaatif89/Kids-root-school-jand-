@@ -110,44 +110,84 @@
 })();
 
 (function () {
-    const currentPage = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-    const publicPages = new Set(['index.html', '']);
     const pageRegistry = {
         'dashboard.html': { moduleKey: 'dashboard', defaultHome: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         'students.html': { moduleKey: 'students', defaultHome: 'students.html', label: 'Students', icon: 'users' },
-        'student_scheduling.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Student Scheduling', icon: 'users' },
-        'student_timetable.html': { moduleKey: 'student_timetable', defaultHome: 'dashboard.html', label: 'Class Timetable', icon: 'calendar-clock' },
-        'student_diary.html': { moduleKey: 'student_diary', defaultHome: 'dashboard.html', label: 'Class Diary', icon: 'book-open' },
-        'student_leave_requests.html': { moduleKey: 'student_leave_requests', defaultHome: 'dashboard.html', label: 'Leave Requests', icon: 'calendar-check' },
-        'student_courses.html': { moduleKey: 'student_courses', defaultHome: 'dashboard.html', label: 'Class Course', icon: 'library' },
-        'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'book-open' },
+        'student_scheduling.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Student Scheduling', icon: 'calendar-clock' },
+        'student_timetable.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Timetable', icon: 'calendar-clock' },
+        'student_diary.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Diary', icon: 'book-open' },
+        'student_leave_requests.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Leave Requests', icon: 'calendar-check' },
+        'student_courses.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Course', icon: 'library' },
         'banners.html': { moduleKey: 'banners', defaultHome: 'dashboard.html', label: 'Banners', icon: 'image' },
         'teachers.html': { moduleKey: 'teachers', defaultHome: 'dashboard.html', label: 'Teachers', icon: 'book-open' },
+        'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'calendar-days' },
         'staff.html': { moduleKey: 'staff', defaultHome: 'dashboard.html', label: 'Staff', icon: 'briefcase' },
         'classes.html': { moduleKey: 'classes', defaultHome: 'dashboard.html', label: 'Classes', icon: 'school' },
         'fees.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Fees', icon: 'credit-card' },
         'fee_challan.html': { moduleKey: 'fee_challan', defaultHome: 'dashboard.html', label: 'Fee Challan', icon: 'file-text' },
+        'certificate.html': { moduleKey: 'certificate', defaultHome: 'dashboard.html', label: 'Certificate', icon: 'award' },
+        'complain_box.html': { moduleKey: 'complain_box', defaultHome: 'dashboard.html', label: 'Complain Box', icon: 'message-square' },
+        'diary.html': { moduleKey: 'diary', defaultHome: 'dashboard.html', label: 'Diary', icon: 'book-open' },
+        'visitor_books.html': { moduleKey: 'visitor_books', defaultHome: 'dashboard.html', label: 'Visitor Books', icon: 'clipboard-list' },
+        'annual_charges.html': { moduleKey: 'annual_charges', defaultHome: 'dashboard.html', label: 'Annual Charges', icon: 'receipt' },
         'teacher_salaries.html': { moduleKey: 'teacher_salaries', defaultHome: 'dashboard.html', label: 'Salaries', icon: 'wallet' },
-        'finance.html': { moduleKey: 'finance', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
         'student_attendance.html': { moduleKey: 'student_attendance', defaultHome: 'dashboard.html', label: 'Student Attendance', icon: 'calendar-check' },
         'teacher_attendance.html': { moduleKey: 'teacher_attendance', defaultHome: 'dashboard.html', label: 'Teacher Attendance', icon: 'clipboard-check' },
         'student_attendance_report.html': { moduleKey: 'student_attendance_report', defaultHome: 'dashboard.html', label: 'Student Attendance Report', icon: 'bar-chart-3' },
         'teacher_attendance_report.html': { moduleKey: 'teacher_attendance_report', defaultHome: 'dashboard.html', label: 'Teacher Attendance Report', icon: 'line-chart' },
         'notifications.html': { moduleKey: 'notifications', defaultHome: 'dashboard.html', label: 'Notifications', icon: 'bell' },
         'special_notices.html': { moduleKey: 'special_notices', defaultHome: 'dashboard.html', label: 'Special Notices', icon: 'megaphone' },
-        'annual_charges.html': { moduleKey: 'annual_charges', defaultHome: 'dashboard.html', label: 'Annual Charges', icon: 'receipt' },
         'exams.html': { moduleKey: 'exams', defaultHome: 'dashboard.html', label: 'Exams', icon: 'clipboard-list' },
         'revenue.html': { moduleKey: 'revenue', defaultHome: 'dashboard.html', label: 'Revenue', icon: 'trending-up' },
         'settings.html': { moduleKey: 'settings', defaultHome: 'dashboard.html', label: 'Settings', icon: 'settings' },
         'permissions.html': { moduleKey: 'permissions', defaultHome: 'dashboard.html', label: 'Permissions', icon: 'shield' },
+        'designation-permissions.html': { moduleKey: 'permissions', defaultHome: 'dashboard.html', label: 'Designation Permissions', icon: 'shield-check' },
         'branch_registration.html': { moduleKey: 'branch_registration', defaultHome: 'dashboard.html', label: 'Branch Registration', icon: 'building-2' },
-        'certificate.html': { moduleKey: 'certificate', defaultHome: 'dashboard.html', label: 'Certificate', icon: 'award' },
-        'complain_box.html': { moduleKey: 'complain_box', defaultHome: 'dashboard.html', label: 'Complain Box', icon: 'message-square' },
-        'visitor_books.html': { moduleKey: 'visitor_books', defaultHome: 'dashboard.html', label: 'Visitor Books', icon: 'clipboard-list' },
         'aboutme.html': { moduleKey: 'aboutme', defaultHome: 'dashboard.html', label: 'About Us', icon: 'info' },
-        'student_portal.html': { moduleKey: 'student_portal', defaultHome: 'student_portal.html', label: 'Student Portal', icon: 'graduation-cap' }
+        'student_portal.html': { moduleKey: 'student_portal', defaultHome: 'student_portal.html', label: 'Student Portal', icon: 'graduation-cap' },
+        'teacher_portal.html': { moduleKey: 'teacher_portal', defaultHome: 'teacher_portal.html', label: 'Teacher Portal', icon: 'book-user' }
     };
-    const portalPages = new Set(['student_portal.html']);
+    const portalPages = new Set();
+    const routeToPageMap = Object.keys(pageRegistry).reduce((acc, pageName) => {
+        const cleanKey = pageName.replace(/\.html$/i, '').toLowerCase();
+        acc[cleanKey] = pageName;
+        return acc;
+    }, { login: 'index.html', index: 'index.html' });
+
+    function normalizePageName(pageValue = '') {
+        const rawValue = String(pageValue || '').trim().toLowerCase();
+        if (!rawValue || rawValue === '/' || rawValue === '.') return 'index.html';
+
+        const withoutHash = rawValue.split('#')[0];
+        const withoutQuery = withoutHash.split('?')[0];
+        const trimmedPath = withoutQuery.replace(/^\/+|\/+$/g, '');
+        if (!trimmedPath) return 'index.html';
+
+        const segment = trimmedPath.split('/').pop() || '';
+        if (!segment) return 'index.html';
+
+        if (routeToPageMap[segment]) return routeToPageMap[segment];
+
+        if (segment.endsWith('.html')) {
+            const cleanSegment = segment.replace(/\.html$/i, '');
+            if (routeToPageMap[cleanSegment]) return routeToPageMap[cleanSegment];
+            return segment;
+        }
+
+        const asHtml = `${segment}.html`;
+        if (pageRegistry[asHtml]) return asHtml;
+        return segment;
+    }
+
+    function toRoutePath(pageName = '') {
+        const normalizedPage = normalizePageName(pageName);
+        if (normalizedPage === 'index.html') return '/login';
+        if (pageRegistry[normalizedPage]) return `/${normalizedPage.replace(/\.html$/i, '')}`;
+        return `/${String(pageName || '').replace(/^\/+/, '') || 'login'}`;
+    }
+
+    const currentPage = normalizePageName(window.location.pathname);
+    const publicPages = new Set(['index.html']);
 
     const defaultPermissions = {
         loginAccess: {
@@ -159,68 +199,103 @@
             staff: true
         },
         roleGroups: {
-            Admin: 'admin',
-            Principal: 'principal',
-            Branch: 'branch_manager',
+            Admin: 'superadmin',
+            Principal: 'admin',
+            Branch: 'computer_operator',
             Teacher: 'teacher',
             Student: 'student',
-            Staff: 'staff'
+            Staff: 'computer_operator'
         },
         groups: {
-            admin: {
-                name: 'System Administrators',
+            superadmin: {
+                name: 'Superadmin',
                 homePage: 'dashboard.html',
                 permissions: {}
             },
-            principal: {
-                name: 'Principal Group',
+            admin: {
+                name: 'Admin',
                 homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', teachers: 'view', staff: 'view' }
+                permissions: {
+                    dashboard: 'manage',
+                    students: 'manage',
+                    student_scheduling: 'manage',
+                    banners: 'manage',
+                    teachers: 'manage',
+                    teacher_scheduling: 'manage',
+                    staff: 'manage',
+                    classes: 'manage',
+                    fees: 'manage',
+                    fee_challan: 'manage',
+                    certificate: 'manage',
+                    complain_box: 'manage',
+                    diary: 'manage',
+                    visitor_books: 'manage',
+                    annual_charges: 'manage',
+                    teacher_salaries: 'manage',
+                    student_attendance: 'manage',
+                    teacher_attendance: 'manage',
+                    student_attendance_report: 'view',
+                    teacher_attendance_report: 'view',
+                    notifications: 'manage',
+                    special_notices: 'manage',
+                    exams: 'manage',
+                    revenue: 'view',
+                    settings: 'view',
+                    branch_registration: 'view',
+                    aboutme: 'view',
+                    permissions: 'view',
+                    student_portal: 'manage',
+                    teacher_portal: 'manage'
+                }
             },
-            branch_manager: {
-                name: 'Branch Managers',
-                homePage: 'students.html',
-                permissions: { students: 'manage', dashboard: 'view', classes: 'view' }
+            computer_operator: {
+                name: 'Computer Operator',
+                homePage: 'dashboard.html',
+                permissions: {
+                    dashboard: 'view',
+                    students: 'manage',
+                    banners: 'none',
+                    teachers: 'view',
+                    staff: 'view',
+                    classes: 'view',
+                    fees: 'view',
+                    fee_challan: 'manage',
+                    certificate: 'view',
+                    complain_box: 'view',
+                    diary: 'view',
+                    visitor_books: 'view',
+                    annual_charges: 'view',
+                    student_attendance: 'edit',
+                    exams: 'view',
+                    notifications: 'view',
+                    aboutme: 'view'
+                }
             },
             teacher: {
                 name: 'Teachers',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', classes: 'view', student_attendance: 'edit', exams: 'edit' }
-            },
-            senior_teacher: {
-                name: 'Senior Teachers',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', teachers: 'view', classes: 'view', student_attendance: 'edit', exams: 'edit' }
-            },
-            coordinator: {
-                name: 'Coordinators',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', teachers: 'view', classes: 'manage', student_attendance: 'manage', exams: 'edit' }
+                homePage: 'teacher_portal.html',
+                permissions: {
+                    teacher_portal: 'manage',
+                    students: 'view',
+                    classes: 'view',
+                    student_attendance: 'edit',
+                    student_attendance_report: 'view',
+                    exams: 'view',
+                    special_notices: 'view',
+                    aboutme: 'view'
+                }
             },
             student: {
                 name: 'Students',
                 homePage: 'student_portal.html',
-                permissions: { student_portal: 'manage', fees: 'view', fee_challan: 'view', exams: 'view' }
-            },
-            staff: {
-                name: 'Staff',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view' }
-            },
-            accountant: {
-                name: 'Accountants',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', fees: 'manage', fee_challan: 'manage', revenue: 'view' }
-            },
-            receptionist: {
-                name: 'Receptionists',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', fees: 'view', fee_challan: 'view' }
-            },
-            office_assistant: {
-                name: 'Office Assistants',
-                homePage: 'dashboard.html',
-                permissions: { dashboard: 'view', students: 'view', classes: 'view' }
+                permissions: {
+                    student_portal: 'manage',
+                    fees: 'view',
+                    fee_challan: 'view',
+                    exams: 'view',
+                    special_notices: 'view',
+                    aboutme: 'view'
+                }
             }
         }
     };
@@ -279,25 +354,21 @@
         const raw = input && typeof input === 'object' ? input : {};
         registerCustomModules(raw.customModules || []);
         const moduleKeys = [...new Set(Object.values(pageRegistry).map((entry) => entry.moduleKey).filter(Boolean))];
-        const rawGroups = raw.groups && typeof raw.groups === 'object'
-            ? raw.groups
-            : defaultPermissions.groups;
-        const groups = Object.entries(rawGroups).reduce((acc, [groupKey, group]) => {
-            const nextGroup = group && typeof group === 'object' ? group : {};
-            const permissions = { ...(nextGroup.permissions || {}) };
+        const rawGroups = raw.groups && typeof raw.groups === 'object' ? raw.groups : {};
+        const groups = Object.entries({
+            ...defaultPermissions.groups,
+            ...rawGroups
+        }).reduce((acc, [groupKey, groupValue]) => {
+            const baseGroup = defaultPermissions.groups[groupKey] || { name: groupKey, homePage: 'dashboard.html', permissions: {} };
+            const nextGroup = groupValue && typeof groupValue === 'object' ? groupValue : {};
+            const permissions = { ...(baseGroup.permissions || {}), ...(nextGroup.permissions || {}) };
             moduleKeys.forEach((moduleKey) => {
-                if (!permissions[moduleKey]) permissions[moduleKey] = groupKey === 'admin' ? 'manage' : 'none';
+                if (!permissions[moduleKey]) permissions[moduleKey] = groupKey === 'superadmin' ? 'manage' : 'none';
             });
-            if (groupKey === 'principal' && !nextGroup.permissions?.notifications) {
-                permissions.notifications = 'view';
-            }
-            if (groupKey === 'principal' && !nextGroup.permissions?.special_notices) {
-                permissions.special_notices = 'manage';
-            }
             acc[groupKey] = {
                 ...nextGroup,
-                name: nextGroup.name || groupKey,
-                homePage: pageRegistry[nextGroup.homePage] ? nextGroup.homePage : 'dashboard.html',
+                name: nextGroup.name || baseGroup.name || groupKey,
+                homePage: pageRegistry[nextGroup.homePage] ? nextGroup.homePage : (baseGroup.homePage || 'dashboard.html'),
                 permissions
             };
             return acc;
@@ -326,7 +397,7 @@
             window.location.protocol === 'file:';
 
         const backendUrl = isLocalhost
-            ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : `${window.location.protocol}//${window.location.hostname}:3000`)
+            ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin)
             : (window.ENV_BACKEND_URL || window.location.origin);
 
         return `${backendUrl}/api`;
@@ -354,6 +425,8 @@
         const group = getGroupConfig(user, permissions);
         const registryEntry = pageRegistry[currentPage];
         if (user?.role === 'Admin' && group?.homePage) return group.homePage;
+        if (user?.role === 'Student') return 'student_portal.html';
+        if (user?.role === 'Teacher') return 'teacher_portal.html';
         if (group && group.homePage) {
             const homeEntry = pageRegistry[group.homePage];
             if (!homeEntry || group.permissions?.[homeEntry.moduleKey] !== 'none') {
@@ -369,21 +442,17 @@
         if (user?.role === 'Admin') return 'dashboard.html';
         if (user?.role === 'Student') return 'student_portal.html';
         if (user?.role === 'Branch') return 'students.html';
-        if (user?.role === 'Teacher' || user?.role === 'Staff' || user?.role === 'Principal') return 'dashboard.html';
+        if (user?.role === 'Teacher') return 'teacher_portal.html';
+        if (user?.role === 'Staff' || user?.role === 'Principal') return 'dashboard.html';
         return 'index.html';
     }
 
     function getModuleAccess(user, permissions, pageName = currentPage) {
-        if (isAdminMonitoringRole(user?.role)) return 'manage';
+        if (user?.role === 'Admin') return 'manage';
         const registryEntry = pageRegistry[pageName];
         if (!registryEntry) return 'view';
         const group = getGroupConfig(user, permissions);
         return group?.permissions?.[registryEntry.moduleKey] || 'none';
-    }
-
-    function isAdminMonitoringRole(role) {
-        return ['admin', 'superadmin', 'super admin', 'system administrator', 'system_admin']
-            .includes(String(role || '').trim().toLowerCase());
     }
 
     function getAccessibleModules(user, permissions) {
@@ -406,20 +475,21 @@
         }
 
         if (user.role === 'Admin') return true;
+        if (user.role === 'Student' && pageName === 'student_portal.html') return true;
+        if (user.role === 'Teacher' && pageName === 'teacher_portal.html') return true;
         return getModuleAccess(user, permissions, pageName) !== 'none';
     }
 
     function redirectToAllowedHome(user, permissions) {
-        window.location.replace(getHomePage(user, permissions));
+        window.location.replace(toRoutePath(getHomePage(user, permissions)));
     }
 
     function forceLoginRedirect() {
         sessionStorage.removeItem('loggedInUser');
         sessionStorage.removeItem('eduCore_token');
-        sessionStorage.removeItem('eduCore_session_id');
         sessionStorage.removeItem('eduCore_student_profile');
         sessionStorage.removeItem('eduCore_permissions_config');
-        window.location.replace('index.html');
+        window.location.replace('/login');
     }
 
     async function fetchPermissionsConfig() {
@@ -446,9 +516,9 @@
         runWhenReady(() => {
             const navLinks = document.querySelectorAll('.nav-links a[href], .user-profile[href]');
             navLinks.forEach((link) => {
-                if (link.dataset.navHiddenDefault === 'true') return;
-                const href = String(link.getAttribute('href') || '').toLowerCase();
-                if (!href || href === '#') return;
+                const rawHref = String(link.getAttribute('href') || '').trim();
+                if (!rawHref || rawHref === '#') return;
+                const href = normalizePageName(rawHref);
                 if (!pageRegistry[href]) return;
                 if (!canAccessPage(user, permissions, href)) {
                     link.style.display = 'none';
@@ -457,7 +527,7 @@
 
             document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
                 const visibleLinks = Array.from(dropdown.querySelectorAll('a[href]'))
-                    .filter((item) => item.style.display !== 'none' && item.dataset.navHiddenDefault !== 'true');
+                    .filter((item) => item.style.display !== 'none');
                 if (!visibleLinks.length) dropdown.style.display = 'none';
             });
         });
@@ -471,10 +541,10 @@
             if (!grid) return;
 
             const existingCards = Array.from(grid.querySelectorAll('a.card[href]'));
-            const existingPages = new Set(existingCards.map((card) => String(card.getAttribute('href') || '').toLowerCase()));
+            const existingPages = new Set(existingCards.map((card) => normalizePageName(card.getAttribute('href') || '')));
 
             existingCards.forEach((card) => {
-                const href = String(card.getAttribute('href') || '').toLowerCase();
+                const href = normalizePageName(card.getAttribute('href') || '');
                 if (!href || !pageRegistry[href]) return;
                 if (!canAccessPage(user, permissions, href)) {
                     card.remove();
@@ -483,7 +553,7 @@
             });
 
             grid.querySelectorAll('[data-admin-only-card]').forEach((card) => {
-                if (!isAdminMonitoringRole(user.role)) card.remove();
+                if (user.role !== 'Admin') card.remove();
             });
 
             // Keep only the first 5 dashboard cards and prevent permission modules from adding additional cards.
@@ -526,191 +596,6 @@
             document.querySelectorAll('.user-profile .user-info p').forEach((role) => {
                 role.textContent = user.role || 'User';
             });
-        });
-    }
-
-    function getSidebarDisplayUser(user) {
-        const displayName = user?.fullName || user?.username || user?.role || 'Admin User';
-        const initials = displayName
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part.charAt(0).toUpperCase())
-            .join('') || 'AD';
-
-        return {
-            displayName,
-            initials,
-            role: user?.designation || user?.role || 'Principal'
-        };
-    }
-
-    function getAdminSidebarItems() {
-        return [
-            { type: 'link', label: 'Dashboard', icon: 'layout-dashboard', page: 'dashboard.html' },
-            { type: 'link', label: 'Students', icon: 'users', page: 'students.html' },
-            {
-                type: 'dropdown',
-                label: 'Scheduling',
-                icon: 'calendar-clock',
-                items: [
-                    { label: 'Student Scheduling', icon: 'users', page: 'student_scheduling.html' },
-                    { label: 'Class Timetable', icon: 'calendar-clock', page: 'student_timetable.html' },
-                    { label: 'Class Diary', icon: 'book-open', page: 'student_diary.html' },
-                    { label: 'Leave Requests', icon: 'calendar-check', page: 'student_leave_requests.html' },
-                    { label: 'Class Course', icon: 'library', page: 'student_courses.html' },
-                    { label: 'Teacher Scheduling', icon: 'book-open', page: 'teacher_scheduling.html' }
-                ]
-            },
-            { type: 'link', label: 'Banners', icon: 'image', page: 'banners.html' },
-            { type: 'link', label: 'Teachers', icon: 'book-open', page: 'teachers.html' },
-            { type: 'link', label: 'Branch Registration', icon: 'building-2', page: 'branch_registration.html' },
-            { type: 'link', label: 'Certificate', icon: 'award', page: 'certificate.html' },
-            { type: 'link', label: 'Complain Box', icon: 'message-square', page: 'complain_box.html' },
-            { type: 'link', label: 'Visitor Books', icon: 'clipboard-list', page: 'visitor_books.html' },
-            {
-                type: 'dropdown',
-                label: 'Attendance',
-                icon: 'clipboard-check',
-                items: [
-                    { label: 'Student Attendance', icon: 'users', page: 'student_attendance.html' },
-                    { label: 'Teacher Attendance', icon: 'user-check', page: 'teacher_attendance.html' },
-                    { label: 'Student Attendance Report', icon: 'file-bar-chart-2', page: 'student_attendance_report.html' },
-                    { label: 'Teacher Attendance Report', icon: 'file-check-2', page: 'teacher_attendance_report.html' }
-                ]
-            },
-            { type: 'link', label: 'Notifications', icon: 'bell-ring', page: 'notifications.html' },
-            { type: 'link', label: 'Special Notices', icon: 'megaphone', page: 'special_notices.html' },
-            { type: 'link', label: 'Annual Charges', icon: 'receipt', page: 'annual_charges.html' },
-            { type: 'link', label: 'Staff', icon: 'briefcase', page: 'staff.html' },
-            { type: 'link', label: 'Classes', icon: 'school', page: 'classes.html' },
-            { type: 'link', label: 'Fees', icon: 'credit-card', page: 'fees.html' },
-            { type: 'link', label: 'Fee Challan', icon: 'file-text', page: 'fee_challan.html' },
-            { type: 'link', label: 'Salaries', icon: 'wallet', page: 'teacher_salaries.html' },
-            { type: 'link', label: 'Bills', icon: 'receipt', page: 'finance.html', hiddenDefault: true },
-            { type: 'link', label: 'Exams', icon: 'clipboard-list', page: 'exams.html' },
-            { type: 'link', label: 'Revenue', icon: 'trending-up', page: 'revenue.html' },
-            { type: 'link', label: 'Permissions', icon: 'shield', page: 'permissions.html' },
-            { type: 'link', label: 'About Us', icon: 'info', page: 'aboutme.html' },
-            { type: 'logout', label: 'Logout', icon: 'log-out' }
-        ];
-    }
-
-    function renderSidebarLink(item) {
-        const page = String(item.page || '').toLowerCase();
-        const active = page === currentPage ? ' active' : '';
-        const hidden = item.hiddenDefault ? ' style="display: none;" data-nav-hidden-default="true"' : '';
-        return `
-            <a href="${escapeHtml(page)}" class="nav-item${active}"${hidden}>
-                <i data-lucide="${escapeHtml(item.icon)}"></i>
-                <span>${escapeHtml(item.label)}</span>
-            </a>
-        `;
-    }
-
-    function renderSidebarDropdown(item) {
-        const childPages = item.items.map((child) => String(child.page || '').toLowerCase());
-        const isOpen = childPages.includes(currentPage);
-        const active = isOpen ? ' active' : '';
-        return `
-            <div class="nav-dropdown${isOpen ? ' open' : ''}">
-                <button type="button" class="nav-item nav-dropdown-toggle${active}" aria-expanded="${isOpen ? 'true' : 'false'}">
-                    <span class="nav-item-main">
-                        <i data-lucide="${escapeHtml(item.icon)}"></i>
-                        <span>${escapeHtml(item.label)}</span>
-                    </span>
-                    <i data-lucide="chevron-down" class="dropdown-chevron"></i>
-                </button>
-                <div class="nav-submenu">
-                    ${item.items.map((child) => `
-                        <a href="${escapeHtml(child.page)}" class="nav-subitem ${String(child.page).toLowerCase() === currentPage ? 'active' : ''}">
-                            <i data-lucide="${escapeHtml(child.icon)}"></i>
-                            <span>${escapeHtml(child.label)}</span>
-                        </a>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-
-    function buildAdminSidebar(user) {
-        const userInfo = getSidebarDisplayUser(user);
-        const navMarkup = getAdminSidebarItems().map((item) => {
-            if (item.type === 'dropdown') return renderSidebarDropdown(item);
-            if (item.type === 'logout') {
-                return `
-                    <a href="#" class="nav-item nav-item-danger" onclick="logoutUser(event)">
-                        <i data-lucide="${escapeHtml(item.icon)}"></i>
-                        <span>${escapeHtml(item.label)}</span>
-                    </a>
-                `;
-            }
-            return renderSidebarLink(item);
-        }).join('');
-
-        return `
-            <aside class="sidebar" data-admin-sidebar>
-                <div class="logo-section">
-                    <i data-lucide="graduation-cap"></i>
-                    <span>Apexiums School System</span>
-                </div>
-                <nav class="nav-links">
-                    ${navMarkup}
-                </nav>
-                <a href="settings.html" class="user-profile">
-                    <div class="avatar">${escapeHtml(userInfo.initials)}</div>
-                    <div class="user-info">
-                        <h4>${escapeHtml(userInfo.displayName)}</h4>
-                        <p>${escapeHtml(userInfo.role)}</p>
-                    </div>
-                </a>
-            </aside>
-        `;
-    }
-
-    function attachAdminSidebarBehavior() {
-        const sidebar = document.querySelector('[data-admin-sidebar]');
-        if (!sidebar) return;
-
-        sidebar.querySelectorAll('.nav-dropdown-toggle').forEach((toggle) => {
-            toggle.addEventListener('click', () => {
-                const dropdown = toggle.closest('.nav-dropdown');
-                if (!dropdown) return;
-                const willOpen = !dropdown.classList.contains('open');
-                dropdown.classList.toggle('open', willOpen);
-                toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-            });
-        });
-
-        if (!document.querySelector('.mobile-sidebar-toggle')) {
-            const toggle = document.createElement('button');
-            toggle.type = 'button';
-            toggle.className = 'mobile-sidebar-toggle';
-            toggle.setAttribute('aria-label', 'Open sidebar');
-            toggle.innerHTML = '<i data-lucide="menu"></i>';
-            document.body.appendChild(toggle);
-
-            const overlay = document.createElement('div');
-            overlay.className = 'sidebar-overlay';
-            document.body.appendChild(overlay);
-
-            const closeSidebar = () => document.body.classList.remove('sidebar-open');
-            toggle.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
-            overlay.addEventListener('click', closeSidebar);
-            sidebar.querySelectorAll('a[href]').forEach((link) => link.addEventListener('click', closeSidebar));
-        }
-    }
-
-    function renderAdminSidebar(user) {
-        if (portalPages.has(currentPage) || publicPages.has(currentPage)) return;
-
-        runWhenReady(() => {
-            const sidebar = document.querySelector('.dashboard-container > .sidebar, body > .sidebar');
-            if (!sidebar || sidebar.matches('[data-admin-sidebar]')) return;
-            sidebar.outerHTML = buildAdminSidebar(user);
-            document.body.classList.add('has-admin-sidebar');
-            attachAdminSidebarBehavior();
-            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
         });
     }
 
@@ -872,10 +757,14 @@
 
     function buildPortalDashboardOverview(user, permissions) {
         const modules = getAccessibleModules(user, permissions);
+        const getModuleLabel = (item) => String(item?.label || '').trim() || String(item?.pageName || '')
+            .replace(/\.html$/i, '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, (match) => match.toUpperCase());
         const searchableModules = modules.filter((item) => item.pageName !== currentPage);
         const cards = searchableModules.map((item) => `
-            <a href="${escapeHtml(item.pageName)}" class="card" data-portal-module-card>
-                <div class="card-title">${escapeHtml(item.label || item.pageName)}</div>
+            <a href="${escapeHtml(toRoutePath(item.pageName))}" class="card" data-portal-module-card>
+                <div class="card-title">${escapeHtml(getModuleLabel(item))}</div>
                 <div class="card-value">${escapeHtml(getAccessLabel(item.access))}</div>
                 <div class="card-trend trend-up">
                     <i data-lucide="trending-up" size="16"></i>
@@ -932,10 +821,14 @@
 
     function buildPortalSidebar(user, permissions) {
         const modules = getAccessibleModules(user, permissions);
+        const getModuleLabel = (item) => String(item?.label || '').trim() || String(item?.pageName || '')
+            .replace(/\.html$/i, '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, (match) => match.toUpperCase());
         const navItems = modules.map((item) => `
-            <a href="${escapeHtml(item.pageName)}" class="nav-item ${item.pageName === currentPage ? 'active' : ''}">
+            <a href="${escapeHtml(toRoutePath(item.pageName))}" class="nav-item ${item.pageName === currentPage ? 'active' : ''}">
                 <i data-lucide="${escapeHtml(item.icon || 'circle')}"></i>
-                <span>${escapeHtml(item.label || item.pageName)}</span>
+                <span>${escapeHtml(getModuleLabel(item))}</span>
             </a>
         `).join('');
 
@@ -943,7 +836,7 @@
         return `
             <aside class="sidebar" data-portal-sidebar>
                 <div class="logo-section">
-                    <i data-lucide="graduation-cap"></i> Apexiums School System
+                    <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
                 </div>
                 <div class="portal-sidebar-user">
                     <strong>${escapeHtml(displayName)}</strong>
@@ -1004,6 +897,10 @@
 
             const modules = getAccessibleModules(user, permissions)
                 .filter((item) => item.pageName !== currentPage);
+            const getModuleLabel = (item) => String(item?.label || '').trim() || String(item?.pageName || '')
+                .replace(/\.html$/i, '')
+                .replace(/[-_]+/g, ' ')
+                .replace(/\b\w/g, (match) => match.toUpperCase());
             const panel = document.createElement('section');
             panel.id = 'portalAccessPanel';
             panel.className = 'portal-access-panel';
@@ -1015,10 +912,10 @@
                 ${modules.length ? `
                     <div class="portal-access-grid">
                         ${modules.map((item) => `
-                            <a class="portal-access-card" href="${escapeHtml(item.pageName)}">
+                            <a class="portal-access-card" href="${escapeHtml(toRoutePath(item.pageName))}">
                                 <span class="portal-access-icon"><i data-lucide="${escapeHtml(item.icon || 'circle')}"></i></span>
                                 <span>
-                                    <span class="portal-access-title">${escapeHtml(item.label || item.pageName)}</span>
+                                    <span class="portal-access-title">${escapeHtml(getModuleLabel(item))}</span>
                                     <span class="portal-access-meta">${escapeHtml(getAccessLabel(item.access))} Access</span>
                                 </span>
                             </a>
@@ -1041,23 +938,39 @@
     function startActiveSessionTracking() {
         if (!loggedInUser || !authToken || publicPages.has(currentPage)) return;
 
-        const sendHeartbeat = async () => {
+        const ensureSessionId = () => {
+            const existing = sessionStorage.getItem('eduCore_session_id');
+            if (existing) return existing;
             try {
-                const response = await fetch(`${getApiBaseUrl()}/session/heartbeat`, {
+                const payloadSegment = String(authToken || '').split('.')[1] || '';
+                if (!payloadSegment) return '';
+                const normalized = payloadSegment.replace(/-/g, '+').replace(/_/g, '/');
+                const decoded = JSON.parse(atob(normalized));
+                const sid = String(decoded?.sessionId || '').trim();
+                if (sid) sessionStorage.setItem('eduCore_session_id', sid);
+                return sid;
+            } catch (_error) {
+                return '';
+            }
+        };
+
+        ensureSessionId();
+
+        const sendHeartbeat = () => {
+            fetch(`${getApiBaseUrl()}/session/heartbeat`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ page: currentPage })
-                });
-
-                if (response.status === 401 || response.status === 403) {
-                    logoutUser();
-                }
-            } catch (error) {
-                // Network failures are handled by the next heartbeat.
-            }
+            })
+                .then((response) => {
+                    if (response.status === 401 || response.status === 403) {
+                        logoutUser();
+                    }
+                })
+                .catch(() => {});
         };
 
         sendHeartbeat();
@@ -1065,9 +978,13 @@
     }
 
     window.eduCoreAuth = {
+        currentPage,
         pageRegistry,
         defaultPermissions,
         normalizePermissionsConfig,
+        normalizePageName,
+        resolvePageNameFromPath: normalizePageName,
+        toRoutePath,
         getUserGroupKey,
         getGroupConfig,
         getModuleAccess,
@@ -1078,7 +995,6 @@
 
     (async () => {
         const permissions = await fetchPermissionsConfig();
-        renderAdminSidebar(loggedInUser);
         applyNavPermissions(loggedInUser, permissions);
         applySignedInUserLabels(loggedInUser);
         renderDashboardPermissionCards(loggedInUser, permissions);
@@ -1127,8 +1043,7 @@ function logoutUser(event) {
     }
     sessionStorage.removeItem('loggedInUser');
     sessionStorage.removeItem('eduCore_token');
-    sessionStorage.removeItem('eduCore_session_id');
     sessionStorage.removeItem('eduCore_student_profile');
     sessionStorage.removeItem('eduCore_permissions_config');
-    window.location.href = 'index.html';
+    window.location.href = '/login';
 }

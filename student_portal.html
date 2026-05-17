@@ -7,21 +7,20 @@
     <title>Student Portal - EduCore</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
             --portal-bg: #f8fafc;
         }
 
         body {
-            background:
-                radial-gradient(circle at top left, rgba(32, 176, 164, 0.14), transparent 22rem),
-                linear-gradient(180deg, #f8fafc 0%, #eef6f5 100%);
+            background: #eef7f6;
             min-height: 100vh;
+            font-family: 'Nunito', 'Inter', sans-serif;
         }
 
         .portal-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            background: var(--primary-color);
             color: white;
             padding: 4rem 2rem;
             text-align: center;
@@ -109,6 +108,195 @@
             backdrop-filter: blur(4px);
         }
 
+        .portal-header {
+            background: #ffffff;
+            color: var(--text-primary);
+            padding: 14px clamp(16px, 4vw, 40px);
+            border-radius: 0;
+            margin-bottom: 0;
+            border-bottom: 1px solid #cae8e4;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+        }
+
+        .portal-logo {
+            width: 180px;
+            max-width: 48vw;
+            height: 64px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .portal-menu-btn {
+            min-height: 38px;
+            border: 1px solid #cae8e4;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f766e;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 9px 14px;
+            font-weight: 700;
+        }
+
+        .portal-container {
+            max-width: 920px;
+        }
+
+        .user-card {
+            background: transparent;
+            box-shadow: none;
+            border-radius: 0;
+            padding: 0;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .user-card-main {
+            flex-direction: column;
+            gap: 0.8rem;
+        }
+
+        .user-avatar {
+            width: 126px;
+            height: 126px;
+            font-size: 2.6rem;
+            border: 4px solid #ffffff;
+            box-shadow: var(--shadow-md);
+        }
+
+        .profile-meta {
+            justify-content: center;
+            margin-top: 0.6rem;
+        }
+
+        .user-card > div:last-child {
+            display: none;
+        }
+
+        .stats-grid {
+            display: none;
+        }
+
+        .student-action-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem;
+            margin: 0 0 2rem;
+        }
+
+        .student-action-btn {
+            min-height: 58px;
+            border: 1px solid var(--border-color);
+            border-radius: 999px;
+            background: #ffffff;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            padding: 0.75rem 1rem;
+        }
+
+        .student-action-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        body {
+            background: #eef7f6;
+        }
+
+        .portal-header {
+            background: #ffffff;
+            color: var(--text-primary);
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .portal-menu-btn {
+            border-color: #cae8e4;
+            background: #ffffff;
+            color: #0f766e;
+        }
+
+        .portal-container {
+            width: min(100%, 980px);
+        }
+
+        .user-card {
+            position: relative;
+            padding: 1.35rem;
+            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid #cae8e4;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
+        }
+
+        .user-avatar {
+            background: #14b8a6;
+            color: #ffffff;
+        }
+
+        .meta-pill {
+            border: 1px solid rgba(20, 184, 166, 0.18);
+            background: #ffffff;
+            color: #0f766e;
+        }
+
+        .status-badge.status-paid,
+        .status-badge.status-pending,
+        .status-badge.status-failed {
+            background: #eef7f6;
+            color: #0f766e;
+            border: 1px solid #cae8e4;
+        }
+
+        .student-action-grid {
+            align-items: stretch;
+        }
+
+        .student-action-btn {
+            min-height: 66px;
+            border: 0;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.09);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+        }
+
+        .student-action-btn i {
+            width: 20px;
+            height: 20px;
+        }
+
+        .student-action-btn:hover {
+            color: #ffffff;
+            transform: translateY(-2px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+        }
+
+        .student-action-btn:nth-child(n) {
+            color: #0f766e;
+            background: #ffffff;
+            border: 1px solid #cae8e4;
+        }
+
+        .student-action-btn:hover:nth-child(n) {
+            background: #0f766e;
+            color: #ffffff;
+            border-color: #0f766e;
+        }
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -132,10 +320,22 @@
 
         .panel-card {
             background: white;
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border-color);
-            padding: 1.5rem;
+            border-radius: 18px;
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+            border: 1px solid #cae8e4;
+            padding: 1.35rem;
+        }
+
+        .student-portal-section h3 {
+            margin: 0 0 1rem;
+            color: #0f172a;
+            font-size: 1.08rem;
+        }
+
+        .student-portal-section h4 {
+            margin: 1.4rem 0 0.75rem;
+            color: #0f172a;
+            font-size: 0.98rem;
         }
 
         .info-grid {
@@ -196,9 +396,9 @@
 
         .mini-stat {
             padding: 1rem;
-            border-radius: var(--radius-md);
+            border-radius: 14px;
             background: #f8fafc;
-            border: 1px solid var(--border-color);
+            border: 1px solid #d9ece9;
         }
 
         .mini-stat-label {
@@ -217,18 +417,21 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
+            overflow: hidden;
+            border-radius: 12px;
         }
 
         .panel-table th,
         .panel-table td {
-            border-bottom: 1px solid var(--border-color);
-            padding: 0.75rem 0.6rem;
+            border-bottom: 1px solid #dcefed;
+            padding: 0.8rem 0.75rem;
             text-align: left;
             font-size: 0.92rem;
         }
 
         .panel-table th {
-            color: var(--text-secondary);
+            background: #f4fbfa;
+            color: #334155;
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.03em;
@@ -240,6 +443,163 @@
             border-radius: var(--radius-md);
             background: #f8fafc;
             color: var(--text-secondary);
+        }
+
+        .result-filter-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem;
+            margin-top: 1.2rem;
+            padding: 1rem;
+            border: 1px solid #d9ece9;
+            border-radius: 16px;
+            background: #fbfefe;
+        }
+
+        .portal-field {
+            display: grid;
+            gap: 0.45rem;
+        }
+
+        .portal-field label {
+            color: #334155;
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+
+        .portal-field .form-control {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 0.65rem 0.75rem;
+            font: inherit;
+            outline: none;
+        }
+
+        .portal-field .form-control:focus {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+        }
+
+        .portal-action-row {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.9rem;
+        }
+
+        .portal-action-row .btn {
+            min-height: 42px;
+            border: 0;
+            border-radius: 10px;
+            padding: 0.65rem 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: none;
+        }
+
+        .portal-action-row .btn-primary {
+            background: #14b8a6;
+            color: #ffffff;
+        }
+
+        .portal-action-row .btn-secondary {
+            background: #eef2f7;
+            color: #0f172a;
+        }
+
+        .portal-content-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .portal-content-card {
+            border: 1px solid #d9ece9;
+            border-radius: 14px;
+            background: #fbfefe;
+            padding: 1rem;
+        }
+
+        .portal-content-card h4 {
+            margin: 0 0 0.4rem;
+        }
+
+        .portal-content-meta {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 0.55rem;
+        }
+
+        .portal-content-card p {
+            margin: 0;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        .portal-content-card a,
+        .portal-download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-top: 0.65rem;
+            color: #0f766e;
+            font-weight: 800;
+            text-decoration: none;
+        }
+
+        .portal-download-btn {
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            font: inherit;
+        }
+
+        .portal-diary-subjects {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 0.75rem;
+        }
+
+        .portal-diary-subject {
+            border: 1px solid #d9ece9;
+            border-radius: 10px;
+            padding: 0.8rem;
+            background: #ffffff;
+        }
+
+        .portal-diary-subject strong {
+            display: block;
+            margin-bottom: 0.35rem;
+            color: #0f172a;
+        }
+
+        .leave-status {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 0.3rem 0.65rem;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .leave-status.pending {
+            background: #eef7f6;
+            color: #0f766e;
+        }
+
+        .leave-status.approved {
+            background: #e0f3f0;
+            color: #0f766e;
+        }
+
+        .leave-status.rejected {
+            background: #f1f5f9;
+            color: #475569;
         }
 
         .special-notice-list {
@@ -354,9 +714,9 @@
             margin-top: 1rem;
             padding: 1rem;
             border-radius: var(--radius-md);
-            background: #fffbeb;
-            color: #92400e;
-            border: 1px solid #fde68a;
+            background: #eef7f6;
+            color: #0f766e;
+            border: 1px solid #cae8e4;
             font-size: 0.9rem;
         }
 
@@ -522,6 +882,14 @@
         }
 
         @media (max-width: 900px) {
+            .portal-container {
+                padding: 1.25rem;
+            }
+
+            .user-card {
+                padding: 1.15rem;
+            }
+
             .portal-grid {
                 grid-template-columns: 1fr;
             }
@@ -530,8 +898,55 @@
                 grid-template-columns: 1fr;
             }
 
+            .student-action-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .lecture-card {
                 grid-template-columns: 1fr;
+            }
+
+            .result-filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 520px) {
+            .portal-header {
+                padding: 12px 16px;
+            }
+
+            .portal-logo {
+                width: 150px;
+                height: 54px;
+            }
+
+            .portal-container {
+                padding: 0.9rem;
+            }
+
+            .student-action-grid {
+                gap: 0.75rem;
+                grid-template-columns: 1fr;
+            }
+
+            .student-action-btn {
+                min-height: 54px;
+                justify-content: flex-start;
+                font-size: 0.92rem;
+                padding: 0.75rem 1rem;
+            }
+
+            .panel-card {
+                padding: 1rem;
+            }
+
+            .mini-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .portal-action-row .btn {
+                width: 100%;
             }
         }
 
@@ -585,9 +1000,11 @@
 
 <body>
     <header class="portal-header">
-        <button class="logout-btn" onclick="logout()">Logout</button>
-        <h1>Student Dashboard</h1>
-        <p>View your account, fee information, and academic profile</p>
+        <img class="portal-logo" src="images/logo.png" alt="Apexiums School System logo">
+        <button class="portal-menu-btn" type="button" onclick="logout()" title="Logout" aria-label="Logout">
+            <i data-lucide="log-out" width="16"></i>
+            Logout
+        </button>
     </header>
 
     <div class="portal-container">
@@ -616,228 +1033,296 @@
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Total Monthly Fee</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: var(--primary-color);" id="feeAmount">PKR 0</div>
-            </div>
-            <div class="stat-box" style="border-left-color: #f59e0b;">
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Pending Amount</div>
-                <div style="font-size: 1.5rem; font-weight: 700; color: #b45309;" id="pendingAmount">PKR 0</div>
-            </div>
-            <div class="stat-box" style="border-left-color: #3b82f6;">
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Fee Frequency</div>
-                <div style="font-size: 1.3rem; font-weight: 700; color: #1d4ed8;" id="feeFrequency">-</div>
-            </div>
-            <div class="stat-box" style="border-left-color: #10b981;">
-                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Last Payment</div>
-                <div style="font-size: 1.3rem; font-weight: 700; color: #047857;" id="lastPayment">-</div>
-            </div>
-        </div>
-
-        <section class="panel-card" id="specialNoticeSection" style="display:none; margin-bottom: 2rem;">
-            <div style="display:flex;align-items:center;gap:0.6rem;">
-                <i data-lucide="megaphone" width="20"></i>
-                <h3>Special Notices</h3>
-            </div>
-            <div class="special-notice-list" id="specialNoticeList"></div>
+        <section class="student-action-grid" aria-label="Student portal actions">
+            <button type="button" class="student-action-btn" data-student-action-target="studentAttendanceSection">
+                <i data-lucide="calendar-check"></i> Attendance
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentDiarySection">
+                <i data-lucide="book-open"></i> Diary
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentFeeSection">
+                <i data-lucide="receipt"></i> Fees
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentResultSection">
+                <i data-lucide="clipboard-list"></i> Result
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentLeaveSection">
+                <i data-lucide="calendar-minus"></i> Leave
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentCourseSection">
+                <i data-lucide="book-marked"></i> Course
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentTimeTableSection">
+                <i data-lucide="clock"></i> Time Table
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentPerformanceSection">
+                <i data-lucide="trending-up"></i> Performance
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentSyllabusSection">
+                <i data-lucide="file-text"></i> Syllabus
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentAssignmentSection">
+                <i data-lucide="pencil-line"></i> Assignment
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentQuizSection">
+                <i data-lucide="circle-help"></i> Quiz
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentLecturesSection">
+                <i data-lucide="presentation"></i> Lectures
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentSubmitAssignmentSection">
+                <i data-lucide="upload"></i> Submit Assignment
+            </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentComplaintSection">
+                <i data-lucide="message-square"></i> Complain Box
+            </button>
         </section>
 
-        <div class="portal-grid">
-            <div class="section-stack">
-                <section class="panel-card">
-                    <h3>Personal Information</h3>
-                    <div class="info-grid">
-                        <div class="info-row">
-                            <strong>Father's Name</strong>
-                            <span id="fatherName">-</span>
-                        </div>
-                        <div class="info-row">
-                            <strong>Form B / CNIC</strong>
-                            <span id="formB">-</span>
-                        </div>
-                        <div class="info-row">
-                            <strong>Parent Contact</strong>
-                            <span id="contact">-</span>
-                        </div>
-                        <div class="info-row">
-                            <strong>Gender</strong>
-                            <span id="gender">-</span>
-                        </div>
-                        <div class="info-row">
-                            <strong>Student Code</strong>
-                            <span id="studentCode">-</span>
-                        </div>
-                        <div class="info-row">
-                            <strong>Username</strong>
-                            <span id="studentUsername">-</span>
-                        </div>
-                    </div>
-                </section>
+        <section class="panel-card student-portal-section" id="studentAttendanceSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Attendance</h3>
+            <div class="mini-grid">
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Attendance Rate</div>
+                    <div class="mini-stat-value" id="attendanceRate">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Total Marked Days</div>
+                    <div class="mini-stat-value" id="attendanceTotal">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Present</div>
+                    <div class="mini-stat-value" id="attendancePresent">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Absent</div>
+                    <div class="mini-stat-value" id="attendanceAbsent">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Late</div>
+                    <div class="mini-stat-value" id="attendanceLate">-</div>
+                </div>
+            </div>
+        </section>
 
-                <section class="panel-card">
-                    <h3>Result Tracking</h3>
-                    <div class="lookup-row">
-                        <input type="text" id="studentResultLookup" placeholder="Enter your student ID, code, or roll number">
-                        <button type="button" class="btn-inline" id="loadStudentResultBtn">
-                            <i data-lucide="search" width="16"></i>
-                            Load Result
-                        </button>
-                    </div>
-                    <div class="result-filter-grid">
-                        <label>Date
-                            <input type="date" id="studentResultDateFilter">
-                        </label>
-                        <label>Class
-                            <input type="text" id="studentResultClassFilter" placeholder="Class">
-                        </label>
-                        <label>Roll Number
-                            <input type="text" id="studentResultRollFilter" placeholder="Roll number">
-                        </label>
-                    </div>
-                    <table class="panel-table result-history-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Class</th>
-                                <th>Term</th>
-                                <th>%</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentResultHistoryBody"></tbody>
-                    </table>
-                    <div class="empty-note" id="studentResultHistoryEmpty">No previous or current result matched these filters.</div>
-                    <div class="mini-grid">
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Latest Term</div>
-                            <div class="mini-stat-value" id="resultTerm">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Result Status</div>
-                            <div class="mini-stat-value" id="resultStatus">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Percentage</div>
-                            <div class="mini-stat-value" id="resultPercentage">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Position / Grade</div>
-                            <div class="mini-stat-value" id="resultPosition">-</div>
-                        </div>
-                    </div>
-                    <table class="panel-table">
-                        <thead>
-                            <tr>
-                                <th>Subject</th>
-                                <th>Max</th>
-                                <th>Obtained</th>
-                                <th>Best</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentResultBody"></tbody>
-                    </table>
-                    <div class="empty-note" id="studentResultEmpty">No saved result is available yet.</div>
-                    <div class="result-actions">
-                        <button type="button" class="btn-inline" id="printStudentResultBtn">
-                            <i data-lucide="printer" width="16"></i>
-                            Print Result Card
-                        </button>
-                    </div>
-                </section>
+        <section class="panel-card student-portal-section" id="studentFeeSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Fee Details</h3>
+            <div class="mini-grid">
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Monthly Fee</div>
+                    <div class="mini-stat-value" id="portalMonthlyFee">PKR 0</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Pending Fee</div>
+                    <div class="mini-stat-value" id="portalPendingFee">PKR 0</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Fee Frequency</div>
+                    <div class="mini-stat-value" id="portalFeeFrequency">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Last Payment</div>
+                    <div class="mini-stat-value" id="portalLastPayment">-</div>
+                </div>
+            </div>
+            <div class="fee-summary">
+                <div class="fee-line">
+                    <strong>Fee Status</strong>
+                    <span id="portalFeeStatusText">Pending</span>
+                </div>
+            </div>
+        </section>
 
-                <section class="panel-card">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
-                        <div>
-                            <h3>Class Lectures</h3>
-                            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Your assigned teacher lectures by day and time.</p>
-                        </div>
-                        <div class="meta-pill">
-                            <i data-lucide="calendar-clock" width="16"></i>
-                            <span id="studentLectureCount">0 Lectures</span>
-                        </div>
-                    </div>
-                    <div class="lecture-list" id="studentLectureList"></div>
-                    <div class="empty-note" id="studentLectureEmpty">No lectures have been assigned for your class yet.</div>
-                </section>
+        <section class="panel-card student-portal-section" id="studentDiarySection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Class Diary</h3>
+            <div class="portal-content-list" id="studentDiaryList"></div>
+            <div class="empty-note" id="studentDiaryEmpty">No diary has been added for your class yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentResultSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Result</h3>
+            <div class="mini-grid">
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Term</div>
+                    <div class="mini-stat-value" id="resultTerm">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Status</div>
+                    <div class="mini-stat-value" id="resultStatus">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Percentage</div>
+                    <div class="mini-stat-value" id="resultPercentage">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Position / Grade</div>
+                    <div class="mini-stat-value" id="resultPosition">-</div>
+                </div>
             </div>
 
-            <div class="section-stack">
-                <section class="panel-card">
-                    <h3>Fee Details</h3>
-                    <div class="fee-summary">
-                        <div class="fee-line">
-                            <strong>Fee Status</strong>
-                            <span id="feeStatusText">-</span>
-                        </div>
-                        <div class="fee-line">
-                            <strong>Monthly Fee</strong>
-                            <span id="monthlyFeeText">PKR 0</span>
-                        </div>
-                        <div class="fee-line">
-                            <strong>Pending Fee</strong>
-                            <span id="pendingFeeText">PKR 0</span>
-                        </div>
-                        <div class="fee-line">
-                            <strong>Last Payment Date</strong>
-                            <span id="paymentDate">Not paid yet</span>
-                        </div>
-                    </div>
-                    <div class="mini-grid">
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Pending Dues</div>
-                            <div class="mini-stat-value" id="pendingDuesCard">PKR 0</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Current Status</div>
-                            <div class="mini-stat-value" id="duesStatusCard">Pending</div>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="panel-card">
-                    <h3>Attendance & Exam Schedule</h3>
-                    <div class="mini-grid">
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Attendance Rate</div>
-                            <div class="mini-stat-value" id="attendanceRate">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Marked Days</div>
-                            <div class="mini-stat-value" id="attendanceTotal">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Present Days</div>
-                            <div class="mini-stat-value" id="attendancePresent">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Absent Days</div>
-                            <div class="mini-stat-value" id="attendanceAbsent">-</div>
-                        </div>
-                        <div class="mini-stat">
-                            <div class="mini-stat-label">Late Days</div>
-                            <div class="mini-stat-value" id="attendanceLate">-</div>
-                        </div>
-                    </div>
-                    <table class="panel-table">
-                        <thead>
-                            <tr>
-                                <th>Subject</th>
-                                <th>Class</th>
-                                <th>Date</th>
-                                <th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentDateSheetBody"></tbody>
-                    </table>
-                    <div class="empty-note" id="studentDateSheetEmpty">No exam date sheet is available yet.</div>
-                    <button type="button" class="btn-inline" id="downloadDateSheetBtn">
-                        <i data-lucide="download" width="16"></i>
-                        Download Date Sheet
-                    </button>
-                </section>
+            <div class="result-filter-grid">
+                <div class="portal-field">
+                    <label for="studentResultLookup">Student ID / Roll No</label>
+                    <input type="text" id="studentResultLookup" class="form-control" placeholder="Enter your roll number">
+                </div>
+                <div class="portal-field">
+                    <label for="studentResultDateFilter">Result Date</label>
+                    <input type="date" id="studentResultDateFilter" class="form-control">
+                </div>
+                <div class="portal-field">
+                    <label for="studentResultClassFilter">Class</label>
+                    <input type="text" id="studentResultClassFilter" class="form-control" placeholder="Class">
+                </div>
+                <div class="portal-field">
+                    <label for="studentResultRollFilter">Roll No</label>
+                    <input type="text" id="studentResultRollFilter" class="form-control" placeholder="Roll no">
+                </div>
             </div>
-        </div>
+            <div class="portal-action-row">
+                <button type="button" class="btn btn-primary" id="loadStudentResultBtn">Load Result</button>
+                <button type="button" class="btn btn-secondary" id="printStudentResultBtn">Print Result</button>
+            </div>
+
+            <table class="panel-table">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Max</th>
+                        <th>Obtained</th>
+                        <th>Best</th>
+                    </tr>
+                </thead>
+                <tbody id="studentResultBody"></tbody>
+            </table>
+            <div class="empty-note" id="studentResultEmpty">No result card has been added for you yet.</div>
+
+            <h4>Result History</h4>
+            <table class="panel-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Class</th>
+                        <th>Term</th>
+                        <th>Percentage</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="studentResultHistoryBody"></tbody>
+            </table>
+            <div class="empty-note" id="studentResultHistoryEmpty">No result history found.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentLeaveSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Apply Leave</h3>
+            <form id="studentLeaveForm">
+                <div class="result-filter-grid">
+                    <div class="portal-field">
+                        <label for="studentLeaveName">Student Name</label>
+                        <input type="text" id="studentLeaveName" class="form-control" readonly>
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentLeaveClass">Class</label>
+                        <input type="text" id="studentLeaveClass" class="form-control" readonly>
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentLeaveRollNo">Roll Number</label>
+                        <input type="text" id="studentLeaveRollNo" class="form-control" readonly>
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentLeaveStudentId">Student ID / Code</label>
+                        <input type="text" id="studentLeaveStudentId" class="form-control" readonly>
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentLeaveFrom">From Date</label>
+                        <input type="date" id="studentLeaveFrom" class="form-control" required>
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentLeaveTo">To Date</label>
+                        <input type="date" id="studentLeaveTo" class="form-control" required>
+                    </div>
+                    <div class="portal-field" style="grid-column: 1 / -1;">
+                        <label for="studentLeaveReason">Reason</label>
+                        <textarea id="studentLeaveReason" class="form-control" rows="4" required placeholder="Write leave reason"></textarea>
+                    </div>
+                </div>
+                <div class="portal-action-row">
+                    <button type="submit" class="btn btn-primary">Submit Leave</button>
+                </div>
+            </form>
+            <h4>Leave History</h4>
+            <div class="portal-content-list" id="studentLeaveHistory"></div>
+            <div class="empty-note" id="studentLeaveEmpty">You have not applied for leave yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentCourseSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Class Course</h3>
+            <div class="portal-content-list" id="studentCourseList"></div>
+            <div class="empty-note" id="studentCourseEmpty">No course has been added for your class yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Complain Box</h3>
+            <form id="studentComplaintForm">
+                <div class="result-filter-grid">
+                    <div class="portal-field">
+                        <label for="studentComplaintSubject">Subject</label>
+                        <input type="text" id="studentComplaintSubject" class="form-control" required placeholder="Complaint subject">
+                    </div>
+                    <div class="portal-field" style="grid-column: 1 / -1;">
+                        <label for="studentComplaintMessage">Complaint</label>
+                        <textarea id="studentComplaintMessage" class="form-control" rows="4" required placeholder="Write your complaint"></textarea>
+                    </div>
+                    <div class="portal-field" style="grid-column: 1 / -1;">
+                        <label for="studentComplaintFile">Attach File</label>
+                        <input type="file" id="studentComplaintFile" class="form-control">
+                    </div>
+                </div>
+                <div class="portal-action-row">
+                    <button type="submit" class="btn btn-primary">Submit Complaint</button>
+                </div>
+            </form>
+            <h4>Complaint History</h4>
+            <div class="portal-content-list" id="studentComplaintHistory"></div>
+            <div class="empty-note" id="studentComplaintEmpty">You have not submitted any complaint yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentTimeTableSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Class Time Table</h3>
+            <table class="panel-table">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Lecture</th>
+                        <th>Teacher</th>
+                        <th>Time</th>
+                        <th>Room</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTimeTableBody"></tbody>
+            </table>
+            <div class="empty-note" id="studentTimeTableEmpty">No timetable has been added for your class yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentPerformanceSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Performance</h3>
+            <div class="mini-grid">
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Attendance</div>
+                    <div class="mini-stat-value" id="performanceAttendance">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Latest Result</div>
+                    <div class="mini-stat-value" id="performanceResult">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Academic Status</div>
+                    <div class="mini-stat-value" id="performanceStatus">-</div>
+                </div>
+                <div class="mini-stat">
+                    <div class="mini-stat-label">Latest Term</div>
+                    <div class="mini-stat-value" id="performanceTerm">-</div>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script src="auth.js"></script>
@@ -857,9 +1342,15 @@
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
         const STUDENT_PROFILE_CACHE_KEY = 'eduCore_student_profile';
         const STUDENT_RESULT_CACHE_KEY = 'eduCore_student_result_card';
+        const STUDENT_SCHEDULE_KEY = 'eduCore_student_schedules';
+        const STUDENT_DIARY_KEY = 'eduCore_student_diaries';
+        const STUDENT_LEAVE_KEY = 'eduCore_student_leave_requests';
+        const STUDENT_COURSE_KEY = 'eduCore_student_courses';
+        const COMPLAINT_KEY = 'eduCore_complaints';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const authToken = sessionStorage.getItem('eduCore_token');
         let studentResultHistory = [];
+        let editingStudentLeaveId = '';
 
         if (!loggedInUser || loggedInUser.role !== 'Student' || !authToken) {
             window.location.href = 'index.html';
@@ -879,15 +1370,585 @@
             }[char]));
         }
 
+        function sanitizePortalFileName(fileName) {
+            const safeName = String(fileName || 'diary-file').trim().replace(/[\\/:*?"<>|]+/g, '-');
+            return safeName || 'diary-file';
+        }
+
+        function downloadPortalDataUrl(dataUrl, fileName) {
+            if (!dataUrl) {
+                showAppAlert('No attachment is available for this diary.', 'Download Failed');
+                return;
+            }
+
+            const link = document.createElement('a');
+            link.href = dataUrl;
+            link.download = sanitizePortalFileName(fileName);
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function downloadPortalBlob(content, fileName, type = 'text/html') {
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = sanitizePortalFileName(fileName);
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 500);
+        }
+
+        async function getPortalLogoDataUrl() {
+            try {
+                const response = await fetch('images/logo.png');
+                if (!response.ok) throw new Error('Logo not available');
+                const blob = await response.blob();
+                return await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (_error) {
+                return '';
+            }
+        }
+
+        function getCurrentPortalStudent() {
+            try {
+                return JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback() || {};
+            } catch (_error) {
+                return getStudentFromLocalFallback() || {};
+            }
+        }
+
+        function buildDiaryDownloadHtml(items = [], logoDataUrl = '', student = {}) {
+            const diaryItems = Array.isArray(items) ? items : [items].filter(Boolean);
+            const firstItem = diaryItems[0] || {};
+            const studentName = escapeHtml(student.fullName || loggedInUser?.fullName || 'Student');
+            const className = escapeHtml(firstItem.classGrade || '-');
+            const date = escapeHtml(firstItem.date || '-');
+            const subjectBlocks = diaryItems.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(item.title || 'Subject')}</td>
+                    <td>${escapeHtml(item.details || '-').replace(/\n/g, '<br>')}</td>
+                </tr>
+            `).join('');
+            const logoMarkup = logoDataUrl
+                ? `<img class="logo" src="${logoDataUrl}" alt="School logo">`
+                : '<div class="logo-fallback">APEXIUMS</div>';
+
+            return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Class Diary</title>
+    <style>
+        @page { margin: 16mm; }
+        body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; background: #ffffff; }
+        .page { width: min(780px, calc(100% - 40px)); margin: 24px auto; padding: 12px 0; }
+        .header { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: 16px; border-bottom: 2px solid #0f766e; padding-bottom: 14px; margin-bottom: 18px; }
+        .logo { width: 108px; height: auto; object-fit: contain; }
+        .logo-fallback { width: 108px; font-weight: 800; color: #0f766e; }
+        h1 { margin: 0; font-size: 25px; color: #0f766e; }
+        .subtitle { margin-top: 5px; color: #475569; font-size: 13px; }
+        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; font-size: 14px; }
+        .meta strong { display: block; color: #475569; font-size: 12px; margin-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 8px; border-bottom: 1px solid #d9ece9; text-align: left; vertical-align: top; line-height: 1.5; }
+        th { color: #0f766e; font-size: 12px; text-transform: uppercase; }
+        td:first-child { width: 38px; color: #64748b; font-weight: 700; }
+        td:nth-child(2) { width: 170px; font-weight: 700; color: #0f172a; }
+        .footer { margin-top: 22px; color: #64748b; font-size: 12px; text-align: center; }
+        @media print { body { background: #fff; } .page { width: auto; margin: 0; padding: 0; } }
+    </style>
+</head>
+<body>
+    <main class="page">
+        <header class="header">
+            ${logoMarkup}
+            <div>
+                <h1>Class Diary</h1>
+                <div class="subtitle">Student: ${studentName}</div>
+            </div>
+        </header>
+        <section class="meta">
+            <div><strong>Student Name</strong>${studentName}</div>
+            <div><strong>Class</strong>${className}</div>
+            <div><strong>Date</strong>${date}</div>
+        </section>
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Subject</th>
+                    <th>Diary</th>
+                </tr>
+            </thead>
+            <tbody>${subjectBlocks}</tbody>
+        </table>
+        <div class="footer">Apexiums School System</div>
+    </main>
+</body>
+</html>`;
+        }
+
+        function openDiaryPrintWindow(html) {
+            const printable = window.open('', '_blank');
+            if (!printable) {
+                showAppAlert('Please allow pop-ups to download the diary PDF.', 'Download Blocked');
+                return;
+            }
+
+            printable.document.write(html);
+            printable.document.close();
+            printable.focus();
+            printable.setTimeout(() => printable.print(), 450);
+        }
+
+        async function downloadPortalDiaryGroup(encodedGroupKey) {
+            const groupKey = decodeURIComponent(encodedGroupKey || '');
+            const items = getPortalData(STUDENT_DIARY_KEY).filter((entry) => `${entry.classGrade || '-'}|${entry.date || '-'}` === groupKey);
+            if (!items.length) {
+                showAppAlert('Diary entry was not found.', 'Download Failed');
+                return;
+            }
+
+            const logoDataUrl = await getPortalLogoDataUrl();
+            const html = buildDiaryDownloadHtml(items, logoDataUrl, getCurrentPortalStudent());
+            openDiaryPrintWindow(html);
+        }
+
+        function downloadPortalAttachment(storageKey, itemId) {
+            const item = getPortalData(storageKey).find((entry) => String(entry.id || '') === String(itemId || ''));
+            if (!item?.file?.dataUrl) {
+                showAppAlert('Attachment file was not found.', 'Download Failed');
+                return;
+            }
+
+            downloadPortalDataUrl(item.file.dataUrl, item.file.name || 'diary-file');
+        }
+
         function getStatusClass(status) {
             if (status === 'Paid') return 'status-paid';
             if (status === 'Late') return 'status-failed';
             return 'status-pending';
         }
 
+        function normalizeClassName(value = '') {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function getStudentClassSchedules(student = {}) {
+            const className = normalizeClassName(student.classGrade);
+            if (!className) return [];
+
+            try {
+                const schedules = JSON.parse(localStorage.getItem(STUDENT_SCHEDULE_KEY) || '[]');
+                return (Array.isArray(schedules) ? schedules : [])
+                    .filter((item) => normalizeClassName(item.classGrade) === className)
+                    .sort((a, b) => `${a.day || ''}${a.startTime || ''}`.localeCompare(`${b.day || ''}${b.startTime || ''}`));
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function applyStudentFees(student = {}) {
+            const feeAmount = parseInt(student.monthlyFee || 0, 10);
+            const pendingAmount = student.feesStatus === 'Paid' ? 0 : feeAmount;
+            const setText = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.innerText = value;
+            };
+
+            setText('portalMonthlyFee', formatCurrency(feeAmount));
+            setText('portalPendingFee', formatCurrency(pendingAmount));
+            setText('portalFeeFrequency', student.feeFrequency || 'Monthly');
+            setText('portalLastPayment', student.paymentDate || 'Not paid yet');
+            setText('portalFeeStatusText', student.feesStatus || 'Pending');
+        }
+
+        function applyStudentTimeTable(student = {}) {
+            const tbody = document.getElementById('studentTimeTableBody');
+            const empty = document.getElementById('studentTimeTableEmpty');
+            if (!tbody || !empty) return;
+
+            const schedules = getStudentClassSchedules(student);
+            if (!schedules.length) {
+                tbody.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            tbody.innerHTML = schedules.map((item) => `
+                <tr>
+                    <td>${escapeHtml(item.day || '-')}</td>
+                    <td>${escapeHtml(item.subject || '-')}</td>
+                    <td>${escapeHtml(item.teacherName || '-')}</td>
+                    <td>${escapeHtml(`${item.startTime || '-'} - ${item.endTime || '-'}`)}</td>
+                    <td>${escapeHtml(item.room || '-')}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getPortalData(key) {
+            try {
+                return JSON.parse(localStorage.getItem(key) || '[]');
+            } catch (_error) {
+                return [];
+            }
+        }
+
+        function getClassWiseItems(key, student = {}) {
+            const studentClass = normalizeClassName(student.classGrade);
+            return getPortalData(key)
+                .filter((item) => normalizeClassName(item.classGrade) === studentClass)
+                .sort((a, b) => String(b.date || b.updatedAt || b.createdAt || '').localeCompare(String(a.date || a.updatedAt || a.createdAt || '')));
+        }
+
+        function groupPortalDiaryItems(items = []) {
+            const groups = new Map();
+            items.forEach((item) => {
+                const key = `${item.classGrade || '-'}|${item.date || '-'}`;
+                if (!groups.has(key)) {
+                    groups.set(key, {
+                        key,
+                        classGrade: item.classGrade || '-',
+                        date: item.date || '-',
+                        items: []
+                    });
+                }
+                groups.get(key).items.push(item);
+            });
+            return Array.from(groups.values());
+        }
+
+        function renderPortalDiaryList(student = {}) {
+            const list = document.getElementById('studentDiaryList');
+            const empty = document.getElementById('studentDiaryEmpty');
+            if (!list || !empty) return;
+
+            const groups = groupPortalDiaryItems(getClassWiseItems(STUDENT_DIARY_KEY, student));
+            if (!groups.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = groups.map((group) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(group.classGrade)} Class Diary</h4>
+                    <div class="portal-content-meta">${escapeHtml(group.date)} - ${group.items.length} subject${group.items.length === 1 ? '' : 's'}</div>
+                    <div class="portal-diary-subjects">
+                        ${group.items.map((item) => `
+                            <div class="portal-diary-subject">
+                                <strong>${escapeHtml(item.title || 'Subject')}</strong>
+                                <p>${escapeHtml(item.details || '-')}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button type="button" class="portal-download-btn" onclick="downloadPortalDiaryGroup('${encodeURIComponent(group.key)}')"><i data-lucide="download" width="16"></i> Download PDF</button>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function renderPortalContentList(listId, emptyId, items = [], storageKey = '') {
+            const list = document.getElementById(listId);
+            const empty = document.getElementById(emptyId);
+            if (!list || !empty) return;
+
+            if (!items.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = items.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.title || '-')}</h4>
+                    <div class="portal-content-meta">${escapeHtml(item.date || item.classGrade || '-')}</div>
+                    <p>${escapeHtml(item.details || '-')}</p>
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(storageKey)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function applyStudentDiary(student = {}) {
+            renderPortalDiaryList(student);
+        }
+
+        function applyStudentCourse(student = {}) {
+            renderPortalContentList('studentCourseList', 'studentCourseEmpty', getClassWiseItems(STUDENT_COURSE_KEY, student), STUDENT_COURSE_KEY);
+        }
+
+        function getPortalComplaintsForStudent(student = {}) {
+            const senderId = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim().toLowerCase();
+            return getPortalData(COMPLAINT_KEY)
+                .filter((item) => item.senderRole === 'Student' && String(item.senderId || '').trim().toLowerCase() === senderId)
+                .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        }
+
+        function getComplaintThread(item) {
+            const thread = Array.isArray(item.thread) ? [...item.thread] : [];
+            if (item.reply && !thread.some((entry) => entry.role === 'Admin' && entry.message === item.reply)) {
+                thread.push({ role: 'Admin', name: 'Admin', message: item.reply, createdAt: item.repliedAt || item.updatedAt || item.createdAt });
+            }
+            return thread.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+        }
+
+        function renderStudentComplaints(student = {}) {
+            const list = document.getElementById('studentComplaintHistory');
+            const empty = document.getElementById('studentComplaintEmpty');
+            if (!list || !empty) return;
+            const complaints = getPortalComplaintsForStudent(student);
+            if (!complaints.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            list.innerHTML = complaints.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.subject || 'Complaint')}</h4>
+                    <div class="portal-content-meta">${escapeHtml(item.status || 'Pending')} - ${escapeHtml(item.createdAt ? new Date(item.createdAt).toLocaleString() : '')}</div>
+                    <p>${escapeHtml(item.message || '-')}</p>
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalDataUrl('${item.file.dataUrl}', '${escapeHtml(item.file.name || 'complaint-file')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                    ${getComplaintThread(item).map((entry) => `<div class="empty-note"><strong>${escapeHtml(entry.role || 'Reply')} ${entry.name ? `- ${escapeHtml(entry.name)}` : ''}:</strong><br>${escapeHtml(entry.message || '-')}<div class="portal-content-meta">${escapeHtml(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')}</div></div>`).join('')}
+                    <div class="portal-field" style="margin-top:.85rem;">
+                        <label for="studentComplaintReply-${escapeHtml(item.id || '')}">Reply</label>
+                        <textarea id="studentComplaintReply-${escapeHtml(item.id || '')}" class="form-control" rows="3" placeholder="Write your reply"></textarea>
+                    </div>
+                    <div class="portal-action-row">
+                        <button type="button" class="btn btn-secondary" onclick="replyStudentComplaint('${escapeHtml(item.id || '')}')"><i data-lucide="send" width="16"></i> Reply</button>
+                    </div>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function replyStudentComplaint(id) {
+            const student = getCurrentPortalStudent();
+            const complaints = getPortalData(COMPLAINT_KEY);
+            const index = complaints.findIndex((item) => item.id === id && item.senderRole === 'Student');
+            if (index < 0) {
+                showAppAlert('Complaint was not found.', 'Reply Failed');
+                return;
+            }
+            const reply = document.getElementById(`studentComplaintReply-${id}`)?.value.trim() || '';
+            if (!reply) {
+                showAppAlert('Reply message is required.', 'Missing Reply');
+                return;
+            }
+            const now = new Date().toISOString();
+            const thread = getComplaintThread(complaints[index]);
+            thread.push({ role: 'Student', name: student.fullName || loggedInUser?.fullName || 'Student', message: reply, createdAt: now });
+            complaints[index] = { ...complaints[index], thread, status: 'Pending', updatedAt: now };
+            localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
+            renderStudentComplaints(student);
+            showAppAlert('Your reply has been sent.', 'Reply Sent');
+        }
+
+        function readPortalFile(input) {
+            const file = input?.files?.[0];
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({ name: file.name, dataUrl: reader.result, type: file.type || '' });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function submitStudentComplaint(event) {
+            event.preventDefault();
+            const student = getCurrentPortalStudent();
+            const subject = document.getElementById('studentComplaintSubject').value.trim();
+            const message = document.getElementById('studentComplaintMessage').value.trim();
+            if (!subject || !message) {
+                showAppAlert('Complaint subject and message are required.', 'Missing Complaint');
+                return;
+            }
+            let file = null;
+            try {
+                file = await readPortalFile(document.getElementById('studentComplaintFile'));
+            } catch (_error) {
+                showAppAlert('Complaint file could not be attached.', 'File Error');
+                return;
+            }
+            const complaints = getPortalData(COMPLAINT_KEY);
+            complaints.push({
+                id: `COMP-${Date.now()}`,
+                senderRole: 'Student',
+                senderId: String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim().toLowerCase(),
+                senderName: student.fullName || loggedInUser?.fullName || 'Student',
+                senderClass: student.classGrade || '',
+                subject,
+                message,
+                file,
+                status: 'Pending',
+                thread: [],
+                createdAt: new Date().toISOString()
+            });
+            try {
+                localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
+            } catch (_error) {
+                showAppAlert('Complaint could not be saved. The attached file may be too large.', 'Storage Full');
+                return;
+            }
+            event.target.reset();
+            renderStudentComplaints(student);
+            showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
+        }
+
+        function getStudentLeaveRequests(student = {}) {
+            const candidates = getStudentIdentityCandidates(student);
+            return getPortalData(STUDENT_LEAVE_KEY)
+                .filter((item) => candidates.includes(String(item.studentIdentity || item.studentId || item.rollNo || '').trim().toLowerCase()))
+                .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        }
+
+        function renderStudentLeaveHistory(student = {}) {
+            const list = document.getElementById('studentLeaveHistory');
+            const empty = document.getElementById('studentLeaveEmpty');
+            if (!list || !empty) return;
+            const requests = getStudentLeaveRequests(student);
+
+            if (!requests.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = requests.map((item) => {
+                const status = String(item.status || 'Pending').toLowerCase();
+                return `
+                    <article class="portal-content-card">
+                        <h4>${escapeHtml(item.fromDate || '-')} to ${escapeHtml(item.toDate || '-')}</h4>
+                        <div class="portal-content-meta"><span class="leave-status ${status}">${escapeHtml(item.status || 'Pending')}</span></div>
+                        <p>${escapeHtml(item.reason || '-')}</p>
+                        <div class="portal-action-row">
+                            <button type="button" class="btn btn-secondary" onclick="editStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="edit-2" width="16"></i> Edit</button>
+                            <button type="button" class="btn btn-secondary" onclick="deleteStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="trash-2" width="16"></i> Delete</button>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function setStudentLeaveSubmitText(text) {
+            const button = document.querySelector('#studentLeaveForm button[type="submit"]');
+            if (button) button.textContent = text;
+        }
+
+        function editStudentLeaveRequest(id) {
+            const student = getCurrentPortalStudent();
+            const item = getStudentLeaveRequests(student).find((entry) => entry.id === id);
+            if (!item) {
+                showAppAlert('Leave request was not found.', 'Edit Failed');
+                return;
+            }
+            editingStudentLeaveId = item.id;
+            document.getElementById('studentLeaveFrom').value = item.fromDate || '';
+            document.getElementById('studentLeaveTo').value = item.toDate || '';
+            document.getElementById('studentLeaveReason').value = item.reason || '';
+            setStudentLeaveSubmitText('Update Leave');
+            document.getElementById('studentLeaveForm')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        async function deleteStudentLeaveRequest(id) {
+            const confirmed = await showAppConfirm('Delete this leave request?', 'Delete Leave');
+            if (!confirmed) return;
+            const student = getCurrentPortalStudent();
+            const ownIds = new Set(getStudentLeaveRequests(student).map((item) => item.id));
+            if (!ownIds.has(id)) {
+                showAppAlert('This leave request could not be deleted.', 'Delete Failed');
+                return;
+            }
+            const requests = getPortalData(STUDENT_LEAVE_KEY).filter((item) => item.id !== id);
+            localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(requests));
+            if (editingStudentLeaveId === id) {
+                editingStudentLeaveId = '';
+                document.getElementById('studentLeaveForm')?.reset();
+                setStudentLeaveSubmitText('Submit Leave');
+            }
+            renderStudentLeaveHistory(student);
+            showAppAlert('Leave request deleted.', 'Leave Deleted');
+        }
+
+        function submitStudentLeaveRequest(event) {
+            event.preventDefault();
+            const student = JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback();
+            if (!student) return;
+
+            const fromDate = document.getElementById('studentLeaveFrom').value;
+            const toDate = document.getElementById('studentLeaveTo').value;
+            const reason = document.getElementById('studentLeaveReason').value.trim();
+            if (!fromDate || !toDate || !reason) {
+                showAppAlert('Leave date and reason are required.', 'Missing Leave Details');
+                return;
+            }
+
+            const requests = getPortalData(STUDENT_LEAVE_KEY);
+            if (editingStudentLeaveId) {
+                const ownIds = new Set(getStudentLeaveRequests(student).map((item) => item.id));
+                const index = requests.findIndex((item) => item.id === editingStudentLeaveId && ownIds.has(item.id));
+                if (index < 0) {
+                    showAppAlert('Leave request could not be updated.', 'Update Failed');
+                    return;
+                }
+                requests[index] = {
+                    ...requests[index],
+                    fromDate,
+                    toDate,
+                    reason,
+                    status: 'Pending',
+                    updatedAt: new Date().toISOString()
+                };
+            } else {
+                requests.push({
+                    id: `LEAVE-${Date.now()}`,
+                    studentIdentity: String(student.id || student.studentCode || student.rollNo || loggedInUser.id || '').trim().toLowerCase(),
+                    studentName: student.fullName || loggedInUser.fullName || 'Student',
+                    rollNo: student.rollNo || '-',
+                    classGrade: student.classGrade || '-',
+                    fromDate,
+                    toDate,
+                    reason,
+                    status: 'Pending',
+                    createdAt: new Date().toISOString()
+                });
+            }
+            try {
+                localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(requests));
+            } catch (_error) {
+                showAppAlert('Leave request could not be saved because browser storage is full.', 'Storage Full');
+                return;
+            }
+            event.target.reset();
+            const wasEditing = Boolean(editingStudentLeaveId);
+            editingStudentLeaveId = '';
+            setStudentLeaveSubmitText('Submit Leave');
+            renderStudentLeaveHistory(student);
+            showAppAlert(wasEditing ? 'Your leave request has been updated.' : 'Your leave request has been submitted.', wasEditing ? 'Leave Updated' : 'Leave Submitted');
+        }
+
         function renderSpecialNotices(notices = []) {
             const section = document.getElementById('specialNoticeSection');
             const list = document.getElementById('specialNoticeList');
+            if (!section || !list) return;
             const visibleNotices = notices.filter((notice) => notice.status === 'executed' && (notice.targetPortals || []).includes('student'));
 
             if (!visibleNotices.length) {
@@ -905,6 +1966,23 @@
                 </article>
             `).join('');
             if (window.lucide) window.lucide.createIcons();
+        }
+
+        function bindStudentPortalActions() {
+            document.querySelectorAll('[data-student-action-target]').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const targetId = button.getAttribute('data-student-action-target');
+                    const target = document.getElementById(targetId);
+                    if (target) {
+                        document.querySelectorAll('.student-portal-section').forEach((section) => {
+                            section.style.display = section === target ? '' : 'none';
+                        });
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        return;
+                    }
+                    await showAppAlert('This portal option is not available yet.', 'Coming Soon');
+                });
+            });
         }
 
         async function loadSpecialNoticesForPortal() {
@@ -1228,13 +2306,13 @@
                     <body>
                         <div class="sheet">
                             <div class="head">
-                                <img class="print-logo" src="images/logo.jpeg" alt="School logo">
+                                <img class="print-logo" src="images/logo.png" alt="School logo">
                                 <div>
                                     <h1>${cachedResult.schoolName || 'School Result Card'}</h1>
                                     <p>${branchDetails.campusLabel}</p>
                                     <p>${branchDetails.contactLine}</p>
                                 </div>
-                                <img class="print-logo" src="images/logo.jpeg" alt="School logo">
+                                <img class="print-logo" src="images/logo.png" alt="School logo">
                             </div>
                             <div class="term">${cachedResult.termTitle || 'Result Card'}</div>
                             <div class="meta">
@@ -1296,6 +2374,22 @@
             document.getElementById('attendancePresent').innerText = total ? String(present) : '-';
             document.getElementById('attendanceAbsent').innerText = total ? String(absent) : '-';
             document.getElementById('attendanceLate').innerText = total ? String(late) : '-';
+        }
+
+        function applyStudentPerformance(student) {
+            const latestResult = getLatestStudentResult(student);
+            const attendanceText = document.getElementById('attendanceRate')?.innerText || '-';
+            const percentage = latestResult ? calculateResultPercentage(latestResult) : 0;
+            const status = latestResult ? (percentage >= 40 ? 'Pass' : 'Fail') : '-';
+            const setText = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.innerText = value;
+            };
+
+            setText('performanceAttendance', attendanceText);
+            setText('performanceResult', latestResult ? `${formatMark(percentage)}%` : '-');
+            setText('performanceStatus', status);
+            setText('performanceTerm', latestResult?.termTitle || '-');
         }
 
         async function loadStudentAttendanceForPortal() {
@@ -1533,12 +2627,12 @@
                     </head>
                     <body>
                         <div class="print-header">
-                            <img class="print-logo" src="images/logo.jpeg" alt="School logo">
+                            <img class="print-logo" src="images/logo.png" alt="School logo">
                             <div>
                                 <h2>${state.dateSheetSchoolName || 'School Date Sheet'}</h2>
                                 <p>${state.dateSheetExamTitle || 'Exam Schedule'}</p>
                             </div>
-                            <img class="print-logo" src="images/logo.jpeg" alt="School logo">
+                            <img class="print-logo" src="images/logo.png" alt="School logo">
                         </div>
                         <table>
                             <thead>
@@ -1563,9 +2657,6 @@
         function applyStudentData(student) {
             if (!student) return;
 
-            const feeAmount = parseInt(student.monthlyFee || 0, 10);
-            const pendingAmount = student.feesStatus === 'Paid' ? 0 : feeAmount;
-
             document.getElementById('studentName').innerText = student.fullName || loggedInUser.fullName || 'Student';
             const avatar = document.getElementById('avatarLetter');
             if (student.profileImage) {
@@ -1575,38 +2666,36 @@
             }
             document.getElementById('studentClass').innerText = `Class: ${student.classGrade || '-'}`;
             document.getElementById('rollNo').innerText = student.rollNo || '-';
-            document.getElementById('feeAmount').innerText = formatCurrency(feeAmount);
-            document.getElementById('pendingAmount').innerText = formatCurrency(pendingAmount);
-            document.getElementById('feeFrequency').innerText = student.feeFrequency || 'Monthly';
-            document.getElementById('lastPayment').innerText = student.paymentDate || 'Not paid yet';
-            document.getElementById('fatherName').innerText = student.fatherName || '-';
-            document.getElementById('formB').innerText = student.formB || '-';
-            document.getElementById('contact').innerText = student.parentPhone || '-';
-            document.getElementById('gender').innerText = student.gender || '-';
-            document.getElementById('studentCode').innerText = student.studentCode || '-';
-            document.getElementById('studentUsername').innerText = student.username || loggedInUser.username || '-';
-            document.getElementById('feeStatusText').innerText = student.feesStatus || 'Pending';
-            document.getElementById('monthlyFeeText').innerText = formatCurrency(feeAmount);
-            document.getElementById('pendingFeeText').innerText = formatCurrency(pendingAmount);
-            document.getElementById('paymentDate').innerText = student.paymentDate || 'Not paid yet';
-            document.getElementById('pendingDuesCard').innerText = formatCurrency(pendingAmount);
-            document.getElementById('duesStatusCard').innerText = student.feesStatus || 'Pending';
-            document.getElementById('studentResultLookup').value = student.studentCode || student.id || student.rollNo || '';
-            document.getElementById('studentResultClassFilter').value = student.classGrade || '';
-            document.getElementById('studentResultRollFilter').value = student.rollNo || student.studentCode || student.id || '';
+            const setFieldValue = (id, value) => {
+                const field = document.getElementById(id);
+                if (field) field.value = value || '-';
+            };
+            setFieldValue('studentLeaveName', student.fullName || loggedInUser.fullName || 'Student');
+            setFieldValue('studentLeaveClass', student.classGrade || '-');
+            setFieldValue('studentLeaveRollNo', student.rollNo || '-');
+            setFieldValue('studentLeaveStudentId', student.studentCode || student.id || loggedInUser.id || '-');
 
             const feeStatusBadge = document.getElementById('feeStatusBadge');
             feeStatusBadge.innerText = student.feesStatus || 'Pending';
             feeStatusBadge.className = `status-badge ${getStatusClass(student.feesStatus)}`;
 
-            renderStudentResultHistory(student, {
-                lookup: document.getElementById('studentResultLookup').value,
-                classGrade: document.getElementById('studentResultClassFilter').value,
-                rollNo: document.getElementById('studentResultRollFilter').value
-            });
+            applyStudentFees(student);
+            applyStudentTimeTable(student);
+            applyStudentDiary(student);
+            applyStudentCourse(student);
+            renderStudentComplaints(student);
+            renderStudentLeaveHistory(student);
             applyStudentAttendance(student);
-            applyDateSheet(student);
-            applyStudentLectures(student);
+            renderStudentResultHistory(student);
+            applyStudentPerformance(student);
+
+            const lookupInput = document.getElementById('studentResultLookup');
+            if (lookupInput) lookupInput.value = student.rollNo || student.studentCode || student.id || '';
+            const classInput = document.getElementById('studentResultClassFilter');
+            if (classInput) classInput.value = student.classGrade || '';
+            const rollInput = document.getElementById('studentResultRollFilter');
+            if (rollInput) rollInput.value = student.rollNo || '';
+
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
         }
 
@@ -1654,25 +2743,27 @@
         }
 
         window.onload = () => {
-            document.getElementById('downloadDateSheetBtn').addEventListener('click', downloadDateSheet);
-            document.getElementById('loadStudentResultBtn').addEventListener('click', loadStudentResultByLookup);
-            document.getElementById('printStudentResultBtn').addEventListener('click', printStudentResultCard);
-            document.getElementById('studentResultLookup').addEventListener('keydown', (event) => {
+            document.getElementById('downloadDateSheetBtn')?.addEventListener('click', downloadDateSheet);
+            document.getElementById('loadStudentResultBtn')?.addEventListener('click', loadStudentResultByLookup);
+            document.getElementById('printStudentResultBtn')?.addEventListener('click', printStudentResultCard);
+            document.getElementById('studentLeaveForm')?.addEventListener('submit', submitStudentLeaveRequest);
+            document.getElementById('studentComplaintForm')?.addEventListener('submit', submitStudentComplaint);
+            document.getElementById('studentResultLookup')?.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
                     event.preventDefault();
                     loadStudentResultByLookup();
                 }
             });
             ['studentResultDateFilter', 'studentResultClassFilter', 'studentResultRollFilter'].forEach((inputId) => {
-                document.getElementById(inputId).addEventListener('keydown', (event) => {
+                document.getElementById(inputId)?.addEventListener('keydown', (event) => {
                     if (event.key === 'Enter') {
                         event.preventDefault();
                         loadStudentResultByLookup();
                     }
                 });
-                document.getElementById(inputId).addEventListener('change', loadStudentResultByLookup);
+                document.getElementById(inputId)?.addEventListener('change', loadStudentResultByLookup);
             });
-            document.getElementById('studentResultHistoryBody').addEventListener('click', (event) => {
+            document.getElementById('studentResultHistoryBody')?.addEventListener('click', (event) => {
                 const button = event.target.closest('.student-result-view-btn');
                 if (!button) return;
                 const index = Number(button.dataset.resultIndex);
@@ -1681,6 +2772,7 @@
             });
             loadStudentProfile();
             loadSpecialNoticesForPortal();
+            bindStudentPortalActions();
             lucide.createIcons();
         };
     </script>
