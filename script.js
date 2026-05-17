@@ -533,11 +533,15 @@ async function saveTeacherAttendanceToSQLRecord(teacherId, date, status) {
     return result;
 }
 
-// === FORCE RESET AUTH TO REQUESTED CREDENTIALS ===
+// === LEGACY LOCAL AUTH CLEANUP ===
 (function forceResetAuth() {
-    const creds = { email: 'admin', password: 'admin123' };
-    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(creds));
-    // Clear any previous login failure states in session if they exist
+    let existing = {};
+    try {
+        existing = JSON.parse(localStorage.getItem(STORAGE_KEY_AUTH) || '{}') || {};
+    } catch (_error) {
+        existing = {};
+    }
+    localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify({ ...existing, email: existing.email || 'admin' }));
     sessionStorage.removeItem('login_attempts');
 })();
 
@@ -554,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureSchedulingNav();
     ensureAdminRecordsNav();
     ensureFacilityNav();
+    ensureAdminSidebarCompleteness();
     ensureAttendanceNav();
     ensureNotificationsNav();
     ensureSpecialNoticesNav();
@@ -641,11 +646,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     if (loginForm) {
+        bindAdminForgotPassword();
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
-            const btn = loginForm.querySelector('button');
+            const btn = loginForm.querySelector('button[type="submit"]');
             const originalBtnText = btn.innerText;
 
             btn.innerText = 'Verifying...';
@@ -2380,6 +2386,66 @@ function ensureFacilityNav() {
     } else {
         navLinks.appendChild(fragment);
     }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureAdminSidebarCompleteness() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.dataset.adminSidebarComplete === 'true') return;
+    navLinks.dataset.adminSidebarComplete = 'true';
+
+    const currentPage = getCurrentPageName();
+    const completeLinks = [
+        { page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
+        { page: 'students.html', label: 'Students', icon: 'users' },
+        { page: 'banners.html', label: 'Banners', icon: 'image' },
+        { page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
+        { page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
+        { page: 'certificate.html', label: 'Certificate', icon: 'award' },
+        { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { page: 'visitor_books.html', label: 'Visitor Books', icon: 'clipboard-list' },
+        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
+        { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+        { page: 'classes.html', label: 'Classes', icon: 'school' },
+        { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
+        { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+        { page: 'library.html', label: 'Library', icon: 'library' },
+        { page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
+        { page: 'transport.html', label: 'Transport', icon: 'bus' },
+        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+        { page: 'exams.html', label: 'Exams', icon: 'clipboard-list' },
+        { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' },
+        { page: 'notifications.html', label: 'Notifications', icon: 'bell-ring' },
+        { page: 'special_notices.html', label: 'Special Notices', icon: 'megaphone' },
+        { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
+        { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' },
+        { page: 'aboutme.html', label: 'About Us', icon: 'info' }
+    ];
+
+    const existingPages = () => new Set(Array.from(navLinks.querySelectorAll('a[href]'))
+        .map((link) => normalizeClientPageName(link.getAttribute('href') || '')));
+
+    const logoutLink = Array.from(navLinks.querySelectorAll('a[href="#"]'))
+        .find((link) => /logout/i.test(link.textContent || ''));
+    let existing = existingPages();
+
+    completeLinks.forEach((item) => {
+        if (existing.has(item.page)) return;
+        const link = document.createElement('a');
+        link.href = toRoutePath(item.page);
+        link.className = `nav-item${currentPage === item.page ? ' active' : ''}`;
+        link.dataset.adminCompleteLink = 'true';
+        link.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
+        if (logoutLink) {
+            navLinks.insertBefore(link, logoutLink);
+        } else {
+            navLinks.appendChild(link);
+        }
+        existing = existingPages();
+    });
 
     if (window.lucide) window.lucide.createIcons();
 }
@@ -6131,24 +6197,206 @@ async function loadSettings() {
         if (document.getElementById('sSession')) document.getElementById('sSession').value = data.session || '';
         if (document.getElementById('sPhone')) document.getElementById('sPhone').value = data.phone || '';
     }
+
+    await loadAdminCredentialSettings();
 }
 
 async function handleSettingsSubmit(e) {
     e.preventDefault();
 
-    // Save settings values
-    const settings = {};
-    if (document.getElementById('sSchoolName')) settings.schoolName = document.getElementById('sSchoolName').value;
-    if (document.getElementById('sSession')) settings.session = document.getElementById('sSession').value;
-    if (document.getElementById('sPhone')) settings.phone = document.getElementById('sPhone').value;
+    try {
+        // Save settings values
+        const settings = {};
+        if (document.getElementById('sSchoolName')) settings.schoolName = document.getElementById('sSchoolName').value;
+        if (document.getElementById('sSession')) settings.session = document.getElementById('sSession').value;
+        if (document.getElementById('sPhone')) settings.phone = document.getElementById('sPhone').value;
 
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+        await saveAdminCredentialSettings();
 
-    alert('Settings saved successfully!');
-    pushNotification('Settings Updated', 'Settings have been saved.', 'info');
+        alert('Settings saved successfully!');
+        pushNotification('Settings Updated', 'Settings have been saved.', 'info');
 
-    // Refresh display
-    renderLoginHistory();
+        // Refresh display
+        renderLoginHistory();
+    } catch (error) {
+        alert(error.message || 'Settings could not be saved.');
+    }
+}
+
+async function loadAdminCredentialSettings() {
+    const usernameInput = document.getElementById('adminUsernameSetting');
+    const hint = document.getElementById('adminOtpHint');
+    if (!usernameInput) return;
+
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    if (!token) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin-credentials`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await parseJsonResponse(response, 'Admin credentials could not be loaded.');
+        if (!response.ok || result?.success === false) throw new Error(result?.message || 'Admin credentials could not be loaded.');
+        usernameInput.value = result?.credentials?.username || 'admin';
+        usernameInput.dataset.originalValue = usernameInput.value;
+        if (hint && result?.recoveryEmail) {
+            hint.textContent = `Password change OTP will be sent to ${result.recoveryEmail}.`;
+        }
+    } catch (error) {
+        if (hint) hint.textContent = error.message || 'Admin credentials could not be loaded.';
+    }
+
+    const sendBtn = document.getElementById('sendAdminOtpBtn');
+    if (sendBtn && !sendBtn.dataset.bound) {
+        sendBtn.dataset.bound = 'true';
+        sendBtn.addEventListener('click', sendAdminCredentialOtp);
+    }
+}
+
+async function sendAdminCredentialOtp() {
+    const sendBtn = document.getElementById('sendAdminOtpBtn');
+    const hint = document.getElementById('adminOtpHint');
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    const originalText = sendBtn?.innerHTML || '';
+
+    try {
+        if (sendBtn) {
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<i data-lucide="loader"></i> Sending...';
+            if (window.lucide) window.lucide.createIcons();
+        }
+        const response = await fetch(`${API_BASE_URL}/admin-credentials/request-otp`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({})
+        });
+        const result = await parseJsonResponse(response, 'OTP could not be sent.');
+        if (!response.ok || result?.success === false) throw new Error(result?.message || 'OTP could not be sent.');
+        if (hint) hint.textContent = result.message || 'OTP sent successfully.';
+    } catch (error) {
+        if (hint) hint.textContent = error.message || 'OTP could not be sent.';
+    } finally {
+        if (sendBtn) {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = originalText;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
+}
+
+async function saveAdminCredentialSettings() {
+    const usernameInput = document.getElementById('adminUsernameSetting');
+    const passwordInput = document.getElementById('adminNewPasswordSetting');
+    const otpInput = document.getElementById('adminOtpSetting');
+    if (!usernameInput || !passwordInput || !otpInput) return;
+
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const otp = otpInput.value.trim();
+    const originalUsername = usernameInput.dataset.originalValue || '';
+
+    if (!password && username === originalUsername) return;
+    if (password && !otp) throw new Error('Admin password change ke liye OTP required hai.');
+
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    const response = await fetch(`${API_BASE_URL}/admin-credentials`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ username, password, otp })
+    });
+    const result = await parseJsonResponse(response, 'Admin password could not be updated.');
+    if (!response.ok || result?.success === false) throw new Error(result?.message || 'Admin password could not be updated.');
+
+    usernameInput.dataset.originalValue = result?.credentials?.username || username;
+    passwordInput.value = '';
+    otpInput.value = '';
+}
+
+function bindAdminForgotPassword() {
+    const openBtn = document.getElementById('forgotAdminPasswordBtn');
+    const modal = document.getElementById('forgotAdminModal');
+    const closeBtn = document.getElementById('closeForgotAdminModal');
+    const sendBtn = document.getElementById('sendForgotAdminOtpBtn');
+    const resetBtn = document.getElementById('resetForgotAdminPasswordBtn');
+    const status = document.getElementById('forgotAdminStatus');
+    if (!openBtn || !modal || openBtn.dataset.bound) return;
+    openBtn.dataset.bound = 'true';
+
+    const setStatus = (message) => {
+        if (status) status.textContent = message || '';
+    };
+    const close = () => {
+        modal.classList.remove('active');
+        setStatus('');
+    };
+
+    openBtn.addEventListener('click', () => {
+        modal.classList.add('active');
+        const usernameInput = document.getElementById('forgotAdminUsername');
+        if (usernameInput && !usernameInput.value) usernameInput.value = document.getElementById('email')?.value?.trim() || 'admin';
+        if (window.lucide) window.lucide.createIcons();
+    });
+    closeBtn?.addEventListener('click', close);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) close();
+    });
+
+    sendBtn?.addEventListener('click', async () => {
+        const username = document.getElementById('forgotAdminUsername')?.value?.trim() || '';
+        const original = sendBtn.textContent;
+        try {
+            sendBtn.disabled = true;
+            sendBtn.textContent = 'Sending...';
+            const response = await fetch(`${API_BASE_URL}/admin-password/forgot/request-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username })
+            });
+            const result = await parseJsonResponse(response, 'OTP could not be sent.');
+            if (!response.ok || result?.success === false) throw new Error(result?.message || 'OTP could not be sent.');
+            setStatus(result.message || 'OTP sent successfully.');
+        } catch (error) {
+            setStatus(error.message || 'OTP could not be sent.');
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.textContent = original;
+        }
+    });
+
+    resetBtn?.addEventListener('click', async () => {
+        const username = document.getElementById('forgotAdminUsername')?.value?.trim() || '';
+        const password = document.getElementById('forgotAdminNewPassword')?.value?.trim() || '';
+        const otp = document.getElementById('forgotAdminOtp')?.value?.trim() || '';
+        const original = resetBtn.textContent;
+        try {
+            if (!password || !otp) throw new Error('New password aur OTP required hain.');
+            resetBtn.disabled = true;
+            resetBtn.textContent = 'Resetting...';
+            const response = await fetch(`${API_BASE_URL}/admin-password/forgot/reset`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, otp })
+            });
+            const result = await parseJsonResponse(response, 'Password could not be reset.');
+            if (!response.ok || result?.success === false) throw new Error(result?.message || 'Password could not be reset.');
+            setStatus(result.message || 'Password updated successfully.');
+            document.getElementById('password').value = '';
+            document.getElementById('forgotAdminNewPassword').value = '';
+            document.getElementById('forgotAdminOtp').value = '';
+        } catch (error) {
+            setStatus(error.message || 'Password could not be reset.');
+        } finally {
+            resetBtn.disabled = false;
+            resetBtn.textContent = original;
+        }
+    });
 }
 
 // =======================================================
