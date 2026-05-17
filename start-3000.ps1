@@ -8,5 +8,5 @@ foreach ($port in $ports) {
 }
 
 Start-Sleep -Seconds 1
-$env:PORT = '3001'
+$env:PORT = '3000'
 node app.js
