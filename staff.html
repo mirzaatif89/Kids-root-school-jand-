@@ -169,7 +169,7 @@
             <!-- Add/Edit Form -->
             <div id="staffFormContainer" class="form-container">
                 <h3 style="margin-bottom: 1.5rem;" id="staffFormTitle">Add New Staff Member</h3>
-                <form id="staffForm">
+                <form id="staffForm" onsubmit="handleStaffFormSubmit(event); return false;">
                     <input type="hidden" id="staffId">
 
                     <div class="form-grid">
@@ -315,7 +315,7 @@
 
     <script src="auth.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="script.js?v=20260517-db-save-list-all"></script>
+    <script src="script.js?v=20260517-staff-teacher-submit-bind-fix"></script>
     <script>
         lucide.createIcons();
     </script>

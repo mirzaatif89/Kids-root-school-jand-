@@ -805,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Teachers could not be refreshed from database:', error.message);
                 renderTeachers();
             });
-        teacherForm.addEventListener('submit', handleTeacherFormSubmit);
+        bindTeacherFormSubmit();
         const tSearch = document.getElementById('teacherSearchInput');
         const tCampusFilter = document.getElementById('teacherCampusFilter');
         const tGenderFilter = document.getElementById('teacherGenderFilter');
@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.warn('Staff could not be refreshed from database:', error.message);
                 renderStaff();
             });
-        staffForm.addEventListener('submit', handleStaffFormSubmit);
+        bindStaffFormSubmit();
         const sSearch = document.getElementById('staffSearchInput');
         if (sSearch) {
             sSearch.addEventListener('input', (e) => renderStaff(e.target.value.toLowerCase()));
@@ -5218,6 +5218,18 @@ async function handleTeacherFormSubmit(e) {
     showSuccessModal('Teacher Registered!', `Professor ${newTeacher.fullName}'s account is active. They can now access their portal.`);
 }
 
+function bindTeacherFormSubmit() {
+    const teacherForm = document.getElementById('teacherForm');
+    if (!teacherForm || teacherForm.dataset.submitBound === '1') return;
+    teacherForm.dataset.submitBound = '1';
+    teacherForm.onsubmit = (event) => {
+        handleTeacherFormSubmit(event);
+        return false;
+    };
+}
+
+bindTeacherFormSubmit();
+
 function getTeacherScheduleSummary(teacher) {
     const schedule = normalizeTeacherSchedule(teacher.schedule);
     if (!schedule.length) {
@@ -5744,6 +5756,18 @@ async function handleStaffFormSubmit(e) {
     toggleStaffForm();
     renderStaff();
 }
+
+function bindStaffFormSubmit() {
+    const staffForm = document.getElementById('staffForm');
+    if (!staffForm || staffForm.dataset.submitBound === '1') return;
+    staffForm.dataset.submitBound = '1';
+    staffForm.onsubmit = (event) => {
+        handleStaffFormSubmit(event);
+        return false;
+    };
+}
+
+bindStaffFormSubmit();
 
 function renderStaff(term = '') {
     const tbody = document.getElementById('staffTableBody');
