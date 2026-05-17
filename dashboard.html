@@ -158,7 +158,7 @@
                     </div>
                 </a>
 
-                <div class="card" data-admin-only-card>
+                <button type="button" class="card dashboard-action-card" id="activeLoginsCard" data-admin-only-card onclick="openActiveSessionsModal()">
                     <div class="card-title">Active Portal Logins</div>
                     <div class="card-value" id="dashActiveLogins">...</div>
                     <div class="card-trend trend-up" id="dashActiveLoginsDetail">
@@ -167,7 +167,7 @@
                     <div class="card-icon">
                         <i data-lucide="monitor-up"></i>
                     </div>
-                </div>
+                </button>
 
 
             </div>
@@ -178,6 +178,36 @@
 
 
         </main>
+    </div>
+
+    <div class="session-modal-overlay" id="sessionModalOverlay" aria-hidden="true">
+        <div class="session-modal" role="dialog" aria-modal="true" aria-labelledby="sessionModalTitle">
+            <div class="session-modal-header">
+                <h2 id="sessionModalTitle">Active Portal Logins</h2>
+                <button type="button" id="sessionModalClose" class="session-modal-close" aria-label="Close active sessions">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="table-container session-table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Role</th>
+                            <th>Where Logged In</th>
+                            <th>Device</th>
+                            <th>Last Seen</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activeSessionsBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center;">No active sessions found.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script src="auth.js"></script>

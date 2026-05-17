@@ -40,6 +40,7 @@ let startupPromise = null;
 let isInitialized = false;
 const ACTIVE_SESSION_TTL_MS = 90000;
 const activeSessions = new Map();
+const ADMIN_SESSION_ROLES = new Set(['admin', 'superadmin', 'super admin', 'system administrator', 'system_admin']);
 
 const MODULE_KEYS = [
     'dashboard',
@@ -479,21 +480,29 @@ function pruneActiveSessions() {
     });
 }
 
+setInterval(pruneActiveSessions, 30000);
+
 function createSessionId(role, id) {
     return `${String(role || 'user').toLowerCase()}_${String(id || '0')}_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isAdminSessionRole(role) {
+    return ADMIN_SESSION_ROLES.has(String(role || '').trim().toLowerCase());
 }
 
 function registerActiveSession(req, sessionId, user) {
     if (!sessionId || !user) return;
 
+    const existing = activeSessions.get(sessionId);
     activeSessions.set(sessionId, {
+        ...(existing || {}),
         sessionId,
         userId: String(user.id || ''),
         username: user.username || '',
         fullName: user.fullName || '',
         role: user.role || '',
         campusName: user.campusName || '',
-        loginAt: Date.now(),
+        loginAt: existing?.loginAt || Date.now(),
         lastSeen: Date.now(),
         ip: req.ip || req.socket?.remoteAddress || '',
         userAgent: req.get('user-agent') || ''
@@ -513,13 +522,18 @@ function buildActiveSessionsSummary() {
         return acc;
     }, {});
     const uniqueUsers = new Set(sessions.map((session) => `${session.role}:${session.userId || session.username}`));
+    const uniqueSessions = sessions.filter((session, index, list) =>
+        list.findIndex((item) => item.sessionId === session.sessionId) === index
+    );
 
     return {
         success: true,
         totalActiveLogins: sessions.length,
+        totalActiveSessions: sessions.length,
         uniqueActiveUsers: uniqueUsers.size,
         byRole,
-        sessions
+        sessions,
+        uniqueSessions
     };
 }
 
@@ -627,8 +641,16 @@ app.post('/api/login', async (req, res) => {
             const permissions = readPermissions();
             const groupKey = permissions.roleGroups.Admin || 'admin';
             const sessionId = createSessionId('Admin', 'admin');
-            const token = jwt.sign({ id: 'admin', role: 'Admin', sessionId }, JWT_SECRET, { expiresIn: '1d' });
             const user = { id: 'admin', fullName: 'Administrator', role: 'Admin', username: adminEmail, groupKey };
+            const token = jwt.sign({
+                id: user.id,
+                userId: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                role: user.role,
+                campusName: '',
+                sessionId
+            }, JWT_SECRET, { expiresIn: '1d' });
             registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
@@ -646,8 +668,16 @@ app.post('/api/login', async (req, res) => {
             }
             const groupKey = permissions.roleGroups.Principal || 'principal';
             const sessionId = createSessionId('Principal', 'principal');
-            const token = jwt.sign({ id: 'principal', role: 'Principal', sessionId }, JWT_SECRET, { expiresIn: '1d' });
             const user = { id: 'principal', fullName: 'Principal', role: 'Principal', username: PRINCIPAL_USERNAME, groupKey };
+            const token = jwt.sign({
+                id: user.id,
+                userId: user.id,
+                username: user.username,
+                fullName: user.fullName,
+                role: user.role,
+                campusName: '',
+                sessionId
+            }, JWT_SECRET, { expiresIn: '1d' });
             registerActiveSession(req, sessionId, user);
             return res.json({
                 success: true,
@@ -702,7 +732,6 @@ app.post('/api/login', async (req, res) => {
                 }
 
                 const sessionId = createSessionId(user.role, user.profileId);
-                const token = jwt.sign({ id: user.profileId, role: user.role, campusName: user.campusName || '', sessionId }, JWT_SECRET, { expiresIn: '1d' });
                 const responseUser = {
                     id: user.profileId,
                     fullName: profileName,
@@ -711,6 +740,15 @@ app.post('/api/login', async (req, res) => {
                     campusName: user.campusName || '',
                     groupKey: user.groupKey || permissions.roleGroups[user.role] || roleKey
                 };
+                const token = jwt.sign({
+                    id: responseUser.id,
+                    userId: responseUser.id,
+                    username: responseUser.username,
+                    fullName: responseUser.fullName,
+                    role: responseUser.role,
+                    campusName: responseUser.campusName || '',
+                    sessionId
+                }, JWT_SECRET, { expiresIn: '1d' });
                 registerActiveSession(req, sessionId, responseUser);
                 return res.json({
                     success: true,
@@ -739,6 +777,8 @@ app.post('/api/session/heartbeat', authenticateToken, (req, res) => {
         ...(existing || {}),
         sessionId,
         userId: String(req.user.id || existing?.userId || ''),
+        username: req.user.username || existing?.username || '',
+        fullName: req.user.fullName || existing?.fullName || '',
         role: req.user.role || existing?.role || '',
         campusName: req.user.campusName || existing?.campusName || '',
         loginAt: existing?.loginAt || Date.now(),
@@ -759,11 +799,37 @@ app.post('/api/session/end', authenticateToken, (req, res) => {
 });
 
 app.get('/api/active-sessions', authenticateToken, (req, res) => {
-    if (req.user.role !== 'Admin') {
+    if (!isAdminSessionRole(req.user.role)) {
         return res.status(403).json({ success: false, message: 'Admin access required.' });
     }
 
     res.json(buildActiveSessionsSummary());
+});
+
+app.post('/api/active-sessions/logout', authenticateToken, (req, res) => {
+    if (!isAdminSessionRole(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    const sessionId = String(req.body?.sessionId || '').trim();
+    if (!sessionId) {
+        return res.status(400).json({ success: false, message: 'Session id required.' });
+    }
+
+    const existed = activeSessions.delete(sessionId);
+    io.emit('session_forced_logout', { sessionId });
+    res.json({ success: true, removed: existed, sessionId });
+});
+
+app.delete('/api/active-sessions/:sessionId', authenticateToken, (req, res) => {
+    if (!isAdminSessionRole(req.user.role)) {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    const sessionId = String(req.params.sessionId || '').trim();
+    const existed = activeSessions.delete(sessionId);
+    io.emit('session_forced_logout', { sessionId });
+    res.json({ success: true, removed: existed, sessionId });
 });
 
 app.get('/api/students', async (req, res) => {

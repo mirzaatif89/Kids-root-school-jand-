@@ -275,6 +275,406 @@
                 display: none !important;
             }
         }
+
+        .student-toolbar {
+            align-items: center;
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: var(--shadow-sm);
+            width: 100%;
+        }
+
+        .student-toolbar-left {
+            align-items: center;
+            flex: 1 1 620px;
+            min-width: 0;
+        }
+
+        .student-stat {
+            min-width: 150px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .student-search-box {
+            min-width: min(360px, 100%);
+            flex: 1 1 320px;
+        }
+
+        .student-filter-group select[multiple] {
+            min-height: 116px;
+        }
+
+        .student-toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .student-photo-field {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            min-width: 0;
+        }
+
+        .student-photo-field input[type="file"] {
+            min-width: 0;
+            max-width: 100%;
+        }
+
+        .student-photo-preview {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: rgba(32, 176, 164, 0.12);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            overflow: hidden;
+            border: 2px solid rgba(32, 176, 164, 0.22);
+            flex: 0 0 auto;
+        }
+
+        .student-photo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .form-section-panel {
+            margin-top: 1rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fbfefd;
+        }
+
+        .step-panel {
+            display: none;
+        }
+
+        .step-panel.active {
+            display: block;
+        }
+
+        .action-steps {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin: 1.5rem 0 0.75rem;
+        }
+
+        .action-step-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #ffffff;
+            color: var(--text-primary);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            min-width: 0;
+            text-align: center;
+        }
+
+        .action-step-btn:hover,
+        .action-step-btn.active {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(32, 176, 164, 0.08);
+        }
+
+        .btn-save-activate {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: #ffffff;
+        }
+
+        .btn-save-activate:hover {
+            background: var(--primary-dark);
+            color: #ffffff;
+        }
+
+        .th-with-search {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+
+        .column-search-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .column-search-btn:hover {
+            background: rgba(32, 176, 164, 0.1);
+            color: var(--primary-color);
+        }
+
+        .row-action-wrap {
+            position: relative;
+            display: inline-flex;
+        }
+
+        .row-action-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.35rem);
+            z-index: 80;
+            display: none;
+            min-width: 170px;
+            padding: 0.35rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .row-action-wrap.open .row-action-menu {
+            display: grid;
+        }
+
+        .row-action-menu button {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.62rem 0.7rem;
+            border: 0;
+            border-radius: 6px;
+            background: transparent;
+            color: var(--text-primary);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .row-action-menu button:hover {
+            background: #f1f5f9;
+        }
+
+        .status-badge.status-active,
+        .status-badge.status-paid {
+            background: rgba(16, 185, 129, 0.12);
+            color: #047857;
+        }
+
+        .status-badge.status-pending {
+            background: rgba(245, 158, 11, 0.14);
+            color: #b45309;
+        }
+
+        .status-badge.status-late,
+        .status-badge.status-terminated,
+        .status-badge.status-failed {
+            background: rgba(239, 68, 68, 0.12);
+            color: #b91c1c;
+        }
+
+        .student-modal-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            text-align: left;
+        }
+
+        .student-modal-field {
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .student-modal-field span {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+
+        .student-modal-field strong {
+            word-break: break-word;
+        }
+
+        @media (max-width: 1280px) {
+            .student-toolbar {
+                align-items: stretch;
+            }
+
+            .student-toolbar-left,
+            .student-toolbar-actions {
+                width: 100%;
+            }
+
+            .student-toolbar-actions {
+                justify-content: flex-start;
+            }
+        }
+
+        @media (max-width: 980px) {
+            .form-container {
+                padding: 1.25rem;
+                border-radius: 8px;
+            }
+
+            .student-toolbar {
+                padding: 0.85rem;
+            }
+
+            .student-stat,
+            .student-filter-group {
+                flex: 1 1 220px;
+            }
+
+            .action-steps {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .btn-save-activate {
+                grid-column: 1 / -1;
+            }
+
+            .table-container {
+                overflow-x: auto;
+            }
+
+            #studentsTable {
+                min-width: 980px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .student-toolbar,
+            .student-toolbar-left {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .student-toolbar-actions,
+            .student-toolbar-actions .btn,
+            .student-filter-group,
+            .student-search-box,
+            .student-stat {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .student-filter-group input,
+            .student-filter-group select {
+                min-height: 44px;
+            }
+
+            .student-filter-group select[multiple] {
+                min-height: 132px;
+            }
+
+            .student-toolbar-actions {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
+
+            .student-photo-field {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .action-steps {
+                grid-template-columns: 1fr;
+            }
+
+            .action-step-btn,
+            .btn-save-activate {
+                width: 100%;
+            }
+
+            .student-modal-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .row-action-menu {
+                left: 0;
+                right: auto;
+            }
+        }
+
+        @media (max-width: 560px) {
+            .header {
+                padding-left: 3.25rem;
+            }
+
+            .student-toolbar {
+                margin-left: -0.15rem;
+                margin-right: -0.15rem;
+            }
+
+            .form-container {
+                padding: 1rem;
+                margin-left: -0.15rem;
+                margin-right: -0.15rem;
+            }
+
+            .student-photo-preview {
+                width: 64px;
+                height: 64px;
+                font-size: 1.25rem;
+            }
+
+            .form-section-panel {
+                padding: 0.85rem;
+            }
+
+            #studentsTable {
+                min-width: 900px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .student-stat {
+                padding: 0.65rem 0.75rem;
+            }
+
+            .student-filter-group label {
+                font-size: 0.78rem;
+            }
+
+            .student-filter-group input,
+            .student-filter-group select {
+                padding: 0.72rem 0.8rem;
+            }
+
+            .action-step-btn {
+                padding: 0.68rem 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            #studentsTable {
+                min-width: 840px;
+            }
+        }
     </style>
 </head>
 
@@ -381,42 +781,36 @@
                     <div class="student-stat">
                         Total Students: <span id="totalStudentCount" style="color: var(--primary-color);">0</span>
                     </div>
-                    <div class="student-filter-group">
+                    <div class="student-filter-group student-search-box">
                         <label for="studentSearchInput">Search Student</label>
                         <input type="text" id="studentSearchInput" placeholder="Search by name, roll no, or student ID">
                     </div>
                     <div class="student-filter-group">
-                        <label for="genderFilter">Filter By Gender</label>
-                        <select id="genderFilter">
-                            <option value="All">All Students</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Other">Other</option>
+                        <label for="quickStudentFilter">Quick Filter</label>
+                        <select id="quickStudentFilter" multiple>
+                            <option value="all">All Students</option>
+                            <option value="gender:Male">Male Students</option>
+                            <option value="gender:Female">Female Students</option>
+                            <option value="gender:Other">Other Gender</option>
+                            <option value="age:below5">Below 5 Years</option>
                         </select>
                     </div>
+                </div>
+                <div class="student-toolbar-actions">
                     <div class="student-filter-group">
-                        <label for="campusFilter">Filter By Campus</label>
-                        <select id="campusFilter">
-                            <option value="All">All Campuses</option>
-                            <option value="Main Campus">Main Campus</option>
-                            <option value="Ali campus">Ali campus</option>
-                            <option value="Fatima Campus">Fatima Campus</option>
+                        <label for="studentPrintType">Print List</label>
+                        <select id="studentPrintType">
+                            <option value="school">School Student List</option>
+                            <option value="outer">Outer Student List</option>
                         </select>
                     </div>
-                    <div class="student-filter-group">
-                        <label for="ageFilter">Filter By Age</label>
-                        <select id="ageFilter">
-                            <option value="All">All Ages</option>
-                            <option value="below5">Below 5 Years</option>
-                        </select>
-                    </div>
-                    <button class="btn btn-outline student-print-btn" type="button" onclick="window.print()">
+                    <button class="btn btn-outline student-print-btn" type="button" onclick="printStudentsList()">
                         <i data-lucide="printer"></i> Print Students
                     </button>
+                    <button class="btn btn-primary" type="button" onclick="toggleStudentForm()">
+                        <i data-lucide="plus"></i> Add New Student
+                    </button>
                 </div>
-                <button class="btn btn-primary" onclick="toggleStudentForm()">
-                    <i data-lucide="plus"></i> Add New Student
-                </button>
             </div>
 
             <!-- Add/Edit Form -->
@@ -426,6 +820,13 @@
                     <input type="hidden" id="studentId"> <!-- Hidden ID for Editing -->
 
                     <div class="form-grid">
+                        <div class="input-group">
+                            <label>Profile Image</label>
+                            <div class="student-photo-field">
+                                <div class="student-photo-preview" id="studentPhotoPreview">S</div>
+                                <input type="file" id="studentProfileImage" accept="image/*">
+                            </div>
+                        </div>
                         <div class="input-group">
                             <label>Student ID</label>
                             <input type="text" id="studentCode" readonly
@@ -509,7 +910,7 @@
                     </div>
 
                     <!-- Fee Panel -->
-                    <div id="feePanel" class="step-panel">
+                    <div id="feePanel" class="step-panel form-section-panel">
                         <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Set Student Fee</h4>
                         <div class="form-grid">
                             <div class="input-group">
@@ -528,7 +929,7 @@
                     </div>
 
                     <!-- Credentials Panel -->
-                    <div id="credPanel" class="step-panel">
+                    <div id="credPanel" class="step-panel form-section-panel">
                         <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Create Login Credentials</h4>
                         <div class="form-grid">
                             <div class="input-group">
@@ -562,18 +963,15 @@
                 <table id="studentsTable">
                     <thead>
                         <tr>
-                            <th>Student ID</th>
-                            <th>Roll No</th>
-                            <th>Name</th>
-                            <th>Father Name</th>
-                            <th>DOB</th>
-                            <th>Class</th>
-                            <th>Campus</th>
-                            <th>Gender</th>
-                            <th>Phone</th>
-                            <th>Form B</th>
-                            <th>Login Details</th>
-                            <th>Status</th>
+                            <th><span class="th-with-search">Student ID <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('studentCode', 'Student ID')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Roll No <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('rollNo', 'Roll No')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Name <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('fullName', 'Name')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Father Name <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('fatherName', 'Father Name')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">DOB <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('dob', 'DOB')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Class <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('classGrade', 'Class')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Campus <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('campusName', 'Campus')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Gender <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('gender', 'Gender')"><i data-lucide="search" size="14"></i></button></span></th>
+                            <th><span class="th-with-search">Status <button class="column-search-btn" type="button" onclick="openStudentColumnSearch('status', 'Status')"><i data-lucide="search" size="14"></i></button></span></th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -599,6 +997,34 @@
             <h2 id="successTitle">Success!</h2>
             <p id="successMessage" style="color: var(--text-secondary); margin: 1rem 0 2rem;"></p>
             <button class="btn btn-primary" style="width: 100%;" onclick="closeSuccessModal()">Great!</button>
+        </div>
+    </div>
+
+    <div id="studentViewModal" class="success-overlay">
+        <div class="success-modal" style="max-width: 720px;">
+            <div class="success-icon-wrap">
+                <i data-lucide="user"></i>
+            </div>
+            <h2>Student Details</h2>
+            <div id="studentViewContent" class="student-modal-grid" style="margin: 1.25rem 0;"></div>
+            <button class="btn btn-primary" style="width: 100%;" onclick="closeStudentViewModal()">Close</button>
+        </div>
+    </div>
+
+    <div id="studentColumnSearchModal" class="success-overlay">
+        <div class="success-modal" style="max-width: 440px;">
+            <div class="success-icon-wrap">
+                <i data-lucide="search"></i>
+            </div>
+            <h2 id="studentColumnSearchTitle">Search Column</h2>
+            <div class="input-group" style="text-align: left; margin: 1.25rem 0;">
+                <label for="studentColumnSearchInput">Search Value</label>
+                <input type="text" id="studentColumnSearchInput" placeholder="Type to filter this column">
+            </div>
+            <div class="form-actions" style="justify-content: stretch;">
+                <button type="button" class="btn btn-outline" onclick="clearStudentColumnSearch()">Clear</button>
+                <button type="button" class="btn btn-primary" onclick="applyStudentColumnSearch()">Apply</button>
+            </div>
         </div>
     </div>
 

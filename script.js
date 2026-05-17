@@ -29,6 +29,8 @@ const BACKEND_URL = isLocalhost
 
 const API_BASE_URL = `${BACKEND_URL}/api`;
 let socket;
+let activeSessionsCache = [];
+let activeSessionsModalBound = false;
 
 (function installAppPopups() {
     if (window.showAppAlert && window.showAppConfirm) return;
@@ -161,6 +163,14 @@ let socket;
 
 if (typeof io !== 'undefined') {
     socket = io(BACKEND_URL);
+
+    socket.on('session_forced_logout', (payload = {}) => {
+        const currentSessionId = sessionStorage.getItem('eduCore_session_id');
+        if (payload.sessionId && currentSessionId && payload.sessionId === currentSessionId) {
+            alert('This login session has been logged out by admin.');
+            logoutUser();
+        }
+    });
 
     // Listen for Real-Time SQL Updates
     socket.on('students_update', (data) => {
@@ -477,6 +487,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Store JWT and User Info
                     sessionStorage.setItem('eduCore_token', result.token);
+                    if (result.sessionId) {
+                        sessionStorage.setItem('eduCore_session_id', result.sessionId);
+                    }
                     sessionStorage.setItem('loggedInUser', JSON.stringify(result.user));
                     sessionStorage.removeItem('eduCore_permissions_config');
                     if (result.permissions) {
@@ -547,21 +560,19 @@ document.addEventListener('DOMContentLoaded', () => {
         renderStudents(); // Initial Load
         studentForm.addEventListener('submit', handleStudentFormSubmit);
         const studentSearch = document.getElementById('studentSearchInput');
-        const genderFilter = document.getElementById('genderFilter');
-        const campusFilter = document.getElementById('campusFilter');
-        const ageFilter = document.getElementById('ageFilter');
+        const quickFilter = document.getElementById('quickStudentFilter');
+        const studentPhotoInput = document.getElementById('studentProfileImage');
+        const classSelect = document.getElementById('classGrade');
+        const fullNameInput = document.getElementById('fullName');
         if (studentSearch) {
             studentSearch.addEventListener('input', renderStudents);
         }
-        if (genderFilter) {
-            genderFilter.addEventListener('change', renderStudents);
-        }
-        if (campusFilter) {
-            campusFilter.addEventListener('change', renderStudents);
-        }
-        if (ageFilter) {
-            ageFilter.addEventListener('change', renderStudents);
-        }
+        if (quickFilter) quickFilter.addEventListener('change', renderStudents);
+        if (studentPhotoInput) studentPhotoInput.addEventListener('change', handleStudentPhotoSelection);
+        if (classSelect) classSelect.addEventListener('change', applySelectedClassFee);
+        if (fullNameInput) fullNameInput.addEventListener('input', () => setStudentPhotoPreview('', fullNameInput.value));
+        populateStudentFormOptions();
+        populateQuickStudentFilters();
     }
 
     // === TEACHER PAGE ===
@@ -700,7 +711,7 @@ function mergeStudentRecords(incomingStudents) {
         let studentCode = student.studentCode || localStudent.studentCode || '';
 
         if (!studentCode) {
-            studentCode = `STD-${String(nextStudentCodeNumber).padStart(4, '0')}`;
+            studentCode = `STU-${String(nextStudentCodeNumber).padStart(3, '0')}`;
             nextStudentCodeNumber += 1;
         }
 
@@ -710,7 +721,8 @@ function mergeStudentRecords(incomingStudents) {
             profileImage: student.profileImage || localStudent.profileImage || '',
             admissionDate: student.admissionDate || localStudent.admissionDate || '',
             gender: student.gender || localStudent.gender || '',
-        campusName: student.campusName || localStudent.campusName || 'Main Campus',
+            campusName: student.campusName || localStudent.campusName || 'Main Campus',
+            enrollmentStatus: student.enrollmentStatus || localStudent.enrollmentStatus || 'Active',
             plainPassword: student.plainPassword || localStudent.plainPassword ||
                 (localStudent.password && !isHashedPassword(localStudent.password) ? localStudent.password : '')
         };
@@ -971,16 +983,25 @@ function setDesignationSelectValue(selectId, value, fallbackGroupKey) {
 
 function validateStudentIdentityInputs({ studentId = '', username = '', email = '' }) {
     const students = getData(STORAGE_KEY_STUDENTS);
+    const teachers = getData(STORAGE_KEY_TEACHERS);
+    const staffMembers = getData(STORAGE_KEY_STAFF);
     const normalizedUsername = normalizeOptionalIdentityValue(username);
     const normalizedEmail = normalizeOptionalIdentityValue(email, 'email');
 
-    const usernameConflict = students.find(student =>
-        student.id !== studentId &&
-        normalizeOptionalIdentityValue(student.username) === normalizedUsername
+    const usernameConflict = normalizedUsername && students.find(student =>
+        student.id !== studentId && normalizeOptionalIdentityValue(student.username) === normalizedUsername
     );
 
     if (usernameConflict) {
         return 'This student username is already assigned to another student.';
+    }
+
+    const crossRoleUsernameConflict = normalizedUsername && [...teachers, ...staffMembers].find(account =>
+        normalizeOptionalIdentityValue(account.username) === normalizedUsername
+    );
+
+    if (crossRoleUsernameConflict) {
+        return 'This username is already used by another account.';
     }
 
     if (normalizedEmail) {
@@ -991,6 +1012,14 @@ function validateStudentIdentityInputs({ studentId = '', username = '', email = 
 
         if (emailConflict) {
             return 'This student email is already assigned to another student.';
+        }
+
+        const crossRoleEmailConflict = [...teachers, ...staffMembers].find(account =>
+            normalizeOptionalIdentityValue(account.email, 'email') === normalizedEmail
+        );
+
+        if (crossRoleEmailConflict) {
+            return 'This email is already used by another account.';
         }
     }
 
@@ -1443,8 +1472,8 @@ function applyBranchScopedStudentsView() {
     }
 
     const allowedCampus = loggedInUser.campusName || '';
-    const campusFilter = document.getElementById('campusFilter');
-    const addStudentButton = document.querySelector('.student-toolbar > .btn.btn-primary');
+    const quickFilter = document.getElementById('quickStudentFilter');
+    const addStudentButton = document.querySelector('.student-toolbar .btn.btn-primary');
     const formContainer = document.getElementById('studentFormContainer');
 
     document.querySelectorAll('.nav-links .nav-item').forEach((link) => {
@@ -1453,9 +1482,11 @@ function applyBranchScopedStudentsView() {
         link.style.display = keepVisible ? '' : 'none';
     });
 
-    if (campusFilter && allowedCampus) {
-        campusFilter.value = allowedCampus;
-        campusFilter.disabled = true;
+    if (quickFilter && allowedCampus) {
+        Array.from(quickFilter.options).forEach((option) => {
+            option.selected = option.value === `campus:${allowedCampus}`;
+        });
+        quickFilter.disabled = true;
     }
 
     if (addStudentButton) addStudentButton.style.display = 'none';
@@ -2078,17 +2109,22 @@ function updateDashboardStats() {
     }
 
     updateActivePortalLogins();
+    bindActiveSessionsModalEvents();
 }
 
 async function updateActivePortalLogins() {
     const countEl = document.getElementById('dashActiveLogins');
     const detailEl = document.getElementById('dashActiveLoginsDetail');
+    const cardEl = document.getElementById('activeLoginsCard');
     if (!countEl || !detailEl) return;
 
     const token = sessionStorage.getItem('eduCore_token');
     if (!token) {
         countEl.innerText = '0';
         detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> No active admin token';
+        if (cardEl) cardEl.title = 'No active admin token';
+        activeSessionsCache = [];
+        renderActiveSessionsTable(activeSessionsCache);
         if (window.lucide) window.lucide.createIcons();
         return;
     }
@@ -2106,25 +2142,351 @@ async function updateActivePortalLogins() {
         const roleCounts = Object.entries(result.byRole || {})
             .map(([role, count]) => `${role}: ${count}`)
             .join(' | ');
+        const sessions = Array.isArray(result.sessions) ? result.sessions : [];
+        const uniqueUsers = result.uniqueActiveUsers ?? getUniqueActiveUsersFromSessions(sessions);
 
-        countEl.innerText = String(result.totalActiveLogins || 0);
-        detailEl.title = roleCounts;
-        detailEl.innerHTML = `<i data-lucide="monitor-up" size="16"></i> ${result.uniqueActiveUsers || 0} users active now`;
+        activeSessionsCache = sessions;
+        countEl.innerText = String(result.totalActiveSessions ?? result.totalActiveLogins ?? sessions.length);
+        const tooltip = `${roleCounts}${roleCounts ? ' | ' : ''}Unique users: ${uniqueUsers}`;
+        detailEl.title = tooltip;
+        if (cardEl) cardEl.title = tooltip;
+        detailEl.innerHTML = `<i data-lucide="monitor-up" size="16"></i> ${countEl.innerText} systems active now`;
+        renderActiveSessionsTable(activeSessionsCache);
     } catch (error) {
         countEl.innerText = '0';
         detailEl.innerHTML = '<i data-lucide="monitor-up" size="16"></i> Live sessions unavailable';
+        if (cardEl) cardEl.title = 'Live sessions unavailable';
+        activeSessionsCache = [];
+        renderActiveSessionsTable(activeSessionsCache);
     }
 
     if (window.lucide) window.lucide.createIcons();
+}
+
+function bindActiveSessionsModalEvents() {
+    if (activeSessionsModalBound) return;
+    const overlay = document.getElementById('sessionModalOverlay');
+    const closeBtn = document.getElementById('sessionModalClose');
+    if (!overlay || !closeBtn) return;
+
+    const closeModal = () => {
+        overlay.classList.remove('active');
+        overlay.setAttribute('aria-hidden', 'true');
+    };
+
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) closeModal();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && overlay.classList.contains('active')) closeModal();
+    });
+    activeSessionsModalBound = true;
+}
+
+function openActiveSessionsModal() {
+    bindActiveSessionsModalEvents();
+    const overlay = document.getElementById('sessionModalOverlay');
+    if (!overlay) return;
+    renderActiveSessionsTable(activeSessionsCache);
+    overlay.classList.add('active');
+    overlay.setAttribute('aria-hidden', 'false');
+    updateActivePortalLogins();
+}
+
+function renderActiveSessionsTable(sessions) {
+    const tbody = document.getElementById('activeSessionsBody');
+    if (!tbody) return;
+
+    const list = Array.isArray(sessions) ? sessions : [];
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 1.5rem;">No active sessions found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = list.map((session) => {
+        const sessionId = session.sessionId || '';
+        const userAgent = session.userAgent || '-';
+        const shortUserAgent = userAgent.length > 120 ? `${userAgent.slice(0, 120)}...` : userAgent;
+        const campus = session.campusName || 'No campus';
+        return `
+            <tr>
+                <td class="session-user-cell">
+                    <strong>${escapeHtml(session.fullName || session.username || 'Unknown User')}</strong>
+                    <small>${escapeHtml(session.username || '-')}</small>
+                    <small>Session: ${escapeHtml(sessionId.slice(0, 12))}...</small>
+                </td>
+                <td>${escapeHtml(session.role || '-')}</td>
+                <td>
+                    <strong>${escapeHtml(getSessionLocationLabel(session))}</strong>
+                    <span class="session-meta">${escapeHtml(campus)}</span>
+                </td>
+                <td class="session-device-cell" title="${escapeHtml(userAgent)}">${escapeHtml(shortUserAgent)}</td>
+                <td>
+                    <strong>${escapeHtml(formatSessionTimestamp(session.lastSeen))}</strong>
+                    <span class="session-meta">Login: ${escapeHtml(formatSessionTimestamp(session.loginAt))}</span>
+                </td>
+                <td>
+                    <button type="button" class="action-btn btn-delete" onclick="forceLogoutActiveSession('${escapeHtml(sessionId)}')">
+                        <i data-lucide="log-out" width="14"></i> Logout
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    if (window.lucide) window.lucide.createIcons();
+}
+
+async function forceLogoutActiveSession(sessionId) {
+    if (!sessionId) return;
+    if (!(await showAppConfirm('Log out this active session?'))) return;
+
+    const token = sessionStorage.getItem('eduCore_token');
+    if (!token) {
+        alert('No active admin token');
+        return;
+    }
+
+    try {
+        let response = await fetch(`${API_BASE_URL}/active-sessions/logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ sessionId })
+        });
+
+        if (response.status === 404) {
+            response = await fetch(`${API_BASE_URL}/active-sessions/${encodeURIComponent(sessionId)}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+        }
+
+        const result = await parseJsonResponse(response, 'Session logout failed.');
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Session logout failed.');
+        }
+
+        activeSessionsCache = activeSessionsCache.filter((session) => session.sessionId !== sessionId);
+        renderActiveSessionsTable(activeSessionsCache);
+        updateActivePortalLogins();
+    } catch (error) {
+        alert(error.message || 'Session logout failed.');
+    }
+}
+
+function getUniqueActiveUsersFromSessions(sessions) {
+    return new Set((Array.isArray(sessions) ? sessions : []).map((session) =>
+        `${session.role || ''}:${session.userId || session.username || session.sessionId || ''}`
+    )).size;
+}
+
+function formatSessionTimestamp(value) {
+    if (!value) return '-';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return String(value);
+    return parsed.toLocaleString();
+}
+
+function getSessionLocationLabel(session) {
+    const rawIp = String(session?.ip || '').replace(/^::ffff:/, '');
+    if (!rawIp) return 'Unknown';
+    if (rawIp === '::1' || rawIp === '127.0.0.1' || rawIp.toLowerCase() === 'localhost') {
+        return `Localhost (${rawIp})`;
+    }
+    if (
+        rawIp.startsWith('192.168.') ||
+        rawIp.startsWith('10.') ||
+        /^172\.(1[6-9]|2\d|3[01])\./.test(rawIp)
+    ) {
+        return `Private Network (${rawIp})`;
+    }
+    return rawIp;
 }
 // =======================================================
 // ==================== STUDENT LOGIC ====================
 // =======================================================
 
+const studentColumnSearchState = { column: '', label: '', value: '' };
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function getDefaultStudentClasses() {
+    return [
+        { label: 'Play Group', value: 'Play Group' },
+        { label: 'Nursery', value: 'Nursery' },
+        { label: 'Prep', value: 'Prep' },
+        ...Array.from({ length: 10 }, (_, index) => ({ label: `Class ${index + 1}`, value: `Class ${index + 1}` }))
+    ];
+}
+
+function getClassLabelAndFee(classRecord) {
+    const name = classRecord.section ? `${classRecord.name} (${classRecord.section})` : classRecord.name;
+    const fee = classRecord.defaultFee || classRecord.monthlyFee || classRecord.fee || classRecord.classFee || '';
+    return { name, fee };
+}
+
+function populateStudentFormOptions() {
+    const classSelect = document.getElementById('classGrade');
+    const campusSelect = document.getElementById('campusName');
+
+    if (classSelect) {
+        const selected = classSelect.value;
+        const seen = new Set();
+        const storedClasses = getData(STORAGE_KEY_CLASSES);
+        const storedClassFees = new Map();
+        storedClasses.forEach((record) => {
+            if (!record?.name) return;
+            const { name, fee } = getClassLabelAndFee(record);
+            if (fee) storedClassFees.set(name, fee);
+        });
+        classSelect.innerHTML = '<option value="">Select Class</option>';
+
+        getDefaultStudentClasses().forEach((item) => {
+            const fee = storedClassFees.get(item.value);
+            const option = new Option(fee ? `${item.label} - PKR ${fee}` : item.label, item.value);
+            if (fee) option.dataset.fee = fee;
+            seen.add(item.value);
+            classSelect.appendChild(option);
+        });
+
+        storedClasses.forEach((record) => {
+            if (!record?.name) return;
+            const { name, fee } = getClassLabelAndFee(record);
+            if (seen.has(name)) return;
+            const option = new Option(fee ? `${name} - PKR ${fee}` : name, name);
+            if (fee) option.dataset.fee = fee;
+            classSelect.appendChild(option);
+            seen.add(name);
+        });
+
+        if (selected && Array.from(classSelect.options).some((option) => option.value === selected)) {
+            classSelect.value = selected;
+        }
+    }
+
+    if (campusSelect) {
+        const selected = campusSelect.value;
+        const campuses = getStudentCampusOptions();
+        campusSelect.innerHTML = '<option value="">Select Campus</option>';
+        campuses.forEach((campus) => campusSelect.appendChild(new Option(campus, campus)));
+        if (selected && campuses.includes(selected)) campusSelect.value = selected;
+    }
+}
+
+function getStudentCampusOptions() {
+    const campuses = new Set(['Main Campus', 'Ali campus', 'Fatima Campus']);
+    getData(STORAGE_KEY_STUDENTS).forEach((student) => {
+        if (student.campusName) campuses.add(student.campusName);
+    });
+    getData(STORAGE_KEY_TEACHERS).forEach((teacher) => {
+        if (teacher.campusName) campuses.add(teacher.campusName);
+    });
+    try {
+        const branches = JSON.parse(localStorage.getItem('eduCore_branches') || '[]');
+        branches.forEach((branch) => {
+            if (branch.campusName) campuses.add(branch.campusName);
+        });
+    } catch (error) {
+        // Keep default campuses if branch storage is invalid.
+    }
+    return [...campuses].filter(Boolean).sort((a, b) => a.localeCompare(b));
+}
+
+function populateQuickStudentFilters() {
+    const filter = document.getElementById('quickStudentFilter');
+    if (!filter) return;
+
+    const currentValues = new Set(Array.from(filter.selectedOptions).map((option) => option.value));
+    const baseOptions = [
+        ['all', 'All Students'],
+        ['gender:Male', 'Male Students'],
+        ['gender:Female', 'Female Students'],
+        ['gender:Other', 'Other Gender'],
+        ['age:below5', 'Below 5 Years']
+    ];
+    const campuses = getStudentCampusOptions().map((campus) => [`campus:${campus}`, `Campus: ${campus}`]);
+    const classes = [...new Set([
+        ...getDefaultStudentClasses().map((item) => item.value),
+        ...getData(STORAGE_KEY_CLASSES).map((record) => record?.section ? `${record.name} (${record.section})` : record?.name).filter(Boolean),
+        ...getData(STORAGE_KEY_STUDENTS).map((student) => student.classGrade).filter(Boolean)
+    ])].sort((a, b) => a.localeCompare(b)).map((className) => [`class:${className}`, `Class: ${className}`]);
+
+    filter.innerHTML = [...baseOptions, ...campuses, ...classes]
+        .map(([value, label]) => `<option value="${escapeHtml(value)}" ${currentValues.has(value) ? 'selected' : ''}>${escapeHtml(label)}</option>`)
+        .join('');
+}
+
+function getSelectedQuickStudentFilters() {
+    const filter = document.getElementById('quickStudentFilter');
+    if (!filter) return [];
+    const values = Array.from(filter.selectedOptions).map((option) => option.value);
+    return values.includes('all') ? [] : values;
+}
+
+function matchesQuickStudentFilters(student, filters) {
+    if (!filters.length) return true;
+    return filters.every((filter) => {
+        const [type, rawValue] = filter.split(/:(.*)/s);
+        const value = String(rawValue || '').toLowerCase();
+        if (type === 'gender') return String(student.gender || '').toLowerCase() === value;
+        if (type === 'age') return value === 'below5' ? isStudentBelowAge(student, 5) : true;
+        if (type === 'campus') return String(student.campusName || '').toLowerCase() === value;
+        if (type === 'class') return String(student.classGrade || '').toLowerCase() === value;
+        return true;
+    });
+}
+
+function applySelectedClassFee() {
+    const classSelect = document.getElementById('classGrade');
+    const monthlyFee = document.getElementById('monthlyFee');
+    if (!classSelect || !monthlyFee) return;
+    const selectedOption = classSelect.options[classSelect.selectedIndex];
+    if (selectedOption?.dataset?.fee) monthlyFee.value = selectedOption.dataset.fee;
+}
+
+function isStudentTerminated(student) {
+    return String(student.enrollmentStatus || '').toLowerCase() === 'terminated';
+}
+
+function getStudentDisplayStatus(student) {
+    if (isStudentTerminated(student)) return 'Terminated';
+    return student.feesStatus || student.enrollmentStatus || 'Active';
+}
+
+function getStudentStatusClass(status) {
+    const normalized = String(status || '').toLowerCase();
+    if (normalized === 'paid') return 'status-paid';
+    if (normalized === 'active') return 'status-active';
+    if (normalized === 'pending') return 'status-pending';
+    if (normalized === 'late') return 'status-late';
+    if (normalized === 'terminated') return 'status-terminated';
+    return 'status-pending';
+}
+
+function matchesStudentColumnSearch(student, status) {
+    if (!studentColumnSearchState.column || !studentColumnSearchState.value) return true;
+    const column = studentColumnSearchState.column;
+    const lookup = column === 'status' ? status : student[column];
+    const displayValue = column === 'dob' ? formatDateForDisplay(lookup) : lookup;
+    return String(displayValue || '').toLowerCase().includes(studentColumnSearchState.value.toLowerCase());
+}
+
 function toggleStudentForm(editMode = false) {
     const container = document.getElementById('studentFormContainer');
     const form = document.getElementById('studentForm');
     const title = document.getElementById('formTitle');
+    if (!container || !form) return;
 
     if (container.style.display === 'block' && !editMode) {
         container.style.display = 'none';
@@ -2132,36 +2494,7 @@ function toggleStudentForm(editMode = false) {
         document.getElementById('studentId').value = '';
         setStudentPhotoPreview('');
     } else {
-        const classSelect = document.getElementById('classGrade');
-        if (classSelect && classSelect.tagName === 'SELECT') {
-            const storedClasses = getData(STORAGE_KEY_CLASSES);
-            const defaultClasses = [
-                'Play Group', 'Nursery', 'Prep',
-                'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
-                'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'
-            ];
-
-            classSelect.innerHTML = '<option value="">Select Class</option>';
-
-            // Add Default Classes
-            defaultClasses.forEach(cls => {
-                const opt = document.createElement('option');
-                opt.value = cls;
-                opt.textContent = cls;
-                classSelect.appendChild(opt);
-            });
-
-            // Add Custom Classes from Storage
-            storedClasses.forEach(c => {
-                const val = c.section ? `${c.name} (${c.section})` : c.name;
-                if (!defaultClasses.includes(val)) {
-                    const opt = document.createElement('option');
-                    opt.value = val;
-                    opt.textContent = val;
-                    classSelect.appendChild(opt);
-                }
-            });
-        }
+        populateStudentFormOptions();
         container.style.display = 'block';
         // Reset Panels
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
@@ -2174,10 +2507,13 @@ function toggleStudentForm(editMode = false) {
             if (studentCodeField) studentCodeField.value = generateStudentCode();
             const admissionDateField = document.getElementById('admissionDate');
             if (admissionDateField) admissionDateField.value = new Date().toISOString().split('T')[0];
+            if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = 'Monthly';
+            setStudentPhotoPreview('');
             title.innerText = 'Add New Student';
         } else {
             title.innerText = 'Edit Student Details';
         }
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -2196,7 +2532,7 @@ function generateStudentCode() {
         }
     });
 
-    return `STD-${String(maxNumber + 1).padStart(4, '0')}`;
+    return `STU-${String(maxNumber + 1).padStart(3, '0')}`;
 }
 
 function normalizeDateInputValue(value) {
@@ -2213,23 +2549,46 @@ async function handleStudentFormSubmit(e) {
 
     const existingStudents = getData(STORAGE_KEY_STUDENTS);
     const existingStudent = isEdit ? existingStudents.find(s => s.id === idField.value) : null;
-    const currentStatus = isEdit && existingStudent ? existingStudent.feesStatus : 'Pending';
+    const currentStatus = isEdit && existingStudent ? (existingStudent.feesStatus || 'Pending') : 'Pending';
+    const enrollmentStatus = isEdit && existingStudent ? (existingStudent.enrollmentStatus || 'Active') : 'Active';
 
-    const usernameInput = document.getElementById('username').value;
-    const studentPasswordInput = document.getElementById('studentPassword').value;
-    const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '0';
+    const studentCode = document.getElementById('studentCode').value || generateStudentCode();
+    const parentPhone = document.getElementById('parentPhone').value.trim();
+    let usernameInput = document.getElementById('username').value.trim();
+    let studentPasswordInput = document.getElementById('studentPassword').value;
+    const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '';
     const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
 
-    // Validation
-    if (!usernameInput || !studentPasswordInput) {
-        alert('Please create login credentials for the student.');
-        if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
-        return;
+    const requiredFields = [
+        ['fullName', 'Full Name is required.'],
+        ['fatherName', "Father's Name is required."],
+        ['studentDob', 'Date of Birth is required.'],
+        ['classGrade', 'Class is required.'],
+        ['campusName', 'Campus Name is required.'],
+        ['parentPhone', 'Contact Phone is required.'],
+        ['gender', 'Gender is required.'],
+        ['rollNo', 'Roll No is required.']
+    ];
+
+    for (const [fieldId, message] of requiredFields) {
+        const field = document.getElementById(fieldId);
+        if (!String(field?.value || '').trim()) {
+            alert(message);
+            field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            field?.focus();
+            return;
+        }
     }
-    if (!monthlyFeeInput || monthlyFeeInput === '0') {
-        alert('Please set the student fee structure.');
-        if (!document.getElementById('feePanel').classList.contains('active')) toggleStepPanel('feePanel');
-        return;
+
+    if (!usernameInput) {
+        usernameInput = studentCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+        document.getElementById('username').value = usernameInput;
+    }
+
+    if (!studentPasswordInput) {
+        const digits = parentPhone.replace(/\D/g, '');
+        studentPasswordInput = `Student${digits.length >= 4 ? digits.slice(-4) : '123'}`;
+        document.getElementById('studentPassword').value = studentPasswordInput;
     }
 
     const studentIdentityError = validateStudentIdentityInputs({
@@ -2240,26 +2599,39 @@ async function handleStudentFormSubmit(e) {
 
     if (studentIdentityError) {
         alert(studentIdentityError);
+        if (studentIdentityError.toLowerCase().includes('username')) document.getElementById('username')?.focus();
+        if (studentIdentityError.toLowerCase().includes('email')) document.getElementById('studentEmail')?.focus();
+        return;
+    }
+
+    const photoInput = document.getElementById('studentProfileImage');
+    let profileImage = existingStudent?.profileImage || '';
+
+    try {
+        if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
+    } catch (error) {
+        alert(error.message);
         return;
     }
 
     const newStudent = {
         id: isEdit ? idField.value : generateUniqueRecordId('STU'),
-        studentCode: document.getElementById('studentCode').value || generateStudentCode(),
-        fullName: document.getElementById('fullName').value,
-        profileImage: existingStudent?.profileImage || '',
-        fatherName: document.getElementById('fatherName').value,
+        studentCode,
+        fullName: document.getElementById('fullName').value.trim(),
+        profileImage,
+        fatherName: document.getElementById('fatherName').value.trim(),
         dob: document.getElementById('studentDob').value,
         admissionDate: document.getElementById('admissionDate') ? document.getElementById('admissionDate').value : (existingStudent?.admissionDate || ''),
         classGrade: document.getElementById('classGrade').value,
         campusName: document.getElementById('campusName').value,
-        parentPhone: document.getElementById('parentPhone').value,
+        parentPhone,
         email: studentEmailInput,
         gender: document.getElementById('gender').value,
-        rollNo: document.getElementById('rollNo').value,
-        formB: document.getElementById('formB').value,
+        rollNo: document.getElementById('rollNo').value.trim(),
+        formB: document.getElementById('formB').value.trim(),
         feesStatus: currentStatus,
-        monthlyFee: monthlyFeeInput,
+        enrollmentStatus,
+        monthlyFee: monthlyFeeInput || '0',
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
         username: usernameInput,
         password: studentPasswordInput,
@@ -2289,6 +2661,7 @@ async function handleStudentFormSubmit(e) {
 
     pushNotification('Student Updated', `Account for "${newStudent.fullName}" saved and activated.`, 'user');
     toggleStudentForm();
+    populateQuickStudentFilters();
     renderStudents();
     showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
 }
@@ -2298,9 +2671,7 @@ function renderStudents(term = '') {
     if (!tbody) return;
 
     const searchInput = document.getElementById('studentSearchInput');
-    const genderFilter = document.getElementById('genderFilter');
-    const campusFilter = document.getElementById('campusFilter');
-    const ageFilter = document.getElementById('ageFilter');
+    const quickFilter = document.getElementById('quickStudentFilter');
     const loggedInUser = getLoggedInUser();
 
     if (typeof term !== 'string') {
@@ -2309,24 +2680,17 @@ function renderStudents(term = '') {
         term = term.toLowerCase().trim();
     }
 
-    const selectedGender = genderFilter ? genderFilter.value : 'All';
-    const selectedAge = ageFilter ? ageFilter.value : 'All';
-    const selectedCampus = loggedInUser?.role === 'Branch'
-        ? (loggedInUser.campusName || 'All')
-        : (campusFilter ? campusFilter.value : 'All');
-
+    const filters = getSelectedQuickStudentFilters();
     const students = getData(STORAGE_KEY_STUDENTS);
-    const filtered = students.filter(s =>
-        (
-            !term ||
-            (s.fullName && s.fullName.toLowerCase().includes(term)) ||
-            (s.rollNo && s.rollNo.toString().toLowerCase().includes(term)) ||
-            (s.studentCode && s.studentCode.toLowerCase().includes(term))
-        ) &&
-        (selectedGender === 'All' || (s.gender || '').toLowerCase() === selectedGender.toLowerCase()) &&
-        (selectedAge === 'All' || (selectedAge === 'below5' && isStudentBelowAge(s, 5))) &&
-        (selectedCampus === 'All' || (s.campusName || 'Main Campus').toLowerCase() === selectedCampus.toLowerCase())
-    );
+    const filtered = students.filter((s) => {
+        const status = getStudentDisplayStatus(s);
+        const searchable = `${s.fullName || ''} ${s.rollNo || ''} ${s.studentCode || ''}`.toLowerCase();
+        const branchMatch = loggedInUser?.role !== 'Branch' || (s.campusName || 'Main Campus').toLowerCase() === String(loggedInUser.campusName || '').toLowerCase();
+        return branchMatch &&
+            (!term || searchable.includes(term)) &&
+            matchesQuickStudentFilters(s, filters) &&
+            matchesStudentColumnSearch(s, status);
+    });
 
     // Update total count display - Use filtered results length as requested
     const totalCountEl = document.getElementById('totalStudentCount');
@@ -2340,31 +2704,35 @@ function renderStudents(term = '') {
     } else {
         noData.style.display = 'none';
         filtered.forEach(s => {
-            let statusClass = s.feesStatus === 'Paid' ? 'status-paid' : (s.feesStatus === 'Late' ? 'status-failed' : 'status-pending');
-            const visiblePassword = getVisibleStudentPassword(s);
+            const status = getStudentDisplayStatus(s);
+            const statusClass = getStudentStatusClass(status);
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td><b>${s.studentCode || '-'}</b></td>
-                <td><b>${s.rollNo}</b></td>
+                <td><b>${s.rollNo || '-'}</b></td>
                 <td><div class="student-name-cell">
                     <div class="student-avatar">${buildStudentAvatarMarkup(s)}</div>
-                    <div class="student-name-text">${s.fullName}</div>
+                    <div class="student-name-text">${escapeHtml(s.fullName || '-')}</div>
                 </div></td>
-                <td class="cell-compact">${s.fatherName || '-'}</td>
+                <td class="cell-compact">${escapeHtml(s.fatherName || '-')}</td>
                 <td>${formatDateForDisplay(s.dob)}</td>
-                <td class="cell-compact">${s.classGrade}</td>
-                    <td class="cell-compact">${s.campusName || 'Main Campus'}</td>
-                <td>${s.gender || '-'}</td>
-                <td>${s.parentPhone}</td>
-                <td>${s.formB || '-'}</td>
-                <td class="login-details">${loggedInUser?.role === 'Branch'
-                    ? '<span style="color: var(--text-secondary);">Restricted</span>'
-                    : `<strong>User:</strong> ${s.username || '-'}<br><strong>Pass:</strong> ${visiblePassword}`}</td>
-                <td><span class="status-badge ${statusClass}">${s.feesStatus}</span></td>
+                <td class="cell-compact">${escapeHtml(s.classGrade || '-')}</td>
+                <td class="cell-compact">${escapeHtml(s.campusName || '-')}</td>
+                <td>${escapeHtml(s.gender || '-')}</td>
+                <td><span class="status-badge ${statusClass}">${escapeHtml(status)}</span></td>
                 <td>${loggedInUser?.role === 'Branch'
                     ? '<span style="color: var(--text-secondary); font-size: 0.85rem;">View Only</span>'
-                    : `<button class="action-btn btn-edit" onclick='editStudent(${JSON.stringify(s)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
-                    <button class="action-btn btn-delete" onclick="deleteStudent('${s.id}')"><i data-lucide="trash-2" width="14"></i></button>`}
+                    : `<div class="row-action-wrap">
+                        <button class="action-btn btn-edit" type="button" onclick="toggleStudentActionMenu(event)">
+                            Actions <i data-lucide="chevron-down" width="14"></i>
+                        </button>
+                        <div class="row-action-menu">
+                            <button type="button" onclick="viewStudent('${s.id}')"><i data-lucide="eye" width="14"></i> View</button>
+                            <button type="button" onclick="editStudentById('${s.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
+                            <button type="button" onclick="toggleStudentEnrollment('${s.id}')"><i data-lucide="${isStudentTerminated(s) ? 'rotate-ccw' : 'user-x'}" width="14"></i> ${isStudentTerminated(s) ? 'Reactivate' : 'Mark Terminated'}</button>
+                            <button type="button" onclick="deleteStudent('${s.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button>
+                        </div>
+                    </div>`}
                 </td>
             `;
             tbody.appendChild(tr);
@@ -2392,6 +2760,115 @@ function editStudent(s) {
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
     if (document.getElementById('username')) document.getElementById('username').value = s.username || '';
     if (document.getElementById('studentPassword')) document.getElementById('studentPassword').value = getVisibleStudentPassword(s);
+    setStudentPhotoPreview(s.profileImage || '', s.fullName || '');
+    if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
+}
+
+function editStudentById(id) {
+    const student = getData(STORAGE_KEY_STUDENTS).find((item) => item.id === id);
+    if (student) editStudent(student);
+}
+
+function toggleStudentActionMenu(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const wrap = event.currentTarget.closest('.row-action-wrap');
+    document.querySelectorAll('.row-action-wrap.open').forEach((item) => {
+        if (item !== wrap) item.classList.remove('open');
+    });
+    if (wrap) wrap.classList.toggle('open');
+}
+
+document.addEventListener('click', () => {
+    document.querySelectorAll('.row-action-wrap.open').forEach((item) => item.classList.remove('open'));
+});
+
+function viewStudent(id) {
+    const student = getData(STORAGE_KEY_STUDENTS).find((item) => item.id === id);
+    const modal = document.getElementById('studentViewModal');
+    const content = document.getElementById('studentViewContent');
+    if (!student || !modal || !content) return;
+
+    const fields = [
+        ['Student ID', student.studentCode || '-'],
+        ['Roll No', student.rollNo || '-'],
+        ['Name', student.fullName || '-'],
+        ['Father Name', student.fatherName || '-'],
+        ['Date of Birth', formatDateForDisplay(student.dob)],
+        ['Class', student.classGrade || '-'],
+        ['Campus', student.campusName || '-'],
+        ['Gender', student.gender || '-'],
+        ['Status', getStudentDisplayStatus(student)],
+        ['Parent Phone', student.parentPhone || '-'],
+        ['Email', student.email || '-'],
+        ['Username', student.username || '-']
+    ];
+
+    content.innerHTML = fields.map(([label, value]) => `
+        <div class="student-modal-field">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(value)}</strong>
+        </div>
+    `).join('');
+    modal.style.display = 'flex';
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function closeStudentViewModal() {
+    const modal = document.getElementById('studentViewModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function openStudentColumnSearch(column, label) {
+    studentColumnSearchState.column = column;
+    studentColumnSearchState.label = label;
+    const modal = document.getElementById('studentColumnSearchModal');
+    const title = document.getElementById('studentColumnSearchTitle');
+    const input = document.getElementById('studentColumnSearchInput');
+    if (!modal || !title || !input) return;
+    title.innerText = `Search ${label}`;
+    input.value = studentColumnSearchState.value;
+    modal.style.display = 'flex';
+    input.focus();
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function applyStudentColumnSearch() {
+    const input = document.getElementById('studentColumnSearchInput');
+    studentColumnSearchState.value = input ? input.value.trim() : '';
+    const modal = document.getElementById('studentColumnSearchModal');
+    if (modal) modal.style.display = 'none';
+    renderStudents();
+}
+
+function clearStudentColumnSearch() {
+    studentColumnSearchState.column = '';
+    studentColumnSearchState.label = '';
+    studentColumnSearchState.value = '';
+    const input = document.getElementById('studentColumnSearchInput');
+    if (input) input.value = '';
+    const modal = document.getElementById('studentColumnSearchModal');
+    if (modal) modal.style.display = 'none';
+    renderStudents();
+}
+
+function toggleStudentEnrollment(id) {
+    const students = getData(STORAGE_KEY_STUDENTS);
+    const index = students.findIndex((student) => student.id === id);
+    if (index === -1) return;
+
+    const student = students[index];
+    student.enrollmentStatus = isStudentTerminated(student) ? 'Active' : 'Terminated';
+    students[index] = student;
+    saveData(STORAGE_KEY_STUDENTS, students);
+    renderStudents();
+    pushNotification('Student Status Updated', `${student.fullName || 'Student'} is now ${student.enrollmentStatus}.`, 'user');
+}
+
+function printStudentsList() {
+    const printType = document.getElementById('studentPrintType')?.value || 'school';
+    document.body.dataset.studentPrintType = printType;
+    window.print();
 }
 
 async function deleteStudent(id) {
@@ -2401,6 +2878,7 @@ async function deleteStudent(id) {
     const existingStudents = [...students];
     students = students.filter(s => s.id !== id);
     localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
+    populateQuickStudentFilters();
     renderStudents();
 
     try {
@@ -2429,6 +2907,7 @@ async function deleteStudent(id) {
         pushNotification('Student Deleted', result.message || 'Student deleted successfully.', 'user');
     } catch (error) {
         localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(existingStudents));
+        populateQuickStudentFilters();
         renderStudents();
         alert(error.message);
     }

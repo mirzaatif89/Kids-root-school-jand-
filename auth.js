@@ -115,23 +115,35 @@
     const pageRegistry = {
         'dashboard.html': { moduleKey: 'dashboard', defaultHome: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         'students.html': { moduleKey: 'students', defaultHome: 'students.html', label: 'Students', icon: 'users' },
+        'student_scheduling.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Student Scheduling', icon: 'users' },
+        'student_timetable.html': { moduleKey: 'student_timetable', defaultHome: 'dashboard.html', label: 'Class Timetable', icon: 'calendar-clock' },
+        'student_diary.html': { moduleKey: 'student_diary', defaultHome: 'dashboard.html', label: 'Class Diary', icon: 'book-open' },
+        'student_leave_requests.html': { moduleKey: 'student_leave_requests', defaultHome: 'dashboard.html', label: 'Leave Requests', icon: 'calendar-check' },
+        'student_courses.html': { moduleKey: 'student_courses', defaultHome: 'dashboard.html', label: 'Class Course', icon: 'library' },
+        'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'book-open' },
+        'banners.html': { moduleKey: 'banners', defaultHome: 'dashboard.html', label: 'Banners', icon: 'image' },
         'teachers.html': { moduleKey: 'teachers', defaultHome: 'dashboard.html', label: 'Teachers', icon: 'book-open' },
         'staff.html': { moduleKey: 'staff', defaultHome: 'dashboard.html', label: 'Staff', icon: 'briefcase' },
         'classes.html': { moduleKey: 'classes', defaultHome: 'dashboard.html', label: 'Classes', icon: 'school' },
         'fees.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Fees', icon: 'credit-card' },
         'fee_challan.html': { moduleKey: 'fee_challan', defaultHome: 'dashboard.html', label: 'Fee Challan', icon: 'file-text' },
         'teacher_salaries.html': { moduleKey: 'teacher_salaries', defaultHome: 'dashboard.html', label: 'Salaries', icon: 'wallet' },
+        'finance.html': { moduleKey: 'finance', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
         'student_attendance.html': { moduleKey: 'student_attendance', defaultHome: 'dashboard.html', label: 'Student Attendance', icon: 'calendar-check' },
         'teacher_attendance.html': { moduleKey: 'teacher_attendance', defaultHome: 'dashboard.html', label: 'Teacher Attendance', icon: 'clipboard-check' },
         'student_attendance_report.html': { moduleKey: 'student_attendance_report', defaultHome: 'dashboard.html', label: 'Student Attendance Report', icon: 'bar-chart-3' },
         'teacher_attendance_report.html': { moduleKey: 'teacher_attendance_report', defaultHome: 'dashboard.html', label: 'Teacher Attendance Report', icon: 'line-chart' },
         'notifications.html': { moduleKey: 'notifications', defaultHome: 'dashboard.html', label: 'Notifications', icon: 'bell' },
         'special_notices.html': { moduleKey: 'special_notices', defaultHome: 'dashboard.html', label: 'Special Notices', icon: 'megaphone' },
+        'annual_charges.html': { moduleKey: 'annual_charges', defaultHome: 'dashboard.html', label: 'Annual Charges', icon: 'receipt' },
         'exams.html': { moduleKey: 'exams', defaultHome: 'dashboard.html', label: 'Exams', icon: 'clipboard-list' },
         'revenue.html': { moduleKey: 'revenue', defaultHome: 'dashboard.html', label: 'Revenue', icon: 'trending-up' },
         'settings.html': { moduleKey: 'settings', defaultHome: 'dashboard.html', label: 'Settings', icon: 'settings' },
         'permissions.html': { moduleKey: 'permissions', defaultHome: 'dashboard.html', label: 'Permissions', icon: 'shield' },
         'branch_registration.html': { moduleKey: 'branch_registration', defaultHome: 'dashboard.html', label: 'Branch Registration', icon: 'building-2' },
+        'certificate.html': { moduleKey: 'certificate', defaultHome: 'dashboard.html', label: 'Certificate', icon: 'award' },
+        'complain_box.html': { moduleKey: 'complain_box', defaultHome: 'dashboard.html', label: 'Complain Box', icon: 'message-square' },
+        'visitor_books.html': { moduleKey: 'visitor_books', defaultHome: 'dashboard.html', label: 'Visitor Books', icon: 'clipboard-list' },
         'aboutme.html': { moduleKey: 'aboutme', defaultHome: 'dashboard.html', label: 'About Us', icon: 'info' },
         'student_portal.html': { moduleKey: 'student_portal', defaultHome: 'student_portal.html', label: 'Student Portal', icon: 'graduation-cap' }
     };
@@ -362,11 +374,16 @@
     }
 
     function getModuleAccess(user, permissions, pageName = currentPage) {
-        if (user?.role === 'Admin') return 'manage';
+        if (isAdminMonitoringRole(user?.role)) return 'manage';
         const registryEntry = pageRegistry[pageName];
         if (!registryEntry) return 'view';
         const group = getGroupConfig(user, permissions);
         return group?.permissions?.[registryEntry.moduleKey] || 'none';
+    }
+
+    function isAdminMonitoringRole(role) {
+        return ['admin', 'superadmin', 'super admin', 'system administrator', 'system_admin']
+            .includes(String(role || '').trim().toLowerCase());
     }
 
     function getAccessibleModules(user, permissions) {
@@ -399,6 +416,7 @@
     function forceLoginRedirect() {
         sessionStorage.removeItem('loggedInUser');
         sessionStorage.removeItem('eduCore_token');
+        sessionStorage.removeItem('eduCore_session_id');
         sessionStorage.removeItem('eduCore_student_profile');
         sessionStorage.removeItem('eduCore_permissions_config');
         window.location.replace('index.html');
@@ -428,6 +446,7 @@
         runWhenReady(() => {
             const navLinks = document.querySelectorAll('.nav-links a[href], .user-profile[href]');
             navLinks.forEach((link) => {
+                if (link.dataset.navHiddenDefault === 'true') return;
                 const href = String(link.getAttribute('href') || '').toLowerCase();
                 if (!href || href === '#') return;
                 if (!pageRegistry[href]) return;
@@ -438,7 +457,7 @@
 
             document.querySelectorAll('.nav-dropdown').forEach((dropdown) => {
                 const visibleLinks = Array.from(dropdown.querySelectorAll('a[href]'))
-                    .filter((item) => item.style.display !== 'none');
+                    .filter((item) => item.style.display !== 'none' && item.dataset.navHiddenDefault !== 'true');
                 if (!visibleLinks.length) dropdown.style.display = 'none';
             });
         });
@@ -464,7 +483,7 @@
             });
 
             grid.querySelectorAll('[data-admin-only-card]').forEach((card) => {
-                if (user.role !== 'Admin') card.remove();
+                if (!isAdminMonitoringRole(user.role)) card.remove();
             });
 
             // Keep only the first 5 dashboard cards and prevent permission modules from adding additional cards.
@@ -507,6 +526,191 @@
             document.querySelectorAll('.user-profile .user-info p').forEach((role) => {
                 role.textContent = user.role || 'User';
             });
+        });
+    }
+
+    function getSidebarDisplayUser(user) {
+        const displayName = user?.fullName || user?.username || user?.role || 'Admin User';
+        const initials = displayName
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((part) => part.charAt(0).toUpperCase())
+            .join('') || 'AD';
+
+        return {
+            displayName,
+            initials,
+            role: user?.designation || user?.role || 'Principal'
+        };
+    }
+
+    function getAdminSidebarItems() {
+        return [
+            { type: 'link', label: 'Dashboard', icon: 'layout-dashboard', page: 'dashboard.html' },
+            { type: 'link', label: 'Students', icon: 'users', page: 'students.html' },
+            {
+                type: 'dropdown',
+                label: 'Scheduling',
+                icon: 'calendar-clock',
+                items: [
+                    { label: 'Student Scheduling', icon: 'users', page: 'student_scheduling.html' },
+                    { label: 'Class Timetable', icon: 'calendar-clock', page: 'student_timetable.html' },
+                    { label: 'Class Diary', icon: 'book-open', page: 'student_diary.html' },
+                    { label: 'Leave Requests', icon: 'calendar-check', page: 'student_leave_requests.html' },
+                    { label: 'Class Course', icon: 'library', page: 'student_courses.html' },
+                    { label: 'Teacher Scheduling', icon: 'book-open', page: 'teacher_scheduling.html' }
+                ]
+            },
+            { type: 'link', label: 'Banners', icon: 'image', page: 'banners.html' },
+            { type: 'link', label: 'Teachers', icon: 'book-open', page: 'teachers.html' },
+            { type: 'link', label: 'Branch Registration', icon: 'building-2', page: 'branch_registration.html' },
+            { type: 'link', label: 'Certificate', icon: 'award', page: 'certificate.html' },
+            { type: 'link', label: 'Complain Box', icon: 'message-square', page: 'complain_box.html' },
+            { type: 'link', label: 'Visitor Books', icon: 'clipboard-list', page: 'visitor_books.html' },
+            {
+                type: 'dropdown',
+                label: 'Attendance',
+                icon: 'clipboard-check',
+                items: [
+                    { label: 'Student Attendance', icon: 'users', page: 'student_attendance.html' },
+                    { label: 'Teacher Attendance', icon: 'user-check', page: 'teacher_attendance.html' },
+                    { label: 'Student Attendance Report', icon: 'file-bar-chart-2', page: 'student_attendance_report.html' },
+                    { label: 'Teacher Attendance Report', icon: 'file-check-2', page: 'teacher_attendance_report.html' }
+                ]
+            },
+            { type: 'link', label: 'Notifications', icon: 'bell-ring', page: 'notifications.html' },
+            { type: 'link', label: 'Special Notices', icon: 'megaphone', page: 'special_notices.html' },
+            { type: 'link', label: 'Annual Charges', icon: 'receipt', page: 'annual_charges.html' },
+            { type: 'link', label: 'Staff', icon: 'briefcase', page: 'staff.html' },
+            { type: 'link', label: 'Classes', icon: 'school', page: 'classes.html' },
+            { type: 'link', label: 'Fees', icon: 'credit-card', page: 'fees.html' },
+            { type: 'link', label: 'Fee Challan', icon: 'file-text', page: 'fee_challan.html' },
+            { type: 'link', label: 'Salaries', icon: 'wallet', page: 'teacher_salaries.html' },
+            { type: 'link', label: 'Bills', icon: 'receipt', page: 'finance.html', hiddenDefault: true },
+            { type: 'link', label: 'Exams', icon: 'clipboard-list', page: 'exams.html' },
+            { type: 'link', label: 'Revenue', icon: 'trending-up', page: 'revenue.html' },
+            { type: 'link', label: 'Permissions', icon: 'shield', page: 'permissions.html' },
+            { type: 'link', label: 'About Us', icon: 'info', page: 'aboutme.html' },
+            { type: 'logout', label: 'Logout', icon: 'log-out' }
+        ];
+    }
+
+    function renderSidebarLink(item) {
+        const page = String(item.page || '').toLowerCase();
+        const active = page === currentPage ? ' active' : '';
+        const hidden = item.hiddenDefault ? ' style="display: none;" data-nav-hidden-default="true"' : '';
+        return `
+            <a href="${escapeHtml(page)}" class="nav-item${active}"${hidden}>
+                <i data-lucide="${escapeHtml(item.icon)}"></i>
+                <span>${escapeHtml(item.label)}</span>
+            </a>
+        `;
+    }
+
+    function renderSidebarDropdown(item) {
+        const childPages = item.items.map((child) => String(child.page || '').toLowerCase());
+        const isOpen = childPages.includes(currentPage);
+        const active = isOpen ? ' active' : '';
+        return `
+            <div class="nav-dropdown${isOpen ? ' open' : ''}">
+                <button type="button" class="nav-item nav-dropdown-toggle${active}" aria-expanded="${isOpen ? 'true' : 'false'}">
+                    <span class="nav-item-main">
+                        <i data-lucide="${escapeHtml(item.icon)}"></i>
+                        <span>${escapeHtml(item.label)}</span>
+                    </span>
+                    <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                </button>
+                <div class="nav-submenu">
+                    ${item.items.map((child) => `
+                        <a href="${escapeHtml(child.page)}" class="nav-subitem ${String(child.page).toLowerCase() === currentPage ? 'active' : ''}">
+                            <i data-lucide="${escapeHtml(child.icon)}"></i>
+                            <span>${escapeHtml(child.label)}</span>
+                        </a>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function buildAdminSidebar(user) {
+        const userInfo = getSidebarDisplayUser(user);
+        const navMarkup = getAdminSidebarItems().map((item) => {
+            if (item.type === 'dropdown') return renderSidebarDropdown(item);
+            if (item.type === 'logout') {
+                return `
+                    <a href="#" class="nav-item nav-item-danger" onclick="logoutUser(event)">
+                        <i data-lucide="${escapeHtml(item.icon)}"></i>
+                        <span>${escapeHtml(item.label)}</span>
+                    </a>
+                `;
+            }
+            return renderSidebarLink(item);
+        }).join('');
+
+        return `
+            <aside class="sidebar" data-admin-sidebar>
+                <div class="logo-section">
+                    <i data-lucide="graduation-cap"></i>
+                    <span>Apexiums School System</span>
+                </div>
+                <nav class="nav-links">
+                    ${navMarkup}
+                </nav>
+                <a href="settings.html" class="user-profile">
+                    <div class="avatar">${escapeHtml(userInfo.initials)}</div>
+                    <div class="user-info">
+                        <h4>${escapeHtml(userInfo.displayName)}</h4>
+                        <p>${escapeHtml(userInfo.role)}</p>
+                    </div>
+                </a>
+            </aside>
+        `;
+    }
+
+    function attachAdminSidebarBehavior() {
+        const sidebar = document.querySelector('[data-admin-sidebar]');
+        if (!sidebar) return;
+
+        sidebar.querySelectorAll('.nav-dropdown-toggle').forEach((toggle) => {
+            toggle.addEventListener('click', () => {
+                const dropdown = toggle.closest('.nav-dropdown');
+                if (!dropdown) return;
+                const willOpen = !dropdown.classList.contains('open');
+                dropdown.classList.toggle('open', willOpen);
+                toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            });
+        });
+
+        if (!document.querySelector('.mobile-sidebar-toggle')) {
+            const toggle = document.createElement('button');
+            toggle.type = 'button';
+            toggle.className = 'mobile-sidebar-toggle';
+            toggle.setAttribute('aria-label', 'Open sidebar');
+            toggle.innerHTML = '<i data-lucide="menu"></i>';
+            document.body.appendChild(toggle);
+
+            const overlay = document.createElement('div');
+            overlay.className = 'sidebar-overlay';
+            document.body.appendChild(overlay);
+
+            const closeSidebar = () => document.body.classList.remove('sidebar-open');
+            toggle.addEventListener('click', () => document.body.classList.toggle('sidebar-open'));
+            overlay.addEventListener('click', closeSidebar);
+            sidebar.querySelectorAll('a[href]').forEach((link) => link.addEventListener('click', closeSidebar));
+        }
+    }
+
+    function renderAdminSidebar(user) {
+        if (portalPages.has(currentPage) || publicPages.has(currentPage)) return;
+
+        runWhenReady(() => {
+            const sidebar = document.querySelector('.dashboard-container > .sidebar, body > .sidebar');
+            if (!sidebar || sidebar.matches('[data-admin-sidebar]')) return;
+            sidebar.outerHTML = buildAdminSidebar(user);
+            document.body.classList.add('has-admin-sidebar');
+            attachAdminSidebarBehavior();
+            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
         });
     }
 
@@ -837,15 +1041,23 @@
     function startActiveSessionTracking() {
         if (!loggedInUser || !authToken || publicPages.has(currentPage)) return;
 
-        const sendHeartbeat = () => {
-            fetch(`${getApiBaseUrl()}/session/heartbeat`, {
+        const sendHeartbeat = async () => {
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/session/heartbeat`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${authToken}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ page: currentPage })
-            }).catch(() => {});
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    logoutUser();
+                }
+            } catch (error) {
+                // Network failures are handled by the next heartbeat.
+            }
         };
 
         sendHeartbeat();
@@ -866,6 +1078,7 @@
 
     (async () => {
         const permissions = await fetchPermissionsConfig();
+        renderAdminSidebar(loggedInUser);
         applyNavPermissions(loggedInUser, permissions);
         applySignedInUserLabels(loggedInUser);
         renderDashboardPermissionCards(loggedInUser, permissions);
@@ -914,6 +1127,7 @@ function logoutUser(event) {
     }
     sessionStorage.removeItem('loggedInUser');
     sessionStorage.removeItem('eduCore_token');
+    sessionStorage.removeItem('eduCore_session_id');
     sessionStorage.removeItem('eduCore_student_profile');
     sessionStorage.removeItem('eduCore_permissions_config');
     window.location.href = 'index.html';
