@@ -3277,38 +3277,25 @@ function toggleStudentForm(editMode = false) {
     const container = document.getElementById('studentFormContainer');
     const form = document.getElementById('studentForm');
     const title = document.getElementById('formTitle');
-    const loggedInUser = getLoggedInUser();
-
-    if (editMode) {
-        if (!canCurrentUserPerformAction('students', 'edit')) {
-            showAppAlert('You do not have permission to edit students.', 'Permission Denied');
-            return;
-        }
-    } else if (loggedInUser?.role === 'Teacher' || loggedInUser?.role === 'Staff') {
-        if (!canCurrentUserPerformAction('students', 'add')) {
-            showAppAlert('You do not have permission to add students.', 'Permission Denied');
-            return;
-        }
-    }
+    if (!container || !form) return;
 
     if (container.style.display === 'block' && !editMode) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('studentId').value = '';
-        if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
         setStudentPhotoPreview('');
     } else {
         const classSelect = document.getElementById('classGrade');
         if (classSelect && classSelect.tagName === 'SELECT') {
             classSelect.innerHTML = '<option value="">Select Class</option>';
-            getAvailableStudentClassOptions().forEach(cls => {
-                const feeDefault = getClassFeeDefault(cls);
+            getAvailableStudentClassOptions().forEach((cls) => {
                 const opt = document.createElement('option');
                 opt.value = cls;
-                opt.textContent = feeDefault ? `${cls} - PKR ${Number(feeDefault.monthlyFee || 0).toLocaleString('en-PK')}` : cls;
+                opt.textContent = cls;
                 classSelect.appendChild(opt);
             });
         }
+        ensureStudentCampusDefault();
         container.style.display = 'block';
         // Reset Panels
         document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
@@ -3321,15 +3308,13 @@ function toggleStudentForm(editMode = false) {
             if (studentCodeField) studentCodeField.value = generateStudentCode();
             const admissionDateField = document.getElementById('admissionDate');
             if (admissionDateField) admissionDateField.value = new Date().toISOString().split('T')[0];
-            const monthlyFeeField = document.getElementById('monthlyFee');
-            if (monthlyFeeField) monthlyFeeField.dataset.autoClassFee = '';
-            if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';
-            setStudentPhotoPreview('', '');
-            ensureStudentCampusDefault();
+            if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = 'Monthly';
+            setStudentPhotoPreview('');
             title.innerText = 'Add New Student';
         } else {
             title.innerText = 'Edit Student Details';
         }
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 }
 
@@ -3549,55 +3534,51 @@ function normalizeDateInputValue(value) {
 
 async function handleStudentFormSubmit(e) {
     e.preventDefault();
-    console.log('=== Student Form Submit Started ===');
-    
     const idField = document.getElementById('studentId');
     const isEdit = idField.value !== '';
-    const loggedInUser = getLoggedInUser();
 
-    if (isEdit) {
-        if (!canCurrentUserPerformAction('students', 'edit')) {
-            showAppAlert('You do not have permission to edit students.', 'Permission Denied');
-            return;
-        }
-    } else if (loggedInUser?.role === 'Teacher' || loggedInUser?.role === 'Staff') {
-        if (!canCurrentUserPerformAction('students', 'add')) {
-            showAppAlert('You do not have permission to add students.', 'Permission Denied');
-            return;
-        }
-    }
-
-    if (!(await validateStudentRequiredFields())) {
-        return;
-    }
-
-    const existingStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    const existingStudents = getData(STORAGE_KEY_STUDENTS);
     const existingStudent = isEdit ? existingStudents.find(s => s.id === idField.value) : null;
-    const currentStatus = isEdit && existingStudent ? existingStudent.feesStatus : 'Pending';
+    const currentStatus = isEdit && existingStudent ? (existingStudent.feesStatus || 'Pending') : 'Pending';
+    const enrollmentStatus = isEdit && existingStudent ? (existingStudent.enrollmentStatus || 'Active') : 'Active';
 
-    const studentCodeValue = document.getElementById('studentCode').value || generateStudentCode();
+    const studentCode = document.getElementById('studentCode').value || generateStudentCode();
+    const parentPhone = document.getElementById('parentPhone').value.trim();
     let usernameInput = document.getElementById('username').value.trim();
-    let studentPasswordInput = document.getElementById('studentPassword').value.trim();
-    let monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value.trim() : '0';
+    let studentPasswordInput = document.getElementById('studentPassword').value;
+    const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '';
     const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
 
+    const requiredFields = [
+        ['fullName', 'Full Name is required.'],
+        ['fatherName', "Father's Name is required."],
+        ['studentDob', 'Date of Birth is required.'],
+        ['classGrade', 'Class is required.'],
+        ['campusName', 'Campus Name is required.'],
+        ['parentPhone', 'Contact Phone is required.'],
+        ['gender', 'Gender is required.'],
+        ['rollNo', 'Roll No is required.']
+    ];
+
+    for (const [fieldId, message] of requiredFields) {
+        const field = document.getElementById(fieldId);
+        if (!String(field?.value || '').trim()) {
+            alert(message);
+            field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            field?.focus();
+            return;
+        }
+    }
+
     if (!usernameInput) {
-        usernameInput = studentCodeValue.toLowerCase().replace(/[^a-z0-9]+/g, '');
-        const usernameField = document.getElementById('username');
-        if (usernameField) usernameField.value = usernameInput;
+        usernameInput = studentCode.toLowerCase().replace(/[^a-z0-9]/g, '');
+        document.getElementById('username').value = usernameInput;
     }
 
     if (!studentPasswordInput) {
-        const phoneDigits = String(document.getElementById('parentPhone')?.value || '').replace(/\D/g, '');
-        studentPasswordInput = phoneDigits.slice(-4) ? `Student${phoneDigits.slice(-4)}` : 'Student123';
-        const passwordField = document.getElementById('studentPassword');
-        if (passwordField) passwordField.value = studentPasswordInput;
-    }
-
-    if (!monthlyFeeInput) {
-        monthlyFeeInput = '0';
-        const monthlyFeeField = document.getElementById('monthlyFee');
-        if (monthlyFeeField) monthlyFeeField.value = monthlyFeeInput;
+        const digits = parentPhone.replace(/\D/g, '');
+        studentPasswordInput = `Student${digits.length >= 4 ? digits.slice(-4) : '123'}`;
+        document.getElementById('studentPassword').value = studentPasswordInput;
     }
 
     const studentIdentityError = validateStudentIdentityInputs({
@@ -3607,13 +3588,17 @@ async function handleStudentFormSubmit(e) {
     });
 
     if (studentIdentityError) {
-        await showAppAlert(studentIdentityError, 'Duplicate Login');
+        alert(studentIdentityError);
+        if (studentIdentityError.toLowerCase().includes('username')) document.getElementById('username')?.focus();
+        if (studentIdentityError.toLowerCase().includes('email')) document.getElementById('studentEmail')?.focus();
         return;
     }
 
+    const photoInput = document.getElementById('studentProfileImage');
     let profileImage = existingStudent?.profileImage || '';
+
     try {
-        profileImage = await readImageInputDataUrl('studentProfileImage', profileImage);
+        if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
     } catch (error) {
         alert(error.message);
         return;
@@ -3621,39 +3606,28 @@ async function handleStudentFormSubmit(e) {
 
     const newStudent = {
         id: isEdit ? idField.value : generateUniqueRecordId('STU'),
-        studentCode: studentCodeValue,
-        fullName: document.getElementById('fullName').value,
+        studentCode,
+        fullName: document.getElementById('fullName').value.trim(),
         profileImage,
-        fatherName: document.getElementById('fatherName').value,
+        fatherName: document.getElementById('fatherName').value.trim(),
         dob: document.getElementById('studentDob').value,
         admissionDate: document.getElementById('admissionDate') ? document.getElementById('admissionDate').value : (existingStudent?.admissionDate || ''),
         classGrade: document.getElementById('classGrade').value,
         campusName: document.getElementById('campusName').value,
-        parentPhone: document.getElementById('parentPhone').value,
+        parentPhone,
         email: studentEmailInput,
         gender: document.getElementById('gender').value,
-        rollNo: document.getElementById('rollNo').value,
-        formB: document.getElementById('formB').value,
+        rollNo: document.getElementById('rollNo').value.trim(),
+        formB: document.getElementById('formB').value.trim(),
         feesStatus: currentStatus,
-        enrollmentStatus: existingStudent?.enrollmentStatus || 'Active',
-        terminatedAt: existingStudent?.terminatedAt || '',
-        terminationNote: existingStudent?.terminationNote || '',
-        monthlyFee: monthlyFeeInput,
+        enrollmentStatus,
+        monthlyFee: monthlyFeeInput || '0',
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
         username: usernameInput,
         password: studentPasswordInput,
         plainPassword: studentPasswordInput,
         role: 'Student'
     };
-
-    console.log('Created newStudent object:', {
-        id: newStudent.id,
-        fullName: newStudent.fullName,
-        username: newStudent.username,
-        classGrade: newStudent.classGrade,
-        campusName: newStudent.campusName,
-        monthlyFee: newStudent.monthlyFee
-    });
 
     // Auto-set payment date if status is Paid
     if (currentStatus === 'Paid') {
@@ -3666,74 +3640,20 @@ async function handleStudentFormSubmit(e) {
         newStudent.paymentDate = '';
     }
 
-    let students = getArrayData(STORAGE_KEY_STUDENTS);
+    let students = getData(STORAGE_KEY_STUDENTS);
     if (isEdit) {
         const index = students.findIndex(s => s.id === newStudent.id);
         if (index !== -1) students[index] = newStudent;
     } else {
         students.push(newStudent);
     }
-    console.log(`After local update: Total students = ${students.length}, isEdit = ${isEdit}`);
-    
-    let localSaveResult;
-    try {
-        localSaveResult = saveStudentsWithLocalFallback(students, newStudent);
-        students = localSaveResult.students;
-        console.log(`LocalStorage save successful. Total students in storage = ${students.length}`);
-    } catch (error) {
-        await showAppAlert(error.message || 'Student could not be saved in the browser.', 'Save Failed');
-        return;
-    }
-    renderStudents();
-
-    if (localSaveResult.strippedProfileImage) {
-        await showAppAlert(
-            'Student saved, but the profile image was too large for browser storage, so it was skipped. Use a smaller image if you need to attach it.',
-            'Student Saved'
-        );
-    }
-
-    const syncResult = await syncToSQLDetailed('students', [localSaveResult.student]);
-    console.log('Student sync result:', syncResult);
-    
-    if (syncResult.success) {
-        try {
-            students = await refreshStudentsFromSQL();
-            console.log(`Students refreshed from SQL. Total: ${students.length}`);
-            
-            // Verify the new student is in the list
-            const savedStudent = students.find(s => s.id === newStudent.id);
-            if (!savedStudent) {
-                console.warn(`Warning: Saved student with ID ${newStudent.id} not found in refreshed list`);
-            } else {
-                console.log(`Verified: Student ${newStudent.id} is in the refreshed list`);
-            }
-        } catch (error) {
-            console.error('Student refresh failed:', error.message);
-            await showAppAlert(
-                'Student was saved but could not refresh the list from the database. Please refresh the page to see the new student.',
-                'Partial Success'
-            );
-        }
-    } else {
-        console.error('Student sync to database failed:', syncResult.error);
-        await showAppAlert(
-            syncResult.error || 'The student was saved locally, but database sync failed. Check login and server connection.',
-            'Student Saved Locally'
-        );
-        renderStudents();
-        // Keep the form open on sync failure
-        return;
-    }
+    saveData(STORAGE_KEY_STUDENTS, students);
 
     pushNotification('Student Updated', `Account for "${newStudent.fullName}" saved and activated.`, 'user');
     toggleStudentForm();
+    populateQuickStudentFilters();
     renderStudents();
-    if (usernameInput && studentPasswordInput) {
-        showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
-    } else {
-        showSuccessModal('Student Registered!', `The record for ${newStudent.fullName} is saved without login credentials.`);
-    }
+    showSuccessModal('Student Registered!', `The account for ${newStudent.fullName} is now active. They can log in using username: ${usernameInput}`);
 }
 
 function decodeRowPayload(encodedPayload) {
@@ -4912,6 +4832,10 @@ function populateStudentQuickFilterOptions() {
     buildStudentQuickFilterMultiMenu(needsRebuild);
 }
 
+function populateQuickStudentFilters() {
+    populateStudentQuickFilterOptions();
+}
+
 async function loadStudentQuickFilterBranchCampuses() {
     try {
         const response = await fetch(`${API_BASE_URL}/branches`);
@@ -5015,8 +4939,6 @@ function toggleTeacherForm(editMode = false) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('teacherId').value = '';
-        if (document.getElementById('tProfileImage')) document.getElementById('tProfileImage').value = '';
-        setTeacherPhotoPreview('', '');
     } else {
         container.style.display = 'block';
         // Reset Panels
@@ -5028,8 +4950,6 @@ function toggleTeacherForm(editMode = false) {
             document.getElementById('teacherId').value = '';
             const teacherCodeField = document.getElementById('teacherCode');
             if (teacherCodeField) teacherCodeField.value = generateEntityCode(STORAGE_KEY_TEACHERS, 'TCH');
-            if (document.getElementById('tProfileImage')) document.getElementById('tProfileImage').value = '';
-            setTeacherPhotoPreview('', '');
             title.innerText = 'Add New Teacher';
         } else {
             title.innerText = 'Edit Teacher Details';
@@ -5162,18 +5082,13 @@ async function handleTeacherFormSubmit(e) {
     const teacherEmailInput = document.getElementById('tEmail') ? document.getElementById('tEmail').value.trim() : '';
 
     // Validation
-    const requiredFieldError = validateTeacherRequiredFields();
-    if (requiredFieldError) {
-        await showAppAlert(requiredFieldError, 'Missing Teacher Detail');
-        return;
-    }
     if (!usernameInput || !tPasswordInput) {
-        await showAppAlert('Please create login credentials for the teacher.', 'Missing Login');
+        alert('Please create login credentials for the teacher.');
         if (!document.getElementById('credPanel').classList.contains('active')) toggleStepPanel('credPanel');
         return;
     }
     if (!salaryValInput || salaryValInput === '0') {
-        await showAppAlert('Please set the teacher salary.', 'Missing Salary');
+        alert('Please set the teacher salary.');
         if (!document.getElementById('salaryPanel').classList.contains('active')) toggleStepPanel('salaryPanel');
         return;
     }
@@ -5185,11 +5100,11 @@ async function handleTeacherFormSubmit(e) {
     });
 
     if (teacherIdentityError) {
-        await showAppAlert(teacherIdentityError, 'Duplicate Login');
+        alert(teacherIdentityError);
         return;
     }
 
-    let teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const teachers = getData(STORAGE_KEY_TEACHERS);
     const existingTeacher = isEdit ? teachers.find(t => t.id === idField.value) : null;
 
     let idCardFront = existingTeacher?.idCardFront || null;
@@ -5198,19 +5113,13 @@ async function handleTeacherFormSubmit(e) {
     let profileImage = existingTeacher?.profileImage || '';
 
     try {
-        profileImage = await readImageInputDataUrl('tProfileImage', profileImage);
         idCardFront = await getOptionalFilePayload('tIdCardFront', idCardFront);
         idCardBack = await getOptionalFilePayload('tIdCardBack', idCardBack);
         cvFile = await getOptionalFilePayload('tCvFile', cvFile);
     } catch (error) {
-        await showAppAlert(error.message, 'File Upload Error');
+        alert(error.message);
         return;
     }
-
-    const normalizedTeacherDesignation = normalizeTeacherDesignation(
-        document.getElementById('tDesignation')?.value || 'Teacher',
-        getDesignationGroup('tDesignation', 'teacher')
-    );
 
     const newTeacher = {
         id: isEdit ? idField.value : generateUniqueRecordId('TCH'),
@@ -5226,8 +5135,8 @@ async function handleTeacherFormSubmit(e) {
         qualification: document.getElementById('tQualification').value,
         campusName: document.getElementById('tCampusName').value,
         gender: document.getElementById('tGender').value,
-        designation: normalizedTeacherDesignation.designation,
-        groupKey: normalizedTeacherDesignation.groupKey,
+        designation: document.getElementById('tDesignation')?.value || 'Teacher',
+        groupKey: getDesignationGroup('tDesignation', 'teacher'),
         subject: document.getElementById('tSubject').value,
         salary: salaryValInput,
         username: usernameInput,
@@ -5251,48 +5160,17 @@ async function handleTeacherFormSubmit(e) {
         teachers.push(newTeacher);
     }
 
-    let localSaveResult;
-    try {
-        localSaveResult = saveTeachersWithLocalFallback(teachers, newTeacher);
-    } catch (error) {
-        await showAppAlert(error.message || 'Teacher could not be saved in the browser.', 'Save Failed');
-        return;
-    }
+    saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+    const teacherSyncResult = await syncToSQLDetailed('teachers', [newTeacher]);
 
-    if (localSaveResult.strippedDocuments) {
-        teachers = localSaveResult.teachers;
-        await showAppAlert(
-            localSaveResult.strippedProfileImage
-                ? 'Teacher saved, but uploaded files were too large for browser storage, so documents and profile images were skipped. Use smaller files if you need to attach them.'
-                : 'Teacher saved, but uploaded ID/CV files were too large for browser storage, so documents were skipped. Use smaller files if you need to attach them.',
-            'Teacher Saved'
-        );
+    if (!teacherSyncResult.success) {
+        alert(teacherSyncResult.error || 'The teacher was saved to local storage, but database sync failed. Check the server and MySQL connection.');
     }
 
     pushNotification('Staff Updated', `Teacher account for "${newTeacher.fullName}" saved and activated.`, 'book');
     toggleTeacherForm();
-    if (!isEdit) clearTeacherListFilters();
     renderTeachers();
-    showSuccessModal(
-        isEdit ? 'Teacher Updated!' : 'Teacher Successfully Added!',
-        isEdit
-            ? `${newTeacher.fullName}'s teacher record has been updated successfully.`
-            : `${newTeacher.fullName} has been added successfully.`
-    );
-
-    syncToSQLDetailed('teachers', [localSaveResult.teacher]).then((teacherSyncResult) => {
-        if (!teacherSyncResult.success) {
-            console.warn('Teacher SQL sync failed:', teacherSyncResult.error);
-            showAppAlert(
-                teacherSyncResult.error || 'The teacher was saved locally, but database sync failed. Check the server and MySQL connection.',
-                'Teacher Saved Locally'
-            );
-            return;
-        }
-        return refreshTeachersFromSQL().then(() => renderTeachers());
-    }).catch((error) => {
-        console.warn('Teacher list refresh failed:', error.message);
-    });
+    showSuccessModal('Teacher Registered!', `Professor ${newTeacher.fullName}'s account is active. They can now access their portal.`);
 }
 
 function getTeacherScheduleSummary(teacher) {
@@ -5816,17 +5694,7 @@ async function handleStaffFormSubmit(e) {
     } else {
         staff.push(newStaff);
     }
-    saveData(STORAGE_KEY_STAFF, staff, { skipSync: true });
-    const staffSyncResult = await syncToSQLDetailed('staff', [newStaff]);
-    if (!staffSyncResult.success) {
-        alert(staffSyncResult.error || 'The staff record was saved to local storage, but database sync failed. Check the server and MySQL connection.');
-    } else {
-        try {
-            await refreshStaffFromSQL();
-        } catch (error) {
-            console.warn('Staff list refresh failed:', error.message);
-        }
-    }
+    saveData(STORAGE_KEY_STAFF, staff);
     pushNotification('Staff Updated', `Staff record for "${newStaff.fullName}" was added/updated.`, 'user');
     toggleStaffForm();
     renderStaff();
