@@ -1,5 +1,6 @@
 const { createHandler, sendJson } = require('../_lib/http');
 const { getDb } = require('../_lib/db');
+const { sendSpecialNoticeStudentEmails } = require('../_lib/student-emails');
 
 function normalizeNoticeTargets(targetPortals) {
     const allowedTargets = new Set(['student', 'teacher', 'staff']);
@@ -71,11 +72,18 @@ module.exports = createHandler({
         const records = await db.models.SpecialNotice.findAll({
             order: [['updatedAt', 'DESC']]
         });
+        let emailResult = null;
+        try {
+            emailResult = await sendSpecialNoticeStudentEmails(db, formatSpecialNotice(notice));
+        } catch (error) {
+            emailResult = { success: false, message: error.message || 'Student notice email could not be sent.' };
+        }
 
         sendJson(res, 200, {
             success: true,
             notice: formatSpecialNotice(notice),
-            notices: records.map(formatSpecialNotice)
+            notices: records.map(formatSpecialNotice),
+            emailResult
         });
     }
 }, { getDb });

@@ -13,6 +13,7 @@ module.exports = createHandler({
             session,
             amount,
             fullAmount,
+            fineAmount,
             challanNumber
         } = body || {};
 
@@ -34,6 +35,7 @@ module.exports = createHandler({
             session: session || '',
             amount: Number(amount || 0),
             fullAmount: Number(fullAmount || amount || 0),
+            fineAmount: Number(fineAmount || 0),
             challanNumber
         });
 

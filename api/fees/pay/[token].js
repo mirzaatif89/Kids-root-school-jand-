@@ -2,6 +2,7 @@ const { createHandler, sendHtml } = require('../../_lib/http');
 const { getDb } = require('../../_lib/db');
 const { JWT_SECRET, jwt, renderFeePaymentPage } = require('../../_lib/services');
 const { sendFeePaymentConfirmationEmail } = require('../../_lib/fee-reminders');
+const { sendFineAppliedEmail } = require('../../_lib/student-emails');
 
 module.exports = createHandler({
     GET: async ({ req, res, db }) => {
@@ -108,6 +109,23 @@ module.exports = createHandler({
             }, {
                 where: { id: payload.studentId }
             });
+        }
+
+        if (!alreadyRecorded && Number(payload.fineAmount || 0) > 0) {
+            try {
+                await sendFineAppliedEmail(db, {
+                    studentId: payload.studentId,
+                    studentName: payload.studentName || student.fullName || '',
+                    rollNo: payload.rollNo || student.rollNo || '',
+                    classGrade: payload.classGrade || student.classGrade || '',
+                    feeMonth: feeMonthRecorded,
+                    fullAmount,
+                    fineAmount: Number(payload.fineAmount || 0),
+                    challanNumber: payload.challanNumber
+                });
+            } catch (error) {
+                console.warn(`Fine email skipped for ${payload.studentId}: ${error.message || error}`);
+            }
         }
 
         if (!alreadyRecorded && resolvedStatus === 'Paid') {

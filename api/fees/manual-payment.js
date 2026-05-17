@@ -1,6 +1,7 @@
 const { createHandler, sendJson } = require('../_lib/http');
 const { getDb } = require('../_lib/db');
 const { sendFeePaymentConfirmationEmail } = require('../_lib/fee-reminders');
+const { sendFineAppliedEmail } = require('../_lib/student-emails');
 
 module.exports = createHandler({
     POST: async ({ req, res, body, db }) => {
@@ -14,6 +15,7 @@ module.exports = createHandler({
             session,
             amount,
             fullAmount,
+            fineAmount,
             challanNumber
         } = body || {};
 
@@ -106,6 +108,24 @@ module.exports = createHandler({
         }
 
         let emailResult = null;
+        let fineEmailResult = null;
+        if (!alreadyRecorded && Number(fineAmount || 0) > 0) {
+            try {
+                fineEmailResult = await sendFineAppliedEmail(db, {
+                    studentId,
+                    studentName: studentName || student.fullName || '',
+                    rollNo: rollNo || student.rollNo || '',
+                    classGrade: classGrade || student.classGrade || '',
+                    feeMonth: feeMonthRecorded,
+                    fullAmount: safeFullAmount,
+                    fineAmount: Number(fineAmount || 0),
+                    challanNumber: safeChallanNumber
+                });
+            } catch (error) {
+                fineEmailResult = { success: false, message: error.message || 'Fine email could not be sent.' };
+            }
+        }
+
         if (!alreadyRecorded && resolvedStatus === 'Paid') {
             try {
                 emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
@@ -114,6 +134,6 @@ module.exports = createHandler({
             }
         }
 
-        sendJson(res, 200, { success: true, payment: paymentRow, alreadyRecorded, emailResult });
+        sendJson(res, 200, { success: true, payment: paymentRow, alreadyRecorded, emailResult, fineEmailResult });
     }
 }, { getDb });

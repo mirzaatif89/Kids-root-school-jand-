@@ -2533,6 +2533,7 @@
                         session: data.session,
                         amount: data.payNowAmount,
                         fullAmount: data.totalDue,
+                        fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     })
                 });
@@ -2967,6 +2968,7 @@
                         session: data.session,
                         amount: data.payNowAmount,
                         fullAmount: data.totalDue,
+                        fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     })
                 });
@@ -3024,6 +3026,7 @@
                     session: payload.session,
                     amount: payload.payNowAmount ?? payload.totalDue ?? payload.amount,
                     fullAmount: payload.totalDue ?? payload.fullAmount ?? payload.amount,
+                    fineAmount: payload.fineAmount ?? 0,
                     challanNumber: payload.challanNumber
                 })
             });
@@ -3546,6 +3549,7 @@
                             session: data.session,
                             amount: data.totalDue,
                             fullAmount: data.totalDue,
+                            fineAmount: data.fineAmount,
                             challanNumber: data.challanNumber
                         });
                     }
@@ -3797,6 +3801,7 @@
                         session: data.session,
                         amount: data.totalDue,
                         fullAmount: data.totalDue,
+                        fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     });
                 }
@@ -4045,6 +4050,7 @@
                             session: data.session,
                             amount: data.totalDue,
                             fullAmount: data.totalDue,
+                            fineAmount: data.fineAmount,
                             challanNumber: data.challanNumber
                         });
                     }

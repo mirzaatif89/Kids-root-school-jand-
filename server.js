@@ -12,8 +12,15 @@ const QRCode = require('qrcode');
 const { getSmtpConfig, sendSmtpEmail } = require('./api/_lib/mailer');
 const {
     sendFeePaymentConfirmationEmail,
-    sendPendingFeeReminderEmails
+    sendPendingFeeReminderEmails,
+    startPendingFeeReminderScheduler
 } = require('./api/_lib/fee-reminders');
+const {
+    sendBirthdayStudentEmails,
+    sendSpecialNoticeStudentEmails,
+    sendFineAppliedEmail,
+    startStudentEmailNotificationScheduler
+} = require('./api/_lib/student-emails');
 
 require('dotenv').config();
 
@@ -1277,8 +1284,14 @@ app.post('/api/special-notices', async (req, res) => {
             order: [['updatedAt', 'DESC']]
         });
         const notices = records.map(formatSpecialNotice);
+        let emailResult = null;
+        try {
+            emailResult = await sendSpecialNoticeStudentEmails(sequelize, formatSpecialNotice(notice));
+        } catch (error) {
+            emailResult = { success: false, message: error.message || 'Student notice email could not be sent.' };
+        }
         io.emit('special_notices_update', notices);
-        res.json({ success: true, notice: formatSpecialNotice(notice), notices });
+        res.json({ success: true, notice: formatSpecialNotice(notice), notices, emailResult });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -1816,6 +1829,7 @@ app.post('/api/fees/challan-token', async (req, res) => {
             session,
             amount,
             fullAmount,
+            fineAmount,
             challanNumber
         } = req.body || {};
 
@@ -1833,6 +1847,7 @@ app.post('/api/fees/challan-token', async (req, res) => {
             session: session || '',
             amount: Number(amount || 0),
             fullAmount: Number(fullAmount || amount || 0),
+            fineAmount: Number(fineAmount || 0),
             challanNumber
         }, JWT_SECRET, { expiresIn: '120d' });
 
@@ -1907,6 +1922,7 @@ app.post('/api/fees/challan-tokens', async (req, res) => {
                 session: item?.session || '',
                 amount: Number(item?.amount || 0),
                 fullAmount: Number(item?.fullAmount || item?.amount || 0),
+                fineAmount: Number(item?.fineAmount || 0),
                 challanNumber
             }, JWT_SECRET, { expiresIn: '120d' });
 
@@ -1943,6 +1959,7 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             session,
             amount,
             fullAmount,
+            fineAmount,
             challanNumber
         } = req.body || {};
 
@@ -2037,6 +2054,24 @@ app.post('/api/fees/manual-payment', async (req, res) => {
         }
 
         let emailResult = null;
+        let fineEmailResult = null;
+        if (!alreadyRecorded && Number(fineAmount || 0) > 0) {
+            try {
+                fineEmailResult = await sendFineAppliedEmail(sequelize, {
+                    studentId,
+                    studentName: studentName || student.fullName || '',
+                    rollNo: rollNo || student.rollNo || '',
+                    classGrade: classGrade || student.classGrade || '',
+                    feeMonth: feeMonthRecorded,
+                    fullAmount: safeFullAmount,
+                    fineAmount: Number(fineAmount || 0),
+                    challanNumber: safeChallanNumber
+                });
+            } catch (error) {
+                fineEmailResult = { success: false, message: error.message || 'Fine email could not be sent.' };
+            }
+        }
+
         if (!alreadyRecorded && resolvedStatus === 'Paid') {
             try {
                 emailResult = await sendFeePaymentConfirmationEmail(student, paymentRow, remainingDue);
@@ -2049,7 +2084,7 @@ app.post('/api/fees/manual-payment', async (req, res) => {
         io.emit('students_update', allStudents);
         io.emit('fee_payment_update', { payment: paymentRow });
 
-        return res.json({ success: true, payment: paymentRow, alreadyRecorded, emailResult });
+        return res.json({ success: true, payment: paymentRow, alreadyRecorded, emailResult, fineEmailResult });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'Manual payment failed.' });
     }
@@ -2289,6 +2324,23 @@ app.get('/api/fees/pay/:token', async (req, res) => {
             }, {
                 where: { id: payload.studentId }
             });
+        }
+
+        if (!alreadyRecorded && Number(payload.fineAmount || 0) > 0) {
+            try {
+                await sendFineAppliedEmail(sequelize, {
+                    studentId: payload.studentId,
+                    studentName: payload.studentName || student.fullName || '',
+                    rollNo: payload.rollNo || student.rollNo || '',
+                    classGrade: payload.classGrade || student.classGrade || '',
+                    feeMonth: feeMonthRecorded,
+                    fullAmount,
+                    fineAmount: Number(payload.fineAmount || 0),
+                    challanNumber: payload.challanNumber
+                });
+            } catch (error) {
+                console.warn(`Fine email skipped for ${payload.studentId}: ${error.message || error}`);
+            }
         }
 
         if (!alreadyRecorded && resolvedStatus === 'Paid') {
@@ -2620,6 +2672,28 @@ app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res)
         return res.status(error.statusCode || 500).json({
             success: false,
             message: error.message || 'Pending fee reminders could not be sent.'
+        });
+    }
+});
+
+app.post('/api/email/send-birthday-greetings', authenticateToken, async (req, res) => {
+    if (!sequelize) {
+        return res.status(503).json({ success: false, message: 'Database offline' });
+    }
+
+    try {
+        const result = await sendBirthdayStudentEmails(sequelize, {
+            force: req.body?.force === true
+        });
+        return res.json({
+            success: true,
+            message: `Birthday emails sent: ${result.sent}.`,
+            ...result
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            message: error.message || 'Birthday emails could not be sent.'
         });
     }
 });
@@ -3206,6 +3280,8 @@ async function startServer() {
         await ensureLegacySchema();
         await syncAuthUsers();
         console.log('✅ Database synced successfully');
+        startPendingFeeReminderScheduler(() => Promise.resolve(sequelize), console);
+        startStudentEmailNotificationScheduler(() => Promise.resolve(sequelize), console);
 
         isInitialized = true;
     } catch (err) {
