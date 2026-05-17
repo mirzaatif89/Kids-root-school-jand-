@@ -3647,7 +3647,40 @@ async function handleStudentFormSubmit(e) {
     } else {
         students.push(newStudent);
     }
-    saveData(STORAGE_KEY_STUDENTS, students);
+
+    let localSaveResult;
+    try {
+        localSaveResult = saveStudentsWithLocalFallback(students, newStudent);
+        students = localSaveResult.students;
+    } catch (error) {
+        await showAppAlert(error.message || 'Student could not be saved in the browser.', 'Save Failed');
+        return;
+    }
+
+    renderStudents();
+
+    if (localSaveResult.strippedProfileImage) {
+        await showAppAlert(
+            'Student saved, but the profile image was too large for browser storage, so it was skipped. Use a smaller image if you need to attach it.',
+            'Student Saved'
+        );
+    }
+
+    const syncResult = await syncToSQLDetailed('students', [localSaveResult.student]);
+    if (!syncResult.success) {
+        await showAppAlert(
+            syncResult.error || 'The student was saved locally, but database sync failed. Check the server and MySQL connection.',
+            'Student Saved Locally'
+        );
+        renderStudents();
+        return;
+    }
+
+    try {
+        await refreshStudentsFromSQL();
+    } catch (error) {
+        console.warn('Student list refresh failed:', error.message);
+    }
 
     pushNotification('Student Updated', `Account for "${newStudent.fullName}" saved and activated.`, 'user');
     toggleStudentForm();
