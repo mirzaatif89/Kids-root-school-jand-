@@ -553,6 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureBannersNav();
     ensureSchedulingNav();
     ensureAdminRecordsNav();
+    ensureFacilityNav();
     ensureAttendanceNav();
     ensureNotificationsNav();
     ensureSpecialNoticesNav();
@@ -2338,6 +2339,47 @@ function ensureStudentRecordsNav() {
     wrapper.appendChild(toggle);
     wrapper.appendChild(submenu);
     studentsLink.insertAdjacentElement('afterend', wrapper);
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureFacilityNav() {
+    const navLinks = document.querySelector('.nav-links');
+    if (!navLinks) return;
+    if (navLinks.querySelector('[data-facility-nav-link]')) return;
+
+    const currentPage = getCurrentPageName();
+    const facilityLinks = [
+        { page: 'library.html', label: 'Library', icon: 'library' },
+        { page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
+        { page: 'transport.html', label: 'Transport', icon: 'bus' }
+    ];
+    const fragment = document.createDocumentFragment();
+
+    facilityLinks.forEach((item) => {
+        if (Array.from(navLinks.querySelectorAll('a[href]'))
+            .some((link) => normalizeClientPageName(link.getAttribute('href') || '') === item.page)) {
+            return;
+        }
+        const link = document.createElement('a');
+        link.href = toRoutePath(item.page);
+        link.className = `nav-item${currentPage === item.page ? ' active' : ''}`;
+        link.dataset.facilityNavLink = 'true';
+        link.innerHTML = `<i data-lucide="${item.icon}"></i><span>${item.label}</span>`;
+        fragment.appendChild(link);
+    });
+
+    const feeChallanLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'fee_challan.html');
+    const feesLink = Array.from(navLinks.querySelectorAll('a[href]'))
+        .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'fees.html');
+    const insertAfter = feeChallanLink || feesLink;
+
+    if (insertAfter) {
+        insertAfter.parentNode.insertBefore(fragment, insertAfter.nextSibling);
+    } else {
+        navLinks.appendChild(fragment);
+    }
 
     if (window.lucide) window.lucide.createIcons();
 }
