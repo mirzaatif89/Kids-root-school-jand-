@@ -35,6 +35,10 @@
             gap: 1rem;
         }
 
+        .settings-grid[hidden] {
+            display: none;
+        }
+
         .settings-grid .input-group {
             margin-bottom: 0;
         }
@@ -52,6 +56,26 @@
             color: var(--text-secondary);
             font-size: 0.84rem;
             line-height: 1.5;
+        }
+
+        .settings-hint.success {
+            color: #047857;
+            font-weight: 600;
+        }
+
+        .settings-hint.error {
+            color: #b91c1c;
+            font-weight: 600;
+        }
+
+        .password-change-panel {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .password-change-panel[hidden] {
+            display: none;
         }
 
         @media (max-width: 720px) {
@@ -172,22 +196,42 @@
                                 <label for="adminUsernameSetting">Admin Username</label>
                                 <input type="text" id="adminUsernameSetting" placeholder="admin">
                             </div>
-                            <div class="input-group">
-                                <label for="adminNewPasswordSetting">New Password</label>
-                                <input type="password" id="adminNewPasswordSetting" placeholder="Leave blank to keep old password">
-                            </div>
-                            <div class="input-group">
-                                <label for="adminOtpSetting">Email OTP</label>
-                                <input type="text" id="adminOtpSetting" inputmode="numeric" maxlength="6" placeholder="6 digit OTP">
-                            </div>
                             <div class="input-group" style="align-self:end;">
                                 <button type="button" class="btn btn-outline" id="sendAdminOtpBtn" style="width:100%;">
-                                    <i data-lucide="mail"></i> Send OTP
+                                    <i data-lucide="key-round"></i> Change Password
                                 </button>
                             </div>
                         </div>
+                        <div class="password-change-panel" id="adminPasswordChangePanel" hidden>
+                            <div class="settings-grid" id="adminOtpStep">
+                                <div class="input-group">
+                                    <label for="adminOtpSetting">Email OTP</label>
+                                    <input type="text" id="adminOtpSetting" inputmode="numeric" maxlength="6" placeholder="6 digit OTP">
+                                </div>
+                                <div class="input-group" style="align-self:end;">
+                                    <button type="button" class="btn btn-primary" id="verifyAdminOtpBtn" style="width:100%;">
+                                        Verify OTP
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="settings-grid" id="adminPasswordStep" hidden>
+                                <div class="input-group">
+                                    <label for="adminNewPasswordSetting">New Password</label>
+                                    <input type="password" id="adminNewPasswordSetting" autocomplete="new-password" placeholder="New password">
+                                </div>
+                                <div class="input-group">
+                                    <label for="adminConfirmPasswordSetting">Confirm Password</label>
+                                    <input type="password" id="adminConfirmPasswordSetting" autocomplete="new-password" placeholder="Confirm new password">
+                                </div>
+                                <div class="input-group" style="align-self:end;">
+                                    <button type="button" class="btn btn-primary" id="saveAdminPasswordBtn" style="width:100%;">
+                                        Save New Password
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <p class="settings-hint" id="adminOtpHint">
-                            Password change requires OTP on admin recovery email.
+                            Click Change Password to send OTP on admin recovery email.
                         </p>
                     </div>
 

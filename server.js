@@ -771,6 +771,51 @@ function writeAdminCredentials(data = {}) {
     return next;
 }
 
+async function readAdminCredentialsFromStore() {
+    const defaults = readAdminCredentials();
+    if (!sequelize?.models?.AppSetting) return defaults;
+
+    const row = await sequelize.models.AppSetting.findByPk('admin_credentials');
+    if (!row?.settingValue) return defaults;
+
+    try {
+        const parsed = JSON.parse(row.settingValue);
+        const username = String(parsed?.username || '').trim();
+        const password = String(parsed?.password || '');
+        return username && password ? { username, password } : defaults;
+    } catch (_error) {
+        return defaults;
+    }
+}
+
+async function writeAdminCredentialsToStore(data = {}) {
+    const username = String(data.username || '').trim();
+    const password = String(data.password || '');
+
+    if (!username) {
+        const error = new Error('Admin username is required.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    if (!password) {
+        const error = new Error('Admin password is required.');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const next = { username, password };
+    if (sequelize?.models?.AppSetting) {
+        await sequelize.models.AppSetting.upsert({
+            settingKey: 'admin_credentials',
+            settingValue: JSON.stringify(next)
+        });
+    }
+
+    writeAdminCredentials(next);
+    return next;
+}
+
 function getAdminRecoveryEmail() {
     return String(process.env.ADMIN_RECOVERY_EMAIL || process.env.SMTP_USER || process.env.SMTP_FROM_EMAIL || 'softwaredemo17@gmail.com').trim();
 }
@@ -802,6 +847,11 @@ async function saveAdminOtp(purpose, otp) {
 }
 
 async function verifyAdminOtp(purpose, otp) {
+    await checkAdminOtp(purpose, otp);
+    await sequelize.models.AppSetting.destroy({ where: { settingKey: `admin_otp:${purpose}` } });
+}
+
+async function checkAdminOtp(purpose, otp) {
     const code = String(otp || '').trim();
     if (!code) {
         const error = new Error('OTP is required.');
@@ -822,8 +872,6 @@ async function verifyAdminOtp(purpose, otp) {
         error.statusCode = 400;
         throw error;
     }
-
-    await sequelize.models.AppSetting.destroy({ where: { settingKey: `admin_otp:${purpose}` } });
 }
 
 async function sendAdminOtpEmail(purpose) {
@@ -966,13 +1014,23 @@ app.post('/api/designation-permissions', authenticateToken, (req, res) => {
     }
 });
 
-app.get('/api/admin-credentials', (req, res) => {
+app.get('/api/admin-credentials', async (req, res) => {
     try {
         verifyAdminAccessToken(req);
-        const credentials = readAdminCredentials();
+        const credentials = await readAdminCredentialsFromStore();
         res.json({ success: true, credentials: { username: credentials.username }, recoveryEmail: maskEmail(getAdminRecoveryEmail()) });
     } catch (error) {
         res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Failed to load admin credentials.' });
+    }
+});
+
+app.post('/api/admin-credentials/verify-otp', async (req, res) => {
+    try {
+        verifyAdminAccessToken(req);
+        await checkAdminOtp('change-password', req.body?.otp);
+        res.json({ success: true, message: 'OTP verified. Enter your new password.' });
+    } catch (error) {
+        res.status(error.statusCode || 500).json({ success: false, message: error.message || 'OTP could not be verified.' });
     }
 });
 
@@ -989,13 +1047,20 @@ app.post('/api/admin-credentials/request-otp', async (req, res) => {
 app.post('/api/admin-credentials', async (req, res) => {
     try {
         verifyAdminAccessToken(req);
-        const current = readAdminCredentials();
+        const current = await readAdminCredentialsFromStore();
         const nextUsername = String(req.body?.username || '').trim();
         const nextPassword = String(req.body?.password || '').trim();
+        const confirmPassword = String(req.body?.confirmPassword || '').trim();
         if (nextPassword) {
+            if (nextPassword.length < 6) {
+                return res.status(400).json({ success: false, message: 'New password must be at least 6 characters.' });
+            }
+            if (nextPassword !== confirmPassword) {
+                return res.status(400).json({ success: false, message: 'New password and confirm password do not match.' });
+            }
             await verifyAdminOtp('change-password', req.body?.otp);
         }
-        const saved = writeAdminCredentials({
+        const saved = await writeAdminCredentialsToStore({
             username: nextUsername || current.username,
             password: nextPassword || current.password
         });
@@ -1007,7 +1072,7 @@ app.post('/api/admin-credentials', async (req, res) => {
 
 app.post('/api/admin-password/forgot/request-otp', async (req, res) => {
     try {
-        const current = readAdminCredentials();
+        const current = await readAdminCredentialsFromStore();
         const username = String(req.body?.username || '').trim();
         if (username && username !== current.username) {
             return res.json({ success: true, message: 'If the admin account exists, an OTP has been sent.' });
@@ -1022,7 +1087,7 @@ app.post('/api/admin-password/forgot/request-otp', async (req, res) => {
 
 app.post('/api/admin-password/forgot/reset', async (req, res) => {
     try {
-        const current = readAdminCredentials();
+        const current = await readAdminCredentialsFromStore();
         const username = String(req.body?.username || '').trim() || current.username;
         const password = String(req.body?.password || '').trim();
 
@@ -1035,7 +1100,7 @@ app.post('/api/admin-password/forgot/reset', async (req, res) => {
         }
 
         await verifyAdminOtp('forgot-password', req.body?.otp);
-        writeAdminCredentials({ username: current.username, password });
+        await writeAdminCredentialsToStore({ username: current.username, password });
         res.json({ success: true, message: 'Admin password updated successfully.' });
     } catch (error) {
         res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Password could not be reset.' });
@@ -1104,7 +1169,7 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        const adminCredentials = readAdminCredentials();
+        const adminCredentials = await readAdminCredentialsFromStore();
         const adminUsername = adminCredentials.username;
         const adminPass = adminCredentials.password;
 

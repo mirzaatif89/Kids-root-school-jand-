@@ -4,7 +4,7 @@
   "description": "Real-time SQL Backend for School Management System",
   "main": "app.js",
   "scripts": {
-    "start": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File ./start-3000.ps1",
+    "start": "node app.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {

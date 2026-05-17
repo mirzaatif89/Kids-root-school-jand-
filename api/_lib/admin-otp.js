@@ -101,6 +101,11 @@ async function saveOtp(db, purpose, otp) {
 }
 
 async function verifyOtp(db, purpose, otp) {
+    await checkOtp(db, purpose, otp);
+    await db.models.AppSetting.destroy({ where: { settingKey: `admin_otp:${purpose}` } });
+}
+
+async function checkOtp(db, purpose, otp) {
     const code = String(otp || '').trim();
     if (!code) {
         const error = new Error('OTP is required.');
@@ -121,8 +126,6 @@ async function verifyOtp(db, purpose, otp) {
         error.statusCode = 400;
         throw error;
     }
-
-    await db.models.AppSetting.destroy({ where: { settingKey: `admin_otp:${purpose}` } });
 }
 
 async function sendAdminOtpEmail(db, purpose) {
@@ -161,5 +164,6 @@ module.exports = {
     getAdminRecoveryEmail,
     maskEmail,
     sendAdminOtpEmail,
-    verifyOtp
+    verifyOtp,
+    checkOtp
 };

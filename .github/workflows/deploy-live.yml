@@ -1,6 +1,9 @@
 name: Auto Deploy Live (cPanel SSH)
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:

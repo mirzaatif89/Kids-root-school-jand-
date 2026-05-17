@@ -6298,6 +6298,7 @@ async function loadAdminCredentialSettings() {
     const usernameInput = document.getElementById('adminUsernameSetting');
     const hint = document.getElementById('adminOtpHint');
     if (!usernameInput) return;
+    resetAdminPasswordChangeFlow(false);
 
     const token = sessionStorage.getItem('eduCore_token') || '';
     if (!token) return;
@@ -6311,10 +6312,10 @@ async function loadAdminCredentialSettings() {
         usernameInput.value = result?.credentials?.username || 'admin';
         usernameInput.dataset.originalValue = usernameInput.value;
         if (hint && result?.recoveryEmail) {
-            hint.textContent = `Password change OTP will be sent to ${result.recoveryEmail}.`;
+            setAdminPasswordStatus(`Click Change Password to send OTP to ${result.recoveryEmail}.`);
         }
     } catch (error) {
-        if (hint) hint.textContent = error.message || 'Admin credentials could not be loaded.';
+        setAdminPasswordStatus(error.message || 'Admin credentials could not be loaded.', 'error');
     }
 
     const sendBtn = document.getElementById('sendAdminOtpBtn');
@@ -6322,18 +6323,73 @@ async function loadAdminCredentialSettings() {
         sendBtn.dataset.bound = 'true';
         sendBtn.addEventListener('click', sendAdminCredentialOtp);
     }
+
+    const verifyBtn = document.getElementById('verifyAdminOtpBtn');
+    if (verifyBtn && !verifyBtn.dataset.bound) {
+        verifyBtn.dataset.bound = 'true';
+        verifyBtn.addEventListener('click', verifyAdminCredentialOtp);
+    }
+
+    const savePasswordBtn = document.getElementById('saveAdminPasswordBtn');
+    if (savePasswordBtn && !savePasswordBtn.dataset.bound) {
+        savePasswordBtn.dataset.bound = 'true';
+        savePasswordBtn.addEventListener('click', saveVerifiedAdminPassword);
+    }
+}
+
+function setAdminPasswordStatus(message, type = '') {
+    const hint = document.getElementById('adminOtpHint');
+    if (!hint) return;
+    hint.textContent = message || '';
+    hint.classList.remove('success', 'error');
+    if (type) hint.classList.add(type);
+}
+
+function resetAdminPasswordChangeFlow(hidePanel = true) {
+    const panel = document.getElementById('adminPasswordChangePanel');
+    const otpStep = document.getElementById('adminOtpStep');
+    const passwordStep = document.getElementById('adminPasswordStep');
+    const otpInput = document.getElementById('adminOtpSetting');
+    const passwordInput = document.getElementById('adminNewPasswordSetting');
+    const confirmPasswordInput = document.getElementById('adminConfirmPasswordSetting');
+
+    if (panel) panel.hidden = hidePanel;
+    if (otpStep) otpStep.hidden = false;
+    if (passwordStep) passwordStep.hidden = true;
+    if (otpInput) {
+        otpInput.value = '';
+        otpInput.dataset.verified = '';
+    }
+    if (passwordInput) passwordInput.value = '';
+    if (confirmPasswordInput) confirmPasswordInput.value = '';
+}
+
+function normalizeAdminOtpError(error) {
+    const message = String(error?.message || '').trim();
+    if (/route not found|Cannot POST|404/i.test(message)) {
+        return 'OTP verification route is not active. Please restart/deploy the server once.';
+    }
+    if (/invalid|expired|wrong/i.test(message)) {
+        return 'Wrong OTP. Please enter the correct email OTP.';
+    }
+    return message || 'OTP could not be verified.';
 }
 
 async function sendAdminCredentialOtp() {
     const sendBtn = document.getElementById('sendAdminOtpBtn');
-    const hint = document.getElementById('adminOtpHint');
+    const panel = document.getElementById('adminPasswordChangePanel');
+    const otpStep = document.getElementById('adminOtpStep');
+    const passwordStep = document.getElementById('adminPasswordStep');
+    const otpInput = document.getElementById('adminOtpSetting');
+    const passwordInput = document.getElementById('adminNewPasswordSetting');
+    const confirmPasswordInput = document.getElementById('adminConfirmPasswordSetting');
     const token = sessionStorage.getItem('eduCore_token') || '';
     const originalText = sendBtn?.innerHTML || '';
 
     try {
         if (sendBtn) {
             sendBtn.disabled = true;
-            sendBtn.innerHTML = '<i data-lucide="loader"></i> Sending...';
+            sendBtn.innerHTML = '<i data-lucide="loader"></i> Sending OTP...';
             if (window.lucide) window.lucide.createIcons();
         }
         const response = await fetch(`${API_BASE_URL}/admin-credentials/request-otp`, {
@@ -6346,9 +6402,20 @@ async function sendAdminCredentialOtp() {
         });
         const result = await parseJsonResponse(response, 'OTP could not be sent.');
         if (!response.ok || result?.success === false) throw new Error(result?.message || 'OTP could not be sent.');
-        if (hint) hint.textContent = result.message || 'OTP sent successfully.';
+        if (panel) panel.hidden = false;
+        if (otpStep) otpStep.hidden = false;
+        if (passwordStep) passwordStep.hidden = true;
+        if (otpInput) {
+            otpInput.value = '';
+            otpInput.dataset.verified = '';
+            otpInput.focus();
+        }
+        if (passwordInput) passwordInput.value = '';
+        if (confirmPasswordInput) confirmPasswordInput.value = '';
+        setAdminPasswordStatus(result.message || 'OTP sent successfully.', 'success');
     } catch (error) {
-        if (hint) hint.textContent = error.message || 'OTP could not be sent.';
+        resetAdminPasswordChangeFlow(true);
+        setAdminPasswordStatus(error.message || 'OTP could not be sent.', 'error');
     } finally {
         if (sendBtn) {
             sendBtn.disabled = false;
@@ -6358,19 +6425,59 @@ async function sendAdminCredentialOtp() {
     }
 }
 
+async function verifyAdminCredentialOtp() {
+    const verifyBtn = document.getElementById('verifyAdminOtpBtn');
+    const otpInput = document.getElementById('adminOtpSetting');
+    const otpStep = document.getElementById('adminOtpStep');
+    const passwordStep = document.getElementById('adminPasswordStep');
+    const passwordInput = document.getElementById('adminNewPasswordSetting');
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    const otp = otpInput?.value?.trim() || '';
+    const originalText = verifyBtn?.textContent || '';
+
+    try {
+        if (!/^\d{6}$/.test(otp)) throw new Error('6 digit OTP enter karein.');
+        if (verifyBtn) {
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+        }
+        const response = await fetch(`${API_BASE_URL}/admin-credentials/verify-otp`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ otp })
+        });
+        const result = await parseJsonResponse(response, 'OTP could not be verified.');
+        if (!response.ok || result?.success === false) throw new Error(result?.message || 'OTP could not be verified.');
+        if (otpInput) otpInput.dataset.verified = otp;
+        if (otpStep) otpStep.hidden = true;
+        if (passwordStep) passwordStep.hidden = false;
+        if (passwordInput) passwordInput.focus();
+        setAdminPasswordStatus('OTP Verified. Enter your new password.', 'success');
+    } catch (error) {
+        if (otpInput) otpInput.dataset.verified = '';
+        if (otpStep) otpStep.hidden = false;
+        if (passwordStep) passwordStep.hidden = true;
+        setAdminPasswordStatus(normalizeAdminOtpError(error), 'error');
+    } finally {
+        if (verifyBtn) {
+            verifyBtn.disabled = false;
+            verifyBtn.textContent = originalText;
+        }
+    }
+}
+
 async function saveAdminCredentialSettings() {
     const usernameInput = document.getElementById('adminUsernameSetting');
-    const passwordInput = document.getElementById('adminNewPasswordSetting');
-    const otpInput = document.getElementById('adminOtpSetting');
-    if (!usernameInput || !passwordInput || !otpInput) return;
+    if (!usernameInput) return;
 
     const username = usernameInput.value.trim();
-    const password = passwordInput.value.trim();
-    const otp = otpInput.value.trim();
     const originalUsername = usernameInput.dataset.originalValue || '';
 
-    if (!password && username === originalUsername) return;
-    if (password && !otp) throw new Error('Admin password change ke liye OTP required hai.');
+    if (username === originalUsername) return;
+    if (!username) throw new Error('Admin username required hai.');
 
     const token = sessionStorage.getItem('eduCore_token') || '';
     const response = await fetch(`${API_BASE_URL}/admin-credentials`, {
@@ -6379,14 +6486,70 @@ async function saveAdminCredentialSettings() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ username, password, otp })
+        body: JSON.stringify({ username })
     });
-    const result = await parseJsonResponse(response, 'Admin password could not be updated.');
-    if (!response.ok || result?.success === false) throw new Error(result?.message || 'Admin password could not be updated.');
+    const result = await parseJsonResponse(response, 'Admin username could not be updated.');
+    if (!response.ok || result?.success === false) throw new Error(result?.message || 'Admin username could not be updated.');
 
     usernameInput.dataset.originalValue = result?.credentials?.username || username;
-    passwordInput.value = '';
-    otpInput.value = '';
+}
+
+async function saveVerifiedAdminPassword() {
+    const usernameInput = document.getElementById('adminUsernameSetting');
+    const passwordInput = document.getElementById('adminNewPasswordSetting');
+    const confirmPasswordInput = document.getElementById('adminConfirmPasswordSetting');
+    const otpInput = document.getElementById('adminOtpSetting');
+    const saveBtn = document.getElementById('saveAdminPasswordBtn');
+    const panel = document.getElementById('adminPasswordChangePanel');
+    const otpStep = document.getElementById('adminOtpStep');
+    const passwordStep = document.getElementById('adminPasswordStep');
+    if (!usernameInput || !passwordInput || !confirmPasswordInput || !otpInput) return;
+
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
+    const confirmPassword = confirmPasswordInput.value.trim();
+    const otp = otpInput.dataset.verified || '';
+    const originalText = saveBtn?.textContent || '';
+
+    try {
+        if (!otp) throw new Error('Pehle email OTP verify karein.');
+        if (!password) throw new Error('New password required hai.');
+        if (password.length < 6) throw new Error('New password kam az kam 6 characters ka hona chahiye.');
+        if (password !== confirmPassword) throw new Error('New password aur confirm password match nahi kar rahe.');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+        }
+
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        const response = await fetch(`${API_BASE_URL}/admin-credentials`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ username, password, confirmPassword, otp })
+        });
+        const result = await parseJsonResponse(response, 'Admin password could not be updated.');
+        if (!response.ok || result?.success === false) throw new Error(result?.message || 'Admin password could not be updated.');
+
+        usernameInput.dataset.originalValue = result?.credentials?.username || username;
+        passwordInput.value = '';
+        confirmPasswordInput.value = '';
+        otpInput.value = '';
+        otpInput.dataset.verified = '';
+        if (panel) panel.hidden = true;
+        if (otpStep) otpStep.hidden = false;
+        if (passwordStep) passwordStep.hidden = true;
+        setAdminPasswordStatus('Admin password updated successfully. Login will use the new password now.', 'success');
+    } catch (error) {
+        setAdminPasswordStatus(error.message || 'Admin password could not be updated.', 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+        }
+    }
 }
 
 function bindAdminForgotPassword() {
