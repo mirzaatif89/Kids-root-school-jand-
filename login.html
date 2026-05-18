@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My own Science school</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Real-Time SQL Sync -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+
+    <div class="login-layout">
+        <div class="login-card">
+
+            <!-- New Single Column Design -->
+            <div class="login-header">
+                <div class="login-icon-circle">
+                    <img class="login-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+                </div>
+            </div>
+
+            <div class="login-body">
+                <form id="loginForm">
+                    <div class="input-group">
+                        <label for="email">Username / Email</label>
+                        <div style="position: relative;">
+                            <input type="text" id="email" placeholder="Enter username or email" required>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="password">Password</label>
+                        <div class="password-field">
+                            <input type="password" id="password" placeholder="Enter your password" required>
+                            <button type="button" class="password-toggle" data-toggle-password="password"
+                                aria-label="Show password" aria-pressed="false">
+                                <i data-lucide="eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember">
+                        <label for="remember">Remember me</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%;">Sign In</button>
+                    <button type="button" class="login-link-btn" id="forgotAdminPasswordBtn">Forgot admin password?</button>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="auth-modal-overlay" id="forgotAdminModal">
+        <div class="auth-modal">
+            <button type="button" class="auth-modal-close" id="closeForgotAdminModal" aria-label="Close">
+                <i data-lucide="x"></i>
+            </button>
+            <h2>Reset Admin Password</h2>
+            <p>OTP will be sent to the admin recovery email.</p>
+            <div class="input-group">
+                <label for="forgotAdminUsername">Admin Username</label>
+                <input type="text" id="forgotAdminUsername" placeholder="admin">
+            </div>
+            <div class="input-group">
+                <label for="forgotAdminNewPassword">New Password</label>
+                <input type="password" id="forgotAdminNewPassword" placeholder="Enter new password">
+            </div>
+            <div class="input-group">
+                <label for="forgotAdminOtp">OTP</label>
+                <input type="text" id="forgotAdminOtp" inputmode="numeric" maxlength="6" placeholder="6 digit OTP">
+            </div>
+            <div class="auth-modal-actions">
+                <button type="button" class="btn btn-outline" id="sendForgotAdminOtpBtn">Send OTP</button>
+                <button type="button" class="btn btn-success" id="resetForgotAdminPasswordBtn">Reset Password</button>
+            </div>
+            <p class="auth-modal-status" id="forgotAdminStatus"></p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

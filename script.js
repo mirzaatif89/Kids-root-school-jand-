@@ -43,8 +43,9 @@ let studentQuickFilterBranchCampuses = [];
 let studentColumnSearchFilter = null;
 let classFeeDefaults = {};
 const FALLBACK_ROUTE_TO_PAGE = {
-    login: 'index.html',
+    login: 'login.html',
     index: 'index.html',
+    home: 'index.html',
     dashboard: 'dashboard.html',
     students: 'students.html',
     student_scheduling: 'student_scheduling.html',
@@ -115,7 +116,8 @@ function toRoutePath(pageName = '') {
         return window.eduCoreAuth.toRoutePath(pageName);
     }
     const normalizedPage = normalizeClientPageName(pageName);
-    if (normalizedPage === 'index.html') return '/login';
+    if (normalizedPage === 'login.html') return '/login';
+    if (normalizedPage === 'index.html') return '/';
     return `/${normalizedPage.replace(/\.html$/i, '')}`;
 }
 
@@ -2217,7 +2219,7 @@ async function resetSystemData(event) {
 
         clearLocalSystemData();
         await showAppAlert('System data has been reset successfully. Please sign in again.', 'Reset Complete');
-        window.location.href = toRoutePath('index.html');
+        window.location.href = '/login';
     } catch (error) {
         await showAppAlert(error.message || 'System data could not be reset.', 'Reset Failed');
     }

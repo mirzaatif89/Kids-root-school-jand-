@@ -1353,7 +1353,7 @@
         let editingStudentLeaveId = '';
 
         if (!loggedInUser || loggedInUser.role !== 'Student' || !authToken) {
-            window.location.href = 'index.html';
+            window.location.href = '/login';
         }
 
         function formatCurrency(amount) {

@@ -155,7 +155,7 @@
         const cleanKey = pageName.replace(/\.html$/i, '').toLowerCase();
         acc[cleanKey] = pageName;
         return acc;
-    }, { login: 'index.html', index: 'index.html' });
+    }, { login: 'login.html', index: 'index.html', home: 'index.html' });
 
     function normalizePageName(pageValue = '') {
         const rawValue = String(pageValue || '').trim().toLowerCase();
@@ -184,13 +184,14 @@
 
     function toRoutePath(pageName = '') {
         const normalizedPage = normalizePageName(pageName);
-        if (normalizedPage === 'index.html') return '/login';
+        if (normalizedPage === 'login.html') return '/login';
+        if (normalizedPage === 'index.html') return '/';
         if (pageRegistry[normalizedPage]) return `/${normalizedPage.replace(/\.html$/i, '')}`;
         return `/${String(pageName || '').replace(/^\/+/, '') || 'login'}`;
     }
 
     const currentPage = normalizePageName(window.location.pathname);
-    const publicPages = new Set(['index.html']);
+    const publicPages = new Set(['index.html', 'login.html']);
 
     const defaultPermissions = {
         loginAccess: {
