@@ -1,7 +1,7 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/apexium2/my_school_app
+    - export DEPLOYPATH=/home/apexium2/apexiumssoftware.space
     - /bin/mkdir -p "$DEPLOYPATH/.deploy-backup"
     - for file in .env permissions.json date_sheet.json admin_credentials.json; do if [ -f "$DEPLOYPATH/$file" ]; then /bin/cp "$DEPLOYPATH/$file" "$DEPLOYPATH/.deploy-backup/$file"; fi; done
     - /bin/cp -R * "$DEPLOYPATH"
