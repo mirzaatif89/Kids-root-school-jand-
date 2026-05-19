@@ -338,6 +338,32 @@
             font-size: 0.98rem;
         }
 
+        .portal-container.portal-screen-open .user-card,
+        .portal-container.portal-screen-open .stats-grid,
+        .portal-container.portal-screen-open .student-action-grid {
+            display: none !important;
+        }
+
+        .student-portal-section.portal-screen-active {
+            display: block !important;
+            margin-bottom: 0 !important;
+        }
+
+        .portal-screen-back {
+            min-height: 40px;
+            border: 1px solid #cae8e4;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f766e;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
         .info-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1974,10 +2000,7 @@
                     const targetId = button.getAttribute('data-student-action-target');
                     const target = document.getElementById(targetId);
                     if (target) {
-                        document.querySelectorAll('.student-portal-section').forEach((section) => {
-                            section.style.display = section === target ? '' : 'none';
-                        });
-                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        openStudentPortalScreen(target);
                         return;
                     }
                     await showAppAlert('This portal option is not available yet.', 'Coming Soon');
@@ -2740,6 +2763,49 @@
         function logout() {
             logoutUser();
             sessionStorage.removeItem(STUDENT_PROFILE_CACHE_KEY);
+        }
+
+        function getStudentPortalScreenTitle(section) {
+            const heading = section?.querySelector('h3');
+            return heading ? heading.textContent.trim() : 'Back';
+        }
+
+        function closeStudentPortalScreen() {
+            const container = document.querySelector('.portal-container');
+            container?.classList.remove('portal-screen-open');
+            document.querySelectorAll('.student-portal-section').forEach((section) => {
+                section.classList.remove('portal-screen-active');
+                section.style.display = 'none';
+                const backButton = section.querySelector('.portal-screen-back');
+                if (backButton) backButton.remove();
+            });
+            document.querySelector('.student-action-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function openStudentPortalScreen(target) {
+            const container = document.querySelector('.portal-container');
+            if (!target || !container) return;
+
+            document.querySelectorAll('.student-portal-section').forEach((section) => {
+                section.classList.remove('portal-screen-active');
+                section.style.display = 'none';
+                const existingBack = section.querySelector('.portal-screen-back');
+                if (existingBack) existingBack.remove();
+            });
+
+            container.classList.add('portal-screen-open');
+            target.style.display = 'block';
+            target.classList.add('portal-screen-active');
+
+            const backButton = document.createElement('button');
+            backButton.type = 'button';
+            backButton.className = 'portal-screen-back';
+            backButton.innerHTML = `<i data-lucide="arrow-left" width="16"></i> Back to Menu`;
+            backButton.addEventListener('click', closeStudentPortalScreen);
+            target.insertBefore(backButton, target.firstChild);
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) window.lucide.createIcons();
         }
 
         window.onload = () => {

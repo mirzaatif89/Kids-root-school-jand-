@@ -382,6 +382,32 @@
             display: block;
         }
 
+        .teacher-portal.portal-screen-open .profile-card,
+        .teacher-portal.portal-screen-open .stats-grid,
+        .teacher-portal.portal-screen-open .teacher-options {
+            display: none !important;
+        }
+
+        .teacher-option-panel.portal-screen-active {
+            display: block !important;
+            margin-top: 0;
+        }
+
+        .portal-screen-back {
+            min-height: 40px;
+            border: 1px solid #cae8e4;
+            border-radius: 10px;
+            background: #ffffff;
+            color: var(--portal-primary-dark);
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            padding: 0.55rem 0.8rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
         .portal-form-grid,
         .portal-mini-grid {
             display: grid;
@@ -974,10 +1000,39 @@
         }
 
         function showTeacherPanel(panelId) {
+            const portal = document.querySelector('.teacher-portal');
+            const target = document.getElementById(panelId);
+            if (!portal || !target) return;
+
             document.querySelectorAll('.teacher-option-panel').forEach((panel) => {
-                panel.classList.toggle('active', panel.id === panelId);
+                panel.classList.remove('active', 'portal-screen-active');
+                const existingBack = panel.querySelector('.portal-screen-back');
+                if (existingBack) existingBack.remove();
             });
-            document.getElementById(panelId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            portal.classList.add('portal-screen-open');
+            target.classList.add('active', 'portal-screen-active');
+
+            const backButton = document.createElement('button');
+            backButton.type = 'button';
+            backButton.className = 'portal-screen-back';
+            backButton.innerHTML = `<i data-lucide="arrow-left" width="16"></i> Back to Menu`;
+            backButton.addEventListener('click', closeTeacherPanelScreen);
+            target.insertBefore(backButton, target.firstChild);
+
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function closeTeacherPanelScreen() {
+            const portal = document.querySelector('.teacher-portal');
+            portal?.classList.remove('portal-screen-open');
+            document.querySelectorAll('.teacher-option-panel').forEach((panel) => {
+                panel.classList.remove('active', 'portal-screen-active');
+                const existingBack = panel.querySelector('.portal-screen-back');
+                if (existingBack) existingBack.remove();
+            });
+            document.querySelector('.teacher-options')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         function renderSchedule(schedule) {

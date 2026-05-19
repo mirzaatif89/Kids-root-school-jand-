@@ -799,14 +799,15 @@ ul {
 /* === STATS CARDS === */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .card {
     background: var(--surface-color);
-    padding: 1.5rem;
+    min-height: 150px;
+    padding: 1.25rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
@@ -836,7 +837,7 @@ ul {
 }
 
 .card-value {
-    font-size: 2rem;
+    font-size: 1.85rem;
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 0.5rem;
@@ -859,8 +860,8 @@ ul {
 
 .card-icon {
     position: absolute;
-    right: 1.5rem;
-    top: 1.5rem;
+    right: 1.25rem;
+    top: 1.25rem;
     width: 48px;
     height: 48px;
     border-radius: 50%;
@@ -2036,7 +2037,7 @@ button {
     }
 
     .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 1rem;
     }
 

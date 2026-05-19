@@ -190,7 +190,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 1.25rem 1.5rem;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
             background: white;
             border-radius: 0.75rem;
             border: 1px solid var(--border-color);
@@ -231,17 +232,49 @@
         .month-status {
             display: flex;
             align-items: center;
-            gap: 1.5rem;
+            justify-content: flex-end;
+            gap: 0.65rem;
+            flex: 1;
+            flex-wrap: wrap;
         }
 
         .toggle-fee-btn {
-            padding: 0.6rem 1.2rem;
-            font-size: 0.85rem;
-            border-radius: 0.75rem;
+            min-height: 2.35rem;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.78rem;
+            border-radius: 0.55rem;
             cursor: pointer;
             border: none;
             transition: var(--transition);
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+            line-height: 1.1;
+        }
+
+        .fee-row-due {
+            min-width: 220px;
+            font-size: 0.8rem;
+            color: #7f1d1d;
+        }
+
+        @media (max-width: 900px) {
+            .month-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .month-status {
+                justify-content: flex-start;
+            }
+
+            .fee-row-due {
+                width: 100%;
+                min-width: 0;
+            }
         }
 
         .btn-mark-paid {
@@ -650,15 +683,15 @@
                             </select>
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Late Units</label>
+                            <label id="fineUnitsLabel" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Late Units</label>
                             <input type="number" id="fineUnits" value="0" min="0" placeholder="Days / Weeks / Months" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" oninput="updateManualPaymentTotal(true)" />
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fine Rate (PKR)</label>
+                            <label id="fineRateLabel" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fine Rate (PKR)</label>
                             <input type="number" id="fineRate" value="0" min="0" placeholder="e.g. 50" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem;" oninput="updateManualPaymentTotal(true)" />
                         </div>
                         <div>
-                            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fine Amount</label>
+                            <label id="fineAmountLabel" style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Fine Amount</label>
                             <input type="number" id="fineAmount" value="0" min="0" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; background: #f9fafb;" oninput="updateManualPaymentTotal()" />
                         </div>
                     </div>
@@ -682,6 +715,7 @@
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
         const STORAGE_KEY_FINE_PAYMENTS = 'eduCore_fine_payments';
+        const STORAGE_KEY_FEE_FINE_RULE = 'eduCore_fee_fine_rule';
         const monthsList = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -807,13 +841,73 @@
             return Array.isArray(finePaymentsStore[studentId]) ? finePaymentsStore[studentId] : [];
         }
 
-        function getFineAmountForMonth(studentId, month) {
+        function getFeeFineRule() {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_FEE_FINE_RULE) || '{}');
+            return {
+                dueDay: Math.min(Math.max(parseInt(saved.dueDay || 10, 10) || 10, 1), 31),
+                ratePerDay: Math.max(Number(saved.ratePerDay || 0) || 0, 0)
+            };
+        }
+
+        function saveFeeFineRule(rule) {
+            const dueDay = Math.min(Math.max(parseInt(rule?.dueDay || 10, 10) || 10, 1), 31);
+            const ratePerDay = Math.max(Number(rule?.ratePerDay || 0) || 0, 0);
+            localStorage.setItem(STORAGE_KEY_FEE_FINE_RULE, JSON.stringify({ dueDay, ratePerDay }));
+            return { dueDay, ratePerDay };
+        }
+
+        function getMonthDueDate(month) {
+            const monthIndex = monthsList.findIndex((item) => item.toLowerCase() === String(month || '').toLowerCase());
+            if (monthIndex < 0) return null;
+            const now = new Date();
+            const year = monthIndex > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear();
+            const rule = getFeeFineRule();
+            const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+            return new Date(year, monthIndex, Math.min(rule.dueDay, lastDay), 23, 59, 59, 999);
+        }
+
+        function getAutoFineAmountWithRule(month, rule) {
+            const ratePerDay = Math.max(Number(rule?.ratePerDay || 0) || 0, 0);
+            if (ratePerDay <= 0) return 0;
+            const monthIndex = monthsList.findIndex((item) => item.toLowerCase() === String(month || '').toLowerCase());
+            if (monthIndex < 0) return 0;
+            const now = new Date();
+            const year = monthIndex > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear();
+            const dueDay = Math.min(Math.max(parseInt(rule?.dueDay || 10, 10) || 10, 1), 31);
+            const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+            const dueDate = new Date(year, monthIndex, Math.min(dueDay, lastDay), 23, 59, 59, 999);
+            const diffMs = new Date().setHours(0, 0, 0, 0) - dueDate.setHours(0, 0, 0, 0);
+            const lateDays = Math.max(Math.floor(diffMs / 86400000), 0);
+            return lateDays * ratePerDay;
+        }
+
+        function getAutoFineAmountForMonth(month) {
+            return getAutoFineAmountWithRule(month, getFeeFineRule());
+        }
+
+        function getStoredFineAmountForMonth(studentId, month) {
             const targetMonth = String(month || '').trim();
             if (!targetMonth) return 0;
             return getStoredFinePayments(studentId).reduce((sum, fine) => {
                 const fineMonths = extractMonthNames(fine.feeMonth);
                 return fineMonths.includes(targetMonth) ? sum + (Number(fine.amount || 0) || 0) : sum;
             }, 0);
+        }
+
+        function getFineAmountForMonth(studentId, month) {
+            const storedFine = getStoredFineAmountForMonth(studentId, month);
+            const autoFine = getAutoFineAmountForMonth(month);
+            const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+            const paidForMonth = Number(paymentDetails?.[studentId]?.[month]?.amount || 0);
+            const students = getData(STORAGE_KEY_STUDENTS) || [];
+            const student = students.find((item) => String(item?.id || '') === String(studentId || ''));
+            const monthlyFee = Number(student?.monthlyFee || 0) || 0;
+
+            if (paidForMonth > 0 && monthlyFee > 0 && paidForMonth >= monthlyFee + storedFine) {
+                return storedFine;
+            }
+
+            return Math.max(storedFine, autoFine);
         }
 
         async function mergeFeePaymentsIntoMonthlyStore() {
@@ -1765,6 +1859,7 @@
                     const isCurrentMonth = month === CURRENT_MONTH_NAME;
                     const paidForMonth = getPaidForMonth(month);
                     const fineForMonth = getFineAmountForMonth(studentId, month);
+                    const autoFineForMonth = getAutoFineAmountForMonth(month);
                     const totalForMonth = monthlyFee + fineForMonth;
                     const dueForMonth = Math.max(totalForMonth - paidForMonth, 0);
                     const row = document.createElement('div');
@@ -1797,14 +1892,14 @@
                                 <i data-lucide="${badgeIcon}"></i>
                                 ${badgeLabel}
                             </span>
-                            <span style="font-size: 0.8rem; color: #7f1d1d; margin-left: 0.5rem;">
-                                Total Due: PKR ${dueForMonth.toLocaleString('en-PK')}${fineForMonth > 0 ? ` (Fee PKR ${monthlyFee.toLocaleString('en-PK')} + Fine PKR ${fineForMonth.toLocaleString('en-PK')})` : ''}
+                            <span class="fee-row-due">
+                                Total Due: PKR ${dueForMonth.toLocaleString('en-PK')}${fineForMonth > 0 ? ` (Fee PKR ${monthlyFee.toLocaleString('en-PK')} + ${autoFineForMonth > 0 ? 'Auto ' : ''}Fine PKR ${fineForMonth.toLocaleString('en-PK')})` : ''}
                             </span>
                             <button class="toggle-fee-btn btn-mark-paid" style="background:#10b981;" onclick="openManualPaymentModal('${studentId}', '${month}', 'payment')">
                                 <i data-lucide="plus" size="14"></i> Add Payment
                             </button>
                             <button class="toggle-fee-btn" style="background:#f59e0b;color:#111827;" onclick="openManualPaymentModal('${studentId}', '${month}', 'fine')">
-                                <i data-lucide="badge-alert" size="14"></i> ${fineForMonth > 0 ? 'Edit Fine' : 'Add Fine'}
+                                <i data-lucide="badge-alert" size="14"></i> Fine Rule
                             </button>
                             <button class="toggle-fee-btn btn-mark-paid" onclick="toggleMonthFee('${studentId}', '${month}')">
                                 <i data-lucide="check-circle" size="14"></i> Mark Paid
@@ -1830,6 +1925,7 @@
 
                     paidMonths.forEach(month => {
                         const paidForMonth = getPaidForMonth(month);
+                        const fineForMonth = getFineAmountForMonth(studentId, month);
                         const row = document.createElement('div');
                         row.className = 'month-row';
                         row.style.background = '#f0fdf4';
@@ -1840,7 +1936,7 @@
                                     <i data-lucide="check-circle" size="14"></i>
                                     Paid
                                 </span>
-                                <span style="font-size: 0.8rem; color: #065f46; margin-left: 0.5rem; font-weight: 600;">PKR ${paidForMonth.toLocaleString('en-PK')}</span>
+                                <span class="fee-row-due" style="color: #065f46; font-weight: 600;">PKR ${paidForMonth.toLocaleString('en-PK')}${fineForMonth > 0 ? ` incl. fine PKR ${fineForMonth.toLocaleString('en-PK')}` : ''}</span>
                                 <button class="toggle-fee-btn btn-mark-unpaid" onclick="markMonthUnpaid('${studentId}', '${month}')">
                                     <i data-lucide="x-circle" size="14"></i> Mark Unpaid
                                 </button>
@@ -1912,15 +2008,16 @@
 
             monthSelect.onchange = () => updateManualPaymentTotal(true);
             if (selectedMonth) monthSelect.value = selectedMonth;
+            const fineRule = getFeeFineRule();
             document.getElementById('paymentAmount').value = '';
-            document.getElementById('fineFrequency').value = 'none';
-            document.getElementById('fineUnits').value = '0';
-            document.getElementById('fineRate').value = '0';
+            document.getElementById('fineFrequency').value = mode === 'fine' ? 'day' : 'none';
+            document.getElementById('fineUnits').value = mode === 'fine' ? String(fineRule.dueDay) : '0';
+            document.getElementById('fineRate').value = mode === 'fine' ? String(fineRule.ratePerDay) : '0';
             document.getElementById('fineAmount').value = mode === 'fine' ? String(getFineAmountForMonth(studentId, selectedMonth) || 0) : '0';
             document.getElementById('manualPaymentModal').dataset.studentId = studentId;
             document.getElementById('manualPaymentModal').dataset.paymentMode = mode === 'fine' ? 'fine' : 'payment';
-            document.getElementById('manualPaymentModalTitle').textContent = mode === 'fine' ? 'Edit Fine Amount' : 'Add Manual Payment';
-            document.getElementById('manualPaymentSubmitBtn').textContent = mode === 'fine' ? 'Save Fine Amount' : 'Save Payment';
+            document.getElementById('manualPaymentModalTitle').textContent = mode === 'fine' ? 'Auto Fine Rule' : 'Add Manual Payment';
+            document.getElementById('manualPaymentSubmitBtn').textContent = mode === 'fine' ? 'Save Fine Rule' : 'Save Payment';
             document.getElementById('manualPaymentModal').style.display = 'flex';
             updateManualPaymentTotal(true);
         }
@@ -1931,6 +2028,11 @@
             document.getElementById('manualPaymentModal').dataset.paymentMode = '';
             document.getElementById('manualPaymentModalTitle').textContent = 'Add Manual Payment';
             document.getElementById('manualPaymentSubmitBtn').textContent = 'Save Payment';
+            document.getElementById('fineUnitsLabel').textContent = 'Late Units';
+            document.getElementById('fineRateLabel').textContent = 'Fine Rate (PKR)';
+            document.getElementById('fineAmountLabel').textContent = 'Fine Amount';
+            document.getElementById('fineFrequency').disabled = false;
+            document.getElementById('paymentAmount').disabled = false;
         }
 
         function getManualPaymentDueAmount() {
@@ -1948,6 +2050,12 @@
         function calculateManualFineAmount() {
             const modal = document.getElementById('manualPaymentModal');
             const mode = String(modal?.dataset?.paymentMode || 'payment');
+            if (mode === 'fine') {
+                const month = String(document.getElementById('paymentMonth')?.value || '').trim();
+                const dueDay = Math.min(Math.max(parseInt(document.getElementById('fineUnits')?.value || '10', 10) || 10, 1), 31);
+                const ratePerDay = Math.max(Number(document.getElementById('fineRate')?.value || 0) || 0, 0);
+                return getAutoFineAmountWithRule(month, { dueDay, ratePerDay });
+            }
             const frequency = String(document.getElementById('fineFrequency')?.value || 'none');
             const manualFine = Number(document.getElementById('fineAmount')?.value || 0);
             if (frequency === 'none') return Math.max(Number.isFinite(manualFine) ? manualFine : 0, 0);
@@ -1963,29 +2071,50 @@
             const fineAmount = calculateManualFineAmount();
             const modal = document.getElementById('manualPaymentModal');
             const mode = String(modal?.dataset?.paymentMode || 'payment');
+            const selectedOption = document.getElementById('paymentMonth')?.selectedOptions?.[0];
+            const currentMonthFine = Number(selectedOption?.dataset?.currentFineAmount || 0) || 0;
+            const displayFineAmount = mode === 'fine' ? fineAmount : currentMonthFine;
             const amountInput = document.getElementById('paymentAmount');
             const fineInput = document.getElementById('fineAmount');
             const dueHint = document.getElementById('manualPaymentDueHint');
             const totalHint = document.getElementById('manualPaymentTotalHint');
             const feePaymentAmount = mode === 'fine' ? 0 : Number(amountInput?.value || 0) || dueAmount;
+            const fineType = document.getElementById('fineFrequency');
+            const fineUnitsLabel = document.getElementById('fineUnitsLabel');
+            const fineRateLabel = document.getElementById('fineRateLabel');
+            const fineAmountLabel = document.getElementById('fineAmountLabel');
+            const fineUnitsInput = document.getElementById('fineUnits');
+
+            if (fineUnitsLabel) fineUnitsLabel.textContent = mode === 'fine' ? 'Due Day' : 'Late Units';
+            if (fineRateLabel) fineRateLabel.textContent = mode === 'fine' ? 'Fine / Day (PKR)' : 'Fine Rate (PKR)';
+            if (fineAmountLabel) fineAmountLabel.textContent = mode === 'fine' ? 'Current Auto Fine' : 'Fine Amount';
+            if (fineType) {
+                fineType.disabled = mode === 'fine';
+                if (mode === 'fine') fineType.value = 'day';
+            }
+            if (fineUnitsInput) {
+                fineUnitsInput.placeholder = mode === 'fine' ? 'e.g. 10' : 'Days / Weeks / Months';
+                fineUnitsInput.min = mode === 'fine' ? '1' : '0';
+                fineUnitsInput.max = mode === 'fine' ? '31' : '';
+            }
 
             if (fineInput) {
-                fineInput.readOnly = mode !== 'fine' && String(document.getElementById('fineFrequency')?.value || 'none') !== 'none';
+                fineInput.readOnly = mode === 'fine' || (mode !== 'fine' && String(document.getElementById('fineFrequency')?.value || 'none') !== 'none');
                 if (String(document.getElementById('fineFrequency')?.value || 'none') !== 'none') {
                     fineInput.value = String(fineAmount);
                 }
                 fineInput.style.background = fineInput.readOnly ? '#f9fafb' : '#fff';
-                fineInput.placeholder = mode === 'fine' ? 'Enter fine amount' : 'Fine amount';
+                fineInput.placeholder = mode === 'fine' ? 'Auto calculated' : 'Fine amount';
             }
             if (amountInput) {
                 amountInput.disabled = mode === 'fine';
-                amountInput.placeholder = mode === 'fine' ? 'Fine only - fee remains pending' : 'Enter fee payment amount';
+                amountInput.placeholder = mode === 'fine' ? 'Fine rule only' : 'Enter fee payment amount';
             }
             if (dueHint) dueHint.textContent = `Due: PKR ${dueAmount.toLocaleString('en-PK')}`;
             if (totalHint) {
                 totalHint.textContent = mode === 'fine'
-                    ? `Fine amount: PKR ${fineAmount.toLocaleString('en-PK')} | New month due: PKR ${(baseDueAmount + fineAmount).toLocaleString('en-PK')}`
-                    : `Fee payment: PKR ${feePaymentAmount.toLocaleString('en-PK')} | Fine: PKR ${fineAmount.toLocaleString('en-PK')}`;
+                    ? `Auto fine preview: PKR ${fineAmount.toLocaleString('en-PK')} | Month due after fine: PKR ${(baseDueAmount + fineAmount).toLocaleString('en-PK')}`
+                    : `Fee payment: PKR ${feePaymentAmount.toLocaleString('en-PK')} | Auto fine: PKR ${displayFineAmount.toLocaleString('en-PK')}`;
             }
             if (amountInput && (forceFillAmount || !String(amountInput.value || '').trim())) {
                 amountInput.value = mode === 'fine' ? '' : (dueAmount ? String(dueAmount) : '');
@@ -1997,7 +2126,7 @@
             const studentId = String(modal.dataset.studentId || '').trim();
             const paymentMode = String(modal.dataset.paymentMode || 'payment');
             const month = String(document.getElementById('paymentMonth').value || '').trim();
-            const fineAmount = calculateManualFineAmount();
+            const rawFineAmount = calculateManualFineAmount();
             const amount = paymentMode === 'fine' ? 0 : parseInt(document.getElementById('paymentAmount').value || '0', 10);
 
             if (!studentId) {
@@ -2010,7 +2139,17 @@
                 return;
             }
 
-            if (paymentMode !== 'fine' && (!Number.isFinite(amount) || amount <= 0) && fineAmount <= 0) {
+            if (paymentMode === 'fine') {
+                const dueDay = Math.min(Math.max(parseInt(document.getElementById('fineUnits')?.value || '10', 10) || 10, 1), 31);
+                const ratePerDay = Math.max(Number(document.getElementById('fineRate')?.value || 0) || 0, 0);
+                saveFeeFineRule({ dueDay, ratePerDay });
+                closeManualPaymentModal();
+                renderMonthlyFeeRecord(studentId);
+                alert('Auto fine rule saved successfully!');
+                return;
+            }
+
+            if (paymentMode !== 'fine' && (!Number.isFinite(amount) || amount <= 0) && rawFineAmount <= 0) {
                 alert('Please enter a valid payment amount or add a fine amount.');
                 return;
             }
@@ -2020,6 +2159,7 @@
             const monthlyFee = Number(student?.monthlyFee || 0) || 0;
             const dueAmount = getManualPaymentDueAmount() || monthlyFee;
             const fullAmount = dueAmount;
+            const fineAmount = getFineAmountForMonth(studentId, month);
 
             const payload = {
                 studentId,
@@ -2036,21 +2176,6 @@
             };
 
             try {
-                if (paymentMode === 'fine') {
-                    const token = sessionStorage.getItem('eduCore_token') || '';
-                    const response = await fetch(`${API_BASE_URL}/fees/fine-charge`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            ...(token ? { Authorization: `Bearer ${token}` } : {})
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const body = await response.json().catch(() => ({}));
-                    if (!response.ok || body?.success === false) {
-                        throw new Error(body?.message || 'Fine amount could not be saved.');
-                    }
-                } else
                 if (typeof syncToSQLDetailed === 'function') {
                     const result = await syncToSQLDetailed('fees/manual-payment', payload);
                     if (!result?.success) throw new Error(result?.error || 'Manual payment failed.');

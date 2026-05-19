@@ -8,9 +8,13 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .library-layout { display: grid; grid-template-columns: minmax(320px, 0.85fr) minmax(520px, 1.15fr); gap: 1.25rem; align-items: start; }
+        .library-layout { display: grid; grid-template-columns: 1fr; gap: 1.25rem; align-items: start; }
         .library-panel { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.1rem; box-shadow: var(--shadow-sm); }
+        .library-form-panel { display: none; }
+        .library-form-panel.active { display: block; }
         .library-panel h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+        .library-list-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .library-list-head h2 { margin: 0; }
         .library-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
         .library-field.full { grid-column: 1 / -1; }
         .library-field label { display: block; margin-bottom: 0.35rem; color: var(--text-secondary); font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -23,8 +27,8 @@
         .library-stat strong { display: block; margin-top: 0.3rem; font-size: 1.35rem; color: var(--text-primary); }
         .library-toolbar { display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; }
         .library-toolbar .search-bar { max-width: 340px; }
-        .library-table-wrap { overflow: auto; border: 1px solid var(--border-color); border-radius: 8px; }
-        .library-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+        .library-table-wrap { overflow-x: auto; overflow-y: visible; border: 1px solid var(--border-color); border-radius: 8px; }
+        .library-table { width: 100%; border-collapse: collapse; min-width: 760px; }
         .library-table th, .library-table td { padding: 0.7rem; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; font-size: 0.86rem; }
         .library-table th { background: #f8fbff; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
         .lib-meta { display: grid; gap: 0.18rem; }
@@ -74,23 +78,23 @@
             </header>
 
             <section class="library-layout">
-                <div class="library-panel">
+                <div class="library-panel library-form-panel" id="libraryFormPanel">
                     <h2 id="libraryFormTitle">Issue Book</h2>
                     <form id="libraryIssueForm">
                         <input type="hidden" id="libraryRecordId">
                         <div class="library-grid">
-                            <div class="library-field full"><label for="libraryStudent">Student</label><select id="libraryStudent" required><option value="">Select student</option></select></div>
-                            <div class="library-field"><label>Roll No</label><input id="libraryRollNo" readonly></div>
-                            <div class="library-field"><label>Class</label><input id="libraryClass" readonly></div>
-                            <div class="library-field"><label>Father Name</label><input id="libraryFatherName" readonly></div>
-                            <div class="library-field"><label>Parent Phone</label><input id="libraryParentPhone" readonly></div>
-                            <div class="library-field full"><label for="bookTitle">Book Title</label><input id="bookTitle" placeholder="Example: Oxford English Reader" required></div>
-                            <div class="library-field"><label for="bookNumber">Book Number</label><input id="bookNumber" placeholder="B-1024" required></div>
-                            <div class="library-field"><label for="accessionNumber">Accession No.</label><input id="accessionNumber" placeholder="ACC-001"></div>
-                            <div class="library-field"><label for="author">Author</label><input id="author" placeholder="Author name"></div>
-                            <div class="library-field"><label for="isbn">ISBN</label><input id="isbn" placeholder="ISBN"></div>
-                            <div class="library-field"><label for="category">Category</label><input id="category" placeholder="Course / Story / Reference"></div>
-                            <div class="library-field"><label for="shelfLocation">Shelf</label><input id="shelfLocation" placeholder="Shelf A2"></div>
+                            <div class="library-field full"><label for="libraryStudentName">Student Name</label><input id="libraryStudentName" required></div>
+                            <div class="library-field"><label for="libraryRollNo">Roll No</label><input id="libraryRollNo"></div>
+                            <div class="library-field"><label for="libraryClass">Class</label><input id="libraryClass"></div>
+                            <div class="library-field"><label for="libraryFatherName">Father Name</label><input id="libraryFatherName"></div>
+                            <div class="library-field"><label for="libraryParentPhone">Parent Phone</label><input id="libraryParentPhone"></div>
+                            <div class="library-field full"><label for="bookTitle">Book Title</label><input id="bookTitle" required></div>
+                            <div class="library-field"><label for="bookNumber">Book Number</label><input id="bookNumber" required></div>
+                            <div class="library-field"><label for="accessionNumber">Accession No.</label><input id="accessionNumber"></div>
+                            <div class="library-field"><label for="author">Author</label><input id="author"></div>
+                            <div class="library-field"><label for="isbn">ISBN</label><input id="isbn"></div>
+                            <div class="library-field"><label for="category">Category</label><input id="category"></div>
+                            <div class="library-field"><label for="shelfLocation">Shelf</label><input id="shelfLocation"></div>
                             <div class="library-field"><label for="issueDate">Issue Date</label><input type="date" id="issueDate" required></div>
                             <div class="library-field"><label for="loanDays">Days</label><input type="number" id="loanDays" min="1" value="7" required></div>
                             <div class="library-field"><label for="dueDate">Due Date</label><input type="date" id="dueDate" required></div>
@@ -101,12 +105,21 @@
                         </div>
                         <div class="library-actions">
                             <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Record</button>
-                            <button type="button" class="btn btn-outline" onclick="resetLibraryForm()">Clear</button>
+                            <button type="button" class="btn btn-outline" onclick="resetLibraryForm()">Cancel</button>
                         </div>
                     </form>
                 </div>
 
                 <div class="library-panel">
+                    <div class="library-list-head">
+                        <div>
+                            <h2>Library Records</h2>
+                            <p style="color:var(--text-secondary); margin-top:0.25rem;">Issued, overdue, returned, and lost book records.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="openLibraryForm()">
+                            <i data-lucide="plus"></i> Issue Book
+                        </button>
+                    </div>
                     <div class="library-stats">
                         <div class="library-stat"><span>Total</span><strong id="libTotal">0</strong></div>
                         <div class="library-stat"><span>Issued</span><strong id="libIssued">0</strong></div>
@@ -141,7 +154,6 @@
     <script src="script.js?v=20260517-facility-nav"></script>
     <script>
         let libraryIssues = [];
-        let libraryStudents = [];
 
         function escapeLibrary(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
@@ -179,35 +191,33 @@
             return Math.max(Math.ceil((now - due) / 86400000), 0);
         }
 
-        function getStudentById(id) {
-            return libraryStudents.find((student) => String(student.id) === String(id));
-        }
-
-        function fillStudentDetails() {
-            const student = getStudentById(document.getElementById('libraryStudent').value);
-            document.getElementById('libraryRollNo').value = student?.rollNo || '';
-            document.getElementById('libraryClass').value = student?.classGrade || '';
-            document.getElementById('libraryFatherName').value = student?.fatherName || '';
-            document.getElementById('libraryParentPhone').value = student?.parentPhone || '';
+        function getManualLibraryStudent() {
+            return {
+                id: '',
+                fullName: document.getElementById('libraryStudentName').value.trim(),
+                rollNo: document.getElementById('libraryRollNo').value.trim(),
+                classGrade: document.getElementById('libraryClass').value.trim(),
+                fatherName: document.getElementById('libraryFatherName').value.trim(),
+                parentPhone: document.getElementById('libraryParentPhone').value.trim(),
+                email: ''
+            };
         }
 
         function syncDueDate() {
             document.getElementById('dueDate').value = addDays(document.getElementById('issueDate').value, document.getElementById('loanDays').value);
         }
 
-        async function loadStudentsForLibrary() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/students`);
-                const data = await response.json();
-                libraryStudents = Array.isArray(data) ? data : [];
-                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(libraryStudents));
-            } catch (_error) {
-                libraryStudents = getData(STORAGE_KEY_STUDENTS) || [];
-            }
-            const select = document.getElementById('libraryStudent');
-            select.innerHTML = '<option value="">Select student</option>' + libraryStudents.map((student) => (
-                `<option value="${escapeLibrary(student.id)}">${escapeLibrary(student.fullName || 'Student')} - ${escapeLibrary(student.classGrade || '-')} - Roll ${escapeLibrary(student.rollNo || '-')}</option>`
-            )).join('');
+        function openLibraryForm(editing = false) {
+            const panel = document.getElementById('libraryFormPanel');
+            if (!panel) return;
+            panel.classList.add('active');
+            document.getElementById('libraryFormTitle').textContent = editing ? 'Edit Library Record' : 'Issue Book';
+            panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function closeLibraryForm() {
+            const panel = document.getElementById('libraryFormPanel');
+            if (panel) panel.classList.remove('active');
         }
 
         async function loadLibraryIssues() {
@@ -225,7 +235,7 @@
         }
 
         function getLibraryPayload() {
-            const student = getStudentById(document.getElementById('libraryStudent').value) || {};
+            const student = getManualLibraryStudent();
             return {
                 id: document.getElementById('libraryRecordId').value || undefined,
                 bookTitle: document.getElementById('bookTitle').value.trim(),
@@ -235,7 +245,7 @@
                 author: document.getElementById('author').value.trim(),
                 category: document.getElementById('category').value.trim(),
                 shelfLocation: document.getElementById('shelfLocation').value.trim(),
-                studentId: document.getElementById('libraryStudent').value,
+                studentId: student.id,
                 studentName: student.fullName || '',
                 rollNo: student.rollNo || '',
                 classGrade: student.classGrade || '',
@@ -255,8 +265,8 @@
         async function saveLibraryIssue(event) {
             event.preventDefault();
             const payload = getLibraryPayload();
-            if (!payload.bookTitle || !payload.bookNumber || !payload.studentId) {
-                alert('Please select student and enter book title/number.');
+            if (!payload.bookTitle || !payload.bookNumber || !payload.studentName) {
+                alert('Please enter student name and book title/number.');
                 return;
             }
             try {
@@ -296,7 +306,7 @@
             renderLibraryStats(rows);
 
             if (!rows.length) {
-                body.innerHTML = '<tr><td colspan="6">No library records found.</td></tr>';
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:1.25rem; color:var(--text-secondary);">No library records found. Click Issue Book to add one.</td></tr>';
                 return;
             }
 
@@ -307,7 +317,15 @@
                 return `
                     <tr>
                         <td><div class="lib-meta"><strong>${escapeLibrary(issue.bookTitle)}</strong><span class="lib-muted">Book #: ${escapeLibrary(issue.bookNumber)} | Acc: ${escapeLibrary(issue.accessionNumber || '-')}</span><span class="lib-muted">${escapeLibrary(issue.author || '-')} | ${escapeLibrary(issue.category || '-')} | ${escapeLibrary(issue.shelfLocation || '-')}</span></div></td>
-                        <td><div class="lib-meta"><strong>${escapeLibrary(issue.studentName || '-')}</strong><span class="lib-muted">Roll ${escapeLibrary(issue.rollNo || '-')} | ${escapeLibrary(issue.classGrade || '-')}</span><span class="lib-muted">${escapeLibrary(issue.fatherName || '-')} | ${escapeLibrary(issue.parentPhone || '-')}</span></div></td>
+                        <td>
+                            <div class="lib-meta">
+                                <strong>${escapeLibrary(issue.studentName || '-')}</strong>
+                                <span class="lib-muted"><strong>Class:</strong> ${escapeLibrary(issue.classGrade || '-')}</span>
+                                <span class="lib-muted"><strong>Roll No:</strong> ${escapeLibrary(issue.rollNo || '-')}</span>
+                                <span class="lib-muted"><strong>Father:</strong> ${escapeLibrary(issue.fatherName || '-')}</span>
+                                <span class="lib-muted"><strong>Phone:</strong> ${escapeLibrary(issue.parentPhone || '-')}</span>
+                            </div>
+                        </td>
                         <td><div class="lib-meta"><span>Issued: <strong>${formatDate(issue.issueDate)}</strong></span><span>Due: <strong>${formatDate(issue.dueDate)}</strong></span><span class="lib-muted">${Number(issue.loanDays || 0)} day(s)</span></div></td>
                         <td><span class="lib-status ${status.toLowerCase()}"><i data-lucide="${status === 'Returned' ? 'check-circle' : status === 'Overdue' ? 'alert-triangle' : status === 'Lost' ? 'circle-x' : 'clock'}" size="13"></i>${status}</span></td>
                         <td><div class="lib-meta"><strong>PKR ${fine.toLocaleString('en-PK')}</strong><span class="lib-muted">${daysLate ? `${daysLate} day(s) late` : `PKR ${Number(issue.finePerDay || 0).toLocaleString('en-PK')} / day`}</span></div></td>
@@ -325,17 +343,19 @@
         function editLibraryIssue(id) {
             const issue = libraryIssues.find((item) => String(item.id) === String(id));
             if (!issue) return;
-            document.getElementById('libraryFormTitle').textContent = 'Edit Library Record';
+            openLibraryForm(true);
             document.getElementById('libraryRecordId').value = issue.id || '';
-            document.getElementById('libraryStudent').value = issue.studentId || '';
-            fillStudentDetails();
+            document.getElementById('libraryStudentName').value = issue.studentName || '';
+            document.getElementById('libraryRollNo').value = issue.rollNo || '';
+            document.getElementById('libraryClass').value = issue.classGrade || '';
+            document.getElementById('libraryFatherName').value = issue.fatherName || '';
+            document.getElementById('libraryParentPhone').value = issue.parentPhone || '';
             ['bookTitle', 'bookNumber', 'accessionNumber', 'author', 'isbn', 'category', 'shelfLocation', 'issueDate', 'loanDays', 'dueDate', 'finePerDay'].forEach((idKey) => {
                 document.getElementById(idKey).value = issue[idKey] || '';
             });
             document.getElementById('conditionIssue').value = issue.conditionIssue || 'Good';
             document.getElementById('recordStatus').value = issue.status === 'Returned' || issue.status === 'Lost' ? issue.status : 'Issued';
             document.getElementById('libraryNotes').value = issue.notes || '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         async function returnLibraryIssue(id) {
@@ -375,19 +395,17 @@
             document.getElementById('issueDate').value = todayInput();
             document.getElementById('loanDays').value = '7';
             syncDueDate();
-            fillStudentDetails();
+            closeLibraryForm();
         }
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('issueDate').value = todayInput();
             syncDueDate();
-            document.getElementById('libraryStudent').addEventListener('change', fillStudentDetails);
             document.getElementById('issueDate').addEventListener('change', syncDueDate);
             document.getElementById('loanDays').addEventListener('input', syncDueDate);
             document.getElementById('librarySearch').addEventListener('input', renderLibraryIssues);
             document.getElementById('libraryStatusFilter').addEventListener('change', renderLibraryIssues);
             document.getElementById('libraryIssueForm').addEventListener('submit', saveLibraryIssue);
-            await loadStudentsForLibrary();
             await loadLibraryIssues();
             if (window.lucide) lucide.createIcons();
         });

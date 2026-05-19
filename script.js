@@ -13,6 +13,8 @@ const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher creden
 const STORAGE_KEY_PROMOTION_HISTORY = 'eduCore_promotion_history';
 const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
 const STORAGE_KEY_ALUMNI = 'eduCore_alumni';
+const STORAGE_KEY_COMPLAINTS = 'eduCore_complaints';
+const SIDEBAR_SCROLL_KEY = 'eduCore_sidebar_scroll_position';
 let teacherScheduleDraft = [];
 
 // === REAL-TIME SQL CONFIGURATION ===
@@ -270,6 +272,10 @@ if (typeof io !== 'undefined') {
         localStorage.setItem(STORAGE_KEY_STAFF, JSON.stringify(mergeStaffRecords(data)));
         if (isCurrentPage('staff.html')) renderStaff();
         if (isCurrentPage('dashboard.html')) updateDashboardStats();
+    });
+
+    socket.on('banners_update', (data) => {
+        if (isCurrentPage('dashboard.html')) updateDashboardBannerStats(data);
     });
 
     socket.on('session_forced_logout', (payload) => {
@@ -564,6 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureAttendanceNav();
     ensureNotificationsNav();
     ensureSpecialNoticesNav();
+    initializeSidebarScrollMemory();
     applyBranchScopedStudentsView();
     if (sessionStorage.getItem('eduCore_token')) {
         loadDesignationPermissionsForCurrentUser()
@@ -788,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (studentSearch) {
             studentSearch.addEventListener('input', () => {
                 studentColumnSearchFilter = null;
-                studentSearch.placeholder = 'Search by name, roll no, or student ID';
+                studentSearch.placeholder = 'Search';
                 renderStudents();
             });
         }
@@ -1895,6 +1902,133 @@ function canCurrentUserPerformAction(moduleKey, actionKey) {
     return false;
 }
 
+function getSidebarScrollElement() {
+    return document.querySelector('.sidebar .nav-links');
+}
+
+function getActiveSidebarItem(navLinks) {
+    if (!navLinks) return null;
+    const currentPage = getCurrentPageName();
+    let activeItem = navLinks.querySelector('.nav-item.active, .nav-subitem.active');
+    if (activeItem) return activeItem;
+
+    activeItem = Array.from(navLinks.querySelectorAll('a[href]')).find((link) => (
+        normalizeClientPageName(link.getAttribute('href') || '') === currentPage
+    ));
+    if (activeItem) activeItem.classList.add(activeItem.classList.contains('nav-subitem') ? 'active' : 'active');
+    return activeItem || null;
+}
+
+function isSidebarItemVisible(navLinks, item) {
+    if (!navLinks || !item) return true;
+    const navRect = navLinks.getBoundingClientRect();
+    const itemRect = item.getBoundingClientRect();
+    return itemRect.top >= navRect.top && itemRect.bottom <= navRect.bottom &&
+        itemRect.left >= navRect.left && itemRect.right <= navRect.right;
+}
+
+function keepActiveSidebarItemVisible(navLinks) {
+    const activeItem = getActiveSidebarItem(navLinks);
+    if (!activeItem || isSidebarItemVisible(navLinks, activeItem)) return;
+    activeItem.scrollIntoView({ block: 'center', inline: 'nearest' });
+}
+
+let sidebarScrollRestoreUntil = 0;
+
+function saveSidebarScrollPosition(extra = {}) {
+    const navLinks = getSidebarScrollElement();
+    if (!navLinks) return;
+
+    sessionStorage.setItem(SIDEBAR_SCROLL_KEY, JSON.stringify({
+        top: navLinks.scrollTop || 0,
+        left: navLinks.scrollLeft || 0,
+        path: window.location.pathname,
+        savedAt: Date.now(),
+        ...extra
+    }));
+}
+
+function saveSidebarLinkPosition(link) {
+    const navLinks = getSidebarScrollElement();
+    if (!navLinks || !link) return;
+
+    const navRect = navLinks.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+    saveSidebarScrollPosition({
+        targetHref: link.getAttribute('href') || '',
+        itemTop: linkRect.top - navRect.top
+    });
+}
+
+function readSidebarScrollPosition() {
+    try {
+        return JSON.parse(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 'null');
+    } catch (_error) {
+        return null;
+    }
+}
+
+function restoreSidebarScrollPosition(savedPosition = readSidebarScrollPosition()) {
+    const navLinks = getSidebarScrollElement();
+    if (!navLinks) return;
+    if (!savedPosition) return;
+
+    window.requestAnimationFrame(() => {
+        sidebarScrollRestoreUntil = Date.now() + 900;
+        const targetHref = String(savedPosition.targetHref || '').trim();
+        const targetPage = normalizeClientPageName(targetHref || window.location.pathname);
+        const targetLink = Array.from(navLinks.querySelectorAll('a[href]')).find((link) => (
+            normalizeClientPageName(link.getAttribute('href') || '') === targetPage
+        ));
+
+        if (targetLink && Number.isFinite(Number(savedPosition.itemTop))) {
+            navLinks.scrollTop += targetLink.getBoundingClientRect().top -
+                navLinks.getBoundingClientRect().top -
+                Number(savedPosition.itemTop);
+            return;
+        }
+
+        if (Number.isFinite(Number(savedPosition.top))) {
+            navLinks.scrollTop = Number(savedPosition.top) || 0;
+            navLinks.scrollLeft = Number(savedPosition.left) || 0;
+        }
+    });
+}
+
+function initializeSidebarScrollMemory() {
+    const navLinks = getSidebarScrollElement();
+    if (!navLinks || navLinks.dataset.scrollMemoryBound === 'true') return;
+    navLinks.dataset.scrollMemoryBound = 'true';
+
+    const initialSavedPosition = readSidebarScrollPosition();
+    restoreSidebarScrollPosition(initialSavedPosition);
+    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 80);
+    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 300);
+    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 700);
+
+    let pendingFrame = 0;
+    navLinks.addEventListener('scroll', () => {
+        if (Date.now() < sidebarScrollRestoreUntil) return;
+        if (pendingFrame) return;
+        pendingFrame = window.requestAnimationFrame(() => {
+            pendingFrame = 0;
+            saveSidebarScrollPosition();
+        });
+    }, { passive: true });
+
+    navLinks.addEventListener('pointerdown', (event) => {
+        const link = event.target.closest('a[href]');
+        if (link) saveSidebarLinkPosition(link);
+    }, { capture: true });
+
+    navLinks.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href]');
+        if (link) saveSidebarLinkPosition(link);
+    });
+
+    window.addEventListener('beforeunload', saveSidebarScrollPosition);
+}
+
 function ensureDesignationPermissionsNav() {
     const navLinks = document.querySelector('.nav-links');
     const loggedInUser = getLoggedInUser();
@@ -2563,6 +2697,7 @@ async function renderBranches() {
             throw new Error(branches.error || 'Branches could not be loaded.');
         }
 
+        updateBranchAccessSummary(branches);
         tbody.innerHTML = '';
         if (!Array.isArray(branches) || branches.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">No branches registered yet.</td></tr>';
@@ -2593,7 +2728,26 @@ async function renderBranches() {
         });
         if (window.lucide) window.lucide.createIcons();
     } catch (error) {
+        updateBranchAccessSummary([]);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded.</td></tr>';
+    }
+}
+
+function updateBranchAccessSummary(branches = []) {
+    const countEl = document.getElementById('branchAccessCount');
+    const detailEl = document.getElementById('branchAccessDetail');
+    if (!countEl && !detailEl) return;
+
+    const records = Array.isArray(branches) ? branches : [];
+    const total = records.length;
+    const active = records.filter((branch) => branch?.isActive !== false).length;
+    const inactive = Math.max(total - active, 0);
+
+    if (countEl) countEl.innerText = total.toString();
+    if (detailEl) {
+        const label = total === 1 ? 'branch' : 'branches';
+        detailEl.innerHTML = `<i data-lucide="building-2" size="16"></i> ${active} active / ${inactive} inactive ${label}`;
+        if (window.lucide) window.lucide.createIcons();
     }
 }
 
@@ -3159,7 +3313,49 @@ function updateDashboardStats() {
         document.getElementById('dashRevenue').innerText = 'PKR ' + totalRevenue.toLocaleString();
     }
 
+    updateDashboardComplaintStats();
+    updateDashboardBannerStats();
     updateActivePortalLogins();
+}
+
+function updateDashboardComplaintStats() {
+    const complaints = getArrayData(STORAGE_KEY_COMPLAINTS);
+    const total = complaints.length;
+    const pending = complaints.filter((complaint) => String(complaint.status || 'Pending').toLowerCase() !== 'replied').length;
+    const countEl = document.getElementById('dashComplaintCount');
+    const detailEl = document.getElementById('dashComplaintDetail');
+
+    if (countEl) countEl.innerText = total.toString();
+    if (detailEl) {
+        detailEl.innerHTML = `<i data-lucide="message-square" size="16"></i> ${pending} pending`;
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
+async function updateDashboardBannerStats(records) {
+    const countEl = document.getElementById('dashLiveBannerCount');
+    const detailEl = document.getElementById('dashLiveBannerDetail');
+    if (!countEl && !detailEl) return;
+
+    try {
+        let banners = Array.isArray(records) ? records : null;
+        if (!banners) {
+            const response = await fetch(`${API_BASE_URL}/banners`);
+            const data = await response.json();
+            banners = Array.isArray(data.banners) ? data.banners : [];
+        }
+
+        const liveCount = banners.filter((banner) => banner.isActive !== false).length;
+        if (countEl) countEl.innerText = liveCount.toString();
+        if (detailEl) {
+            detailEl.innerHTML = `<i data-lucide="image" size="16"></i> ${banners.length} total banners`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    } catch (error) {
+        if (countEl) countEl.innerText = '0';
+        if (detailEl) detailEl.innerHTML = '<i data-lucide="image" size="16"></i> Unable to load';
+        if (window.lucide) window.lucide.createIcons();
+    }
 }
 
 function initializeDashboardHome() {
@@ -3957,6 +4153,32 @@ function handleStudentActionSelect(selectElement, encodedPayload, studentId, isB
     }
 }
 
+function handleTeacherActionSelect(selectElement, encodedPayload, teacherId) {
+    const action = String(selectElement?.value || '').trim().toLowerCase();
+    if (!action) return;
+
+    if (selectElement) selectElement.value = '';
+
+    if (action === 'attendance') {
+        viewTeacherAttendanceFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'schedule') {
+        openTeacherSchedule(teacherId);
+        return;
+    }
+
+    if (action === 'edit') {
+        editTeacherFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'delete') {
+        deleteTeacher(teacherId);
+    }
+}
+
 function viewStudent(student) {
     const modal = document.getElementById('studentViewModal');
     if (!modal) {
@@ -4416,7 +4638,7 @@ function applyStudentColumnSearchValue(field, label, value) {
         searchInput.value = normalizedValue;
         searchInput.placeholder = studentColumnSearchFilter
             ? `Searching ${label}...`
-            : 'Search by name, roll no, or student ID';
+            : 'Search';
     }
 
     renderStudents();
@@ -5621,14 +5843,15 @@ function renderTeachers(term = '') {
                 <td style="font-weight:600;">PKR ${parseInt(t.salary || 0).toLocaleString()}</td>
                 <td>${t.phone || '-'}</td>
                 <td>
-                    <button class="action-btn btn-view" onclick="viewTeacherAttendanceFromEncoded('${encodedTeacher}')" title="View Attendance">
-                        <i data-lucide="eye" width="14"></i>
-                    </button>
-                    <button class="action-btn btn-edit" onclick="openTeacherSchedule('${t.id}')" title="Assign Lectures">
-                        <i data-lucide="calendar-clock" width="14"></i> Schedule
-                    </button>
-                    <button class="action-btn btn-edit" onclick="editTeacherFromEncoded('${encodedTeacher}')"><i data-lucide="edit-2" width="14"></i> Edit</button>
-                    <button class="action-btn btn-delete" onclick="deleteTeacher('${t.id}')"><i data-lucide="trash-2" width="14"></i></button>
+                    <div class="teacher-action-wrap">
+                        <select class="table-action-select" onchange="handleTeacherActionSelect(this, '${encodedTeacher}', '${t.id}')">
+                            <option value="">Actions</option>
+                            <option value="attendance">Attendance</option>
+                            <option value="schedule">Schedule</option>
+                            <option value="edit">Edit</option>
+                            <option value="delete">Delete</option>
+                        </select>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);

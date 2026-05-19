@@ -98,6 +98,7 @@
             align-items: end;
             gap: 1rem;
             flex-wrap: wrap;
+            flex: 1 1 auto;
         }
 
         .student-stat {
@@ -108,7 +109,13 @@
         }
 
         .student-filter-group {
+            flex: 0 1 260px;
+            width: 260px;
             min-width: 260px;
+        }
+
+        .student-search-group {
+            max-width: none;
         }
 
         .student-filter-group label {
@@ -122,11 +129,18 @@
         .student-filter-group input,
         .student-filter-group select {
             width: 100%;
-            padding: 0.9rem 1rem;
+            min-height: 42px;
+            padding: 0.58rem 0.85rem;
             border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
+            border-radius: var(--radius-md);
             background: white;
             font: inherit;
+        }
+
+        #studentPrintMode {
+            min-height: 42px !important;
+            padding: 0.58rem 0.85rem !important;
+            border-radius: var(--radius-md) !important;
         }
 
         .student-filter-group .student-multifilter {
@@ -135,9 +149,10 @@
 
         .student-filter-group .student-multifilter-trigger {
             width: 100%;
-            padding: 0.9rem 1rem;
+            min-height: 42px;
+            padding: 0.58rem 0.85rem;
             border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
+            border-radius: var(--radius-md);
             background: white;
             font: inherit;
             cursor: pointer;
@@ -307,12 +322,12 @@
         .student-name-cell {
             display: flex;
             align-items: center;
-            gap: 0.7rem;
+            gap: 0.85rem;
         }
 
         .student-avatar {
-            width: 32px;
-            height: 32px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: rgba(32, 176, 164, 0.12);
             color: var(--primary-color);
@@ -320,6 +335,7 @@
             align-items: center;
             justify-content: center;
             font-weight: 700;
+            font-size: 0.9rem;
             flex-shrink: 0;
             overflow: hidden;
         }
@@ -381,7 +397,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            min-width: 170px;
+            min-width: 0;
         }
 
         .student-name-text {
@@ -544,6 +560,42 @@
             font: inherit;
         }
 
+        .student-search-control {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            width: 100%;
+            min-height: 42px;
+            padding: 0 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            background: #ffffff;
+        }
+
+        .student-search-control i {
+            width: 17px;
+            height: 17px;
+            color: var(--primary-color);
+            flex: 0 0 auto;
+        }
+
+        .student-filter-group .student-search-control input {
+            border: 0;
+            border-radius: 0;
+            padding: 0.55rem 0;
+            min-width: 0;
+        }
+
+        .student-filter-group .student-search-control input:focus {
+            border-color: transparent;
+            box-shadow: none;
+        }
+
+        .student-search-control:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
         .student-search-actions {
             display: flex;
             justify-content: flex-end;
@@ -556,6 +608,84 @@
             min-width: 95px;
         }
 
+        .student-table-container {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #studentsTable {
+            width: 100% !important;
+            min-width: 980px !important;
+            table-layout: fixed !important;
+        }
+
+        #studentsTable th,
+        #studentsTable td {
+            padding: 0.68rem 0.55rem !important;
+            vertical-align: middle;
+        }
+
+        #studentsTable th:nth-child(1),
+        #studentsTable td:nth-child(1) {
+            width: 9%;
+        }
+
+        #studentsTable th:nth-child(2),
+        #studentsTable td:nth-child(2) {
+            width: 7%;
+        }
+
+        #studentsTable th:nth-child(3),
+        #studentsTable td:nth-child(3) {
+            width: 20%;
+        }
+
+        #studentsTable th:nth-child(4),
+        #studentsTable td:nth-child(4) {
+            width: 12%;
+        }
+
+        #studentsTable th:nth-child(5),
+        #studentsTable td:nth-child(5) {
+            width: 9%;
+        }
+
+        #studentsTable th:nth-child(6),
+        #studentsTable td:nth-child(6) {
+            width: 8%;
+        }
+
+        #studentsTable th:nth-child(7),
+        #studentsTable td:nth-child(7) {
+            width: 10%;
+        }
+
+        #studentsTable th:nth-child(8),
+        #studentsTable td:nth-child(8) {
+            width: 7%;
+        }
+
+        #studentsTable th:nth-child(9),
+        #studentsTable td:nth-child(9) {
+            width: 9%;
+            text-align: center;
+        }
+
+        #studentsTable th:nth-child(10),
+        #studentsTable td:nth-child(10) {
+            width: 9%;
+            text-align: center;
+        }
+
+        #studentsTable .table-action-wrap {
+            justify-content: center;
+        }
+
+        #studentsTable .table-action-select {
+            width: 86px;
+            min-height: 34px;
+        }
+
         @media (max-width: 900px) {
             .student-toolbar,
             .student-toolbar-left {
@@ -563,8 +693,11 @@
             }
 
             .student-filter-group,
+            .student-search-group,
             .student-stat {
                 min-width: 100%;
+                width: 100%;
+                max-width: none;
             }
 
             .student-print-btn,
@@ -639,8 +772,8 @@
         }
 
             .student-avatar {
-                width: 22px !important;
-                height: 22px !important;
+                width: 30px !important;
+                height: 30px !important;
                 font-size: 11px !important;
             }
 
@@ -800,22 +933,6 @@
         <main class="main-content">
             <header class="header">
                 <h1>Student Management</h1>
-                <div class="header-actions">
-                    <div class="notification-bell" id="notificationBell">
-                        <i data-lucide="bell" size="22"></i>
-                        <span class="notification-badge" id="notifBadge">0</span>
-
-                        <div class="notif-panel" id="notificationPanel">
-                            <div class="notif-header">
-                                <h4>Notifications</h4>
-                                <button class="clear-notif" onclick="clearAllNotifications(event)">Clear All</button>
-                            </div>
-                            <div class="notif-list" id="notificationList">
-                                <!-- Notifications added via JS -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </header>
 
             <div class="student-toolbar">
@@ -823,9 +940,12 @@
                     <div class="student-stat">
                         Total Students: <span id="totalStudentCount" style="color: var(--primary-color);">0</span>
                     </div>
-                    <div class="student-filter-group">
-                        <label for="studentSearchInput">Search Student</label>
-                        <input type="text" id="studentSearchInput" placeholder="Search by name, roll no, or student ID">
+                    <div class="student-filter-group student-search-group">
+                        <label for="studentSearchInput">Search</label>
+                        <div class="student-search-control">
+                            <i data-lucide="search"></i>
+                            <input type="text" id="studentSearchInput" placeholder="Search">
+                        </div>
                     </div>
                     <div class="student-filter-group">
                         <label for="studentQuickFilterTrigger">Quick Filter</label>
@@ -999,7 +1119,7 @@
             </div>
 
             <!-- Students List -->
-            <div class="table-container">
+            <div class="table-container student-table-container">
                 <table id="studentsTable">
                     <thead>
                         <tr>
