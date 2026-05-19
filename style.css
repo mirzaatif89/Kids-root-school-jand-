@@ -382,24 +382,49 @@ ul {
 }
 
 .logo-section {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 42px 1fr;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: 0.7rem;
+    width: 100%;
+    min-height: 58px;
+    padding: 0.55rem 0.65rem;
     margin-bottom: 1.55rem;
+    border: 1px solid rgba(153, 246, 228, 0.18);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.07);
     color: #ffffff;
-    font-weight: bold;
-    font-size: 1.2rem;
-    text-align: center;
+    text-align: left;
 }
 
-.sidebar-logo-img {
-    width: 132px;
-    height: 44px;
-    object-fit: contain;
-    display: block;
-    margin-bottom: 0;
+.sidebar .logo-section::before {
+    content: "";
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-color: #ecfeff;
+    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 15.5L20 9L32 15.5L20 22L8 15.5Z' fill='%230f766e'/%3E%3Cpath d='M13 19V25.5C13 27.8 16.1 30 20 30C23.9 30 27 27.8 27 25.5V19' stroke='%23115e59' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M32 16V24' stroke='%2320b0a4' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='26.5' r='2.4' fill='%2320b0a4'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 34px 34px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar .logo-section::after {
+    content: "Apexiums\A School Software";
+    color: #ffffff;
+    font-size: 0.98rem;
+    font-weight: 800;
+    line-height: 1.12;
+    letter-spacing: 0;
+    white-space: pre-line;
+    text-transform: none;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar .sidebar-logo-img {
+    display: none;
 }
 
 .nav-links {
