@@ -3965,13 +3965,6 @@ async function handleStudentFormSubmit(e) {
 
     renderStudents();
 
-    if (localSaveResult.strippedProfileImage) {
-        await showAppAlert(
-            'Student saved, but the profile image was too large for browser storage, so it was skipped. Use a smaller image if you need to attach it.',
-            'Student Saved'
-        );
-    }
-
     const syncResult = await syncToSQLDetailed('students', [localSaveResult.student]);
     if (!syncResult.success) {
         await showAppAlert(
