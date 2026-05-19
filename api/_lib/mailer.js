@@ -1,10 +1,18 @@
+const path = require('path');
 const nodemailer = require('nodemailer');
 const { getSchoolLogoAttachment, SCHOOL_LOGO_CID } = require('./email-template');
+
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+
+function normalizeBoolean(value, fallback = false) {
+    if (value === undefined || value === null || value === '') return fallback;
+    return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+}
 
 function getSmtpConfig() {
     const host = String(process.env.SMTP_HOST || '').trim();
     const port = Number(process.env.SMTP_PORT || 587);
-    const secure = String(process.env.SMTP_SECURE || 'false').toLowerCase() === 'true';
+    const secure = normalizeBoolean(process.env.SMTP_SECURE, port === 465);
     const user = String(process.env.SMTP_USER || '').trim();
     const pass = String(process.env.SMTP_PASS || process.env.SMTP_PSAS || '').trim();
     const fromEmail = String(process.env.SMTP_FROM_EMAIL || user || '').trim();
@@ -36,6 +44,26 @@ function assertSmtpConfigured(config = getSmtpConfig()) {
     }
 }
 
+function describeSmtpError(error) {
+    const message = String(error?.message || error || 'Email could not be sent.');
+    const responseCode = Number(error?.responseCode || 0);
+    const code = String(error?.code || '');
+
+    if (responseCode === 535 || code === 'EAUTH') {
+        return 'SMTP login failed. Check SMTP_USER and SMTP_PASS. For Gmail, use a 16-character App Password, not the normal Gmail password.';
+    }
+
+    if (['ECONNECTION', 'ETIMEDOUT', 'ESOCKET'].includes(code)) {
+        return 'SMTP server connection failed. Check SMTP_HOST, SMTP_PORT, SMTP_SECURE, and hosting firewall/network access.';
+    }
+
+    if (responseCode === 550 || responseCode === 553) {
+        return `SMTP rejected the sender or recipient: ${message}`;
+    }
+
+    return message;
+}
+
 function createTransporter() {
     const config = getSmtpConfig();
     assertSmtpConfigured(config);
@@ -47,7 +75,10 @@ function createTransporter() {
         auth: {
             user: config.user,
             pass: config.pass
-        }
+        },
+        connectionTimeout: 20000,
+        greetingTimeout: 20000,
+        socketTimeout: 30000
     });
 }
 
@@ -98,17 +129,26 @@ async function sendSmtpEmail(payload = {}) {
         attachments.push(getSchoolLogoAttachment());
     }
 
-    const result = await transporter.sendMail({
-        from: `"${config.fromName.replace(/"/g, '\\"')}" <${config.fromEmail}>`,
-        to: email.to,
-        cc: email.cc.length ? email.cc : undefined,
-        bcc: email.bcc.length ? email.bcc : undefined,
-        subject: email.subject,
-        text: email.text || undefined,
-        html: email.html || undefined,
-        attachments: attachments.length ? attachments : undefined,
-        replyTo: payload.replyTo ? String(payload.replyTo).trim() : undefined
-    });
+    let result;
+    try {
+        result = await transporter.sendMail({
+            from: `"${config.fromName.replace(/"/g, '\\"')}" <${config.fromEmail}>`,
+            to: email.to,
+            cc: email.cc.length ? email.cc : undefined,
+            bcc: email.bcc.length ? email.bcc : undefined,
+            subject: email.subject,
+            text: email.text || undefined,
+            html: email.html || undefined,
+            attachments: attachments.length ? attachments : undefined,
+            replyTo: payload.replyTo ? String(payload.replyTo).trim() : undefined
+        });
+    } catch (error) {
+        const smtpError = new Error(describeSmtpError(error));
+        smtpError.statusCode = error.statusCode || 502;
+        smtpError.code = error.code;
+        smtpError.responseCode = error.responseCode;
+        throw smtpError;
+    }
 
     return {
         messageId: result.messageId,

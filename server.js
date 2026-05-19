@@ -23,7 +23,7 @@ const {
 } = require('./api/_lib/student-emails');
 const { startWhatsAppBirthdayScheduler } = require('./api/_lib/cronjob');
 
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const server = http.createServer(app);
