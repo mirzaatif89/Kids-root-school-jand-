@@ -373,6 +373,197 @@
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
+        (function () {
+            const API = window.API_BASE_URL || `${window.location.origin}/api`;
+
+            function html(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[char]));
+            }
+
+            function formatUsername(campusName) {
+                return String(campusName || 'Campus 1')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '_')
+                    .replace(/^_+|_+$/g, '') + '_admin';
+            }
+
+            function nextBranchNumber(branches) {
+                const used = (Array.isArray(branches) ? branches : [])
+                    .map((branch) => String(branch?.campusName || '').match(/campus\s*(\d+)/i)?.[1])
+                    .map((value) => Number.parseInt(value, 10))
+                    .filter((value) => Number.isFinite(value) && value > 0);
+                let next = 1;
+                while (used.includes(next)) next += 1;
+                return next;
+            }
+
+            function setDefaultBranchFields(branches = []) {
+                const recordId = document.getElementById('branchRecordId');
+                const campusInput = document.getElementById('branchCampusName');
+                const displayInput = document.getElementById('branchDisplayName');
+                const usernameInput = document.getElementById('branchUsername');
+                const passwordInput = document.getElementById('branchPassword');
+                if (!campusInput || recordId?.value) return;
+                if (String(campusInput.value || '').trim()) return;
+
+                const campusName = `Campus ${nextBranchNumber(branches)}`;
+                campusInput.value = campusName;
+                if (displayInput) displayInput.value = `${campusName} Office`;
+                if (usernameInput) usernameInput.value = formatUsername(campusName);
+                if (passwordInput && !passwordInput.value) passwordInput.value = '';
+            }
+
+            function renderBranchTable(branches = []) {
+                const tbody = document.getElementById('branchTableBody');
+                if (!tbody) return;
+                const rows = Array.isArray(branches) ? branches : [];
+                window.branchRecordsCache = rows;
+                setDefaultBranchFields(rows);
+
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">No branches registered yet.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = rows.map((branch) => `
+                    <tr>
+                        <td><strong>${html(branch.campusName || '-')}</strong></td>
+                        <td>${html(branch.fullName || '-')}</td>
+                        <td>${html(branch.username || '-')}</td>
+                        <td>${html(branch.plainPassword || 'Hidden')}</td>
+                        <td>${branch.isActive === false ? 'Inactive' : 'Active'}</td>
+                        <td>${html(branch.profileId || '-')}</td>
+                        <td>
+                            <div class="branch-actions">
+                                <button class="action-btn btn-edit" type="button" onclick='editBranch(${JSON.stringify(branch).replace(/'/g, '&#039;')})' title="Edit">
+                                    <i data-lucide="edit-2" width="14"></i> Edit
+                                </button>
+                                <button class="action-btn btn-delete" type="button" onclick="deleteBranch('${html(branch.id)}')" title="Delete">
+                                    <i data-lucide="trash-2" width="14"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+                if (window.lucide) window.lucide.createIcons();
+            }
+
+            async function loadBranchRows() {
+                const tbody = document.getElementById('branchTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">Loading branches...</td></tr>';
+                }
+                try {
+                    const response = await fetch(`${API}/branches`, { cache: 'no-store' });
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.message || data.error || 'Branches could not be loaded.');
+                    renderBranchTable(Array.isArray(data) ? data : data.branches);
+                } catch (error) {
+                    if (tbody) {
+                        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded. Please refresh and try again.</td></tr>';
+                    }
+                }
+            }
+
+            async function saveBranch(event) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+
+                const form = document.getElementById('branchRegistrationForm');
+                const submitBtn = form?.querySelector('button[type="submit"]');
+                const recordId = document.getElementById('branchRecordId').value.trim();
+                const campusName = document.getElementById('branchCampusName').value.trim();
+                const fullName = document.getElementById('branchDisplayName').value.trim() || campusName;
+                const username = document.getElementById('branchUsername').value.trim();
+                const password = document.getElementById('branchPassword').value.trim();
+
+                if (!campusName || !username) {
+                    alert('Campus name and username are required.');
+                    return;
+                }
+                if (!recordId && !password) {
+                    alert('Password is required for a new branch login.');
+                    return;
+                }
+
+                try {
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i data-lucide="loader-circle"></i> Saving...';
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+
+                    const response = await fetch(`${API}/branches`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: recordId || undefined, campusName, fullName, username, password })
+                    });
+                    const data = await response.json();
+                    if (!response.ok || data.success === false) {
+                        throw new Error(data.message || data.error || 'Branch registration failed.');
+                    }
+
+                    document.getElementById('branchRecordId').value = '';
+                    document.getElementById('branchCampusName').value = '';
+                    document.getElementById('branchDisplayName').value = '';
+                    document.getElementById('branchUsername').value = '';
+                    document.getElementById('branchPassword').value = '';
+                    renderBranchTable(Array.isArray(data.branches) ? data.branches : []);
+                    if (typeof populateCampusDropdowns === 'function') populateCampusDropdowns();
+                    if (typeof showSuccessModal === 'function') {
+                        showSuccessModal(recordId ? 'Branch Updated!' : 'Branch Registered!', `${campusName} branch login has been saved.`);
+                    }
+                } catch (error) {
+                    alert(error.message || 'Branch registration failed.');
+                } finally {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="save"></i> Save Branch';
+                        if (window.lucide) window.lucide.createIcons();
+                    }
+                }
+            }
+
+            window.loadBranchRows = loadBranchRows;
+            window.renderBranchTable = renderBranchTable;
+
+            function bindBranchPage() {
+                const form = document.getElementById('branchRegistrationForm');
+                if (form) {
+                    if (typeof window.handleBranchRegistrationSubmit === 'function') {
+                        form.removeEventListener('submit', window.handleBranchRegistrationSubmit);
+                    }
+                    form.addEventListener('submit', saveBranch);
+                }
+
+                const campusInput = document.getElementById('branchCampusName');
+                campusInput?.addEventListener('input', () => {
+                    const recordId = document.getElementById('branchRecordId');
+                    if (recordId?.value) return;
+                    const campusName = campusInput.value.trim();
+                    if (!campusName) return;
+                    const displayInput = document.getElementById('branchDisplayName');
+                    const usernameInput = document.getElementById('branchUsername');
+                    if (displayInput) displayInput.value = `${campusName} Office`;
+                    if (usernameInput) usernameInput.value = formatUsername(campusName);
+                });
+
+                loadBranchRows();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindBranchPage);
+            } else {
+                bindBranchPage();
+            }
+        })();
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

@@ -45,6 +45,10 @@ const DEFAULT_STUDENT_CLASS_ORDER = [
 let studentQuickFilterBranchCampuses = [];
 let studentColumnSearchFilter = null;
 let classFeeDefaults = {};
+let classFeeHistory = [];
+let classFeeEditingHistoryId = '';
+const STORAGE_KEY_CLASS_FEES = 'eduCore_class_fees';
+const STORAGE_KEY_CLASS_FEE_HISTORY = 'eduCore_class_fee_history';
 let branchRecordsCache = [];
 const FALLBACK_ROUTE_TO_PAGE = {
     login: 'login.html',
@@ -60,9 +64,11 @@ const FALLBACK_ROUTE_TO_PAGE = {
     student_courses: 'student_courses.html',
     banners: 'banners.html',
     teachers: 'teachers.html',
+    stuck_off: 'stuck_off.html',
     teacher_scheduling: 'teacher_scheduling.html',
     staff: 'staff.html',
     classes: 'classes.html',
+    set_fee: 'set_fee.html',
     fees: 'fees.html',
     fee_challan: 'fee_challan.html',
     certificate: 'certificate.html',
@@ -262,12 +268,14 @@ if (typeof io !== 'undefined') {
     socket.on('students_update', (data) => {
         localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(mergeStudentRecords(data)));
         if (isCurrentPage('students.html')) renderStudents();
+        if (isCurrentPage('stuck_off.html')) renderStuckOffPage();
         if (isCurrentPage('dashboard.html')) updateDashboardStats();
     });
 
     socket.on('teachers_update', (data) => {
         localStorage.setItem(STORAGE_KEY_TEACHERS, JSON.stringify(mergeTeacherRecords(data)));
         if (isCurrentPage('teachers.html')) renderTeachers();
+        if (isCurrentPage('stuck_off.html')) renderStuckOffPage();
         if (isCurrentPage('dashboard.html')) updateDashboardStats();
     });
 
@@ -368,6 +376,7 @@ async function initialSQLSync() {
                 await syncToSQL('students', missingStudents);
             }
             if (typeof renderStudents === 'function') renderStudents();
+            if (typeof renderStuckOffPage === 'function') renderStuckOffPage();
             if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
@@ -381,6 +390,7 @@ async function initialSQLSync() {
                 await syncToSQL('teachers', missingTeachers);
             }
             if (typeof renderTeachers === 'function') renderTeachers();
+            if (typeof renderStuckOffPage === 'function') renderStuckOffPage();
             if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
@@ -908,6 +918,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('branchCampusName')?.addEventListener('input', handleBranchCampusInput);
     }
 
+    const stuckOffTable = document.getElementById('stuckOffRecordsBody');
+    if (stuckOffTable) {
+        renderStuckOffPage();
+        document.getElementById('stuckOffTypeFilter')?.addEventListener('change', renderStuckOffPage);
+        document.getElementById('stuckOffSearchInput')?.addEventListener('input', renderStuckOffPage);
+    }
+
     // === DASHBOARD HOME LOGIC ===
     initializeDashboardHome();
 
@@ -1117,6 +1134,9 @@ function mergeTeacherRecords(incomingTeachers) {
             designation: normalizedDesignation.designation,
             groupKey: normalizedDesignation.groupKey,
             profileImage: teacher.profileImage || localTeacher.profileImage || '',
+            employmentStatus: teacher.employmentStatus || localTeacher.employmentStatus || 'Active',
+            stuckOffAt: teacher.stuckOffAt || localTeacher.stuckOffAt || '',
+            stuckOffNote: teacher.stuckOffNote || localTeacher.stuckOffNote || '',
             schedule: normalizeTeacherSchedule(teacher.schedule || localTeacher.schedule),
             plainPassword: teacher.plainPassword || localTeacher.plainPassword ||
                 (localTeacher.password && !isHashedPassword(localTeacher.password) ? localTeacher.password : '')
@@ -1134,9 +1154,55 @@ function mergeTeacherRecords(incomingTeachers) {
 
 function isStudentTerminated(student) {
     const enrollmentStatus = String(student?.enrollmentStatus || '').trim().toLowerCase();
-    if (enrollmentStatus === 'terminated' || enrollmentStatus === 'left' || enrollmentStatus === 'inactive') return true;
+    if (enrollmentStatus === 'terminated' || enrollmentStatus === 'left' || enrollmentStatus === 'inactive' || enrollmentStatus === 'stuck off' || enrollmentStatus === 'stuck-off' || enrollmentStatus === 'stuckoff') return true;
     if (student?.isTerminated === true) return true; // legacy
     return String(student?.feesStatus || '').trim().toLowerCase() === 'terminated';
+}
+
+function isStudentStuckOff(student) {
+    const enrollmentStatus = String(student?.enrollmentStatus || '').trim().toLowerCase();
+    return enrollmentStatus === 'stuck off' || enrollmentStatus === 'stuck-off' || enrollmentStatus === 'stuckoff';
+}
+
+function isTeacherStuckOff(teacher) {
+    const status = String(teacher?.employmentStatus || '').trim().toLowerCase();
+    return status === 'stuck off' || status === 'stuck-off' || status === 'stuckoff';
+}
+
+function stuckOffStudent(studentId) {
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    const index = students.findIndex((s) => String(s?.id || '') === String(studentId || ''));
+    if (index === -1) return;
+
+    const student = students[index];
+    if (isStudentStuckOff(student)) {
+        showAppAlert('Student is already marked as stuck off.', 'No Changes');
+        return;
+    }
+
+    const confirmText = `Mark "${student.fullName || 'Student'}" as stuck off?\n\nThis student will be removed from the active student list and shown in Stuck Off records.`;
+    const ok = typeof showAppConfirm === 'function' ? showAppConfirm(confirmText) : Promise.resolve(window.confirm(confirmText));
+
+    Promise.resolve(ok).then((confirmed) => {
+        if (!confirmed) return;
+
+        const today = new Date().toISOString().split('T')[0];
+        const updatedStudent = {
+            ...student,
+            enrollmentStatus: 'Stuck Off',
+            stuckOffAt: today,
+            terminatedAt: today,
+            terminationNote: student.terminationNote || ''
+        };
+
+        students[index] = updatedStudent;
+        saveData(STORAGE_KEY_STUDENTS, students, { skipSync: true });
+        syncToSQLDetailed('students', [updatedStudent]).catch(() => {});
+        pushNotification('Student Updated', `"${updatedStudent.fullName || 'Student'}" marked as stuck off.`, 'info');
+        renderStudents();
+        renderAdminRecordPanels();
+        renderStuckOffPage();
+    }).catch(() => {});
 }
 
 function terminateStudent(studentId) {
@@ -1193,6 +1259,7 @@ function reactivateStudent(studentId) {
         const updatedStudent = {
             ...student,
             enrollmentStatus: 'Active',
+            stuckOffAt: '',
             terminatedAt: '',
             terminationNote: ''
         };
@@ -1203,6 +1270,7 @@ function reactivateStudent(studentId) {
         pushNotification('Student Updated', `"${updatedStudent.fullName || 'Student'}" reactivated.`, 'success');
         renderStudents();
         renderAdminRecordPanels();
+        renderStuckOffPage();
     }).catch(() => {});
 }
 
@@ -1262,7 +1330,7 @@ function setStudentPhotoPreview(imageSrc = '', fullName = '') {
         return;
     }
 
-    preview.textContent = getStudentInitial(fullName);
+    preview.innerHTML = '';
 }
 
 function setTeacherPhotoPreview(imageSrc = '', fullName = '') {
@@ -1274,7 +1342,7 @@ function setTeacherPhotoPreview(imageSrc = '', fullName = '') {
         return;
     }
 
-    preview.textContent = getTeacherInitial(fullName);
+    preview.innerHTML = '';
 }
 
 function getStaffInitial(fullName = '') {
@@ -2173,8 +2241,7 @@ function ensureAdminRecordsNav() {
     const adminRecordLinks = [
         { page: 'certificate.html', label: 'Certificate', icon: 'award' },
         { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
-        { page: 'visitor_books.html', label: 'Visitor Books', icon: 'clipboard-list' },
-        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+        { page: 'visitor_books.html', label: 'Visitor Books', icon: 'clipboard-list' }
     ];
     const fragment = document.createDocumentFragment();
 
@@ -2625,6 +2692,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'families.html', label: 'Families', icon: 'home' },
         { page: 'banners.html', label: 'Banners', icon: 'image' },
         { page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
+        { page: 'stuck_off.html', label: 'Stuck Off', icon: 'user-x' },
         { page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
         { page: 'certificate.html', label: 'Certificate', icon: 'award' },
         { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
@@ -2632,6 +2700,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
         { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'classes.html', label: 'Classes', icon: 'school' },
+        { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
         { page: 'library.html', label: 'Library', icon: 'library' },
@@ -2733,6 +2802,7 @@ async function renderBranches() {
     if (!tbody) return;
 
     try {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">Loading branches...</td></tr>';
         const response = await fetch(`${API_BASE_URL}/branches`);
         const responseText = await response.text();
         let branches = [];
@@ -2747,6 +2817,21 @@ async function renderBranches() {
             throw new Error(branches.error || 'Branches could not be loaded.');
         }
 
+        branches = Array.isArray(branches) ? branches : (Array.isArray(branches.branches) ? branches.branches : []);
+        renderBranchRows(branches);
+    } catch (error) {
+        branchRecordsCache = [];
+        updateBranchAccessSummary([]);
+        setDefaultNewBranchFields();
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded. Please refresh and try again.</td></tr>';
+    }
+}
+
+function renderBranchRows(branches = []) {
+    const tbody = document.getElementById('branchTableBody');
+    if (!tbody) return;
+
+    try {
         branchRecordsCache = Array.isArray(branches) ? branches : [];
         updateBranchAccessSummary(branches);
         tbody.innerHTML = '';
@@ -2785,7 +2870,7 @@ async function renderBranches() {
         branchRecordsCache = [];
         updateBranchAccessSummary([]);
         setDefaultNewBranchFields();
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be displayed.</td></tr>';
     }
 }
 
@@ -2906,6 +2991,7 @@ function updateBranchAccessSummary(branches = []) {
 async function handleBranchRegistrationSubmit(event) {
     event.preventDefault();
 
+    const submitButton = event.submitter || document.querySelector('#branchRegistrationForm button[type="submit"]');
     const recordId = document.getElementById('branchRecordId').value.trim();
     const campusName = document.getElementById('branchCampusName').value.trim();
     const fullName = document.getElementById('branchDisplayName').value.trim() || campusName;
@@ -2918,6 +3004,11 @@ async function handleBranchRegistrationSubmit(event) {
     }
 
     try {
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i data-lucide="loader-circle"></i> Saving...';
+            if (window.lucide) window.lucide.createIcons();
+        }
         const response = await fetch(`${API_BASE_URL}/branches`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2934,14 +3025,22 @@ async function handleBranchRegistrationSubmit(event) {
         }
 
         pushNotification('Branch Registered', `${campusName} branch login has been created.`, 'user');
+        const savedBranches = Array.isArray(result.branches) ? result.branches : [];
         resetBranchRegistrationForm();
-        renderBranches();
+        renderBranchRows(savedBranches);
         populateCampusDropdowns();
         showSuccessModal(recordId ? 'Branch Updated!' : 'Branch Registered!', recordId
             ? `${campusName} branch login details have been updated.`
             : `${campusName} can now log in with its branch username and password.`);
     } catch (error) {
         alert(error.message);
+    } finally {
+        const currentSubmitButton = document.querySelector('#branchRegistrationForm button[type="submit"]');
+        if (currentSubmitButton) {
+            currentSubmitButton.disabled = false;
+            currentSubmitButton.innerHTML = '<i data-lucide="save"></i> Save Branch';
+            if (window.lucide) window.lucide.createIcons();
+        }
     }
 }
 
@@ -3856,10 +3955,20 @@ function normalizeClassFeeConfig(input = {}) {
     return Object.entries(raw).reduce((acc, [className, config]) => {
         const name = String(className || '').trim();
         const monthlyFee = String(config?.monthlyFee ?? config?.fee ?? '').trim();
+        const annualCharges = String(config?.annualCharges ?? config?.annualFee ?? '').trim();
         const feeFrequency = String(config?.feeFrequency || 'Monthly').trim() || 'Monthly';
-        if (name && monthlyFee) acc[name] = { monthlyFee, feeFrequency };
+        const feeMonth = String(config?.feeMonth || '').trim();
+        const feeYear = String(config?.feeYear || '').trim();
+        if (name && (monthlyFee || annualCharges)) acc[name] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
         return acc;
     }, {});
+}
+
+function saveClassFeeLocalBackup() {
+    try {
+        localStorage.setItem(STORAGE_KEY_CLASS_FEES, JSON.stringify(classFeeDefaults || {}));
+        localStorage.setItem(STORAGE_KEY_CLASS_FEE_HISTORY, JSON.stringify(Array.isArray(classFeeHistory) ? classFeeHistory : []));
+    } catch (_error) {}
 }
 
 async function loadClassFeeDefaults() {
@@ -3870,10 +3979,20 @@ async function loadClassFeeDefaults() {
             throw new Error(result?.message || 'Class fee defaults unavailable.');
         }
         classFeeDefaults = normalizeClassFeeConfig(result.classFees || {});
+        classFeeHistory = Array.isArray(result.classFeeHistory) ? result.classFeeHistory : [];
+        saveClassFeeLocalBackup();
     } catch (error) {
-        classFeeDefaults = {};
+        try {
+            classFeeDefaults = normalizeClassFeeConfig(JSON.parse(localStorage.getItem(STORAGE_KEY_CLASS_FEES) || '{}'));
+            classFeeHistory = JSON.parse(localStorage.getItem(STORAGE_KEY_CLASS_FEE_HISTORY) || '[]');
+            if (!Array.isArray(classFeeHistory)) classFeeHistory = [];
+        } catch (_fallbackError) {
+            classFeeDefaults = {};
+            classFeeHistory = [];
+        }
     }
     renderClassFeeSettings();
+    renderClassFeeHistory();
     return classFeeDefaults;
 }
 
@@ -3913,7 +4032,12 @@ async function setupClassFeeSettings() {
     const form = document.getElementById('classFeeForm');
     const classSelect = document.getElementById('classFeeClassSelect');
     const amountInput = document.getElementById('classFeeAmount');
+    const annualInput = document.getElementById('classAnnualCharges');
     const frequencyInput = document.getElementById('classFeeFrequency');
+    const monthInput = document.getElementById('classFeeMonth');
+    const yearInput = document.getElementById('classFeeYear');
+    const saveButton = document.getElementById('classFeeSaveButton');
+    const cancelEditButton = document.getElementById('classFeeCancelEditButton');
     if (!form || !classSelect || !amountInput) return;
 
     populateClassFeeSelect();
@@ -3922,40 +4046,61 @@ async function setupClassFeeSettings() {
     classSelect.addEventListener('change', () => {
         const feeDefault = getClassFeeDefault(classSelect.value);
         amountInput.value = feeDefault?.monthlyFee || '';
+        if (annualInput) annualInput.value = feeDefault?.annualCharges || '';
         if (frequencyInput) frequencyInput.value = feeDefault?.feeFrequency || 'Monthly';
+        if (monthInput && feeDefault?.feeMonth) monthInput.value = feeDefault.feeMonth;
+        if (yearInput && feeDefault?.feeYear) yearInput.value = feeDefault.feeYear;
     });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const className = String(classSelect.value || '').trim();
         const monthlyFee = String(amountInput.value || '').trim();
+        const annualCharges = String(annualInput?.value || '').trim();
         const feeFrequency = String(frequencyInput?.value || 'Monthly').trim() || 'Monthly';
-        if (!className || !monthlyFee) {
-            await showAppAlert('Please select a class and enter monthly fee.', 'Missing Fee');
+        const feeMonth = String(monthInput?.value || '').trim();
+        const feeYear = String(yearInput?.value || '').trim();
+        if (!className || (!monthlyFee && !annualCharges)) {
+            await showAppAlert('Please select a class and enter monthly fee or annual charges.', 'Missing Fee');
             return;
         }
 
         const token = sessionStorage.getItem('eduCore_token') || '';
         try {
-            const response = await fetch(`${API_BASE_URL}/class-fees`, {
-                method: 'POST',
+            const editingId = String(classFeeEditingHistoryId || '').trim();
+            const response = await fetch(editingId ? `${API_BASE_URL}/class-fees/history/${encodeURIComponent(editingId)}` : `${API_BASE_URL}/class-fees`, {
+                method: editingId ? 'PUT' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`
                 },
-                body: JSON.stringify({ className, monthlyFee, feeFrequency })
+                body: JSON.stringify({ className, monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear })
             });
             const result = await parseJsonResponse(response, 'Class fee could not be saved.');
             if (!response.ok || result?.success === false) {
                 throw new Error(result?.message || 'Class fee could not be saved.');
             }
             classFeeDefaults = normalizeClassFeeConfig(result.classFees || {});
+            classFeeHistory = Array.isArray(result.classFeeHistory) ? result.classFeeHistory : classFeeHistory;
+            saveClassFeeLocalBackup();
+            clearClassFeeHistoryEditMode();
             renderClassFeeSettings();
-            pushNotification('Class Fee Updated', `${className} fee set to PKR ${Number(monthlyFee).toLocaleString('en-PK')}.`, 'success');
+            renderClassFeeHistory();
+            const monthlyText = monthlyFee ? `monthly PKR ${Number(monthlyFee).toLocaleString('en-PK')}` : '';
+            const annualText = annualCharges ? `annual PKR ${Number(annualCharges).toLocaleString('en-PK')}` : '';
+            pushNotification(editingId ? 'Fee History Updated' : 'Class Fee Updated', `${className} ${[monthlyText, annualText].filter(Boolean).join(' and ')} saved.`, 'success');
         } catch (error) {
             await showAppAlert(error.message || 'Class fee could not be saved.', 'Save Failed');
         }
     });
+
+    if (cancelEditButton) {
+        cancelEditButton.addEventListener('click', clearClassFeeHistoryEditMode);
+    }
+
+    if (saveButton) {
+        saveButton.dataset.defaultLabel = saveButton.innerHTML;
+    }
 }
 
 function populateClassFeeSelect() {
@@ -3980,9 +4125,161 @@ function renderClassFeeSettings() {
     }
     list.innerHTML = entries.map(([className, config]) => `
         <span class="class-fee-pill">
-            ${escapeHtml(className)}: PKR ${Number(config.monthlyFee || 0).toLocaleString('en-PK')} ${escapeHtml(config.feeFrequency || 'Monthly')}
+            ${escapeHtml(className)}: PKR ${Number(config.monthlyFee || 0).toLocaleString('en-PK')} ${escapeHtml(config.feeFrequency || 'Monthly')}${config.annualCharges ? ` | Annual PKR ${Number(config.annualCharges || 0).toLocaleString('en-PK')}` : ''}${config.feeMonth || config.feeYear ? ` (${escapeHtml([config.feeMonth, config.feeYear].filter(Boolean).join(' '))})` : ''}
         </span>
     `).join('');
+}
+
+function setClassFeeSelectValue(className) {
+    const classSelect = document.getElementById('classFeeClassSelect');
+    if (!classSelect) return;
+    const target = String(className || '').trim();
+    if (!target) return;
+    const exists = Array.from(classSelect.options).some((option) => option.value === target);
+    if (!exists) {
+        const opt = document.createElement('option');
+        opt.value = target;
+        opt.textContent = target;
+        classSelect.appendChild(opt);
+    }
+    classSelect.value = target;
+}
+
+function clearClassFeeHistoryEditMode() {
+    classFeeEditingHistoryId = '';
+    const saveButton = document.getElementById('classFeeSaveButton');
+    const cancelButton = document.getElementById('classFeeCancelEditButton');
+    const form = document.getElementById('classFeeForm');
+    if (saveButton) {
+        saveButton.innerHTML = saveButton.dataset.defaultLabel || '<i data-lucide="save"></i> Save Fee';
+    }
+    if (cancelButton) cancelButton.style.display = 'none';
+    if (form) form.dataset.editingHistoryId = '';
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+}
+
+function editClassFeeHistory(historyId) {
+    const id = String(historyId || '').trim();
+    const item = (Array.isArray(classFeeHistory) ? classFeeHistory : []).find((row) => String(row?.id || '') === id);
+    if (!item) {
+        showAppAlert('Fee history record was not found.', 'Edit Failed');
+        return;
+    }
+
+    classFeeEditingHistoryId = id;
+    setClassFeeSelectValue(item.className || '');
+    const amountInput = document.getElementById('classFeeAmount');
+    const annualInput = document.getElementById('classAnnualCharges');
+    const frequencyInput = document.getElementById('classFeeFrequency');
+    const monthInput = document.getElementById('classFeeMonth');
+    const yearInput = document.getElementById('classFeeYear');
+    const saveButton = document.getElementById('classFeeSaveButton');
+    const cancelButton = document.getElementById('classFeeCancelEditButton');
+    const form = document.getElementById('classFeeForm');
+
+    if (amountInput) amountInput.value = item.monthlyFee || '';
+    if (annualInput) annualInput.value = item.annualCharges || '';
+    if (frequencyInput) frequencyInput.value = item.feeFrequency || 'Monthly';
+    if (monthInput && item.feeMonth) monthInput.value = item.feeMonth;
+    if (yearInput) yearInput.value = item.feeYear || yearInput.value || String(new Date().getFullYear());
+    if (saveButton) saveButton.innerHTML = '<i data-lucide="save"></i> Update Fee';
+    if (cancelButton) cancelButton.style.display = '';
+    if (form) {
+        form.dataset.editingHistoryId = id;
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+}
+
+async function deleteClassFeeHistory(historyId) {
+    const id = String(historyId || '').trim();
+    const item = (Array.isArray(classFeeHistory) ? classFeeHistory : []).find((row) => String(row?.id || '') === id);
+    if (!item) {
+        await showAppAlert('Fee history record was not found.', 'Delete Failed');
+        return;
+    }
+
+    const ok = typeof showAppConfirm === 'function'
+        ? await showAppConfirm(`Delete fee history for ${item.className || 'this class'}?`, 'Delete Fee History')
+        : window.confirm(`Delete fee history for ${item.className || 'this class'}?`);
+    if (!ok) return;
+
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    try {
+        const response = await fetch(`${API_BASE_URL}/class-fees/history/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        const result = await parseJsonResponse(response, 'Fee history could not be deleted.');
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Fee history could not be deleted.');
+        }
+        classFeeDefaults = normalizeClassFeeConfig(result.classFees || {});
+        classFeeHistory = Array.isArray(result.classFeeHistory) ? result.classFeeHistory : [];
+        saveClassFeeLocalBackup();
+        if (classFeeEditingHistoryId === id) clearClassFeeHistoryEditMode();
+        renderClassFeeSettings();
+        renderClassFeeHistory();
+        pushNotification('Fee History Deleted', `${item.className || 'Class'} fee history removed.`, 'info');
+    } catch (error) {
+        await showAppAlert(error.message || 'Fee history could not be deleted.', 'Delete Failed');
+    }
+}
+
+function renderClassFeeHistory() {
+    const wrap = document.getElementById('classFeeHistoryWrap');
+    if (!wrap) return;
+
+    const rows = Array.isArray(classFeeHistory) ? [...classFeeHistory] : [];
+    rows.sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+
+    if (!rows.length) {
+        wrap.innerHTML = '<div class="empty-history">No fee history saved yet.</div>';
+        return;
+    }
+
+    wrap.innerHTML = `
+        <table class="history-table">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Month</th>
+                    <th>Class</th>
+                    <th>Fee</th>
+                    <th>Annual</th>
+                    <th>Frequency</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map((item) => {
+                    const updated = item.updatedAt ? new Date(item.updatedAt) : null;
+                    const updatedText = updated && !Number.isNaN(updated.getTime())
+                        ? updated.toLocaleDateString('en-PK')
+                        : '';
+                    const historyId = escapeHtml(item.id || '');
+                    return `
+                        <tr>
+                            <td>${escapeHtml(item.feeYear || '')}</td>
+                            <td>${escapeHtml(item.feeMonth || '')}</td>
+                            <td>${escapeHtml(item.className || '')}</td>
+                            <td>PKR ${Number(item.monthlyFee || 0).toLocaleString('en-PK')}</td>
+                            <td>${item.annualCharges ? `PKR ${Number(item.annualCharges || 0).toLocaleString('en-PK')}` : '-'}</td>
+                            <td>${escapeHtml(item.feeFrequency || 'Monthly')}</td>
+                            <td>${escapeHtml(updatedText)}</td>
+                            <td>
+                                <div class="history-actions">
+                                    <button type="button" class="history-action-btn edit" onclick="editClassFeeHistory('${historyId}')">Edit</button>
+                                    <button type="button" class="history-action-btn delete" onclick="deleteClassFeeHistory('${historyId}')">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('')}
+            </tbody>
+        </table>
+    `;
 }
 
 function normalizeDateInputValue(value) {
@@ -4279,12 +4576,12 @@ function handleStudentActionSelect(selectElement, encodedPayload, studentId, isB
         return;
     }
 
-    if (action === 'terminate') {
+    if (action === 'stuckoff' || action === 'terminate') {
         if (!canCurrentUserPerformAction('students', 'edit')) {
             showAppAlert('You do not have permission to update student status.', 'Permission Denied');
             return;
         }
-        terminateStudent(studentId);
+        stuckOffStudent(studentId);
         return;
     }
 
@@ -4324,6 +4621,16 @@ function handleTeacherActionSelect(selectElement, encodedPayload, teacherId) {
 
     if (action === 'edit') {
         editTeacherFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'stuckoff') {
+        markTeacherStuckOff(teacherId);
+        return;
+    }
+
+    if (action === 'reactivate') {
+        reactivateTeacher(teacherId);
         return;
     }
 
@@ -4730,6 +5037,7 @@ function createStudentQuickFilterMenuItem(optionElement) {
 }
 
 function getStudentStatusLabel(student) {
+    if (isStudentStuckOff(student)) return 'Stuck Off';
     return isStudentTerminated(student) ? 'Terminated' : (student?.feesStatus || 'Pending');
 }
 
@@ -4865,7 +5173,8 @@ function renderStudents(term = '') {
         (genderSet.size === 0 || genderSet.has(String(s.gender || '').toLowerCase())) &&
         (!requireBelow5 || isStudentBelowAge(s, 5)) &&
         (classSet.size === 0 || classSet.has(String(s.classGrade || '').toLowerCase())) &&
-        (campusSet.size === 0 || campusSet.has(String(s.campusName || '').toLowerCase()))
+        (campusSet.size === 0 || campusSet.has(String(s.campusName || '').toLowerCase())) &&
+        !isStudentTerminated(s)
     );
 
     // Update total count display - Use filtered results length as requested
@@ -4906,7 +5215,7 @@ function renderStudents(term = '') {
                         <option value="view">View</option>
                         ${s.email ? '<option value="email">Send Email</option>' : ''}
                         ${canEditStudents ? '<option value="edit">Edit</option>' : ''}
-                        ${canEditStudents ? (terminated ? '<option value="reactivate">Reactivate</option>' : '<option value="terminate">Mark Terminated</option>') : ''}
+                        ${canEditStudents ? (terminated ? '<option value="reactivate">Reactivate</option>' : '<option value="stuckoff">Stuck-Off</option>') : ''}
                         ${canDeleteStudents ? '<option value="delete">Delete</option>' : ''}
                     </select>
                 </div>
@@ -4977,7 +5286,7 @@ function renderStuckOffStudents() {
                         <td><strong>${escapeHtml(student.fullName || '-')}</strong><br><span style="color:var(--text-secondary);">${escapeHtml(student.studentCode || student.rollNo || '-')}</span></td>
                         <td>${escapeHtml(student.classGrade || '-')}</td>
                         <td>${escapeHtml(student.campusName || '-')}</td>
-                        <td>${escapeHtml(formatDateForDisplay(student.terminatedAt) || '-')}</td>
+                        <td>${escapeHtml(formatDateForDisplay(student.stuckOffAt || student.terminatedAt) || '-')}</td>
                         <td><button type="button" class="action-btn btn-edit" onclick="reactivateStudent('${student.id}')">Unmark</button></td>
                     </tr>
                 `).join('')}
@@ -4986,8 +5295,167 @@ function renderStuckOffStudents() {
     `;
 }
 
+function getStuckOffStudentRecords() {
+    return getArrayData(STORAGE_KEY_STUDENTS)
+        .filter(isStudentTerminated)
+        .map((student) => ({
+            type: 'Student',
+            id: student.id,
+            code: student.studentCode || student.rollNo || '-',
+            name: student.fullName || '-',
+            detail: student.classGrade || '-',
+            campus: student.campusName || '-',
+            date: student.stuckOffAt || student.terminatedAt || '',
+            reason: student.terminationNote || '',
+            status: getStudentStatusLabel(student),
+            action: `reactivateStudent('${String(student.id).replace(/'/g, "\\'")}')`
+        }));
+}
+
+function getStuckOffTeacherRecords() {
+    return getArrayData(STORAGE_KEY_TEACHERS)
+        .filter(isTeacherStuckOff)
+        .map((teacher) => ({
+            type: 'Teacher',
+            id: teacher.id,
+            code: teacher.employeeCode || teacher.id || '-',
+            name: teacher.fullName || '-',
+            detail: teacher.subject || teacher.designation || '-',
+            campus: teacher.campusName || '-',
+            date: teacher.stuckOffAt || '',
+            reason: teacher.stuckOffNote || '',
+            status: 'Stuck Off',
+            action: `reactivateTeacher('${String(teacher.id).replace(/'/g, "\\'")}')`
+        }));
+}
+
+function renderStuckOffPage() {
+    const tbody = document.getElementById('stuckOffRecordsBody');
+    if (!tbody) return;
+
+    const typeFilter = document.getElementById('stuckOffTypeFilter')?.value || 'all';
+    const searchTerm = String(document.getElementById('stuckOffSearchInput')?.value || '').trim().toLowerCase();
+    const emptyState = document.getElementById('stuckOffEmptyState');
+    const totalEl = document.getElementById('stuckOffTotalCount');
+    const studentCountEl = document.getElementById('stuckOffStudentCount');
+    const teacherCountEl = document.getElementById('stuckOffTeacherCount');
+
+    const students = getStuckOffStudentRecords();
+    const teachers = getStuckOffTeacherRecords();
+    let records = [...students, ...teachers];
+
+    if (typeFilter === 'students') records = students;
+    if (typeFilter === 'teachers') records = teachers;
+
+    if (searchTerm) {
+        records = records.filter((record) => (
+            record.name.toLowerCase().includes(searchTerm) ||
+            record.code.toLowerCase().includes(searchTerm) ||
+            record.detail.toLowerCase().includes(searchTerm) ||
+            record.campus.toLowerCase().includes(searchTerm)
+        ));
+    }
+
+    records.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')) || a.name.localeCompare(b.name));
+
+    if (totalEl) totalEl.textContent = records.length;
+    if (studentCountEl) studentCountEl.textContent = students.length;
+    if (teacherCountEl) teacherCountEl.textContent = teachers.length;
+
+    if (!records.length) {
+        tbody.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+    }
+
+    if (emptyState) emptyState.style.display = 'none';
+    tbody.innerHTML = records.map((record) => `
+        <tr>
+            <td><span class="record-type-pill ${record.type === 'Teacher' ? 'teacher' : 'student'}">${escapeHtml(record.type)}</span></td>
+            <td><strong>${escapeHtml(record.name)}</strong><br><span class="muted-text">${escapeHtml(record.code)}</span></td>
+            <td>${escapeHtml(record.detail)}</td>
+            <td>${escapeHtml(record.campus)}</td>
+            <td>${escapeHtml(formatDateForDisplay(record.date) || '-')}</td>
+            <td><span class="status-badge status-failed">${escapeHtml(record.status)}</span></td>
+            <td>${escapeHtml(record.reason || '-')}</td>
+            <td><button type="button" class="action-btn btn-edit" onclick="${record.action}">Reactivate</button></td>
+        </tr>
+    `).join('');
+}
+
 function isTeacherResigned(teacher) {
     return teacher?.resigned === true || String(teacher?.employmentStatus || '').toLowerCase() === 'resigned';
+}
+
+function markTeacherStuckOff(teacherId) {
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const index = teachers.findIndex((teacher) => String(teacher.id) === String(teacherId));
+    if (index === -1) return;
+
+    const teacher = teachers[index];
+    if (isTeacherStuckOff(teacher)) {
+        showAppAlert('Teacher is already marked as stuck off.', 'No Changes');
+        return;
+    }
+
+    const confirmText = `Mark "${teacher.fullName || 'Teacher'}" as stuck off?\n\nThis teacher will be removed from the active teacher list and shown in Stuck Off records.`;
+    const ok = typeof showAppConfirm === 'function' ? showAppConfirm(confirmText) : Promise.resolve(window.confirm(confirmText));
+
+    Promise.resolve(ok).then(async (confirmed) => {
+        if (!confirmed) return;
+
+        const today = new Date().toISOString().slice(0, 10);
+        const updatedTeacher = {
+            ...teacher,
+            employmentStatus: 'Stuck Off',
+            stuckOffAt: today,
+            stuckOffNote: teacher.stuckOffNote || ''
+        };
+
+        teachers[index] = updatedTeacher;
+        saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+        await syncToSQLDetailed('teachers', [updatedTeacher]).catch(() => null);
+        pushNotification('Teacher Updated', `"${updatedTeacher.fullName || 'Teacher'}" marked as stuck off.`, 'info');
+        renderTeachers();
+        renderAdminRecordPanels();
+        renderStuckOffPage();
+    }).catch(() => {});
+}
+
+function reactivateTeacher(teacherId) {
+    const teachers = getArrayData(STORAGE_KEY_TEACHERS);
+    const index = teachers.findIndex((teacher) => String(teacher.id) === String(teacherId));
+    if (index === -1) return;
+
+    const teacher = teachers[index];
+    if (!isTeacherStuckOff(teacher) && !isTeacherResigned(teacher)) {
+        showAppAlert('Teacher is already active.', 'No Changes');
+        return;
+    }
+
+    const confirmText = `Reactivate "${teacher.fullName || 'Teacher'}"?`;
+    const ok = typeof showAppConfirm === 'function' ? showAppConfirm(confirmText) : Promise.resolve(window.confirm(confirmText));
+
+    Promise.resolve(ok).then(async (confirmed) => {
+        if (!confirmed) return;
+
+        const updatedTeacher = {
+            ...teacher,
+            resigned: false,
+            employmentStatus: 'Active',
+            stuckOffAt: '',
+            stuckOffNote: '',
+            resignedAt: ''
+        };
+
+        teachers[index] = updatedTeacher;
+        saveData(STORAGE_KEY_TEACHERS, teachers, { skipSync: true });
+        await syncToSQLDetailed('teachers', [updatedTeacher]).catch(() => null);
+        pushNotification('Teacher Updated', `"${updatedTeacher.fullName || 'Teacher'}" is active again.`, 'success');
+        renderTeachers();
+        renderAdminRecordPanels();
+        renderStuckOffPage();
+    }).catch(() => {});
 }
 
 function renderResignedTeachers() {
@@ -5744,6 +6212,9 @@ async function handleTeacherFormSubmit(e) {
         bankAccountNumber: document.getElementById('tBankAccountNumber').value.trim(),
         bankBranch: document.getElementById('tBankBranch').value.trim(),
         schedule: normalizeTeacherSchedule(existingTeacher?.schedule),
+        employmentStatus: existingTeacher?.employmentStatus || 'Active',
+        stuckOffAt: existingTeacher?.stuckOffAt || '',
+        stuckOffNote: existingTeacher?.stuckOffNote || '',
         role: 'Teacher'
     };
 
@@ -5917,6 +6388,7 @@ function renderTeachers(term = '') {
     const teachers = getArrayData(STORAGE_KEY_TEACHERS);
     const filtered = teachers
         .filter(t =>
+            !isTeacherStuckOff(t) &&
             (
                 (t.fullName && t.fullName.toLowerCase().includes(term)) ||
                 (t.subject && t.subject.toString().toLowerCase().includes(term))
@@ -6004,6 +6476,7 @@ function renderTeachers(term = '') {
                             <option value="attendance">Attendance</option>
                             <option value="schedule">Schedule</option>
                             <option value="edit">Edit</option>
+                            <option value="stuckoff">Stuck-Off</option>
                             <option value="delete">Delete</option>
                         </select>
                     </div>

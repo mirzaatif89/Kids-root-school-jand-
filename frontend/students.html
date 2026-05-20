@@ -352,9 +352,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 36px;
-            min-height: 36px;
-            padding: 0 0.85rem;
+            height: 42px;
+            min-height: 42px;
+            padding: 0;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             background: white;
@@ -386,6 +386,10 @@
             flex: 0 0 auto;
         }
 
+        .profile-image-preview:empty {
+            display: none;
+        }
+
         .profile-image-preview img {
             width: 100%;
             height: 100%;
@@ -394,12 +398,15 @@
         }
 
         .profile-image-content {
+            position: absolute;
+            inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             width: 100%;
+            height: 100%;
             min-width: 0;
-            padding-left: 1.35rem;
+            padding-left: 0;
         }
 
         .profile-image-content strong {
@@ -411,15 +418,18 @@
         }
 
         .profile-image-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute;
+            inset: 0;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             gap: 0.4rem;
             width: 100%;
             max-width: 100%;
-            min-height: 34px;
+            height: 100%;
+            min-height: 0;
             margin-top: 0;
-            padding: 0;
+            padding: 0 0.85rem;
             border: 0;
             border-radius: 0;
             background: transparent;
@@ -427,6 +437,7 @@
             font-weight: 700;
             font-size: 0.82rem;
             line-height: 1;
+            text-align: center;
             white-space: nowrap;
             cursor: pointer;
             transition: var(--transition);
@@ -446,7 +457,9 @@
         }
 
         .profile-image-action span {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             line-height: 1;
         }
 
@@ -494,41 +507,6 @@
 
         .cell-compact {
             line-height: 1.45;
-        }
-
-        .student-th-with-search {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.25rem;
-            white-space: nowrap;
-        }
-
-        .student-column-search-btn {
-            width: 18px;
-            height: 18px;
-            border: 0;
-            border-radius: 50%;
-            background: transparent;
-            color: var(--primary-color);
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-            vertical-align: middle;
-        }
-
-        .student-column-search-btn:hover,
-        .student-column-search-btn:focus {
-            background: rgba(32, 176, 164, 0.12);
-            color: var(--primary-color);
-            outline: none;
-        }
-
-        .student-column-search-btn i {
-            width: 11px;
-            height: 11px;
-            stroke-width: 2.4;
         }
 
         .student-search-overlay {
@@ -1072,12 +1050,11 @@
                         <div class="input-group">
                             <label>Profile Image</label>
                             <div class="profile-image-picker">
-                                <div class="profile-image-preview" id="studentPhotoPreview">S</div>
+                                <div class="profile-image-preview" id="studentPhotoPreview"></div>
                                 <div class="profile-image-content">
                                     <strong>Student photo</strong>
                                     <span>Upload JPG or PNG image for the student profile.</span>
                                     <label class="profile-image-action" for="studentProfileImage">
-                                        <i data-lucide="image-plus"></i>
                                         <span>Choose Image</span>
                                     </label>
                                 </div>
@@ -1228,15 +1205,15 @@
                 <table id="studentsTable">
                     <thead>
                         <tr>
-                            <th><span class="student-th-with-search">Student ID <button type="button" class="student-column-search-btn" title="Search Student ID" onclick="openStudentColumnSearch('studentCode', 'Student ID')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Roll No <button type="button" class="student-column-search-btn" title="Search Roll No" onclick="openStudentColumnSearch('rollNo', 'Roll No')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Name <button type="button" class="student-column-search-btn" title="Search Name" onclick="openStudentColumnSearch('fullName', 'Name')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Father Name <button type="button" class="student-column-search-btn" title="Search Father Name" onclick="openStudentColumnSearch('fatherName', 'Father Name')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">DOB <button type="button" class="student-column-search-btn" title="Search DOB" onclick="openStudentColumnSearch('dob', 'DOB')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Class <button type="button" class="student-column-search-btn" title="Search Class" onclick="openStudentColumnSearch('classGrade', 'Class')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Campus <button type="button" class="student-column-search-btn" title="Search Campus" onclick="openStudentColumnSearch('campusName', 'Campus')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Gender <button type="button" class="student-column-search-btn" title="Search Gender" onclick="openStudentColumnSearch('gender', 'Gender')"><i data-lucide="search"></i></button></span></th>
-                            <th><span class="student-th-with-search">Status <button type="button" class="student-column-search-btn" title="Search Status" onclick="openStudentColumnSearch('status', 'Status')"><i data-lucide="search"></i></button></span></th>
+                            <th>Student ID</th>
+                            <th>Roll No</th>
+                            <th>Name</th>
+                            <th>Father Name</th>
+                            <th>DOB</th>
+                            <th>Class</th>
+                            <th>Campus</th>
+                            <th>Gender</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>

@@ -698,7 +698,15 @@
 
         <section class="panel-card teacher-option-panel" id="complaintsPanel">
             <h3>Complains</h3>
-            <div class="notice-list" id="teacherIncomingComplaints"></div>
+            <form id="teacherComplaintForm" class="complaint-form">
+                <label for="teacherComplaintSubject">Subject</label>
+                <input type="text" id="teacherComplaintSubject" required placeholder="Complaint subject">
+                <label for="teacherComplaintMessage">Complaint</label>
+                <textarea id="teacherComplaintMessage" required placeholder="Write your complaint"></textarea>
+                <button class="portal-btn" type="submit"><i data-lucide="send" width="15"></i> Submit Complaint</button>
+            </form>
+            <h4 style="margin:1rem 0 .75rem;">Complaint History</h4>
+            <div class="notice-list" id="teacherComplaintHistory"></div>
         </section>
 
         <section class="panel-card teacher-option-panel" id="leavePanel">
@@ -924,30 +932,6 @@
             `;
         }
 
-        function renderIncomingComplaints() {
-            const teacherId = getTeacherIdentity().toLowerCase();
-            const teacherName = String(currentTeacherProfile?.fullName || loggedInUser?.fullName || '').toLowerCase();
-            const complaints = readLocal(COMPLAINT_KEY)
-                .filter((item) => {
-                    const role = String(item.senderRole || '').toLowerCase();
-                    const targetId = String(item.teacherId || item.targetTeacherId || '').toLowerCase();
-                    const targetName = String(item.teacherName || item.targetTeacherName || '').toLowerCase();
-                    return role === 'student' || role === 'parent' || targetId === teacherId || (teacherName && targetName === teacherName);
-                })
-                .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-            renderPortalList('teacherIncomingComplaints', complaints, 'No student or parent complaints are available.', (item) => `
-                <div class="list-item">
-                    <div class="list-item-top">
-                        <span>${escapeHtml(item.subject || 'Complaint')}</span>
-                        <span>${escapeHtml(item.status || 'Pending')}</span>
-                    </div>
-                    <div class="muted">${escapeHtml(item.senderRole || '-')} - ${escapeHtml(item.senderName || '-')} ${item.senderClass ? `| ${escapeHtml(item.senderClass)}` : ''}</div>
-                    <div>${escapeHtml(item.message || '-')}</div>
-                    ${item.reply ? `<div class="empty-note" style="margin-top:8px;"><strong>Reply:</strong><br>${escapeHtml(item.reply)}</div>` : ''}
-                </div>
-            `);
-        }
-
         function getTeacherLeaveRequests() {
             const teacherId = getTeacherIdentity().toLowerCase();
             return readLocal(TEACHER_LEAVE_KEY)
@@ -992,7 +976,7 @@
         function renderTeacherPanels() {
             renderSalaryRecord();
             renderTimeTable();
-            renderIncomingComplaints();
+            renderTeacherComplaints();
             renderTeacherLeaveHistory();
             renderAssignedClasses();
             renderAssignedLectures();
@@ -1170,6 +1154,7 @@
                     </div>
                     <div class="muted">${escapeHtml(item.message || '-')}</div>
                     ${item.reply ? `<div class="empty-note" style="margin-top:8px;"><strong>Admin Reply:</strong><br>${escapeHtml(item.reply)}</div>` : ''}
+                    ${item.actionTaken ? `<div class="empty-note" style="margin-top:8px;"><strong>Action Taken:</strong><br>${escapeHtml(item.actionTaken)}</div>` : ''}
                 </div>
             `).join('');
         }
@@ -1192,6 +1177,8 @@
                 subject,
                 message,
                 status: 'Pending',
+                thread: [],
+                actionTaken: '',
                 createdAt: new Date().toISOString()
             });
             localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
@@ -1266,6 +1253,7 @@
                 });
             });
             document.getElementById('teacherSelfAttendanceForm')?.addEventListener('submit', submitSelfAttendance);
+            document.getElementById('teacherComplaintForm')?.addEventListener('submit', submitTeacherComplaint);
             document.getElementById('teacherLeaveForm')?.addEventListener('submit', submitTeacherLeave);
             const attendanceDate = document.getElementById('teacherAttendanceDate');
             if (attendanceDate && !attendanceDate.value) attendanceDate.value = todayKey();

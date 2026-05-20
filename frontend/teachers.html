@@ -214,9 +214,9 @@
             align-items: center;
             justify-content: center;
             gap: 0.45rem;
-            height: 36px;
-            min-height: 36px;
-            padding: 0 0.75rem;
+            height: 42px;
+            min-height: 42px;
+            padding: 0;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             background: #ffffff;
@@ -242,6 +242,10 @@
             flex: 0 0 auto;
         }
 
+        .profile-image-preview:empty {
+            display: none;
+        }
+
         .profile-image-preview img {
             width: 100%;
             height: 100%;
@@ -258,20 +262,32 @@
         }
 
         .profile-image-action {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+            position: absolute;
+            inset: 0;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
             gap: 0.35rem;
             width: 100%;
-            min-height: 34px;
-            padding-left: 1.35rem;
+            max-width: 100%;
+            height: 100%;
+            min-height: 0;
+            padding: 0 0.85rem;
             color: var(--text-primary);
             font-size: 0.82rem;
             font-weight: 700;
             line-height: 1;
+            text-align: center;
             white-space: nowrap;
             cursor: pointer;
             transition: var(--transition);
+        }
+
+        .profile-image-action span {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
         }
 
         .profile-image-action:hover {
@@ -723,9 +739,8 @@
                         <div class="input-group">
                             <label>Profile Image</label>
                             <div class="profile-image-picker">
-                                <div class="profile-image-preview" id="teacherPhotoPreview">T</div>
+                                <div class="profile-image-preview" id="teacherPhotoPreview"></div>
                                 <label class="profile-image-action" for="tProfileImage">
-                                    <i data-lucide="image-plus"></i>
                                     <span>Choose Image</span>
                                 </label>
                                 <input type="file" id="tProfileImage" accept="image/*">

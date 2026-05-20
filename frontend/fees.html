@@ -138,39 +138,60 @@
             box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
 
-        .fee-fine-rule-panel {
+        .fee-control-panel {
             background: #ffffff;
             border: 1px solid var(--border-color);
-            border-radius: 0.85rem;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            border-radius: 1rem;
+            padding: 1.2rem;
+            margin-bottom: 1.35rem;
             box-shadow: var(--shadow-sm);
         }
 
-        .fee-fine-rule-head {
+        .fee-control-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            margin-bottom: 0.85rem;
+            margin-bottom: 1rem;
             flex-wrap: wrap;
         }
 
-        .fee-fine-rule-head h2 {
+        .fee-control-header h2 {
             margin: 0;
-            font-size: 1rem;
+            font-size: 1.1rem;
             color: var(--text-primary);
         }
 
-        .fee-fine-rule-head p {
+        .fee-control-header p {
             margin: 0.25rem 0 0;
             color: var(--text-secondary);
             font-size: 0.86rem;
         }
 
+        .fee-control-sections {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .fee-control-group {
+            padding-top: 1rem;
+            border-top: 1px solid rgba(203, 213, 225, 0.7);
+        }
+
+        .fee-control-group:first-child {
+            padding-top: 0;
+            border-top: 0;
+        }
+
+        .fee-control-group-title {
+            margin: 0 0 0.75rem;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
         .fee-fine-rule-grid {
             display: grid;
-            grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+            grid-template-columns: minmax(140px, 0.8fr) minmax(160px, 1fr) minmax(180px, 1fr) auto;
             gap: 0.85rem;
             align-items: end;
         }
@@ -185,7 +206,8 @@
             letter-spacing: 0.03em;
         }
 
-        .fee-fine-rule-field input {
+        .fee-fine-rule-field input,
+        .fee-fine-rule-field select {
             width: 100%;
             min-height: 42px;
             padding: 0.58rem 0.85rem;
@@ -403,21 +425,12 @@
             box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.16);
         }
 
-        .bulk-fee-panel {
-            background: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            box-shadow: var(--shadow-sm);
-        }
-
         .bulk-fee-panel-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 1rem;
-            margin-bottom: 1rem;
+            margin-bottom: 0.75rem;
         }
 
         .bulk-fee-panel-header h2 {
@@ -610,58 +623,72 @@
 
             <!-- Grid View (Classes) -->
             <div id="feesGridView">
-                <section class="fee-fine-rule-panel">
-                    <div class="fee-fine-rule-head">
+                <section class="fee-control-panel">
+                    <div class="fee-control-header">
                         <div>
-                            <h2>Auto Fine Rule</h2>
-                            <p>Set monthly due date and daily fine. Pending fee after this date will include fine automatically.</p>
+                            <h2>Fee Controls</h2>
+                            <p>Manage automatic fine settings and print class-wise fee status from one place.</p>
                         </div>
                     </div>
-                    <div class="fee-fine-rule-grid">
-                        <div class="fee-fine-rule-field">
-                            <label for="globalFineDueDay">Target Date</label>
-                            <input type="number" id="globalFineDueDay" min="1" max="31" placeholder="e.g. 10">
+                    <div class="fee-control-sections">
+                        <div class="fee-control-group">
+                            <h3 class="fee-control-group-title">Auto Fine Rule</h3>
+                            <div class="fee-fine-rule-grid">
+                                <div class="fee-fine-rule-field">
+                                    <label for="globalFineDueDay">Target Date</label>
+                                    <input type="number" id="globalFineDueDay" min="1" max="31" placeholder="e.g. 10">
+                                </div>
+                                <div class="fee-fine-rule-field">
+                                    <label for="globalFineFrequency">Fine Filter</label>
+                                    <select id="globalFineFrequency" onchange="updateGlobalFineRulePanelLabels()">
+                                        <option value="day">Day</option>
+                                        <option value="week">Week</option>
+                                        <option value="month">Monthly</option>
+                                        <option value="year">Yearly</option>
+                                    </select>
+                                </div>
+                                <div class="fee-fine-rule-field">
+                                    <label for="globalFineRate" id="globalFineRateLabel">Fine / Day (PKR)</label>
+                                    <input type="number" id="globalFineRate" min="0" placeholder="e.g. 50">
+                                </div>
+                                <button class="print-unpaid-btn" type="button" onclick="saveGlobalFineRuleFromPanel()">
+                                    <i data-lucide="save" size="18"></i> Save Fine Rule
+                                </button>
+                            </div>
+                            <div class="fee-fine-rule-status" id="globalFineRuleStatus"></div>
                         </div>
-                        <div class="fee-fine-rule-field">
-                            <label for="globalFineRate">Daily Fine (PKR)</label>
-                            <input type="number" id="globalFineRate" min="0" placeholder="e.g. 50">
+                        <div class="fee-control-group">
+                            <div class="bulk-fee-panel-header">
+                                <div>
+                                    <h3 class="fee-control-group-title">Bulk Fee Status Print</h3>
+                                    <p>Select a class and print paid, pending, or full fee status in one report.</p>
+                                </div>
+                            </div>
+                            <div class="bulk-fee-controls">
+                                <div class="bulk-fee-field">
+                                    <label for="bulkFeeClassFilter">Class</label>
+                                    <select id="bulkFeeClassFilter">
+                                        <option value="all">All Classes</option>
+                                    </select>
+                                </div>
+                                <div class="bulk-fee-field">
+                                    <label for="bulkFeeStatusFilter">Status</label>
+                                    <select id="bulkFeeStatusFilter">
+                                        <option value="all">Full Status</option>
+                                        <option value="pending">Pending Fees</option>
+                                        <option value="paid">Paid Fees</option>
+                                    </select>
+                                </div>
+                                <button class="print-unpaid-btn" type="button" onclick="printBulkFeeStatusReport()">
+                                    <i data-lucide="printer" size="18"></i> Print Report
+                                </button>
+                            </div>
+                            <div class="bulk-fee-summary" id="bulkFeeSummary">
+                                <span>Students: <strong>0</strong></span>
+                                <span>Paid: <strong>PKR 0</strong></span>
+                                <span>Pending: <strong>PKR 0</strong></span>
+                            </div>
                         </div>
-                        <button class="print-unpaid-btn" type="button" onclick="saveGlobalFineRuleFromPanel()">
-                            <i data-lucide="save" size="18"></i> Save Fine Rule
-                        </button>
-                    </div>
-                    <div class="fee-fine-rule-status" id="globalFineRuleStatus"></div>
-                </section>
-                <section class="bulk-fee-panel">
-                    <div class="bulk-fee-panel-header">
-                        <div>
-                            <h2>Bulk Fee Status Print</h2>
-                            <p>Select a class and print paid, pending, or full fee status in one report.</p>
-                        </div>
-                    </div>
-                    <div class="bulk-fee-controls">
-                        <div class="bulk-fee-field">
-                            <label for="bulkFeeClassFilter">Class</label>
-                            <select id="bulkFeeClassFilter">
-                                <option value="all">All Classes</option>
-                            </select>
-                        </div>
-                        <div class="bulk-fee-field">
-                            <label for="bulkFeeStatusFilter">Status</label>
-                            <select id="bulkFeeStatusFilter">
-                                <option value="all">Full Status</option>
-                                <option value="pending">Pending Fees</option>
-                                <option value="paid">Paid Fees</option>
-                            </select>
-                        </div>
-                        <button class="print-unpaid-btn" type="button" onclick="printBulkFeeStatusReport()">
-                            <i data-lucide="printer" size="18"></i> Print Report
-                        </button>
-                    </div>
-                    <div class="bulk-fee-summary" id="bulkFeeSummary">
-                        <span>Students: <strong>0</strong></span>
-                        <span>Paid: <strong>PKR 0</strong></span>
-                        <span>Pending: <strong>PKR 0</strong></span>
                     </div>
                 </section>
                 <div class="classes-grid" id="feesClassGrid">
@@ -771,6 +798,7 @@
                                 <option value="day">Per Day</option>
                                 <option value="week">Per Week</option>
                                 <option value="month">Per Month</option>
+                                <option value="year">Per Year</option>
                             </select>
                         </div>
                         <div>
@@ -934,29 +962,59 @@
 
         function getFeeFineRule() {
             const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_FEE_FINE_RULE) || '{}');
+            const rateFrequency = ['day', 'week', 'month', 'year'].includes(String(saved.rateFrequency || 'day')) ? String(saved.rateFrequency || 'day') : 'day';
             return {
                 dueDay: Math.min(Math.max(parseInt(saved.dueDay || 10, 10) || 10, 1), 31),
-                ratePerDay: Math.max(Number(saved.ratePerDay || 0) || 0, 0)
+                ratePerDay: Math.max(Number(saved.ratePerDay || 0) || 0, 0),
+                rateFrequency
             };
         }
 
         function saveFeeFineRule(rule) {
             const dueDay = Math.min(Math.max(parseInt(rule?.dueDay || 10, 10) || 10, 1), 31);
             const ratePerDay = Math.max(Number(rule?.ratePerDay || 0) || 0, 0);
-            localStorage.setItem(STORAGE_KEY_FEE_FINE_RULE, JSON.stringify({ dueDay, ratePerDay }));
-            return { dueDay, ratePerDay };
+            const rateFrequency = ['day', 'week', 'month', 'year'].includes(String(rule?.rateFrequency || 'day')) ? String(rule?.rateFrequency || 'day') : 'day';
+            localStorage.setItem(STORAGE_KEY_FEE_FINE_RULE, JSON.stringify({ dueDay, ratePerDay, rateFrequency }));
+            return { dueDay, ratePerDay, rateFrequency };
+        }
+
+        function getFineFrequencyLabel(frequency, format = 'short') {
+            const labels = {
+                day: { short: 'Day', rate: 'Fine / Day (PKR)', status: 'per day' },
+                week: { short: 'Week', rate: 'Fine / Week (PKR)', status: 'per week' },
+                month: { short: 'Monthly', rate: 'Fine / Month (PKR)', status: 'per month' },
+                year: { short: 'Yearly', rate: 'Fine / Year (PKR)', status: 'per year' }
+            };
+            return (labels[frequency] || labels.day)[format] || labels.day[format];
+        }
+
+        function getFineUnitsFromLateDays(lateDays, frequency) {
+            if (lateDays <= 0) return 0;
+            if (frequency === 'week') return Math.ceil(lateDays / 7);
+            if (frequency === 'month') return Math.ceil(lateDays / 30);
+            if (frequency === 'year') return Math.ceil(lateDays / 365);
+            return lateDays;
+        }
+
+        function updateGlobalFineRulePanelLabels() {
+            const frequency = String(document.getElementById('globalFineFrequency')?.value || 'day');
+            const rateLabel = document.getElementById('globalFineRateLabel');
+            if (rateLabel) rateLabel.textContent = getFineFrequencyLabel(frequency, 'rate');
         }
 
         function updateGlobalFineRulePanel() {
             const rule = getFeeFineRule();
             const dueInput = document.getElementById('globalFineDueDay');
+            const frequencyInput = document.getElementById('globalFineFrequency');
             const rateInput = document.getElementById('globalFineRate');
             const status = document.getElementById('globalFineRuleStatus');
             if (dueInput) dueInput.value = String(rule.dueDay);
+            if (frequencyInput) frequencyInput.value = rule.rateFrequency;
             if (rateInput) rateInput.value = String(rule.ratePerDay);
+            updateGlobalFineRulePanelLabels();
             if (status) {
                 status.textContent = rule.ratePerDay > 0
-                    ? `Current rule: fee due date is every month ${rule.dueDay}; after that PKR ${Number(rule.ratePerDay).toLocaleString('en-PK')} fine is added per day.`
+                    ? `Current rule: fee due date is every month ${rule.dueDay}; after that PKR ${Number(rule.ratePerDay).toLocaleString('en-PK')} fine is added ${getFineFrequencyLabel(rule.rateFrequency, 'status')}.`
                     : `Current rule: fee due date is every month ${rule.dueDay}; auto fine is off.`;
             }
         }
@@ -978,7 +1036,8 @@
         function saveGlobalFineRuleFromPanel() {
             const dueDay = Math.min(Math.max(parseInt(document.getElementById('globalFineDueDay')?.value || '10', 10) || 10, 1), 31);
             const ratePerDay = Math.max(Number(document.getElementById('globalFineRate')?.value || 0) || 0, 0);
-            saveFeeFineRule({ dueDay, ratePerDay });
+            const rateFrequency = String(document.getElementById('globalFineFrequency')?.value || 'day');
+            saveFeeFineRule({ dueDay, ratePerDay, rateFrequency });
             updateGlobalFineRulePanel();
             refreshCurrentFeeViewsAfterFineChange();
             alert('Fine rule saved successfully.');
@@ -1006,7 +1065,8 @@
             const dueDate = new Date(year, monthIndex, Math.min(dueDay, lastDay), 23, 59, 59, 999);
             const diffMs = new Date().setHours(0, 0, 0, 0) - dueDate.setHours(0, 0, 0, 0);
             const lateDays = Math.max(Math.floor(diffMs / 86400000), 0);
-            return lateDays * ratePerDay;
+            const frequency = ['day', 'week', 'month', 'year'].includes(String(rule?.rateFrequency || 'day')) ? String(rule?.rateFrequency || 'day') : 'day';
+            return getFineUnitsFromLateDays(lateDays, frequency) * ratePerDay;
         }
 
         function getAutoFineAmountForMonth(month) {
@@ -2136,7 +2196,7 @@
             if (selectedMonth) monthSelect.value = selectedMonth;
             const fineRule = getFeeFineRule();
             document.getElementById('paymentAmount').value = '';
-            document.getElementById('fineFrequency').value = mode === 'fine' ? 'day' : 'none';
+            document.getElementById('fineFrequency').value = mode === 'fine' ? fineRule.rateFrequency : 'none';
             document.getElementById('fineUnits').value = mode === 'fine' ? String(fineRule.dueDay) : '0';
             document.getElementById('fineRate').value = mode === 'fine' ? String(fineRule.ratePerDay) : '0';
             document.getElementById('fineAmount').value = mode === 'fine' ? String(getFineAmountForMonth(studentId, selectedMonth) || 0) : '0';
@@ -2180,7 +2240,8 @@
                 const month = String(document.getElementById('paymentMonth')?.value || '').trim();
                 const dueDay = Math.min(Math.max(parseInt(document.getElementById('fineUnits')?.value || '10', 10) || 10, 1), 31);
                 const ratePerDay = Math.max(Number(document.getElementById('fineRate')?.value || 0) || 0, 0);
-                return getAutoFineAmountWithRule(month, { dueDay, ratePerDay });
+                const rateFrequency = String(document.getElementById('fineFrequency')?.value || 'day');
+                return getAutoFineAmountWithRule(month, { dueDay, ratePerDay, rateFrequency });
             }
             const frequency = String(document.getElementById('fineFrequency')?.value || 'none');
             const manualFine = Number(document.getElementById('fineAmount')?.value || 0);
@@ -2212,11 +2273,11 @@
             const fineUnitsInput = document.getElementById('fineUnits');
 
             if (fineUnitsLabel) fineUnitsLabel.textContent = mode === 'fine' ? 'Due Day' : 'Late Units';
-            if (fineRateLabel) fineRateLabel.textContent = mode === 'fine' ? 'Fine / Day (PKR)' : 'Fine Rate (PKR)';
+            const selectedFineFrequency = String(document.getElementById('fineFrequency')?.value || 'day');
+            if (fineRateLabel) fineRateLabel.textContent = mode === 'fine' ? getFineFrequencyLabel(selectedFineFrequency, 'rate') : 'Fine Rate (PKR)';
             if (fineAmountLabel) fineAmountLabel.textContent = mode === 'fine' ? 'Current Auto Fine' : 'Fine Amount';
             if (fineType) {
-                fineType.disabled = mode === 'fine';
-                if (mode === 'fine') fineType.value = 'day';
+                fineType.disabled = false;
             }
             if (fineUnitsInput) {
                 fineUnitsInput.placeholder = mode === 'fine' ? 'e.g. 10' : 'Days / Weeks / Months';
@@ -2268,7 +2329,8 @@
             if (paymentMode === 'fine') {
                 const dueDay = Math.min(Math.max(parseInt(document.getElementById('fineUnits')?.value || '10', 10) || 10, 1), 31);
                 const ratePerDay = Math.max(Number(document.getElementById('fineRate')?.value || 0) || 0, 0);
-                saveFeeFineRule({ dueDay, ratePerDay });
+                const rateFrequency = String(document.getElementById('fineFrequency')?.value || 'day');
+                saveFeeFineRule({ dueDay, ratePerDay, rateFrequency });
                 closeManualPaymentModal();
                 renderMonthlyFeeRecord(studentId);
                 alert('Auto fine rule saved successfully!');

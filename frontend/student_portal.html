@@ -1751,6 +1751,7 @@
                     <p>${escapeHtml(item.message || '-')}</p>
                     ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalDataUrl('${item.file.dataUrl}', '${escapeHtml(item.file.name || 'complaint-file')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
                     ${getComplaintThread(item).map((entry) => `<div class="empty-note"><strong>${escapeHtml(entry.role || 'Reply')} ${entry.name ? `- ${escapeHtml(entry.name)}` : ''}:</strong><br>${escapeHtml(entry.message || '-')}<div class="portal-content-meta">${escapeHtml(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')}</div></div>`).join('')}
+                    ${item.actionTaken ? `<div class="empty-note"><strong>Action Taken:</strong><br>${escapeHtml(item.actionTaken)}<div class="portal-content-meta">${escapeHtml(item.actionAt ? new Date(item.actionAt).toLocaleString() : '')}</div></div>` : ''}
                     <div class="portal-field" style="margin-top:.85rem;">
                         <label for="studentComplaintReply-${escapeHtml(item.id || '')}">Reply</label>
                         <textarea id="studentComplaintReply-${escapeHtml(item.id || '')}" class="form-control" rows="3" placeholder="Write your reply"></textarea>
@@ -1824,6 +1825,7 @@
                 file,
                 status: 'Pending',
                 thread: [],
+                actionTaken: '',
                 createdAt: new Date().toISOString()
             });
             try {

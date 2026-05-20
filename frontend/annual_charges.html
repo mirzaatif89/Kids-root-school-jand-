@@ -28,6 +28,8 @@
         .slip-table th { background:#f1f5f9; }
         .slip-total { display:flex; justify-content:flex-end; padding:.75rem; font-weight:900; color:#0f4f4a; }
         .print-actions { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; }
+        .bulk-print-box { margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border-color); display:grid; gap:.85rem; }
+        .bulk-summary { color:var(--text-secondary); font-size:.88rem; line-height:1.45; }
         @media (max-width:980px){ .charges-layout{ grid-template-columns:1fr; } }
         @media print { .sidebar,.header,.charges-panel:first-child,.print-actions{ display:none!important; } .main-content{ margin:0!important; padding:0!important; } .charges-layout{ display:block; } .charges-panel{ border:0; box-shadow:none; } }
     </style>
@@ -64,6 +66,18 @@
                     <div class="print-actions">
                         <button class="btn btn-primary" type="button" onclick="window.print()"><i data-lucide="printer"></i> Print Slip</button>
                     </div>
+                    <div class="bulk-print-box">
+                        <div>
+                            <label for="annualBulkClass">Print Whole Class</label>
+                            <select id="annualBulkClass">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="bulk-summary" id="annualBulkSummary">Select a class to print annual charge slips for every student in that class.</div>
+                        <button class="btn btn-primary" type="button" onclick="printAnnualChargesForClass()">
+                            <i data-lucide="printer"></i> Print Full Class Annual Charges
+                        </button>
+                    </div>
                 </div>
                 <div class="charges-panel">
                     <div class="slip-preview">
@@ -94,6 +108,122 @@
     <script src="auth.js"></script>
     <script src="script.js"></script>
     <script>
+        let annualChargeStudents = [];
+        let annualClassFeeDefaults = {};
+
+        function escAnnual(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function annualApiBaseUrl() {
+            const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.startsWith('192.168.');
+            return `${isLocal || window.location.protocol === 'file:' ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin) : window.location.origin}/api`;
+        }
+
+        function normalizeAnnualStudents(input) {
+            if (Array.isArray(input)) return input;
+            if (Array.isArray(input?.students)) return input.students;
+            return [];
+        }
+
+        function normalizeAnnualClassFeeConfig(input = {}) {
+            const raw = input && typeof input === 'object' ? input : {};
+            return Object.entries(raw).reduce((acc, [className, config]) => {
+                const name = String(className || '').trim();
+                if (!name) return acc;
+                acc[name.toLowerCase()] = {
+                    className: name,
+                    monthlyFee: String(config?.monthlyFee ?? config?.fee ?? '').trim(),
+                    annualCharges: String(config?.annualCharges ?? config?.annualFee ?? '').trim()
+                };
+                return acc;
+            }, {});
+        }
+
+        async function loadAnnualClassFeeDefaults() {
+            try {
+                const response = await fetch(`${annualApiBaseUrl()}/class-fees`);
+                if (!response.ok) throw new Error('Class fees could not be loaded.');
+                const result = await response.json();
+                annualClassFeeDefaults = normalizeAnnualClassFeeConfig(result?.classFees || {});
+                localStorage.setItem('eduCore_class_fees', JSON.stringify(result?.classFees || {}));
+            } catch (_error) {
+                try {
+                    annualClassFeeDefaults = normalizeAnnualClassFeeConfig(JSON.parse(localStorage.getItem('eduCore_class_fees') || '{}'));
+                } catch (__error) {
+                    annualClassFeeDefaults = {};
+                }
+            }
+        }
+
+        function getAnnualClassFeeDefault(className = '') {
+            const key = String(className || '').trim().toLowerCase();
+            return key ? annualClassFeeDefaults[key] || null : null;
+        }
+
+        async function loadAnnualChargeStudents() {
+            try {
+                const response = await fetch(`${annualApiBaseUrl()}/students`);
+                const data = await response.json();
+                annualChargeStudents = normalizeAnnualStudents(data);
+            } catch (_error) {
+                try {
+                    annualChargeStudents = JSON.parse(localStorage.getItem('eduCore_students') || '[]');
+                } catch (__error) {
+                    annualChargeStudents = [];
+                }
+            }
+            populateAnnualClassFilter();
+        }
+
+        function populateAnnualClassFilter() {
+            const classSelect = document.getElementById('annualBulkClass');
+            if (!classSelect) return;
+            const classes = [...new Set(annualChargeStudents
+                .map((student) => String(student.classGrade || student.className || '').trim())
+                .filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+
+            classSelect.innerHTML = '<option value="">Select Class</option>' + classes.map((className) => (
+                `<option value="${escAnnual(className)}">${escAnnual(className)}</option>`
+            )).join('');
+            updateAnnualBulkSummary();
+        }
+
+        function getAnnualClassStudents() {
+            const selectedClass = String(document.getElementById('annualBulkClass')?.value || '').trim();
+            if (!selectedClass) return [];
+            return annualChargeStudents.filter((student) => String(student.classGrade || student.className || '').trim() === selectedClass);
+        }
+
+        function updateAnnualBulkSummary() {
+            const summary = document.getElementById('annualBulkSummary');
+            if (!summary) return;
+            const selectedClass = String(document.getElementById('annualBulkClass')?.value || '').trim();
+            if (!selectedClass) {
+                summary.textContent = 'Select a class to print annual charge slips for every student in that class.';
+                return;
+            }
+            const students = getAnnualClassStudents();
+            const classFee = getAnnualClassFeeDefault(selectedClass);
+            const annualCharges = Number(classFee?.annualCharges || 0);
+            const annualAmountInput = document.getElementById('annualAmount');
+            if (annualAmountInput && annualCharges > 0) {
+                annualAmountInput.value = String(annualCharges);
+                updateAnnualSlip();
+            }
+            const amountText = annualCharges > 0
+                ? ` | Annual Charges: <strong>PKR ${annualCharges.toLocaleString('en-PK')}</strong>`
+                : ' | Annual Charges: <strong>Not set</strong>';
+            summary.innerHTML = `Selected: <strong>${escAnnual(selectedClass)}</strong> | Students: <strong>${students.length}</strong>${amountText}`;
+        }
+
         function updateAnnualSlip() {
             const amount = Number(document.getElementById('annualAmount').value || 0);
             document.getElementById('slipStudent').textContent = document.getElementById('annualStudentName').value || '-';
@@ -104,8 +234,104 @@
             document.getElementById('slipAmount').textContent = `PKR ${amount.toLocaleString('en-PK')}`;
             document.getElementById('slipTotal').textContent = `PKR ${amount.toLocaleString('en-PK')}`;
         }
+
+        function annualSlipHtml(student, options) {
+            const amount = Number(options.amount || 0);
+            return `
+                <section class="print-slip">
+                    <div class="slip-preview">
+                        <div class="slip-head">
+                            <div class="slip-logo">SCH</div>
+                            <div><h2>Apexiums School System</h2><p>Annual Charges Slip</p></div>
+                            <div class="office-copy">Office Copy</div>
+                        </div>
+                        <div class="slip-copy">
+                            <div class="slip-copy-title"><span>Annual Charges</span><span>${escAnnual(options.session || '-')}</span></div>
+                            <div class="slip-grid">
+                                <div><strong>Student:</strong> <span>${escAnnual(student.fullName || student.studentName || '-')}</span></div>
+                                <div><strong>Class:</strong> <span>${escAnnual(student.classGrade || student.className || '-')}</span></div>
+                                <div><strong>Roll No:</strong> <span>${escAnnual(student.rollNo || '-')}</span></div>
+                                <div><strong>Due Date:</strong> <span>${escAnnual(options.dueDate || '-')}</span></div>
+                            </div>
+                            <table class="slip-table">
+                                <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+                                <tbody><tr><td>Annual Charges</td><td>PKR ${amount.toLocaleString('en-PK')}</td></tr></tbody>
+                            </table>
+                            <div class="slip-total">Total: <span>PKR ${amount.toLocaleString('en-PK')}</span></div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function printAnnualChargesForClass() {
+            const selectedClass = String(document.getElementById('annualBulkClass')?.value || '').trim();
+            const students = getAnnualClassStudents();
+            const amount = Number(document.getElementById('annualAmount').value || 0);
+            const session = document.getElementById('annualSession').value || '-';
+            const dueDate = document.getElementById('annualDueDate').value || '-';
+
+            if (!selectedClass) {
+                alert('Please select a class first.');
+                return;
+            }
+            if (!students.length) {
+                alert('No students found in selected class.');
+                return;
+            }
+            if (amount <= 0) {
+                alert('Annual charges are not set for this class. Please set them from Set Fees first.');
+                return;
+            }
+
+            const printWindow = window.open('', '_blank', 'width=1100,height=800');
+            if (!printWindow) {
+                alert('Please allow popups to print annual charges.');
+                return;
+            }
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Annual Charges - ${escAnnual(selectedClass)}</title>
+                    <style>
+                        body { margin:0; font-family: Arial, sans-serif; color:#111827; background:#fff; }
+                        .print-slip { page-break-after: always; padding: 14mm; }
+                        .print-slip:last-child { page-break-after: auto; }
+                        .slip-preview { width: 100%; border: 1px solid #0f766e; background: #fff; color: #111827; }
+                        .slip-head { display:grid; grid-template-columns:70px 1fr 120px; gap:.75rem; align-items:center; padding:1rem; border-bottom:2px solid #0f766e; }
+                        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; font-size:24px; }
+                        .slip-head h2 { margin:0; color:#0f4f4a; font-size:1.35rem; text-align:center; }
+                        .slip-head p { margin:.2rem 0 0; text-align:center; color:#475569; }
+                        .office-copy { text-align:right; font-weight:800; }
+                        .slip-copy { border:1px solid #94a3b8; margin:1rem; }
+                        .slip-copy-title { background:#0f766e; color:#fff; padding:.45rem .75rem; font-weight:800; display:flex; justify-content:space-between; }
+                        .slip-grid { display:grid; grid-template-columns:repeat(2,1fr); border-bottom:1px solid #94a3b8; }
+                        .slip-grid div { padding:.55rem .75rem; border-right:1px solid #cbd5e1; }
+                        .slip-grid div:nth-child(even) { border-right:0; }
+                        .slip-table { width:100%; border-collapse:collapse; }
+                        .slip-table th, .slip-table td { border:1px solid #cbd5e1; padding:.6rem .75rem; text-align:left; }
+                        .slip-table th { background:#f1f5f9; }
+                        .slip-total { display:flex; justify-content:flex-end; gap:.5rem; padding:.75rem; font-weight:900; color:#0f4f4a; }
+                        @media print { @page { size:A4; margin:8mm; } .print-slip { padding:0; } }
+                    </style>
+                </head>
+                <body>
+                    ${students.map((student) => annualSlipHtml(student, { amount, session, dueDate })).join('')}
+                    <script>
+                        window.onload = function(){ window.print(); };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
         document.querySelectorAll('#annualChargesForm input').forEach((input) => input.addEventListener('input', updateAnnualSlip));
+        document.getElementById('annualBulkClass')?.addEventListener('change', updateAnnualBulkSummary);
         updateAnnualSlip();
+        Promise.all([loadAnnualClassFeeDefaults(), loadAnnualChargeStudents()]).then(updateAnnualBulkSummary);
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

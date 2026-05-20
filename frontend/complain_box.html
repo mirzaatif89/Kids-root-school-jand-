@@ -21,15 +21,21 @@
         .family-complaint-form input, .family-complaint-form textarea { width:100%; border:1px solid var(--border-color); border-radius:8px; padding:.7rem .8rem; font:inherit; }
         .family-complaint-form textarea { min-height:86px; resize:vertical; }
         .complaint-list { display:grid; gap:1rem; }
-        .complaint-card { border:1px solid #d9ece9; border-radius:12px; padding:1rem; background:#fbfefe; }
-        .complaint-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.75rem; }
+        .complaint-card { border:1px solid #d9ece9; border-radius:12px; padding:1rem; background:#fbfefe; display:grid; gap:.85rem; }
+        .complaint-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
         .complaint-top h3 { margin:0; font-size:1rem; }
         .muted { color:var(--text-secondary); font-size:.86rem; }
-        .status-pill { display:inline-flex; border-radius:999px; padding:.28rem .65rem; font-size:.78rem; font-weight:800; }
+        .status-pill { display:inline-flex; align-items:center; justify-content:center; min-width:88px; border-radius:999px; padding:.32rem .75rem; font-size:.78rem; font-weight:800; line-height:1; }
         .status-pill.pending { background:#fef3c7; color:#92400e; }
+        .status-pill.in-progress { background:#dbeafe; color:#1d4ed8; }
         .status-pill.replied { background:#dcfce7; color:#166534; }
+        .status-pill.resolved { background:#ccfbf1; color:#0f766e; }
+        .status-pill.closed { background:#e5e7eb; color:#374151; }
         .reply-box { display:grid; gap:.5rem; margin-top:.9rem; }
-        .reply-box textarea { width:100%; min-height:86px; border:1px solid #cbd5e1; border-radius:10px; padding:.7rem; font:inherit; resize:vertical; }
+        .reply-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+        .reply-box label { color:var(--text-secondary); font-weight:800; font-size:.82rem; }
+        .reply-box textarea, .reply-box select { width:100%; min-height:44px; border:1px solid #cbd5e1; border-radius:10px; padding:.7rem; font:inherit; resize:vertical; background:#fff; }
+        .reply-box textarea { min-height:86px; }
         .action-row { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.6rem; }
         .mini-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .75rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
         .mini-btn.primary { background:#14b8a6; color:#fff; }
@@ -124,6 +130,17 @@
             }
             return thread.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
         }
+        function normalizeComplaintStatus(status = 'Pending') {
+            const value = String(status || 'Pending').trim().toLowerCase();
+            if (value === 'in progress' || value === 'in-progress') return 'In Progress';
+            if (value === 'reply' || value === 'replied') return 'Replied';
+            if (value === 'resolve' || value === 'resolved' || value === 'action taken') return 'Resolved';
+            if (value === 'closed') return 'Closed';
+            return 'Pending';
+        }
+        function statusClass(status = 'Pending') {
+            return normalizeComplaintStatus(status).toLowerCase().replace(/\s+/g, '-');
+        }
         function renderComplaints() {
             const complaints = readComplaints()
                 .filter((item) => String(item.senderRole || '').toLowerCase() === activeComplaintFilter.toLowerCase())
@@ -133,7 +150,8 @@
                 return;
             }
             complaintList.innerHTML = complaints.map((item) => {
-                const status = String(item.status || 'Pending').toLowerCase();
+                const status = normalizeComplaintStatus(item.status);
+                const canReply = activeComplaintFilter !== 'Family';
                 return `
                     <article class="complaint-card">
                         <div class="complaint-top">
@@ -142,17 +160,26 @@
                                 <div class="muted">${esc(item.senderRole || '-')} - ${esc(item.senderName || '-')} ${item.senderClass ? `| ${esc(item.senderClass)}` : ''}</div>
                                 <div class="muted">${esc(item.createdAt ? new Date(item.createdAt).toLocaleString() : '')}</div>
                             </div>
-                            <span class="status-pill ${status}">${esc(item.status || 'Pending')}</span>
+                            <span class="status-pill ${statusClass(status)}">${esc(status)}</span>
                         </div>
                         <p>${esc(item.message || '-')}</p>
                         ${item.file?.dataUrl ? `<button class="mini-btn file" onclick="downloadComplaintFile('${esc(item.id)}')"><i data-lucide="download" width="14"></i> ${esc(item.file.name || 'Download File')}</button>` : ''}
                         ${getComplaintThread(item).map((entry) => `<div class="empty-note"><strong>${esc(entry.role || 'Reply')} ${entry.name ? `- ${esc(entry.name)}` : ''}:</strong><br>${esc(entry.message || '-')}<div class="muted">${esc(entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '')}</div></div>`).join('')}
+                        ${item.actionTaken ? `<div class="empty-note"><strong>Action Taken:</strong><br>${esc(item.actionTaken)}<div class="muted">${esc(item.actionAt ? new Date(item.actionAt).toLocaleString() : '')}</div></div>` : ''}
                         <div class="reply-box">
-                            <label for="reply-${esc(item.id)}">Reply</label>
-                            <textarea id="reply-${esc(item.id)}" placeholder="Write reply"></textarea>
+                            <div class="reply-grid">
+                                ${canReply ? `<div><label for="reply-${esc(item.id)}">Reply to ${esc(activeComplaintFilter)}</label><textarea id="reply-${esc(item.id)}" placeholder="Write reply for ${esc(activeComplaintFilter.toLowerCase())}"></textarea></div>` : ''}
+                                <div><label for="action-${esc(item.id)}">Action Taken</label><textarea id="action-${esc(item.id)}" placeholder="Write action taken"></textarea></div>
+                            </div>
+                            <div>
+                                <label for="status-${esc(item.id)}">Status</label>
+                                <select id="status-${esc(item.id)}">
+                                    ${['Pending', 'In Progress', 'Replied', 'Resolved', 'Closed'].map((option) => `<option value="${option}" ${status === option ? 'selected' : ''}>${option}</option>`).join('')}
+                                </select>
+                            </div>
                         </div>
                         <div class="action-row">
-                            <button class="mini-btn primary" onclick="replyComplaint('${esc(item.id)}')"><i data-lucide="send" width="14"></i> Save Reply</button>
+                            <button class="mini-btn primary" onclick="updateComplaint('${esc(item.id)}')"><i data-lucide="send" width="14"></i> Save Update</button>
                             <button class="mini-btn delete" onclick="deleteComplaint('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button>
                         </div>
                     </article>
@@ -160,19 +187,38 @@
             }).join('');
             if (window.lucide) window.lucide.createIcons();
         }
-        function replyComplaint(id) {
+        function updateComplaint(id) {
             const items = readComplaints();
             const index = items.findIndex((item) => item.id === id);
             if (index < 0) return;
+            const canReply = String(items[index].senderRole || '').toLowerCase() !== 'family';
             const reply = document.getElementById(`reply-${id}`)?.value.trim() || '';
-            if (!reply) { showAppAlert('Reply is required.', 'Missing Reply'); return; }
+            const actionTaken = document.getElementById(`action-${id}`)?.value.trim() || '';
+            const selectedStatus = normalizeComplaintStatus(document.getElementById(`status-${id}`)?.value || items[index].status || 'Pending');
+            if (canReply && !reply && !actionTaken && selectedStatus === normalizeComplaintStatus(items[index].status)) {
+                showAppAlert('Write a reply, action taken, or change status.', 'Missing Update');
+                return;
+            }
+            if (!canReply && !actionTaken && selectedStatus === normalizeComplaintStatus(items[index].status)) {
+                showAppAlert('Write action taken or change status.', 'Missing Action');
+                return;
+            }
             const now = new Date().toISOString();
             const thread = getComplaintThread(items[index]);
-            thread.push({ role: 'Admin', name: 'Admin', message: reply, createdAt: now });
-            items[index] = { ...items[index], reply, thread, status: 'Replied', repliedAt: now };
+            if (canReply && reply) {
+                thread.push({ role: 'Admin', name: 'Admin', message: reply, createdAt: now });
+            }
+            items[index] = {
+                ...items[index],
+                ...(canReply && reply ? { reply, repliedAt: now } : {}),
+                ...(canReply ? { thread } : {}),
+                ...(actionTaken ? { actionTaken, actionAt: now } : {}),
+                status: selectedStatus,
+                updatedAt: now
+            };
             saveComplaints(items);
             renderComplaints();
-            showAppAlert('Reply saved for this complaint.', 'Reply Saved');
+            showAppAlert('Complaint update saved.', 'Update Saved');
         }
         async function deleteComplaint(id) {
             const confirmed = await showAppConfirm('Delete this complaint?', 'Delete Complaint');
@@ -199,6 +245,8 @@
                 subject: document.getElementById('familyComplaintSubject').value.trim(),
                 message: document.getElementById('familyComplaintMessage').value.trim(),
                 status: 'Pending',
+                thread: [],
+                actionTaken: '',
                 createdAt: new Date().toISOString()
             });
             saveComplaints(items);

@@ -21,6 +21,10 @@
         .history-table { width:100%; border-collapse:collapse; }
         .history-table th, .history-table td { padding:.75rem; border-bottom:1px solid var(--border-color); text-align:left; }
         .history-table th { background:#f8fafc; color:var(--text-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
+        .history-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+        .history-action-btn { border:0; border-radius:6px; padding:.42rem .65rem; font-size:.78rem; font-weight:800; cursor:pointer; }
+        .history-action-btn.edit { background:#e0f2fe; color:#075985; }
+        .history-action-btn.delete { background:#fee2e2; color:#991b1b; }
         .empty-history { padding:1rem; border:1px dashed var(--border-color); border-radius:8px; color:var(--text-secondary); background:#f8fafc; }
         @media (max-width:900px){ .set-fee-layout{ grid-template-columns:1fr; } }
     </style>
@@ -34,7 +38,7 @@
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
                 <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
                 <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
-                <a href="set_fee.html" class="nav-item active"><i data-lucide="badge-dollar-sign"></i><span>Set Fee</span></a>
+                <a href="set_fee.html" class="nav-item active"><i data-lucide="badge-dollar-sign"></i><span>Set Fees</span></a>
                 <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
                 <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
             </nav>
@@ -59,7 +63,11 @@
                         </div>
                         <div class="set-fee-field">
                             <label for="classFeeAmount">Monthly Fee</label>
-                            <input type="number" id="classFeeAmount" placeholder="e.g. 5000" min="0" required>
+                            <input type="number" id="classFeeAmount" placeholder="e.g. 5000" min="0">
+                        </div>
+                        <div class="set-fee-field">
+                            <label for="classAnnualCharges">Annual Charges</label>
+                            <input type="number" id="classAnnualCharges" placeholder="e.g. 12000" min="0">
                         </div>
                         <div class="set-fee-field">
                             <label for="classFeeFrequency">Frequency</label>
@@ -77,7 +85,8 @@
                             <input type="number" id="classFeeYear" min="2000" max="2100">
                         </div>
                         <div class="set-fee-actions">
-                            <button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Fee</button>
+                            <button class="btn btn-primary" type="submit" id="classFeeSaveButton"><i data-lucide="save"></i> Save Fee</button>
+                            <button class="btn btn-outline" type="button" id="classFeeCancelEditButton" style="display:none;">Cancel Edit</button>
                         </div>
                     </form>
                     <div id="classFeeList" class="set-fee-pills"></div>

@@ -34,6 +34,7 @@ function defineStudentModel(db) {
         plainPassword: DataTypes.STRING,
         role: { type: DataTypes.STRING, defaultValue: 'Student' },
         enrollmentStatus: { type: DataTypes.STRING, defaultValue: 'Active' },
+        stuckOffAt: DataTypes.STRING,
         terminatedAt: DataTypes.STRING,
         terminationNote: DataTypes.TEXT
     });
@@ -68,6 +69,9 @@ function defineTeacherModel(db) {
         username: { type: DataTypes.STRING, unique: true },
         password: DataTypes.STRING,
         plainPassword: DataTypes.STRING,
+        employmentStatus: { type: DataTypes.STRING, defaultValue: 'Active' },
+        stuckOffAt: DataTypes.STRING,
+        stuckOffNote: DataTypes.TEXT,
         groupKey: DataTypes.STRING,
         role: { type: DataTypes.STRING, defaultValue: 'Teacher' }
     });
@@ -317,6 +321,7 @@ async function ensureLegacySchema(db) {
         plainPassword: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true },
         enrollmentStatus: { type: DataTypes.STRING, allowNull: true },
+        stuckOffAt: { type: DataTypes.STRING, allowNull: true },
         terminatedAt: { type: DataTypes.STRING, allowNull: true },
         terminationNote: { type: DataTypes.TEXT, allowNull: true }
     });
@@ -360,6 +365,9 @@ async function ensureLegacySchema(db) {
         username: { type: DataTypes.STRING, allowNull: true },
         password: { type: DataTypes.STRING, allowNull: true },
         plainPassword: { type: DataTypes.STRING, allowNull: true },
+        employmentStatus: { type: DataTypes.STRING, allowNull: true },
+        stuckOffAt: { type: DataTypes.STRING, allowNull: true },
+        stuckOffNote: { type: DataTypes.TEXT, allowNull: true },
         groupKey: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true }
     });

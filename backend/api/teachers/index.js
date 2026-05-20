@@ -12,7 +12,8 @@ const teacherAttributes = [
     'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
     'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
     'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-    'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role', 'groupKey'
+    'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
+    'employmentStatus', 'stuckOffAt', 'stuckOffNote', 'role', 'groupKey'
 ];
 
 module.exports = createHandler({

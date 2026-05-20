@@ -198,6 +198,7 @@ const MODULE_KEYS = [
     'teacher_scheduling',
     'staff',
     'classes',
+    'set_fee',
     'fees',
     'fee_challan',
     'library',
@@ -236,9 +237,11 @@ const ALLOWED_HOME_PAGES = new Set([
     'student_courses.html',
     'banners.html',
     'teachers.html',
+    'stuck_off.html',
     'teacher_scheduling.html',
     'staff.html',
     'classes.html',
+    'set_fee.html',
     'fees.html',
     'fee_challan.html',
     'library.html',
@@ -314,6 +317,7 @@ const defaultPermissions = {
                 teacher_scheduling: 'manage',
                 staff: 'manage',
                 classes: 'manage',
+                set_fee: 'manage',
                 fees: 'manage',
                 fee_challan: 'manage',
                 library: 'manage',
@@ -349,6 +353,7 @@ const defaultPermissions = {
                 teachers: 'view',
                 staff: 'view',
                 classes: 'view',
+                set_fee: 'view',
                 fees: 'view',
                 fee_challan: 'manage',
                 library: 'view',
@@ -1689,9 +1694,12 @@ function normalizeClassFeeConfig(input = {}) {
         const name = String(className || '').trim();
         if (!name) return acc;
         const monthlyFee = String(config?.monthlyFee ?? config?.fee ?? '').trim();
+        const annualCharges = String(config?.annualCharges ?? config?.annualFee ?? '').trim();
         const feeFrequency = String(config?.feeFrequency || 'Monthly').trim() || 'Monthly';
-        if (!monthlyFee) return acc;
-        acc[name] = { monthlyFee, feeFrequency };
+        const feeMonth = String(config?.feeMonth || '').trim();
+        const feeYear = String(config?.feeYear || '').trim();
+        if (!monthlyFee && !annualCharges) return acc;
+        acc[name] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
         return acc;
     }, {});
 }
@@ -1706,11 +1714,40 @@ async function readClassFeeConfig() {
     }
 }
 
+async function readClassFeeHistory() {
+    const row = await sequelize.models.AppSetting.findByPk('class_fee_history');
+    if (!row?.settingValue) return [];
+    try {
+        const parsed = JSON.parse(row.settingValue);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+        return [];
+    }
+}
+
+async function writeClassFeeState(classFees, classFeeHistory) {
+    await sequelize.models.AppSetting.upsert({
+        settingKey: 'class_fees',
+        settingValue: JSON.stringify(classFees)
+    });
+    await sequelize.models.AppSetting.upsert({
+        settingKey: 'class_fee_history',
+        settingValue: JSON.stringify((Array.isArray(classFeeHistory) ? classFeeHistory : []).slice(0, 500))
+    });
+}
+
+async function applyClassFeeToStudents(className, monthlyFee, feeFrequency) {
+    if (!sequelize.models.Student || !className) return;
+    const studentUpdate = { feeFrequency };
+    if (monthlyFee) studentUpdate.monthlyFee = monthlyFee;
+    await sequelize.models.Student.update(studentUpdate, { where: { classGrade: className } });
+}
+
 app.get('/api/class-fees', async (_req, res) => {
     if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
 
     try {
-        res.json({ success: true, classFees: await readClassFeeConfig() });
+        res.json({ success: true, classFees: await readClassFeeConfig(), classFeeHistory: await readClassFeeHistory() });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -1725,21 +1762,109 @@ app.post('/api/class-fees', authenticateToken, async (req, res) => {
     try {
         const className = String(req.body?.className || '').trim();
         const monthlyFee = String(req.body?.monthlyFee || '').trim();
+        const annualCharges = String(req.body?.annualCharges || '').trim();
         const feeFrequency = String(req.body?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        const feeMonth = String(req.body?.feeMonth || '').trim();
+        const feeYear = String(req.body?.feeYear || '').trim();
 
-        if (!className || !monthlyFee) {
-            return res.status(400).json({ success: false, message: 'Class and monthly fee are required.' });
+        if (!className || (!monthlyFee && !annualCharges)) {
+            return res.status(400).json({ success: false, message: 'Class and monthly fee or annual charges are required.' });
         }
 
         const classFees = await readClassFeeConfig();
-        classFees[className] = { monthlyFee, feeFrequency };
+        classFees[className] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
+        const classFeeHistory = await readClassFeeHistory();
+        const historyEntry = {
+            id: `CFH-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            className,
+            monthlyFee,
+            annualCharges,
+            feeFrequency,
+            feeMonth,
+            feeYear,
+            updatedBy: req.user?.username || req.user?.role || '',
+            updatedAt: new Date().toISOString()
+        };
+        classFeeHistory.unshift(historyEntry);
 
-        await sequelize.models.AppSetting.upsert({
-            settingKey: 'class_fees',
-            settingValue: JSON.stringify(classFees)
-        });
+        await writeClassFeeState(classFees, classFeeHistory);
+        await applyClassFeeToStudents(className, monthlyFee, feeFrequency);
 
-        res.json({ success: true, classFees });
+        res.json({ success: true, classFees, classFeeHistory });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.put('/api/class-fees/history/:id', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    if (req.user.role !== 'Admin' && req.user.role !== 'Principal') {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    try {
+        const id = String(req.params.id || '').trim();
+        const className = String(req.body?.className || '').trim();
+        const monthlyFee = String(req.body?.monthlyFee || '').trim();
+        const annualCharges = String(req.body?.annualCharges || '').trim();
+        const feeFrequency = String(req.body?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        const feeMonth = String(req.body?.feeMonth || '').trim();
+        const feeYear = String(req.body?.feeYear || '').trim();
+
+        if (!id) return res.status(400).json({ success: false, message: 'History id is required.' });
+        if (!className || (!monthlyFee && !annualCharges)) {
+            return res.status(400).json({ success: false, message: 'Class and monthly fee or annual charges are required.' });
+        }
+
+        const classFees = await readClassFeeConfig();
+        const classFeeHistory = await readClassFeeHistory();
+        const index = classFeeHistory.findIndex((item) => String(item?.id || '') === id);
+        if (index === -1) {
+            return res.status(404).json({ success: false, message: 'Fee history record not found.' });
+        }
+
+        classFees[className] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
+        classFeeHistory[index] = {
+            ...classFeeHistory[index],
+            className,
+            monthlyFee,
+            annualCharges,
+            feeFrequency,
+            feeMonth,
+            feeYear,
+            updatedBy: req.user?.username || req.user?.role || '',
+            updatedAt: new Date().toISOString()
+        };
+
+        await writeClassFeeState(classFees, classFeeHistory);
+        await applyClassFeeToStudents(className, monthlyFee, feeFrequency);
+
+        res.json({ success: true, classFees, classFeeHistory });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/class-fees/history/:id', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+    if (req.user.role !== 'Admin' && req.user.role !== 'Principal') {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+
+    try {
+        const id = String(req.params.id || '').trim();
+        if (!id) return res.status(400).json({ success: false, message: 'History id is required.' });
+
+        const classFees = await readClassFeeConfig();
+        const classFeeHistory = await readClassFeeHistory();
+        const nextHistory = classFeeHistory.filter((item) => String(item?.id || '') !== id);
+        if (nextHistory.length === classFeeHistory.length) {
+            return res.status(404).json({ success: false, message: 'Fee history record not found.' });
+        }
+
+        await writeClassFeeState(classFees, nextHistory);
+
+        res.json({ success: true, classFees, classFeeHistory: nextHistory });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
@@ -2800,7 +2925,8 @@ app.get('/api/teachers', async (req, res) => {
                 'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role', 'groupKey'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
+                'employmentStatus', 'stuckOffAt', 'stuckOffNote', 'role', 'groupKey'
             ]
         });
         res.json(teachers);
@@ -2884,7 +3010,8 @@ app.post('/api/teachers', authenticateToken, async (req, res) => {
                 'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role', 'groupKey'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
+                'employmentStatus', 'stuckOffAt', 'stuckOffNote', 'role', 'groupKey'
             ]
         });
         io.emit('teachers_update', allTeachers);
@@ -2924,7 +3051,8 @@ app.delete('/api/teachers/:id', authenticateToken, async (req, res) => {
                 'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
-                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword', 'role', 'groupKey'
+                'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
+                'employmentStatus', 'stuckOffAt', 'stuckOffNote', 'role', 'groupKey'
             ]
         });
         io.emit('teachers_update', allTeachers);
@@ -3463,7 +3591,11 @@ function defineStudentModel(db) {
         username: { type: DataTypes.STRING, unique: true },
         password: DataTypes.STRING,
         plainPassword: DataTypes.STRING,
-        role: { type: DataTypes.STRING, defaultValue: 'Student' }
+        role: { type: DataTypes.STRING, defaultValue: 'Student' },
+        enrollmentStatus: { type: DataTypes.STRING, defaultValue: 'Active' },
+        stuckOffAt: DataTypes.STRING,
+        terminatedAt: DataTypes.STRING,
+        terminationNote: DataTypes.TEXT
     });
 }
 
@@ -3496,6 +3628,9 @@ function defineTeacherModel(db) {
         username: { type: DataTypes.STRING, unique: true },
         password: DataTypes.STRING,
         plainPassword: DataTypes.STRING,
+        employmentStatus: { type: DataTypes.STRING, defaultValue: 'Active' },
+        stuckOffAt: DataTypes.STRING,
+        stuckOffNote: DataTypes.TEXT,
         groupKey: DataTypes.STRING,
         role: { type: DataTypes.STRING, defaultValue: 'Teacher' }
     });
@@ -3948,6 +4083,8 @@ async function ensureLegacySchema() {
         email: { type: DataTypes.STRING, allowNull: true },
         rollNo: { type: DataTypes.STRING, allowNull: true },
         formB: { type: DataTypes.STRING, allowNull: true },
+        familyId: { type: DataTypes.STRING, allowNull: true },
+        familyName: { type: DataTypes.STRING, allowNull: true },
         monthlyFee: { type: DataTypes.STRING, allowNull: true },
         feeFrequency: { type: DataTypes.STRING, allowNull: true },
         feesStatus: { type: DataTypes.STRING, allowNull: true },
@@ -3957,6 +4094,7 @@ async function ensureLegacySchema() {
         plainPassword: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true },
         enrollmentStatus: { type: DataTypes.STRING, allowNull: true },
+        stuckOffAt: { type: DataTypes.STRING, allowNull: true },
         terminatedAt: { type: DataTypes.STRING, allowNull: true },
         terminationNote: { type: DataTypes.TEXT, allowNull: true }
     });
@@ -4000,6 +4138,9 @@ async function ensureLegacySchema() {
         username: { type: DataTypes.STRING, allowNull: true },
         password: { type: DataTypes.STRING, allowNull: true },
         plainPassword: { type: DataTypes.STRING, allowNull: true },
+        employmentStatus: { type: DataTypes.STRING, allowNull: true },
+        stuckOffAt: { type: DataTypes.STRING, allowNull: true },
+        stuckOffNote: { type: DataTypes.TEXT, allowNull: true },
         groupKey: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true }
     });

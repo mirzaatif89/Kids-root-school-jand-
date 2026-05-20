@@ -9,8 +9,10 @@ function normalizeClassFeeConfig(input = {}) {
         if (!name) return acc;
         const monthlyFee = String(config?.monthlyFee ?? config?.fee ?? '').trim();
         const feeFrequency = String(config?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        const feeMonth = String(config?.feeMonth || '').trim();
+        const feeYear = String(config?.feeYear || '').trim();
         if (!monthlyFee) return acc;
-        acc[name] = { monthlyFee, feeFrequency };
+        acc[name] = { monthlyFee, feeFrequency, feeMonth, feeYear };
         return acc;
     }, {});
 }
@@ -22,6 +24,17 @@ async function readClassFeeConfig(db) {
         return normalizeClassFeeConfig(JSON.parse(row.settingValue));
     } catch (_error) {
         return {};
+    }
+}
+
+async function readClassFeeHistory(db) {
+    const row = await db.models.AppSetting.findByPk('class_fee_history');
+    if (!row?.settingValue) return [];
+    try {
+        const parsed = JSON.parse(row.settingValue);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_error) {
+        return [];
     }
 }
 
@@ -56,7 +69,7 @@ function assertAdminOrPrincipal(req) {
 
 module.exports = createHandler({
     GET: async ({ res, db }) => {
-        sendJson(res, 200, { success: true, classFees: await readClassFeeConfig(db) });
+        sendJson(res, 200, { success: true, classFees: await readClassFeeConfig(db), classFeeHistory: await readClassFeeHistory(db) });
     },
     POST: async ({ req, res, db, body }) => {
         assertAdminOrPrincipal(req);
@@ -64,6 +77,8 @@ module.exports = createHandler({
         const className = String(body?.className || '').trim();
         const monthlyFee = String(body?.monthlyFee || '').trim();
         const feeFrequency = String(body?.feeFrequency || 'Monthly').trim() || 'Monthly';
+        const feeMonth = String(body?.feeMonth || '').trim();
+        const feeYear = String(body?.feeYear || '').trim();
 
         if (!className || !monthlyFee) {
             const error = new Error('Class and monthly fee are required.');
@@ -72,13 +87,35 @@ module.exports = createHandler({
         }
 
         const classFees = await readClassFeeConfig(db);
-        classFees[className] = { monthlyFee, feeFrequency };
+        classFees[className] = { monthlyFee, feeFrequency, feeMonth, feeYear };
+        const classFeeHistory = await readClassFeeHistory(db);
+        const historyEntry = {
+            id: `CFH-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            className,
+            monthlyFee,
+            feeFrequency,
+            feeMonth,
+            feeYear,
+            updatedAt: new Date().toISOString()
+        };
+        classFeeHistory.unshift(historyEntry);
 
         await db.models.AppSetting.upsert({
             settingKey: 'class_fees',
             settingValue: JSON.stringify(classFees)
         });
+        await db.models.AppSetting.upsert({
+            settingKey: 'class_fee_history',
+            settingValue: JSON.stringify(classFeeHistory.slice(0, 500))
+        });
 
-        sendJson(res, 200, { success: true, classFees });
+        if (db.models.Student) {
+            await db.models.Student.update(
+                { monthlyFee, feeFrequency },
+                { where: { classGrade: className } }
+            );
+        }
+
+        sendJson(res, 200, { success: true, classFees, classFeeHistory });
     }
 }, { getDb });

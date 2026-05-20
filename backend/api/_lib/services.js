@@ -16,6 +16,7 @@ const MODULE_KEYS = [
     'teacher_scheduling',
     'staff',
     'classes',
+    'set_fee',
     'fees',
     'fee_challan',
     'certificate',
@@ -43,6 +44,7 @@ const ACCESS_LEVELS = ['none', 'view', 'edit', 'manage'];
 const ALLOWED_HOME_PAGES = new Set([
     'dashboard.html',
     'students.html',
+    'stuck_off.html',
     'student_scheduling.html',
     'student_timetable.html',
     'student_diary.html',
@@ -52,6 +54,7 @@ const ALLOWED_HOME_PAGES = new Set([
     'teacher_scheduling.html',
     'staff.html',
     'classes.html',
+    'set_fee.html',
     'fees.html',
     'fee_challan.html',
     'certificate.html',

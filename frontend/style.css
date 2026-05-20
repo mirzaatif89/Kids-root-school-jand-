@@ -417,13 +417,14 @@ ul {
 }
 
 .sidebar .logo-section::after {
-    content: "Apexiums\A School Software";
+    content: "Apexiums School\A Software";
     color: #ffffff;
     font-size: 0.98rem;
     font-weight: 800;
     line-height: 1.12;
     letter-spacing: 0;
     white-space: pre-line;
+    text-align: center;
     text-transform: none;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
 }

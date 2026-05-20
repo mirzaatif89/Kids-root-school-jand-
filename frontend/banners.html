@@ -11,22 +11,55 @@
     <style>
         .banner-layout {
             display: grid;
-            grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
-            gap: 1rem;
+            grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
+            gap: 1.15rem;
             align-items: start;
+        }
+
+        .banner-panel {
+            background: #ffffff;
+            border: 1px solid rgba(32, 176, 164, 0.18);
+            border-radius: 10px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .banner-panel-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.1rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(180deg, #ffffff 0%, #f8fffe 100%);
+        }
+
+        .banner-panel-head h2 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+
+        .banner-panel-head p {
+            margin: 0.25rem 0 0;
+            color: var(--text-secondary);
+            font-size: 0.86rem;
         }
 
         .banner-form {
             display: grid;
-            gap: 0.95rem;
+            gap: 1rem;
+            padding: 1.1rem;
         }
 
         .banner-field label {
             display: block;
             margin-bottom: 0.45rem;
-            font-size: 0.86rem;
-            font-weight: 700;
+            font-size: 0.78rem;
+            font-weight: 800;
             color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
         }
 
         .banner-field input,
@@ -40,27 +73,35 @@
             background: #fff;
         }
 
+        .banner-field input:focus,
+        .banner-field textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
         .banner-upload-box {
             display: grid;
             gap: 0.8rem;
-            padding: 0.85rem;
+            padding: 0.8rem;
             border: 1px dashed rgba(32, 176, 164, 0.5);
-            border-radius: 8px;
-            background: rgba(32, 176, 164, 0.04);
+            border-radius: 10px;
+            background: #f8fffe;
         }
 
         .banner-preview {
             width: 100%;
-            aspect-ratio: 16 / 6;
+            aspect-ratio: 16 / 7;
             border-radius: 8px;
             border: 1px solid var(--border-color);
-            background: #f8fafc;
+            background: linear-gradient(135deg, #f8fafc 0%, #eefcfb 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             color: var(--text-secondary);
             font-weight: 700;
+            text-align: center;
         }
 
         .banner-preview img {
@@ -120,6 +161,10 @@
             color: var(--text-secondary);
         }
 
+        .banner-toggle input {
+            accent-color: var(--primary-color);
+        }
+
         .banner-actions {
             display: flex;
             gap: 0.75rem;
@@ -128,17 +173,19 @@
 
         .banner-list {
             display: grid;
-            gap: 0.9rem;
+            gap: 0.95rem;
+            padding: 1.1rem;
         }
 
         .banner-card {
             display: grid;
-            grid-template-columns: 220px 1fr;
+            grid-template-columns: 230px minmax(0, 1fr);
             gap: 1rem;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
+            border-radius: 10px;
             background: #fff;
-            padding: 0.9rem;
+            padding: 0.85rem;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
         }
 
         .banner-thumb {
@@ -147,17 +194,20 @@
             object-fit: cover;
             border-radius: 8px;
             background: #eef2f7;
+            border: 1px solid var(--border-color);
         }
 
         .banner-meta {
             display: grid;
             gap: 0.65rem;
             min-width: 0;
+            align-content: start;
         }
 
         .banner-meta h3 {
             margin: 0;
-            font-size: 1rem;
+            color: var(--text-primary);
+            font-size: 1.05rem;
         }
 
         .banner-meta p {
@@ -184,18 +234,36 @@
             font-weight: 800;
         }
 
+        .banner-pill.order {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
         .banner-pill.inactive {
             background: #fee2e2;
             color: #991b1b;
         }
 
         .banner-empty {
-            padding: 1.5rem;
-            border: 1px dashed var(--border-color);
-            border-radius: 8px;
+            display: grid;
+            justify-items: center;
+            gap: 0.65rem;
+            padding: 2.5rem 1.5rem;
+            border: 1px dashed rgba(32, 176, 164, 0.35);
+            border-radius: 10px;
             color: var(--text-secondary);
             text-align: center;
-            background: #f8fafc;
+            background: #f8fffe;
+        }
+
+        .banner-empty i {
+            color: var(--primary-color);
+            width: 32px;
+            height: 32px;
+        }
+
+        .banner-empty strong {
+            color: var(--text-primary);
         }
 
         @media (max-width: 980px) {
@@ -253,7 +321,13 @@
             </header>
 
             <section class="banner-layout">
-                <div class="table-container">
+                <div class="banner-panel">
+                    <div class="banner-panel-head">
+                        <div>
+                            <h2>Banner Details</h2>
+                            <p>Upload a wide image and control its display order.</p>
+                        </div>
+                    </div>
                     <form id="bannerForm" class="banner-form">
                         <input type="hidden" id="bannerId">
                         <input type="hidden" id="bannerExistingImage">
@@ -289,7 +363,13 @@
                     </form>
                 </div>
 
-                <div class="table-container">
+                <div class="banner-panel">
+                    <div class="banner-panel-head">
+                        <div>
+                            <h2>Saved Banners</h2>
+                            <p>Active banners appear on the website and portal.</p>
+                        </div>
+                    </div>
                     <div id="bannerList" class="banner-list"></div>
                 </div>
             </section>
@@ -337,7 +417,7 @@
                 preview.innerHTML = `<img src="${escapeHtml(imageUrl)}" alt="Banner preview">`;
                 return;
             }
-            preview.textContent = 'No image selected';
+            preview.innerHTML = '<span>No image selected</span>';
         }
 
         function resetBannerForm() {
@@ -354,7 +434,14 @@
         function renderBanners() {
             const list = document.getElementById('bannerList');
             if (!bannerRecords.length) {
-                list.innerHTML = '<div class="banner-empty">No banners saved yet.</div>';
+                list.innerHTML = `
+                    <div class="banner-empty">
+                        <i data-lucide="image"></i>
+                        <strong>No banners saved yet</strong>
+                        <span>Upload a banner image and save it to show it here.</span>
+                    </div>
+                `;
+                if (window.lucide) window.lucide.createIcons();
                 return;
             }
 
@@ -365,12 +452,12 @@
                     <div class="banner-meta">
                         <div class="banner-pill-row">
                             <span class="banner-pill${banner.isActive ? '' : ' inactive'}">${banner.isActive ? 'Active' : 'Inactive'}</span>
-                            <span class="banner-pill">Order ${Number(banner.displayOrder || 0)}</span>
+                            <span class="banner-pill order">Order ${Number(banner.displayOrder || 0)}</span>
                         </div>
                         <h3>${escapeHtml(banner.title)}</h3>
                         <div class="banner-actions">
                             <button class="btn btn-outline" type="button" onclick="toggleBannerStatus('${escapeHtml(banner.id)}')">
-                                <i data-lucide="${banner.isActive ? 'eye-off' : 'eye'}"></i> ${banner.isActive ? 'Off' : 'On'}
+                                <i data-lucide="${banner.isActive ? 'eye-off' : 'eye'}"></i> ${banner.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                             <button class="btn btn-outline" type="button" onclick="editBanner('${escapeHtml(banner.id)}')"><i data-lucide="pencil"></i> Edit</button>
                             <button class="btn btn-danger" type="button" onclick="deleteBanner('${escapeHtml(banner.id)}')"><i data-lucide="trash-2"></i> Delete</button>
@@ -383,15 +470,38 @@
         }
 
         async function loadBanners() {
+            const list = document.getElementById('bannerList');
+            if (list) {
+                list.innerHTML = `
+                    <div class="banner-empty">
+                        <i data-lucide="loader-circle"></i>
+                        <strong>Loading banners</strong>
+                        <span>Please wait while saved banners are loaded.</span>
+                    </div>
+                `;
+                if (window.lucide) window.lucide.createIcons();
+            }
             try {
                 const response = await fetch(`${API_BASE_URL}/banners`);
                 const data = await response.json();
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.message || 'Banners could not be loaded.');
+                }
                 bannerRecords = Array.isArray(data.banners) ? data.banners : [];
                 renderBanners();
                 resetBannerForm();
             } catch (error) {
                 bannerRecords = [];
-                renderBanners();
+                if (list) {
+                    list.innerHTML = `
+                        <div class="banner-empty">
+                            <i data-lucide="circle-alert"></i>
+                            <strong>Banners could not be loaded</strong>
+                            <span>Refresh the page and try again.</span>
+                        </div>
+                    `;
+                    if (window.lucide) window.lucide.createIcons();
+                }
                 resetBannerForm();
                 console.error(error);
             }
