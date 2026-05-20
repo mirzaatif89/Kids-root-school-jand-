@@ -2927,7 +2927,7 @@ app.get('/api/teachers', async (req, res) => {
     try {
         const teachers = await sequelize.models.Teacher.findAll({
             attributes: [
-                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
+                'id', 'employeeCode', 'fullName', 'profileImage', 'fingerprintData', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
                 'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
@@ -3012,7 +3012,7 @@ app.post('/api/teachers', authenticateToken, async (req, res) => {
 
         const allTeachers = await Teacher.findAll({
             attributes: [
-                'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
+                'id', 'employeeCode', 'fullName', 'profileImage', 'fingerprintData', 'fatherName', 'dob', 'cnic', 'phone',
                 'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
                 'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
                 'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',
@@ -3577,6 +3577,7 @@ function defineStudentModel(db) {
         studentCode: DataTypes.STRING,
         fullName: DataTypes.STRING,
         profileImage: DataTypes.TEXT('long'),
+        fingerprintData: DataTypes.TEXT('long'),
         fatherName: DataTypes.STRING,
         dob: DataTypes.STRING,
         admissionDate: DataTypes.STRING,
@@ -3612,6 +3613,7 @@ function defineTeacherModel(db) {
         employeeCode: DataTypes.STRING,
         fullName: DataTypes.STRING,
         profileImage: DataTypes.TEXT('long'),
+        fingerprintData: DataTypes.TEXT('long'),
         fatherName: DataTypes.STRING,
         dob: DataTypes.STRING,
         cnic: DataTypes.STRING,
@@ -4080,6 +4082,7 @@ async function ensureLegacySchema() {
         studentCode: { type: DataTypes.STRING, allowNull: true },
         fullName: { type: DataTypes.STRING, allowNull: true },
         profileImage: { type: DataTypes.TEXT('long'), allowNull: true },
+        fingerprintData: { type: DataTypes.TEXT('long'), allowNull: true },
         fatherName: { type: DataTypes.STRING, allowNull: true },
         dob: { type: DataTypes.STRING, allowNull: true },
         admissionDate: { type: DataTypes.STRING, allowNull: true },
@@ -4124,6 +4127,7 @@ async function ensureLegacySchema() {
         employeeCode: { type: DataTypes.STRING, allowNull: true },
         fullName: { type: DataTypes.STRING, allowNull: true },
         profileImage: { type: DataTypes.TEXT('long'), allowNull: true },
+        fingerprintData: { type: DataTypes.TEXT('long'), allowNull: true },
         fatherName: { type: DataTypes.STRING, allowNull: true },
         dob: { type: DataTypes.STRING, allowNull: true },
         cnic: { type: DataTypes.STRING, allowNull: true },

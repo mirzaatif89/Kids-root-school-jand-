@@ -235,6 +235,7 @@
                     teacher_scheduling: 'manage',
                     staff: 'manage',
                     classes: 'manage',
+                    set_fee: 'manage',
                     fees: 'manage',
                     fee_challan: 'manage',
                     library: 'manage',
@@ -548,6 +549,159 @@
                     .filter((item) => item.style.display !== 'none');
                 if (!visibleLinks.length) dropdown.style.display = 'none';
             });
+        });
+    }
+
+    function renderRequestedSidebarSequence(user, permissions) {
+        if (!user || !authToken || publicPages.has(currentPage)) return;
+        if (user.role === 'Student' || user.role === 'Teacher') return;
+
+        runWhenReady(() => {
+            const navLinks = document.querySelector('.sidebar .nav-links');
+            if (!navLinks || navLinks.dataset.requestedSidebarSequence === 'true') return;
+
+            const isActivePage = (pageName) => normalizePageName(pageName) === currentPage;
+            const canShowPage = (pageName) => pageRegistry[normalizePageName(pageName)] && canAccessPage(user, permissions, pageName);
+            const canShowAny = (children = []) => children.some((child) => canShowPage(child.page));
+
+            const navItems = [
+                { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
+                {
+                    type: 'dropdown',
+                    label: 'Students',
+                    icon: 'users',
+                    children: [
+                        { page: 'students.html', label: 'Students', icon: 'users' },
+                        { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
+                        { page: 'certificate.html', label: 'Certificates', icon: 'award' },
+                        { page: 'library.html', label: 'Library', icon: 'library' },
+                        { page: 'families.html', label: 'Families', icon: 'home' }
+                    ]
+                },
+                {
+                    type: 'dropdown',
+                    label: 'Teacher',
+                    icon: 'book-open',
+                    children: [
+                        { page: 'teachers.html', label: 'Teacher', icon: 'book-open' },
+                        { page: 'teacher_scheduling.html', label: 'Teacher Scheduling', icon: 'calendar-days' }
+                    ]
+                },
+                { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+                {
+                    type: 'dropdown',
+                    label: 'Banners',
+                    icon: 'image',
+                    children: [
+                        { page: 'banners.html', label: 'Banners', icon: 'image' },
+                        { page: 'settings.html', label: 'Logos', icon: 'badge' }
+                    ]
+                },
+                { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
+                { type: 'link', page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
+                {
+                    type: 'dropdown',
+                    label: 'Examination',
+                    icon: 'clipboard-list',
+                    children: [
+                        { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
+                        { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
+                        { page: 'exams.html', label: 'Exams', icon: 'clipboard-list' }
+                    ]
+                },
+                {
+                    type: 'dropdown',
+                    label: 'Fees Structure',
+                    icon: 'credit-card',
+                    children: [
+                        { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                        { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+                    ]
+                },
+                { type: 'link', page: 'stuck_off.html', label: 'Stuck Off', icon: 'user-x' },
+                {
+                    type: 'dropdown',
+                    label: 'Finance',
+                    icon: 'landmark',
+                    children: [
+                        { page: 'bills.html', label: 'Bills', icon: 'receipt' },
+                        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+                        { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' }
+                    ]
+                },
+                {
+                    type: 'dropdown',
+                    label: 'Notifications Section',
+                    icon: 'bell-ring',
+                    children: [
+                        { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
+                        { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' },
+                        { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' }
+                    ]
+                },
+                { type: 'link', page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
+                { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
+                {
+                    type: 'dropdown',
+                    label: 'Security',
+                    icon: 'shield',
+                    children: [
+                        { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
+                        { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
+                    ]
+                },
+                { type: 'logout', label: 'Logout', icon: 'log-out' }
+            ];
+
+            const buildLink = (item, className = 'nav-item') => {
+                if (!canShowPage(item.page)) return '';
+                return `
+                    <a href="${toRoutePath(item.page)}" class="${className}${isActivePage(item.page) ? ' active' : ''}">
+                        <i data-lucide="${item.icon}"></i>
+                        <span>${item.label}</span>
+                    </a>
+                `;
+            };
+
+            navLinks.innerHTML = navItems.map((item) => {
+                if (item.type === 'link') return buildLink(item);
+                if (item.type === 'logout') {
+                    return `
+                        <a href="#" class="nav-item" onclick="logoutUser(event)">
+                            <i data-lucide="${item.icon}"></i>
+                            <span>${item.label}</span>
+                        </a>
+                    `;
+                }
+                if (!canShowAny(item.children)) return '';
+
+                const visibleChildren = item.children.filter((child) => canShowPage(child.page));
+                const open = visibleChildren.some((child) => isActivePage(child.page));
+                return `
+                    <div class="nav-dropdown${open ? ' open' : ''}" data-requested-sidebar-dropdown="true">
+                        <button type="button" class="nav-item nav-dropdown-toggle${open ? ' active' : ''}">
+                            <span class="nav-item-main">
+                                <i data-lucide="${item.icon}"></i>
+                                <span>${item.label}</span>
+                            </span>
+                            <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                        </button>
+                        <div class="nav-submenu">
+                            ${visibleChildren.map((child) => buildLink(child, 'nav-subitem')).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            navLinks.dataset.requestedSidebarSequence = 'true';
+            navLinks.querySelectorAll('[data-requested-sidebar-dropdown] > .nav-dropdown-toggle').forEach((toggle) => {
+                toggle.addEventListener('click', () => {
+                    toggle.closest('.nav-dropdown')?.classList.toggle('open');
+                });
+            });
+
+            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
         });
     }
 
@@ -1013,6 +1167,7 @@
 
     (async () => {
         const permissions = await fetchPermissionsConfig();
+        renderRequestedSidebarSequence(loggedInUser, permissions);
         applyNavPermissions(loggedInUser, permissions);
         applySignedInUserLabels(loggedInUser);
         renderDashboardPermissionCards(loggedInUser, permissions);

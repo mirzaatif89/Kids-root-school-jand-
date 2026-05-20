@@ -9,7 +9,7 @@ const {
 } = require('../_lib/services');
 
 const teacherAttributes = [
-    'id', 'employeeCode', 'fullName', 'profileImage', 'fatherName', 'dob', 'cnic', 'phone',
+    'id', 'employeeCode', 'fullName', 'profileImage', 'fingerprintData', 'fatherName', 'dob', 'cnic', 'phone',
     'email', 'address', 'qualification', 'campusName', 'gender', 'designation', 'subject', 'salary',
     'idCardFront', 'idCardBack', 'cvFile', 'bankName', 'bankAccountTitle',
     'bankAccountNumber', 'bankBranch', 'schedule', 'username', 'password', 'plainPassword',

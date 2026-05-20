@@ -586,6 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ensureAttendanceNav();
     ensureNotificationsNav();
     ensureSpecialNoticesNav();
+    renderAdminSidebarSequence();
     initializeSidebarScrollMemory();
     applyBranchScopedStudentsView();
     if (sessionStorage.getItem('eduCore_token')) {
@@ -2773,6 +2774,151 @@ function ensureAdminSidebarCompleteness() {
     if (window.lucide) window.lucide.createIcons();
 }
 
+function renderAdminSidebarSequence() {
+    const navLinks = document.querySelector('.nav-links');
+    const loggedInUser = getLoggedInUser();
+    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (navLinks.dataset.adminSidebarSequenced === 'true') return;
+
+    const currentPage = getCurrentPageName();
+    const isActivePage = (page) => normalizeClientPageName(page) === currentPage;
+    const hasActiveChild = (children = []) => children.some((child) => isActivePage(child.page));
+
+    const navItems = [
+        { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
+        {
+            type: 'dropdown',
+            label: 'Students',
+            icon: 'users',
+            children: [
+                { page: 'students.html', label: 'Students', icon: 'users' },
+                { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
+                { page: 'certificate.html', label: 'Certificates', icon: 'award' },
+                { page: 'library.html', label: 'Library', icon: 'library' },
+                { page: 'families.html', label: 'Families', icon: 'home' }
+            ]
+        },
+        {
+            type: 'dropdown',
+            label: 'Teacher',
+            icon: 'book-open',
+            children: [
+                { page: 'teachers.html', label: 'Teacher', icon: 'book-open' },
+                { page: 'teacher_scheduling.html', label: 'Teacher Scheduling', icon: 'calendar-days' }
+            ]
+        },
+        { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+        {
+            type: 'dropdown',
+            label: 'Banners',
+            icon: 'image',
+            children: [
+                { page: 'banners.html', label: 'Banners', icon: 'image' },
+                { page: 'settings.html', label: 'Logos', icon: 'badge' }
+            ]
+        },
+        { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
+        { type: 'link', page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
+        {
+            type: 'dropdown',
+            label: 'Examination',
+            icon: 'clipboard-list',
+            children: [
+                { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
+                { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
+                { page: 'exams.html', label: 'Exams', icon: 'clipboard-list' }
+            ]
+        },
+        {
+            type: 'dropdown',
+            label: 'Fees Structure',
+            icon: 'credit-card',
+            children: [
+                { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+            ]
+        },
+        { type: 'link', page: 'stuck_off.html', label: 'Stuck Off', icon: 'user-x' },
+        {
+            type: 'dropdown',
+            label: 'Finance',
+            icon: 'landmark',
+            children: [
+                { page: 'bills.html', label: 'Bills', icon: 'receipt' },
+                { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+                { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' }
+            ]
+        },
+        {
+            type: 'dropdown',
+            label: 'Notifications Section',
+            icon: 'bell-ring',
+            children: [
+                { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
+                { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' },
+                { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' }
+            ]
+        },
+        { type: 'link', page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
+        { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
+        {
+            type: 'dropdown',
+            label: 'Security',
+            icon: 'shield',
+            children: [
+                { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
+                { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
+            ]
+        },
+        { type: 'logout', label: 'Logout', icon: 'log-out' }
+    ];
+
+    const buildLink = (item, className = 'nav-item') => `
+        <a href="${toRoutePath(item.page)}" class="${className}${isActivePage(item.page) ? ' active' : ''}">
+            <i data-lucide="${item.icon}"></i>
+            <span>${item.label}</span>
+        </a>
+    `;
+
+    navLinks.innerHTML = navItems.map((item) => {
+        if (item.type === 'link') return buildLink(item);
+        if (item.type === 'logout') {
+            return `
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="${item.icon}"></i>
+                    <span>${item.label}</span>
+                </a>
+            `;
+        }
+
+        const open = hasActiveChild(item.children);
+        return `
+            <div class="nav-dropdown${open ? ' open' : ''}" data-sequenced-sidebar-dropdown="true">
+                <button type="button" class="nav-item nav-dropdown-toggle${open ? ' active' : ''}">
+                    <span class="nav-item-main">
+                        <i data-lucide="${item.icon}"></i>
+                        <span>${item.label}</span>
+                    </span>
+                    <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                </button>
+                <div class="nav-submenu">
+                    ${item.children.map((child) => buildLink(child, 'nav-subitem')).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    navLinks.dataset.adminSidebarSequenced = 'true';
+    navLinks.querySelectorAll('[data-sequenced-sidebar-dropdown] > .nav-dropdown-toggle').forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+            toggle.closest('.nav-dropdown')?.classList.toggle('open');
+        });
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
 function ensureSchedulingNav() {
     const navLinks = document.querySelector('.nav-links');
     const loggedInUser = getLoggedInUser();
@@ -4445,6 +4591,7 @@ async function handleStudentFormSubmit(e) {
         gender: document.getElementById('gender').value,
         rollNo: document.getElementById('rollNo').value.trim(),
         formB: document.getElementById('formB').value.trim(),
+        fingerprintData: document.getElementById('studentFingerprintData') ? document.getElementById('studentFingerprintData').value.trim() : (existingStudent?.fingerprintData || ''),
         familyId,
         familyName,
         feesStatus: currentStatus,
@@ -5999,6 +6146,7 @@ function editStudent(s) {
     document.getElementById('gender').value = s.gender || '';
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
+    if (document.getElementById('studentFingerprintData')) document.getElementById('studentFingerprintData').value = s.fingerprintData || '';
     populateStudentFamilyOptions(s.familyId || '');
     if (document.getElementById('studentFamilyName')) document.getElementById('studentFamilyName').value = s.familyName || '';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
@@ -6269,6 +6417,7 @@ async function handleTeacherFormSubmit(e) {
         designation: document.getElementById('tDesignation')?.value || 'Teacher',
         groupKey: getDesignationGroup('tDesignation', 'teacher'),
         subject: document.getElementById('tSubject').value,
+        fingerprintData: document.getElementById('tFingerprintData') ? document.getElementById('tFingerprintData').value.trim() : (existingTeacher?.fingerprintData || ''),
         salary: salaryValInput,
         username: usernameInput,
         plainPassword: tPasswordInput,
@@ -6574,6 +6723,7 @@ function editTeacher(t) {
     document.getElementById('tGender').value = t.gender || '';
     setDesignationSelectValue('tDesignation', normalizedTeacherDesignation.designation, normalizedTeacherDesignation.groupKey);
     document.getElementById('tSubject').value = t.subject;
+    if (document.getElementById('tFingerprintData')) document.getElementById('tFingerprintData').value = t.fingerprintData || '';
     document.getElementById('tSalary').value = t.salary || '0';
     if (document.getElementById('tBankName')) document.getElementById('tBankName').value = t.bankName || '';
     if (document.getElementById('tBankAccountTitle')) document.getElementById('tBankAccountTitle').value = t.bankAccountTitle || '';

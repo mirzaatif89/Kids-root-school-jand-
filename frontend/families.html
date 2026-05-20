@@ -37,8 +37,8 @@
             <section id="familiesList" class="family-grid"></section>
         </main>
     </div>
-    <script src="auth.js"></script>
-    <script src="script.js"></script>
+    <script src="auth.js?v=20260520-sidebar-sequence"></script>
+    <script src="script.js?v=20260520-sidebar-sequence"></script>
     <script>
         function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }

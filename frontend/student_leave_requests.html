@@ -47,8 +47,8 @@
         </main>
     </div>
     <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
-    <script src="auth.js"></script>
-    <script src="script.js"></script>
+    <script src="auth.js?v=20260520-sidebar-sequence"></script>
+    <script src="script.js?v=20260520-sidebar-sequence"></script>
     <script>
         const STUDENT_LEAVE_KEY = 'eduCore_student_leave_requests';
         function data() { try { return JSON.parse(localStorage.getItem(STUDENT_LEAVE_KEY) || '[]'); } catch (_e) { return []; } }
