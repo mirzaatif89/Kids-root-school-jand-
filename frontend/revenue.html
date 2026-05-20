@@ -239,7 +239,7 @@
                     <i data-lucide="wallet"></i>
                     <span>Salaries</span>
                 </a>
-                <a href="finance.html" class="nav-item" style="display: none;">
+                <a href="bills.html" class="nav-item">
                     <i data-lucide="receipt"></i>
                     <span>Bills</span>
                 </a>
@@ -353,11 +353,41 @@
 
             <div class="revenue-stats" style="margin-top: 1.5rem;">
                 <div class="rev-card">
+                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
+                        <i data-lucide="receipt"></i>
+                    </div>
+                    <div class="rev-data">
+                        <p>Bills / Expenses</p>
+                        <h3 id="billExpenseTotal">PKR 0</h3>
+                    </div>
+                </div>
+                <div class="rev-card">
+                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                        <i data-lucide="send"></i>
+                    </div>
+                    <div class="rev-data">
+                        <p>Paid Bills</p>
+                        <h3 id="paidBillExpense">PKR 0</h3>
+                    </div>
+                </div>
+                <div class="rev-card">
+                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
+                        <i data-lucide="clock-3"></i>
+                    </div>
+                    <div class="rev-data">
+                        <p>Pending Bills</p>
+                        <h3 id="pendingBillExpense">PKR 0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="revenue-stats" style="margin-top: 1.5rem;">
+                <div class="rev-card">
                     <div class="rev-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
                         <i data-lucide="badge-dollar-sign"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Net Expected After Salaries</p>
+                        <p>Net Expected After Salaries & Bills</p>
                         <h3 id="netExpectedRevenue">PKR 0</h3>
                     </div>
                 </div>
@@ -366,7 +396,7 @@
                         <i data-lucide="landmark"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Net Collected After Transfers</p>
+                        <p>Net Collected After Transfers & Paid Bills</p>
                         <h3 id="netCollectedRevenue">PKR 0</h3>
                     </div>
                 </div>
@@ -402,11 +432,13 @@
                                         <th>Pending</th>
                                         <th>Salary Budget</th>
                                         <th>Transferred</th>
+                                        <th>Bills</th>
+                                        <th>Paid Bills</th>
                                         <th>Net Collected</th>
                                     </tr>
                                 </thead>
                                 <tbody id="monthWiseRevenueBody">
-                                    <tr><td colspan="7" style="color: var(--text-secondary); padding: 1.25rem;">Loading…</td></tr>
+                                    <tr><td colspan="9" style="color: var(--text-secondary); padding: 1.25rem;">Loading...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -436,8 +468,16 @@
                             <div class="label">Salaries Transferred</div>
                             <div class="value" id="overallTransferredSalaries">PKR 0</div>
                         </div>
+                        <div class="overall-metric">
+                            <div class="label">Total Bills</div>
+                            <div class="value" id="overallBillExpenses">PKR 0</div>
+                        </div>
+                        <div class="overall-metric">
+                            <div class="label">Paid Bills</div>
+                            <div class="value" id="overallPaidBills">PKR 0</div>
+                        </div>
                         <div class="overall-metric profit">
-                            <div class="label">Profit (Collected - Transfers)</div>
+                            <div class="label">Profit (Collected - Transfers - Bills)</div>
                             <div class="value" id="overallProfit">PKR 0</div>
                         </div>
                         <div class="overall-metric profit">
@@ -455,6 +495,7 @@
     <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+        const STORAGE_KEY_BILLS = 'eduCore_bills';
         const monthsNames = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -547,6 +588,34 @@
             const [y, m] = String(monthKey || '').split('-').map(Number);
             if (!y || !m) return null;
             return { year: y, monthIndex: m - 1 };
+        }
+
+        function readBillExpenses() {
+            try {
+                const items = JSON.parse(localStorage.getItem(STORAGE_KEY_BILLS) || '[]');
+                return Array.isArray(items) ? items : [];
+            } catch (_error) {
+                return [];
+            }
+        }
+
+        function getBillMonthKey(item = {}) {
+            const rawDate = item.billDate || item.date || item.createdAt || '';
+            const parsed = rawDate ? new Date(rawDate) : null;
+            if (!parsed || Number.isNaN(parsed.getTime())) return '';
+            return monthKeyFromYearMonth(parsed.getFullYear(), parsed.getMonth());
+        }
+
+        function getMonthlyBillSummary(monthKey = '') {
+            return readBillExpenses()
+                .filter((item) => getBillMonthKey(item) === monthKey)
+                .reduce((summary, item) => {
+                    const amount = Number(item.amount || 0);
+                    summary.total += amount;
+                    if (item.status === 'Paid') summary.paid += amount;
+                    else summary.pending += amount;
+                    return summary;
+                }, { total: 0, paid: 0, pending: 0 });
         }
 
         function getMonthKeyRange(startKey, endKey) {
@@ -740,6 +809,8 @@
             const students = getData(STORAGE_KEY_STUDENTS);
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const salarySummary = getMonthlySalarySummary(monthKey);
+            const billSummary = getMonthlyBillSummary(monthKey);
+            const billMonthKeys = readBillExpenses().map((item) => getBillMonthKey(item)).filter(Boolean);
             const feePayments = await fetchCollectedFeePayments();
 
             // Build the month range for the summary table (min admission/payment -> current month).
@@ -750,7 +821,7 @@
                 return monthKeyFromYearMonth(d.getFullYear(), d.getMonth());
             }).filter(Boolean);
 
-            const allKeys = [...paymentMonthKeys, ...admissionMonthKeys, currentMeta.monthKey].filter(Boolean);
+            const allKeys = [...paymentMonthKeys, ...admissionMonthKeys, ...billMonthKeys, currentMeta.monthKey].filter(Boolean);
             const sortedAll = allKeys.sort();
             const startKey = sortedAll[0] || currentMeta.monthKey;
             const monthKeys = getMonthKeyRange(startKey, currentMeta.monthKey);
@@ -811,9 +882,9 @@
             });
 
             // Update UI Stats
-            const netExpected = totalExpected - salarySummary.expected;
-            const netCollected = totalCollected - salarySummary.transferred;
-            const remainingBalance = netCollected + salarySummary.pending;
+            const netExpected = totalExpected - salarySummary.expected - billSummary.total;
+            const netCollected = totalCollected - salarySummary.transferred - billSummary.paid;
+            const remainingBalance = netCollected + salarySummary.pending - billSummary.pending;
 
             document.getElementById('expectedRevenue').innerText = 'PKR ' + totalExpected.toLocaleString();
             document.getElementById('collectedRevenue').innerText = 'PKR ' + totalCollected.toLocaleString();
@@ -821,6 +892,9 @@
             document.getElementById('salaryBudget').innerText = 'PKR ' + salarySummary.expected.toLocaleString();
             document.getElementById('transferredSalaries').innerText = 'PKR ' + salarySummary.transferred.toLocaleString();
             document.getElementById('pendingSalaries').innerText = 'PKR ' + salarySummary.pending.toLocaleString();
+            document.getElementById('billExpenseTotal').innerText = 'PKR ' + billSummary.total.toLocaleString();
+            document.getElementById('paidBillExpense').innerText = 'PKR ' + billSummary.paid.toLocaleString();
+            document.getElementById('pendingBillExpense').innerText = 'PKR ' + billSummary.pending.toLocaleString();
             document.getElementById('netExpectedRevenue').innerText = 'PKR ' + netExpected.toLocaleString();
             document.getElementById('netCollectedRevenue').innerText = 'PKR ' + netCollected.toLocaleString();
             document.getElementById('netPendingRevenue').innerText = 'PKR ' + remainingBalance.toLocaleString();
@@ -869,7 +943,8 @@
                     const col = metrics.collectedByMonth[k] || 0;
                     const pend = Math.max(exp - col, 0);
                     const salary = getMonthlySalarySummary(k);
-                    const netCol = (col - salary.transferred);
+                    const bills = getMonthlyBillSummary(k);
+                    const netCol = (col - salary.transferred - bills.paid);
 
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
@@ -879,6 +954,8 @@
                         <td style="color:#dc2626; font-weight:700;">PKR ${Math.round(pend).toLocaleString('en-PK')}</td>
                         <td>PKR ${Math.round(salary.expected).toLocaleString('en-PK')}</td>
                         <td>PKR ${Math.round(salary.transferred).toLocaleString('en-PK')}</td>
+                        <td>PKR ${Math.round(bills.total).toLocaleString('en-PK')}</td>
+                        <td>PKR ${Math.round(bills.paid).toLocaleString('en-PK')}</td>
                         <td style="font-weight:700;">PKR ${Math.round(netCol).toLocaleString('en-PK')}</td>
                     `;
                     tr.querySelector('td')?.addEventListener('click', () => {
@@ -890,7 +967,7 @@
                 });
 
                 if (!monthKeys.length) {
-                    body.innerHTML = '<tr><td colspan="7" style="color: var(--text-secondary); padding: 1.25rem;">No data.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="9" style="color: var(--text-secondary); padding: 1.25rem;">No data.</td></tr>';
                 }
             }
 
@@ -899,16 +976,21 @@
             let overallCollected = 0;
             let overallSalaryBudget = 0;
             let overallTransferred = 0;
+            let overallBillExpenses = 0;
+            let overallPaidBills = 0;
             monthKeys.forEach((k) => {
                 overallExpected += Number(metrics.expectedByMonth[k] || 0);
                 overallCollected += Number(metrics.collectedByMonth[k] || 0);
                 const sal = getMonthlySalarySummary(k);
+                const bills = getMonthlyBillSummary(k);
                 overallSalaryBudget += Number(sal?.expected || 0);
                 overallTransferred += Number(sal?.transferred || 0);
+                overallBillExpenses += Number(bills?.total || 0);
+                overallPaidBills += Number(bills?.paid || 0);
             });
 
             const overallPending = Math.max(overallExpected - overallCollected, 0);
-            const overallProfit = overallCollected - overallTransferred;
+            const overallProfit = overallCollected - overallTransferred - overallPaidBills;
             const overallMarginPct = overallCollected > 0 ? (overallProfit / overallCollected) * 100 : 0;
 
             const setText = (id, text) => {
@@ -921,6 +1003,8 @@
             setText('overallPendingRevenue', `PKR ${Math.round(overallPending).toLocaleString('en-PK')}`);
             setText('overallSalaryBudget', `PKR ${Math.round(overallSalaryBudget).toLocaleString('en-PK')}`);
             setText('overallTransferredSalaries', `PKR ${Math.round(overallTransferred).toLocaleString('en-PK')}`);
+            setText('overallBillExpenses', `PKR ${Math.round(overallBillExpenses).toLocaleString('en-PK')}`);
+            setText('overallPaidBills', `PKR ${Math.round(overallPaidBills).toLocaleString('en-PK')}`);
             setText('overallProfit', `PKR ${Math.round(overallProfit).toLocaleString('en-PK')}`);
             setText('overallMarginPct', `${overallMarginPct.toFixed(1)}%`);
 

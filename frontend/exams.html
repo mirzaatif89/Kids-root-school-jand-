@@ -1509,6 +1509,12 @@
         }
 
         function fillFormState(savedState = {}) {
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            if (!savedState.schoolName && branding.schoolName) document.getElementById('schoolName').value = branding.schoolName;
+            if (!savedState.campusName && branding.schoolTitle) document.getElementById('campusName').value = branding.schoolTitle;
+            if (!savedState.schoolContact && branding.phone) document.getElementById('schoolContact').value = branding.phone;
+            if (!savedState.leftLogoUrl && branding.logoDataUrl) document.getElementById('leftLogoUrl').value = branding.logoDataUrl;
+            if (!savedState.rightLogoUrl && branding.logoDataUrl) document.getElementById('rightLogoUrl').value = branding.logoDataUrl;
             [
                 'schoolName', 'campusName', 'schoolContact', 'termTitle', 'leftLogoUrl', 'rightLogoUrl',
                 'studentName', 'fatherName', 'studentGrade', 'positionGrade',

@@ -1477,6 +1477,7 @@
         const API_BASE_URL = `${BACKEND_URL}/api`;
         const STORAGE_KEY_STUDENTS = 'eduCore_students';
         const STORAGE_KEY_TEACHERS = 'eduCore_teachers';
+        const STORAGE_KEY_SETTINGS = 'eduCore_settings';
         const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
@@ -1514,6 +1515,24 @@
             }[char]));
         }
 
+        function getPortalBrandingSettings() {
+            try {
+                return {
+                    schoolName: 'My own Science school',
+                    schoolTitle: 'Apexiums School System',
+                    phone: '',
+                    logoDataUrl: '',
+                    ...(JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS) || '{}') || {})
+                };
+            } catch (_error) {
+                return { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', logoDataUrl: '' };
+            }
+        }
+
+        function getPortalBrandingLogoSrc() {
+            return getPortalBrandingSettings().logoDataUrl || 'images/logo.png';
+        }
+
         function sanitizePortalFileName(fileName) {
             const safeName = String(fileName || 'diary-file').trim().replace(/[\\/:*?"<>|]+/g, '-');
             return safeName || 'diary-file';
@@ -1548,6 +1567,8 @@
         }
 
         async function getPortalLogoDataUrl() {
+            const brandingLogo = getPortalBrandingSettings().logoDataUrl;
+            if (brandingLogo) return brandingLogo;
             try {
                 const response = await fetch('images/logo.png');
                 if (!response.ok) throw new Error('Logo not available');
@@ -2577,6 +2598,8 @@
             const percentage = totalMarks ? (obtainedMarks / totalMarks) * 100 : 0;
             const status = percentage >= 40 ? 'Pass' : 'Fail';
             const branchDetails = getStudentBranchContactDetails(student.campusName || cachedResult.campusName);
+            const branding = getPortalBrandingSettings();
+            const logoSrc = getPortalBrandingLogoSrc();
             const subjectRows = cachedResult.subjects.map((item) => `
                 <tr>
                     <td>${item.subject || '-'}</td>
@@ -2615,13 +2638,13 @@
                     <body>
                         <div class="sheet">
                             <div class="head">
-                                <img class="print-logo" src="images/logo.png" alt="School logo">
+                                <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                                 <div>
-                                    <h1>${cachedResult.schoolName || 'School Result Card'}</h1>
-                                    <p>${branchDetails.campusLabel}</p>
-                                    <p>${branchDetails.contactLine}</p>
+                                    <h1>${escapeHtml(cachedResult.schoolName || branding.schoolName || 'School Result Card')}</h1>
+                                    <p>${escapeHtml(branding.schoolTitle || branchDetails.campusLabel)}</p>
+                                    <p>${escapeHtml(branding.phone || branchDetails.contactLine)}</p>
                                 </div>
-                                <img class="print-logo" src="images/logo.png" alt="School logo">
+                                <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                             </div>
                             <div class="term">${cachedResult.termTitle || 'Result Card'}</div>
                             <div class="meta">
@@ -2919,6 +2942,8 @@
                     <td>${formatScheduleTime(row.endTime)}</td>
                 </tr>
             `).join('');
+            const branding = getPortalBrandingSettings();
+            const logoSrc = getPortalBrandingLogoSrc();
 
             printable.document.write(`
                 <html>
@@ -2937,12 +2962,12 @@
                     </head>
                     <body>
                         <div class="print-header">
-                            <img class="print-logo" src="images/logo.png" alt="School logo">
+                            <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                             <div>
-                                <h2>${state.dateSheetSchoolName || 'School Date Sheet'}</h2>
-                                <p>${state.dateSheetExamTitle || 'Exam Schedule'}</p>
+                                <h2>${escapeHtml(state.dateSheetSchoolName || branding.schoolName || 'School Date Sheet')}</h2>
+                                <p>${escapeHtml(state.dateSheetExamTitle || branding.schoolTitle || 'Exam Schedule')}</p>
                             </div>
-                            <img class="print-logo" src="images/logo.png" alt="School logo">
+                            <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                         </div>
                         <table>
                             <thead>

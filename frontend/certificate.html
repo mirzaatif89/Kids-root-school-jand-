@@ -8,9 +8,28 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .module-panel { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); }
+        .module-panel { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); margin-bottom:1.25rem; }
         .module-panel h2 { margin: 0 0 0.5rem; font-size: 1.15rem; }
         .module-panel p { margin: 0; color: var(--text-secondary); }
+        .certificate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin-top:1rem; }
+        .certificate-grid label { display:grid; gap:.4rem; color:var(--text-secondary); font-weight:800; font-size:.85rem; }
+        .certificate-grid input,.certificate-grid textarea,.certificate-grid select { width:100%; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .75rem; font:inherit; }
+        .certificate-grid textarea { min-height:110px; resize:vertical; }
+        .certificate-sheet { border:8px double #0f766e; padding:32px; background:#fff; color:#111827; max-width:860px; margin:0 auto; text-align:center; }
+        .certificate-head { display:grid; grid-template-columns:96px 1fr 96px; align-items:center; gap:18px; margin-bottom:22px; }
+        .certificate-logo { width:96px; height:96px; object-fit:contain; display:block; margin:0 auto; }
+        .certificate-head h1 { margin:0; font-size:30px; color:#0f766e; }
+        .certificate-head p { margin:6px 0 0; color:#475569; font-weight:700; }
+        .certificate-title { font-size:24px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; margin:22px 0; }
+        .certificate-body { font-size:18px; line-height:1.8; margin:20px auto; max-width:680px; }
+        .certificate-name { font-size:28px; font-weight:900; color:#0f766e; border-bottom:1px solid #94a3b8; display:inline-block; padding:0 30px 6px; margin:10px 0; }
+        .certificate-sign { display:flex; justify-content:space-between; gap:2rem; margin-top:44px; text-align:center; }
+        .certificate-sign div { flex:1; border-top:1px solid #111827; padding-top:8px; font-weight:800; }
+        @media print {
+            body * { visibility:hidden; }
+            #certificatePreview, #certificatePreview * { visibility:visible; }
+            #certificatePreview { position:absolute; inset:0; margin:0; max-width:none; border-width:8px; }
+        }
     </style>
 </head>
 
@@ -39,12 +58,69 @@
             <header class="header"><h1>Certificate</h1></header>
             <section class="module-panel">
                 <h2>Certificate Management</h2>
-                <p>This section is ready for certificate records and templates.</p>
+                <p>Create and print certificates with the saved school logo, name, and title.</p>
+                <form id="certificateForm" class="certificate-grid">
+                    <label>Certificate Type
+                        <select id="certificateType">
+                            <option>Certificate of Achievement</option>
+                            <option>Character Certificate</option>
+                            <option>School Leaving Certificate</option>
+                            <option>Participation Certificate</option>
+                        </select>
+                    </label>
+                    <label>Student Name<input type="text" id="certificateStudentName" placeholder="Student name"></label>
+                    <label>Class<input type="text" id="certificateClass" placeholder="Class"></label>
+                    <label>Date<input type="date" id="certificateDate"></label>
+                    <label style="grid-column:1/-1;">Certificate Text
+                        <textarea id="certificateText">This is to certify that the student has successfully completed the required academic work and demonstrated good conduct.</textarea>
+                    </label>
+                    <label>Principal / Head Name<input type="text" id="certificatePrincipal" placeholder="Principal"></label>
+                    <label>Prepared By<input type="text" id="certificatePreparedBy" placeholder="Administration"></label>
+                    <div style="align-self:end;"><button type="button" class="btn btn-primary" id="printCertificateBtn"><i data-lucide="printer"></i> Print Certificate</button></div>
+                </form>
+            </section>
+            <section class="module-panel">
+                <div class="certificate-sheet" id="certificatePreview"></div>
             </section>
         </main>
     </div>
     <script src="auth.js"></script>
     <script src="script.js"></script>
+    <script>
+        function renderCertificatePreview() {
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const logoSrc = typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png';
+            const dateValue = certificateDate.value ? new Date(certificateDate.value).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+            certificatePreview.innerHTML = `
+                <div class="certificate-head">
+                    <img class="certificate-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
+                    <div>
+                        <h1>${escapeHtml(branding.schoolName || 'My own Science school')}</h1>
+                        <p>${escapeHtml(branding.schoolTitle || 'Apexiums School System')}</p>
+                    </div>
+                    <img class="certificate-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
+                </div>
+                <div class="certificate-title">${escapeHtml(certificateType.value || 'Certificate')}</div>
+                <div class="certificate-body">
+                    <div>This certificate is awarded to</div>
+                    <div class="certificate-name">${escapeHtml(certificateStudentName.value || 'Student Name')}</div>
+                    <div>Class: <strong>${escapeHtml(certificateClass.value || '-')}</strong></div>
+                    <div>${escapeHtml(certificateText.value || '-')}</div>
+                    <div>Date: <strong>${escapeHtml(dateValue)}</strong></div>
+                </div>
+                <div class="certificate-sign">
+                    <div>${escapeHtml(certificatePreparedBy.value || 'Administration')}</div>
+                    <div>${escapeHtml(certificatePrincipal.value || 'Principal')}</div>
+                </div>
+            `;
+        }
+        certificateDate.value = new Date().toISOString().slice(0, 10);
+        certificateForm.addEventListener('input', renderCertificatePreview);
+        certificateForm.addEventListener('change', renderCertificatePreview);
+        printCertificateBtn.addEventListener('click', () => { renderCertificatePreview(); window.print(); });
+        renderCertificatePreview();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
 </body>
 
 </html>

@@ -73,6 +73,7 @@ const FALLBACK_ROUTE_TO_PAGE = {
     set_fee: 'set_fee.html',
     fees: 'fees.html',
     fee_challan: 'fee_challan.html',
+    bills: 'bills.html',
     certificate: 'certificate.html',
     complain_box: 'complain_box.html',
     diary: 'diary.html',
@@ -911,6 +912,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (settingsForm) {
         loadSettings();
         settingsForm.addEventListener('submit', handleSettingsSubmit);
+        document.getElementById('sSchoolLogo')?.addEventListener('change', handleBrandingLogoSelection);
+        document.getElementById('clearBrandingLogoBtn')?.addEventListener('click', clearBrandingLogo);
     }
 
     const branchRegistrationForm = document.getElementById('branchRegistrationForm');
@@ -1054,6 +1057,30 @@ function escapeHtml(value) {
         '"': '&quot;',
         "'": '&#039;'
     }[char]));
+}
+
+function getBrandingSettings() {
+    const fallback = {
+        schoolName: 'My own Science school',
+        schoolTitle: 'Apexiums School System',
+        session: '',
+        phone: '',
+        logoDataUrl: ''
+    };
+    try {
+        return { ...fallback, ...(JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS) || '{}') || {}) };
+    } catch (_error) {
+        return fallback;
+    }
+}
+
+function getBrandingLogoSrc() {
+    const branding = getBrandingSettings();
+    return branding.logoDataUrl || 'images/logo.png';
+}
+
+function getBrandingLogoMarkup(className = 'print-logo', alt = 'School logo') {
+    return `<img class="${escapeHtml(className)}" src="${escapeHtml(getBrandingLogoSrc())}" alt="${escapeHtml(alt)}">`;
 }
 
 function isHashedPassword(value) {
@@ -2705,6 +2732,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+        { page: 'bills.html', label: 'Bills', icon: 'receipt' },
         { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
         { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
         { page: 'library.html', label: 'Library', icon: 'library' },
@@ -2895,21 +2923,40 @@ function saveFamilies(families) {
 }
 
 function buildFamilyNameFromStudentFields() {
+    const guardianName = document.getElementById('guardianName')?.value.trim();
     const fatherName = document.getElementById('fatherName')?.value.trim();
-    const phone = document.getElementById('parentPhone')?.value.trim();
+    const phone = document.getElementById('guardianContact')?.value.trim() || document.getElementById('parentPhone')?.value.trim();
+    if (guardianName) return `${guardianName} Family`;
     if (fatherName) return `${fatherName} Family`;
     if (phone) return `Family ${phone}`;
     return '';
 }
 
-function ensureFamilyRecord(familyName, parentPhone = '') {
+function normalizeFamilyPhone(value = '') {
+    return String(value || '').replace(/\D/g, '');
+}
+
+function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', guardianContact = '') {
     const cleanName = String(familyName || '').trim();
     if (!cleanName) return '';
 
     const families = getFamilies();
-    const existing = families.find((family) => String(family.name || '').toLowerCase() === cleanName.toLowerCase());
+    const cleanGuardianName = String(guardianName || '').trim();
+    const cleanGuardianContact = String(guardianContact || parentPhone || '').trim();
+    const guardianPhoneKey = normalizeFamilyPhone(cleanGuardianContact);
+    const existing = families.find((family) => {
+        const sameName = String(family.name || '').toLowerCase() === cleanName.toLowerCase();
+        const sameGuardian = cleanGuardianName &&
+            String(family.guardianName || '').trim().toLowerCase() === cleanGuardianName.toLowerCase() &&
+            (!guardianPhoneKey || normalizeFamilyPhone(family.guardianContact || family.phone || '') === guardianPhoneKey);
+        const samePhone = guardianPhoneKey && normalizeFamilyPhone(family.guardianContact || family.phone || '') === guardianPhoneKey;
+        return sameName || sameGuardian || samePhone;
+    });
     if (existing) {
         if (parentPhone && !existing.phone) existing.phone = parentPhone;
+        if (cleanGuardianName) existing.guardianName = cleanGuardianName;
+        if (cleanGuardianContact) existing.guardianContact = cleanGuardianContact;
+        if (cleanGuardianContact) existing.phone = existing.phone || cleanGuardianContact;
         saveFamilies(families);
         return existing.id;
     }
@@ -2917,7 +2964,9 @@ function ensureFamilyRecord(familyName, parentPhone = '') {
     const family = {
         id: generateUniqueRecordId('FAM'),
         name: cleanName,
-        phone: parentPhone || '',
+        phone: cleanGuardianContact || parentPhone || '',
+        guardianName: cleanGuardianName,
+        guardianContact: cleanGuardianContact,
         createdAt: new Date().toISOString()
     };
     families.push(family);
@@ -4317,6 +4366,8 @@ async function handleStudentFormSubmit(e) {
     let studentPasswordInput = document.getElementById('studentPassword').value;
     const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '';
     const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
+    const guardianName = document.getElementById('guardianName')?.value.trim() || '';
+    const guardianContact = document.getElementById('guardianContact')?.value.trim() || '';
 
     const requiredFields = [
         ['fullName', 'Full Name is required.'],
@@ -4368,7 +4419,7 @@ async function handleStudentFormSubmit(e) {
     const selectedFamilyId = document.getElementById('studentFamilyId')?.value || '';
     const enteredFamilyName = document.getElementById('studentFamilyName')?.value.trim() || '';
     const familyName = enteredFamilyName || getFamilies().find((family) => family.id === selectedFamilyId)?.name || buildFamilyNameFromStudentFields();
-    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone);
+    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone, guardianName, guardianContact);
 
     try {
         if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
@@ -4388,6 +4439,8 @@ async function handleStudentFormSubmit(e) {
         classGrade: document.getElementById('classGrade').value,
         campusName: document.getElementById('campusName').value,
         parentPhone,
+        guardianName,
+        guardianContact,
         email: studentEmailInput,
         gender: document.getElementById('gender').value,
         rollNo: document.getElementById('rollNo').value.trim(),
@@ -4670,6 +4723,8 @@ function viewStudent(student) {
         viewStudentGender: student.gender || '-',
         viewStudentStatus: isStudentTerminated(student) ? 'Terminated' : (student.feesStatus || 'Pending'),
         viewStudentPhone: student.parentPhone || '-',
+        viewStudentGuardianName: student.guardianName || '-',
+        viewStudentGuardianContact: student.guardianContact || '-',
         viewStudentEmail: student.email || '-',
         viewStudentUsername: student.username || '-'
     };
@@ -5938,6 +5993,8 @@ function editStudent(s) {
     document.getElementById('classGrade').value = s.classGrade;
     document.getElementById('campusName').value = s.campusName || '';
     document.getElementById('parentPhone').value = s.parentPhone;
+    if (document.getElementById('guardianName')) document.getElementById('guardianName').value = s.guardianName || '';
+    if (document.getElementById('guardianContact')) document.getElementById('guardianContact').value = s.guardianContact || '';
     if (document.getElementById('studentEmail')) document.getElementById('studentEmail').value = s.email || '';
     document.getElementById('gender').value = s.gender || '';
     document.getElementById('rollNo').value = s.rollNo;
@@ -7141,11 +7198,48 @@ async function loadSettings() {
     if (settings) {
         const data = JSON.parse(settings);
         if (document.getElementById('sSchoolName')) document.getElementById('sSchoolName').value = data.schoolName || '';
+        if (document.getElementById('sSchoolTitle')) document.getElementById('sSchoolTitle').value = data.schoolTitle || '';
         if (document.getElementById('sSession')) document.getElementById('sSession').value = data.session || '';
         if (document.getElementById('sPhone')) document.getElementById('sPhone').value = data.phone || '';
+        updateBrandingLogoPreview(data.logoDataUrl || '');
+    } else {
+        updateBrandingLogoPreview('');
     }
 
     await loadAdminCredentialSettings();
+}
+
+function updateBrandingLogoPreview(dataUrl = '') {
+    const preview = document.getElementById('brandingLogoPreview');
+    if (!preview) return;
+    if (dataUrl) {
+        preview.innerHTML = `<img src="${escapeHtml(dataUrl)}" alt="School logo preview">`;
+    } else {
+        preview.innerHTML = '96 x 96<br>Logo';
+    }
+}
+
+async function handleBrandingLogoSelection(event) {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+    try {
+        const dataUrl = await readFileAsDataUrl(file);
+        updateBrandingLogoPreview(dataUrl);
+        const settings = getBrandingSettings();
+        settings.logoDataUrl = dataUrl;
+        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    } catch (error) {
+        await showAppAlert(error.message || 'Logo could not be loaded.', 'Logo Upload Failed');
+    }
+}
+
+function clearBrandingLogo() {
+    const settings = getBrandingSettings();
+    settings.logoDataUrl = '';
+    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    const input = document.getElementById('sSchoolLogo');
+    if (input) input.value = '';
+    updateBrandingLogoPreview('');
 }
 
 async function handleSettingsSubmit(e) {
@@ -7153,8 +7247,9 @@ async function handleSettingsSubmit(e) {
 
     try {
         // Save settings values
-        const settings = {};
+        const settings = getBrandingSettings();
         if (document.getElementById('sSchoolName')) settings.schoolName = document.getElementById('sSchoolName').value;
+        if (document.getElementById('sSchoolTitle')) settings.schoolTitle = document.getElementById('sSchoolTitle').value;
         if (document.getElementById('sSession')) settings.session = document.getElementById('sSession').value;
         if (document.getElementById('sPhone')) settings.phone = document.getElementById('sPhone').value;
 
