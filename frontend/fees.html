@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Fees - My own Science school</title>
-    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -669,6 +669,20 @@
                                     <label for="bulkFeeClassFilter">Class</label>
                                     <select id="bulkFeeClassFilter">
                                         <option value="all">All Classes</option>
+                                        <option value="pending">Pending Fees</option>
+                                        <option value="play">Play Group</option>
+                                        <option value="kg1">KG1</option>
+                                        <option value="kg2">KG2</option>
+                                        <option value="1">Class One</option>
+                                        <option value="2">Class Two</option>
+                                        <option value="3">Class Three</option>
+                                        <option value="4">Class Four</option>
+                                        <option value="5">Class Five</option>
+                                        <option value="6">Class Six</option>
+                                        <option value="7">Class Seven</option>
+                                        <option value="8">Class Eight</option>
+                                        <option value="9">Class Nine</option>
+                                        <option value="10">Class Ten</option>
                                     </select>
                                 </div>
                                 <div class="bulk-fee-field">
@@ -692,7 +706,25 @@
                     </div>
                 </section>
                 <div class="classes-grid" id="feesClassGrid">
-                    <!-- Classes will be generated here -->
+                    <div class="fee-card" data-fallback-class="all">
+                        <div class="class-name">All Students</div>
+                    </div>
+                    <div class="fee-card" data-fallback-class="pending">
+                        <div class="class-name">Pending Fees</div>
+                    </div>
+                    <div class="fee-card" data-fallback-class="play"><div class="class-name">Play Group</div></div>
+                    <div class="fee-card" data-fallback-class="kg1"><div class="class-name">KG1</div></div>
+                    <div class="fee-card" data-fallback-class="kg2"><div class="class-name">KG2</div></div>
+                    <div class="fee-card" data-fallback-class="1"><div class="class-name">Class One</div></div>
+                    <div class="fee-card" data-fallback-class="2"><div class="class-name">Class Two</div></div>
+                    <div class="fee-card" data-fallback-class="3"><div class="class-name">Class Three</div></div>
+                    <div class="fee-card" data-fallback-class="4"><div class="class-name">Class Four</div></div>
+                    <div class="fee-card" data-fallback-class="5"><div class="class-name">Class Five</div></div>
+                    <div class="fee-card" data-fallback-class="6"><div class="class-name">Class Six</div></div>
+                    <div class="fee-card" data-fallback-class="7"><div class="class-name">Class Seven</div></div>
+                    <div class="fee-card" data-fallback-class="8"><div class="class-name">Class Eight</div></div>
+                    <div class="fee-card" data-fallback-class="9"><div class="class-name">Class Nine</div></div>
+                    <div class="fee-card" data-fallback-class="10"><div class="class-name">Class Ten</div></div>
                 </div>
             </div>
 
@@ -829,8 +861,412 @@
         </main>
     </div>
 
+    <script>
+        (function bootFeesFallback() {
+            const bootClasses = [
+                { id: 'play', name: 'Play Group', keywords: ['play', 'pg', 'playgroup', 'play group', 'play-group'] },
+                { id: 'kg1', name: 'KG1', keywords: ['kg1', 'nursery', 'nursary', 'nur'] },
+                { id: 'kg2', name: 'KG2', keywords: ['kg2', 'prep', 'preschool', 'pre'] },
+                { id: '1', name: 'Class One', keywords: ['1', 'one', '1st', 'class 1', 'class one'] },
+                { id: '2', name: 'Class Two', keywords: ['2', 'two', '2nd', 'class 2', 'class two'] },
+                { id: '3', name: 'Class Three', keywords: ['3', 'three', '3rd', 'class 3', 'class three'] },
+                { id: '4', name: 'Class Four', keywords: ['4', 'four', '4th', 'class 4', 'class four'] },
+                { id: '5', name: 'Class Five', keywords: ['5', 'five', '5th', 'class 5', 'class five'] },
+                { id: '6', name: 'Class Six', keywords: ['6', 'six', '6th', 'class 6', 'class six'] },
+                { id: '7', name: 'Class Seven', keywords: ['7', 'seven', '7th', 'class 7', 'class seven'] },
+                { id: '8', name: 'Class Eight', keywords: ['8', 'eight', '8th', 'class 8', 'class eight'] },
+                { id: '9', name: 'Class Nine', keywords: ['9', 'nine', '9th', 'class 9', 'class nine'] },
+                { id: '10', name: 'Class Ten', keywords: ['10', 'ten', '10th', 'class 10', 'class ten'] }
+            ];
+
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const activeStatuses = new Set(['terminated', 'left', 'inactive']);
+            let fallbackStudents = [];
+
+            function escapeFallbackHtml(value) {
+                return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[char]));
+            }
+
+            function matchesClass(student, classId) {
+                if (classId === 'all' || classId === 'pending') return true;
+                const cls = bootClasses.find((item) => item.id === classId);
+                const studentClass = String(student?.classGrade || '').toLowerCase().trim();
+                return !!cls && cls.keywords.some((key) => studentClass === key || studentClass === `class ${key}`);
+            }
+
+            function isActiveStudent(student) {
+                const status = String(student?.enrollmentStatus || student?.feesStatus || '').toLowerCase().trim();
+                return !activeStatuses.has(status) && student?.isTerminated !== true;
+            }
+
+            function getMonthlyFee(student) {
+                return Math.max(Number(student?.monthlyFee || student?.feeAmount || student?.fees || 0) || 0, 0);
+            }
+
+            function getApplicableMonths(student) {
+                const now = new Date();
+                let startMonth = 0;
+                let startYear = now.getFullYear();
+                if (student?.admissionDate) {
+                    const admissionDate = new Date(student.admissionDate);
+                    if (!Number.isNaN(admissionDate.getTime())) {
+                        startMonth = admissionDate.getMonth();
+                        startYear = admissionDate.getFullYear();
+                    }
+                }
+                const result = [];
+                for (let year = startYear; year <= now.getFullYear(); year += 1) {
+                    const first = year === startYear ? startMonth : 0;
+                    const last = year === now.getFullYear() ? now.getMonth() : 11;
+                    for (let i = first; i <= last; i += 1) result.push(months[i]);
+                }
+                return result;
+            }
+
+            function getPendingAmount(student) {
+                const monthlyFee = getMonthlyFee(student);
+                if (monthlyFee <= 0) return 0;
+                const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+                const monthlyFees = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}');
+                const sid = String(student?.id || '');
+                return getApplicableMonths(student).reduce((sum, month) => {
+                    const paid = Number(paymentDetails?.[sid]?.[month]?.amount || 0);
+                    const markedPaid = monthlyFees?.[sid]?.[month] === 'Paid';
+                    const due = markedPaid ? 0 : Math.max(monthlyFee - paid, 0);
+                    return sum + due;
+                }, 0);
+            }
+
+            function getPendingMonthDetails(student) {
+                const monthlyFee = getMonthlyFee(student);
+                if (monthlyFee <= 0) return [];
+                const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+                const monthlyFees = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}');
+                const sid = String(student?.id || '');
+                return getApplicableMonths(student).map((month) => {
+                    const paid = Number(paymentDetails?.[sid]?.[month]?.amount || 0);
+                    const markedPaid = monthlyFees?.[sid]?.[month] === 'Paid';
+                    return {
+                        month,
+                        paid,
+                        due: markedPaid ? 0 : Math.max(monthlyFee - paid, 0)
+                    };
+                }).filter((item) => item.due > 0);
+            }
+
+            function saveFallbackPaidLocal(student, month, amount) {
+                const sid = String(student?.id || '').trim();
+                if (!sid || !month) return;
+                const monthlyFees = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}');
+                const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+                monthlyFees[sid] = monthlyFees[sid] || {};
+                paymentDetails[sid] = paymentDetails[sid] || {};
+                monthlyFees[sid][month] = 'Paid';
+                paymentDetails[sid][month] = {
+                    amount: Math.max(Number(amount || 0), getMonthlyFee(student)),
+                    challanNumbers: [`LOCAL-${sid}-${month}-${Date.now()}`]
+                };
+                localStorage.setItem('eduCore_monthly_fees', JSON.stringify(monthlyFees));
+                localStorage.setItem('eduCore_payment_details', JSON.stringify(paymentDetails));
+            }
+
+            function saveFallbackUnpaidLocal(student, month) {
+                const sid = String(student?.id || '').trim();
+                if (!sid || !month) return;
+                const monthlyFees = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}');
+                const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+                monthlyFees[sid] = monthlyFees[sid] || {};
+                monthlyFees[sid][month] = 'Pending';
+                if (paymentDetails[sid]) {
+                    delete paymentDetails[sid][month];
+                    if (!Object.keys(paymentDetails[sid]).length) delete paymentDetails[sid];
+                }
+                localStorage.setItem('eduCore_monthly_fees', JSON.stringify(monthlyFees));
+                localStorage.setItem('eduCore_payment_details', JSON.stringify(paymentDetails));
+            }
+
+            async function fallbackMarkPaid(studentId, button) {
+                const student = fallbackStudents.find((item) => String(item?.id || '') === String(studentId || ''));
+                if (!student) return;
+                const pendingMonths = getPendingMonthDetails(student);
+                if (!pendingMonths.length) {
+                    alert('This student has no pending fee.');
+                    return;
+                }
+
+                const oldText = button ? button.textContent : '';
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                }
+
+                pendingMonths.forEach((item) => saveFallbackPaidLocal(student, item.month, item.due));
+                try {
+                    await Promise.all(pendingMonths.map((item) => fetch('/api/fees/manual-payment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            studentId: student.id,
+                            studentName: student.fullName || student.studentName || '',
+                            rollNo: student.rollNo || student.studentCode || '',
+                            classGrade: student.classGrade || '',
+                            session: student.session || '',
+                            feeMonth: item.month,
+                            feeMonths: [item.month],
+                            amount: item.due,
+                            fullAmount: getMonthlyFee(student)
+                        })
+                    })));
+                    alert('Fee marked as paid.');
+                } catch (error) {
+                    alert('Fee marked paid locally. Server sync was not available.');
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = oldText || 'Mark Paid';
+                    }
+                    updateFallbackSummary(fallbackStudents);
+                    updateFallbackCards(fallbackStudents);
+                    renderFallbackStudentList(document.getElementById('feesTableView')?.dataset?.classId || 'pending');
+                }
+            }
+
+            async function fallbackMarkUnpaid(studentId, button) {
+                const student = fallbackStudents.find((item) => String(item?.id || '') === String(studentId || ''));
+                if (!student) return;
+                const currentMonth = months[new Date().getMonth()];
+                const oldText = button ? button.textContent : '';
+                if (button) {
+                    button.disabled = true;
+                    button.textContent = 'Saving...';
+                }
+
+                saveFallbackUnpaidLocal(student, currentMonth);
+                try {
+                    await fetch('/api/fees/mark-unpaid', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ studentId: student.id, feeMonth: currentMonth })
+                    });
+                    alert('Fee marked as unpaid.');
+                } catch (error) {
+                    alert('Fee marked unpaid locally. Server sync was not available.');
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.textContent = oldText || 'Mark Unpaid';
+                    }
+                    updateFallbackSummary(fallbackStudents);
+                    updateFallbackCards(fallbackStudents);
+                    renderFallbackStudentList(document.getElementById('feesTableView')?.dataset?.classId || 'pending');
+                }
+            }
+
+            async function fallbackEmailPendingAll(button) {
+                const ids = fallbackStudents
+                    .filter(isActiveStudent)
+                    .filter((student) => getPendingAmount(student) > 0)
+                    .map((student) => String(student?.id || '').trim())
+                    .filter(Boolean);
+                if (!ids.length) {
+                    alert('No pending fee students found.');
+                    return;
+                }
+
+                const oldHtml = button ? button.innerHTML : '';
+                if (button) {
+                    button.disabled = true;
+                    button.innerHTML = 'Sending...';
+                }
+                try {
+                    const response = await fetch('/api/fees/send-pending-reminders', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ force: true, studentIds: ids })
+                    });
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || result?.success === false) {
+                        throw new Error(result?.message || 'Email could not be sent.');
+                    }
+                    alert(`Pending fee emails sent: ${result.sent || 0}${Array.isArray(result.failed) && result.failed.length ? ` | Failed: ${result.failed.length}` : ''}`);
+                } catch (error) {
+                    alert(`Email could not be sent: ${error.message || error}`);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                        button.innerHTML = oldHtml || 'Email Pending';
+                    }
+                }
+            }
+
+            function setBadge(card, count) {
+                const oldBadge = card.querySelector('.class-badge');
+                if (oldBadge) oldBadge.remove();
+                if (count <= 0) return;
+                const badge = document.createElement('div');
+                badge.className = 'class-badge';
+                badge.textContent = String(count);
+                card.appendChild(badge);
+            }
+
+            function updateFallbackSummary(students) {
+                const activeStudents = students.filter(isActiveStudent);
+                const pendingTotal = activeStudents.reduce((sum, student) => sum + getPendingAmount(student), 0);
+                const pendingStudents = activeStudents.filter((student) => getPendingAmount(student) > 0).length;
+                const summary = document.getElementById('bulkFeeSummary');
+                if (summary) {
+                    summary.innerHTML = `
+                        <span>Students: <strong>${activeStudents.length}</strong></span>
+                        <span>Pending Students: <strong>${pendingStudents}</strong></span>
+                        <span>Pending: <strong>PKR ${pendingTotal.toLocaleString('en-PK')}</strong></span>
+                    `;
+                }
+            }
+
+            function getFallbackClassLabel(classId) {
+                if (classId === 'all') return 'All Students';
+                if (classId === 'pending') return 'Pending Fee Students';
+                const cls = bootClasses.find((item) => item.id === classId);
+                return cls ? `${cls.name} Students` : 'Class Students';
+            }
+
+            function getFallbackStudentsForClass(classId) {
+                const activeStudents = fallbackStudents.filter(isActiveStudent);
+                if (classId === 'pending') return activeStudents.filter((student) => getPendingAmount(student) > 0);
+                return activeStudents.filter((student) => matchesClass(student, classId));
+            }
+
+            function renderFallbackStudentList(classId) {
+                const rows = getFallbackStudentsForClass(classId);
+                const tbody = document.getElementById('studentListTableBody');
+                const table = document.getElementById('feesStudentTable');
+                const noData = document.getElementById('noFeeData');
+                if (!tbody || !table || !noData) return;
+
+                document.getElementById('feesGridView').style.display = 'none';
+                const tableView = document.getElementById('feesTableView');
+                tableView.classList.add('active');
+                tableView.dataset.classId = classId;
+                document.getElementById('selectedClassTitle').innerText = getFallbackClassLabel(classId);
+                document.getElementById('selectedClassSubtitle').innerText = 'Students with fee status and pending balance';
+                document.getElementById('pageTitle').innerText = classId === 'pending' ? 'Fees: Pending Fees' : `Fees: ${getFallbackClassLabel(classId)}`;
+
+                tbody.innerHTML = '';
+                if (!rows.length) {
+                    table.style.display = 'none';
+                    noData.style.display = 'block';
+                    noData.innerHTML = '<i data-lucide="inbox" size="48"></i><p>No pending fee students found.</p>';
+                    if (window.lucide) lucide.createIcons();
+                    return;
+                }
+
+                table.style.display = 'table';
+                noData.style.display = 'none';
+                rows.forEach((student) => {
+                    const monthlyFee = getMonthlyFee(student);
+                    const pendingAmount = getPendingAmount(student);
+                    const paidAmount = Math.max((getApplicableMonths(student).length * monthlyFee) - pendingAmount, 0);
+                    const studentIdJson = JSON.stringify(String(student?.id || ''));
+                    const tr = document.createElement('tr');
+                    tr.className = 'student-list-item';
+                    tr.innerHTML = `
+                        <td>${escapeFallbackHtml(student?.rollNo || student?.studentCode || '-')}</td>
+                        <td>${escapeFallbackHtml(student?.fullName || student?.studentName || '-')}</td>
+                        <td>${escapeFallbackHtml(student?.fatherName || '-')}</td>
+                        <td>PKR ${monthlyFee.toLocaleString('en-PK')}</td>
+                        <td>
+                            <div style="font-weight:700;color:#059669;">Paid: PKR ${paidAmount.toLocaleString('en-PK')}</div>
+                            <div style="font-weight:700;color:#dc2626;">Pending: PKR ${pendingAmount.toLocaleString('en-PK')}</div>
+                        </td>
+                        <td><span class="status-pending-badge"><i data-lucide="clock"></i>${pendingAmount > 0 ? 'Pending' : 'Paid'}</span></td>
+                        <td>
+                            <button class="btn btn-outline" style="padding:0.4rem 0.65rem;font-size:0.75rem;border-radius:0.5rem;" onclick="event.stopPropagation(); if (typeof showStudentFeeRecord === 'function') showStudentFeeRecord(${studentIdJson});">
+                                Open
+                            </button>
+                            <button class="btn btn-outline" style="padding:0.4rem 0.65rem;font-size:0.75rem;border-radius:0.5rem;" onclick="event.stopPropagation(); window.fallbackMarkPaid(${studentIdJson}, this);">
+                                Mark Paid
+                            </button>
+                            <button class="btn btn-outline" style="padding:0.4rem 0.65rem;font-size:0.75rem;border-radius:0.5rem;" onclick="event.stopPropagation(); window.fallbackMarkUnpaid(${studentIdJson}, this);">
+                                Mark Unpaid
+                            </button>
+                            ${pendingAmount > 0 ? `<button class="btn btn-outline" style="padding:0.4rem 0.65rem;font-size:0.75rem;border-radius:0.5rem;" onclick="event.stopPropagation(); if (typeof sendPendingFeeReminderEmails === 'function') sendPendingFeeReminderEmails([${studentIdJson}], this);">Email</button>` : ''}
+                        </td>
+                    `;
+                    tr.onclick = () => {
+                        if (typeof showStudentFeeRecord === 'function') showStudentFeeRecord(String(student?.id || ''));
+                    };
+                    tbody.appendChild(tr);
+                });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            function updateFallbackCards(students) {
+                const activeStudents = students.filter(isActiveStudent);
+                document.querySelectorAll('[data-fallback-class]').forEach((card) => {
+                    const classId = card.dataset.fallbackClass;
+                    const count = classId === 'pending'
+                        ? activeStudents.filter((student) => getPendingAmount(student) > 0).length
+                        : activeStudents.filter((student) => matchesClass(student, classId)).length;
+                    setBadge(card, count);
+                    card.onclick = () => {
+                        renderFallbackStudentList(classId);
+                    };
+                });
+            }
+
+            async function loadFallbackStudents() {
+                let students = [];
+                try {
+                    const response = await fetch('/api/students', { cache: 'no-store' });
+                    if (response.ok) students = await response.json();
+                } catch (error) {
+                    students = [];
+                }
+                if (!Array.isArray(students) || !students.length) {
+                    try {
+                        students = JSON.parse(localStorage.getItem('eduCore_students') || '[]');
+                    } catch (error) {
+                        students = [];
+                    }
+                }
+                if (Array.isArray(students)) {
+                    fallbackStudents = students;
+                    localStorage.setItem('eduCore_students', JSON.stringify(students));
+                    updateFallbackSummary(students);
+                    updateFallbackCards(students);
+                }
+            }
+
+            const classFilter = document.getElementById('bulkFeeClassFilter');
+            if (classFilter) {
+                classFilter.addEventListener('change', () => {
+                    if (classFilter.value) renderFallbackStudentList(classFilter.value);
+                });
+            }
+            const pendingEmailButton = document.getElementById('sendClassPendingEmailsBtn');
+            if (pendingEmailButton) {
+                pendingEmailButton.onclick = (event) => {
+                    event.preventDefault();
+                    fallbackEmailPendingAll(pendingEmailButton);
+                };
+            }
+
+            window.fallbackMarkPaid = fallbackMarkPaid;
+            window.fallbackMarkUnpaid = fallbackMarkUnpaid;
+            window.fallbackEmailPendingAll = fallbackEmailPendingAll;
+
+            loadFallbackStudents();
+            window.addEventListener('load', () => setTimeout(loadFallbackStudents, 500));
+        })();
+    </script>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
         const STORAGE_KEY_FINE_PAYMENTS = 'eduCore_fine_payments';
@@ -840,6 +1276,29 @@
             "July", "August", "September", "October", "November", "December"
         ];
         const CURRENT_MONTH_NAME = monthsList[new Date().getMonth()];
+
+        function normalizeFeeClassKey(value = '') {
+            return String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+        }
+
+        function getClassFeeConfigForStudent(student = {}) {
+            const className = String(student?.classGrade || '').trim();
+            if (!className) return null;
+            try {
+                const fees = JSON.parse(localStorage.getItem('eduCore_class_fees') || '{}');
+                const match = Object.entries(fees || {}).find(([name]) => normalizeFeeClassKey(name) === normalizeFeeClassKey(className));
+                return match ? (match[1] || null) : null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        function getEffectiveMonthlyFee(student = {}) {
+            const directFee = Number(student?.monthlyFee || 0) || 0;
+            if (directFee > 0) return directFee;
+            const classFee = getClassFeeConfigForStudent(student);
+            return Number(classFee?.monthlyFee || classFee?.fee || 0) || 0;
+        }
 
         function getCurrentMonthFeeStatus(student) {
             const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
@@ -902,7 +1361,7 @@
                 }
             }
 
-            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
             const paidMonths = [];
             const pendingMonths = [];
 
@@ -958,6 +1417,25 @@
         function getStoredFinePayments(studentId) {
             const finePaymentsStore = JSON.parse(localStorage.getItem(STORAGE_KEY_FINE_PAYMENTS) || '{}');
             return Array.isArray(finePaymentsStore[studentId]) ? finePaymentsStore[studentId] : [];
+        }
+
+        function saveFineChargeInLocalStore(studentId, month, amount) {
+            const sid = String(studentId || '').trim();
+            const key = String(month || '').trim();
+            const fineAmount = Math.max(Number(amount || 0) || 0, 0);
+            if (!sid || !key || fineAmount <= 0) return;
+
+            const finePaymentsStore = JSON.parse(localStorage.getItem(STORAGE_KEY_FINE_PAYMENTS) || '{}');
+            const existing = Array.isArray(finePaymentsStore[sid]) ? finePaymentsStore[sid] : [];
+            finePaymentsStore[sid] = existing
+                .filter((fine) => !extractMonthNames(fine.feeMonth).includes(key))
+                .concat([{
+                    challanNumber: `LOCAL-FINE-${sid}-${key}-${Date.now()}`,
+                    feeMonth: key,
+                    amount: fineAmount,
+                    paymentDateLabel: new Date().toLocaleDateString('en-PK')
+                }]);
+            localStorage.setItem(STORAGE_KEY_FINE_PAYMENTS, JSON.stringify(finePaymentsStore));
         }
 
         function getFeeFineRule() {
@@ -1089,7 +1567,7 @@
             const paidForMonth = Number(paymentDetails?.[studentId]?.[month]?.amount || 0);
             const students = getData(STORAGE_KEY_STUDENTS) || [];
             const student = students.find((item) => String(item?.id || '') === String(studentId || ''));
-            const monthlyFee = Number(student?.monthlyFee || 0) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
 
             if (paidForMonth > 0 && monthlyFee > 0 && paidForMonth >= monthlyFee + storedFine) {
                 return storedFine;
@@ -1133,7 +1611,7 @@
                     };
 
                     const student = studentsById.get(sid);
-                    const monthlyFee = Number(student?.monthlyFee || 0);
+                    const monthlyFee = getEffectiveMonthlyFee(student);
                     if (monthlyFee > 0 && nextAmount >= monthlyFee) {
                         monthlyFees[sid][key] = 'Paid';
                     } else {
@@ -1190,6 +1668,28 @@
             localStorage.setItem('eduCore_payment_details', JSON.stringify(paymentDetails));
         }
 
+        function markFeeMonthPaidInLocalStore(studentId, month, amount, challanNumber = '') {
+            const sid = String(studentId || '').trim();
+            const key = String(month || '').trim();
+            if (!sid || !key) return;
+
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
+            const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+
+            monthlyFees[sid] = monthlyFees[sid] || {};
+            monthlyFees[sid][key] = 'Paid';
+
+            paymentDetails[sid] = paymentDetails[sid] || {};
+            const previous = paymentDetails[sid][key] || { amount: 0, challanNumbers: [] };
+            paymentDetails[sid][key] = {
+                amount: Math.max(Number(previous.amount || 0), Number(amount || 0)),
+                challanNumbers: Array.from(new Set([...(previous.challanNumbers || []), challanNumber].filter(Boolean)))
+            };
+
+            localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
+            localStorage.setItem('eduCore_payment_details', JSON.stringify(paymentDetails));
+        }
+
         async function loadFeesStudents() {
             try {
                 const response = await fetch(`${API_BASE_URL}/students`);
@@ -1202,54 +1702,6 @@
             }
             await mergeFeePaymentsIntoMonthlyStore();
         }
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadFeesStudents();
-            updateGlobalFineRulePanel();
-            renderFeesClassGrid();
-            initializeBulkFeeFilters();
-
-            // Search implementation
-            const searchInput = document.getElementById('feeSearchInput');
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    const tableView = document.getElementById('feesTableView');
-                    const gridView = document.getElementById('feesGridView');
-                    const recordView = document.getElementById('studentFeeRecordView');
-                    const searchInfo = document.getElementById('searchResultsInfo');
-
-                    const term = e.target.value.toLowerCase().trim();
-
-                    if (term === '') {
-                        searchInfo.style.display = 'none';
-                        if (!tableView.classList.contains('active') && !recordView.classList.contains('active')) {
-                            backToFeesList();
-                        } else if (tableView.classList.contains('active') && tableView.dataset.classId !== 'search_results') {
-                            const classId = tableView.dataset.classId;
-                            renderClassStudentList(classId);
-                        } else {
-                            backToFeesList();
-                        }
-                        return;
-                    }
-
-                    // Global search logic
-                    gridView.style.display = 'none';
-                    recordView.classList.remove('active');
-                    tableView.classList.add('active');
-                    tableView.dataset.classId = 'search_results';
-
-                    document.getElementById('selectedClassTitle').innerText = 'Search Results';
-                    document.getElementById('selectedClassSubtitle').innerText = 'Students matching details in all classes';
-                    document.getElementById('pageTitle').innerText = 'Searching Results...';
-
-                    document.getElementById('searchText').innerText = term;
-                    searchInfo.style.display = 'block';
-
-                    renderClassStudentList('all', term);
-                });
-            }
-        });
 
         const feeClasses = [
             { id: 'play', name: 'Play Group', icon: 'baby', keywords: ['play', 'pg', 'playgroup', 'play group', 'play-group'] },
@@ -1285,7 +1737,7 @@
         }
 
         function studentMatchesFeeClass(student, classId) {
-            if (classId === 'all' || classId === 'search_results') return true;
+            if (classId === 'all' || classId === 'search_results' || classId === 'pending') return true;
             const cls = feeClasses.find(c => c.id === classId);
             if (!cls) return false;
             const studentClass = String(student?.classGrade || '').toLowerCase().trim();
@@ -1294,6 +1746,7 @@
 
         function getFeeClassLabel(classId) {
             if (classId === 'all') return 'All Classes';
+            if (classId === 'pending') return 'Pending Fees';
             const cls = feeClasses.find(c => c.id === classId);
             return cls ? cls.name : 'Selected Class';
         }
@@ -1334,7 +1787,7 @@
             const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
             const studentRecord = monthlyFees[student.id] || {};
             const studentPayments = paymentDetails[student.id] || {};
-            const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
 
             const getPaidForMonth = (month) => {
                 const monthTotalDue = monthlyFee + getFineAmountForMonth(student.id, month);
@@ -1371,6 +1824,8 @@
 
             if (classId === 'all' || classId === 'search_results') {
                 filteredStudents = students;
+            } else if (classId === 'pending') {
+                filteredStudents = students.filter(s => getStudentFeeSummary(s).pendingAmount > 0);
             } else {
                 filteredStudents = students.filter(s => studentMatchesFeeClass(s, classId));
             }
@@ -1419,6 +1874,83 @@
             updateBulkFeeSummary();
         }
 
+        let feesPageInitialized = false;
+
+        function bindFeesSearchInput() {
+            const searchInput = document.getElementById('feeSearchInput');
+            if (!searchInput || searchInput.dataset.feesSearchBound === 'true') return;
+            searchInput.dataset.feesSearchBound = 'true';
+            searchInput.addEventListener('input', (e) => {
+                const tableView = document.getElementById('feesTableView');
+                const gridView = document.getElementById('feesGridView');
+                const recordView = document.getElementById('studentFeeRecordView');
+                const searchInfo = document.getElementById('searchResultsInfo');
+                const term = e.target.value.toLowerCase().trim();
+
+                if (term === '') {
+                    searchInfo.style.display = 'none';
+                    if (!tableView.classList.contains('active') && !recordView.classList.contains('active')) {
+                        backToFeesList();
+                    } else if (tableView.classList.contains('active') && tableView.dataset.classId !== 'search_results') {
+                        renderClassStudentList(tableView.dataset.classId);
+                    } else {
+                        backToFeesList();
+                    }
+                    return;
+                }
+
+                gridView.style.display = 'none';
+                recordView.classList.remove('active');
+                tableView.classList.add('active');
+                tableView.dataset.classId = 'search_results';
+                document.getElementById('selectedClassTitle').innerText = 'Search Results';
+                document.getElementById('selectedClassSubtitle').innerText = 'Students matching details in all classes';
+                document.getElementById('pageTitle').innerText = 'Searching Results...';
+                document.getElementById('searchText').innerText = term;
+                searchInfo.style.display = 'block';
+                renderClassStudentList('all', term);
+            });
+        }
+
+        async function initializeFeesPage() {
+            if (feesPageInitialized) return;
+            feesPageInitialized = true;
+            try {
+                await loadFeesStudents();
+            } catch (error) {
+                console.warn('Fees student data could not be refreshed:', error.message || error);
+            }
+
+            try {
+                updateGlobalFineRulePanel();
+                renderFeesClassGrid();
+                initializeBulkFeeFilters();
+                bindFeesSearchInput();
+            } catch (error) {
+                console.error('Fees page could not render:', error);
+                const grid = document.getElementById('feesClassGrid');
+                if (grid) {
+                    grid.innerHTML = '<div class="fee-card"><div class="class-name">Fees data could not render. Please refresh once.</div></div>';
+                }
+            }
+        }
+
+        function ensureFeesGridRendered() {
+            const grid = document.getElementById('feesClassGrid');
+            if (!grid) return;
+            if (!grid.children.length || !String(grid.innerHTML || '').trim()) {
+                feesPageInitialized = false;
+                initializeFeesPage();
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeFeesPage);
+        } else {
+            initializeFeesPage();
+        }
+        window.addEventListener('load', () => setTimeout(ensureFeesGridRendered, 300));
+
         function updateBulkFeeSummary() {
             const summaryEl = document.getElementById('bulkFeeSummary');
             const classId = document.getElementById('bulkFeeClassFilter')?.value || 'all';
@@ -1456,7 +1988,7 @@
 
             const paidTotal = rows.reduce((sum, row) => sum + row.summary.paidAmount, 0);
             const pendingTotal = rows.reduce((sum, row) => sum + row.summary.pendingAmount, 0);
-            const monthlyTotal = rows.reduce((sum, row) => sum + (parseInt(row.student.monthlyFee || 0, 10) || 0), 0);
+            const monthlyTotal = rows.reduce((sum, row) => sum + getEffectiveMonthlyFee(row.student), 0);
 
             const rowsHtml = rows.map((row, index) => {
                 const { student, summary, pendingDetails, status } = row;
@@ -1473,7 +2005,7 @@
                         <td>${escapeFeeHtml(student.fullName || student.studentName || '-')}</td>
                         <td>${escapeFeeHtml(student.fatherName || '-')}</td>
                         <td>${escapeFeeHtml(student.classGrade || '-')}</td>
-                        <td>PKR ${(parseInt(student.monthlyFee || 0, 10) || 0).toLocaleString('en-PK')}</td>
+                        <td>PKR ${getEffectiveMonthlyFee(student).toLocaleString('en-PK')}</td>
                         <td><span class="status ${statusClass}">${status}</span></td>
                         <td>${summary.paidCount}</td>
                         <td>${summary.pendingCount}</td>
@@ -1604,7 +2136,7 @@
                         <td>${escapeFeeHtml(student.fullName || student.studentName || '-')}</td>
                         <td>${escapeFeeHtml(student.fatherName || '-')}</td>
                         <td>${escapeFeeHtml(student.classGrade || '-')}</td>
-                        <td>PKR ${(parseInt(student.monthlyFee || 0, 10) || 0).toLocaleString('en-PK')}</td>
+                        <td>PKR ${getEffectiveMonthlyFee(student).toLocaleString('en-PK')}</td>
                         <td>${escapeFeeHtml(pendingMonths || '-')}</td>
                         <td>PKR ${details.pendingAmount.toLocaleString('en-PK')}</td>
                     </tr>
@@ -1785,6 +2317,16 @@
             `;
             grid.appendChild(allCard);
 
+            const pendingStudents = students.filter(s => getStudentFeeSummary(s).pendingAmount > 0);
+            const pendingCard = document.createElement('div');
+            pendingCard.className = 'fee-card';
+            pendingCard.onclick = () => showPendingFeeStudents();
+            pendingCard.innerHTML = `
+                <div class="class-name">Pending Fees</div>
+                ${pendingStudents.length > 0 ? `<div class="class-badge">${pendingStudents.length}</div>` : ''}
+            `;
+            grid.appendChild(pendingCard);
+
             feeClasses.forEach(cls => {
                 const classStudents = students.filter(s => studentMatchesFeeClass(s, cls.id));
 
@@ -1801,6 +2343,20 @@
 
             updateBulkFeeSummary();
             if (window.lucide) lucide.createIcons();
+        }
+
+        function showPendingFeeStudents() {
+            document.getElementById('feesGridView').style.display = 'none';
+            document.getElementById('searchResultsInfo').style.display = 'none';
+            const tableView = document.getElementById('feesTableView');
+            tableView.classList.add('active');
+            tableView.dataset.classId = 'pending';
+
+            document.getElementById('selectedClassTitle').innerText = 'Pending Fee Students';
+            document.getElementById('selectedClassSubtitle').innerText = 'Students with any unpaid or partially paid month';
+            document.getElementById('pageTitle').innerText = 'Fees: Pending Fees';
+
+            renderClassStudentList('pending');
         }
 
         function showClassStudents(classId) {
@@ -1859,7 +2415,7 @@
                         </div>
                     </td>
                     <td>${s.fatherName || '-'}</td>
-                    <td><strong>PKR ${(parseInt(s.monthlyFee || 0, 10) || 0).toLocaleString('en-PK')}</strong></td>
+                    <td><strong>PKR ${getEffectiveMonthlyFee(s).toLocaleString('en-PK')}</strong></td>
                     <td>
                         <div style="font-size:0.85rem;line-height:1.5;">
                             <div><strong>${feeSummary.paidCount}</strong> paid / <strong>${feeSummary.pendingCount}</strong> pending</div>
@@ -1948,7 +2504,7 @@
                 }
             }
 
-            const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
             const getPaidForMonth = (month) => {
                 const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
                 const paid = Number(studentPayments[month]?.amount || 0);
@@ -2087,6 +2643,9 @@
                             <button class="toggle-fee-btn btn-mark-paid" style="background:#10b981;" onclick="openManualPaymentModal('${studentId}', '${month}', 'payment')">
                                 <i data-lucide="plus" size="14"></i> Add Payment
                             </button>
+                            <button class="toggle-fee-btn btn-mark-paid" style="background:#f59e0b;" onclick="openFineChargeModal('${studentId}', '${month}')">
+                                <i data-lucide="badge-dollar-sign" size="14"></i> Set Fine
+                            </button>
                             <button class="toggle-fee-btn btn-mark-paid" onclick="toggleMonthFee('${studentId}', '${month}')">
                                 <i data-lucide="check-circle" size="14"></i> Mark Paid
                             </button>
@@ -2144,7 +2703,7 @@
             const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
             const studentPayments = paymentDetails[studentId] || {};
             
-            const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
             const getPaidForMonth = (month) => {
                 const monthTotalDue = monthlyFee + getFineAmountForMonth(studentId, month);
                 const paid = Number(studentPayments[month]?.amount || 0);
@@ -2206,6 +2765,34 @@
             document.getElementById('manualPaymentSubmitBtn').textContent = mode === 'fine' ? 'Save Fine Rule' : 'Save Payment';
             document.getElementById('manualPaymentModal').style.display = 'flex';
             updateManualPaymentTotal(true);
+        }
+
+        function openFineChargeModal(studentId, selectedMonth = '') {
+            openManualPaymentModal(studentId, selectedMonth, 'payment');
+
+            const amountInput = document.getElementById('paymentAmount');
+            const fineType = document.getElementById('fineFrequency');
+            const fineAmount = document.getElementById('fineAmount');
+            const modalTitle = document.getElementById('manualPaymentModalTitle');
+            const submitBtn = document.getElementById('manualPaymentSubmitBtn');
+
+            if (modalTitle) modalTitle.textContent = 'Set Fine';
+            if (submitBtn) submitBtn.textContent = 'Save Fine';
+            document.getElementById('manualPaymentModal').dataset.paymentMode = 'fine_charge';
+            if (amountInput) {
+                amountInput.value = '0';
+                amountInput.disabled = true;
+            }
+            if (fineType) fineType.value = 'none';
+            if (fineAmount) {
+                fineAmount.readOnly = false;
+                fineAmount.value = '';
+                fineAmount.placeholder = 'Enter fine amount';
+                fineAmount.style.background = '#fff';
+                fineAmount.focus();
+            }
+
+            updateManualPaymentTotal(false);
         }
 
         function closeManualPaymentModal() {
@@ -2344,10 +2931,12 @@
 
             const students = getData(STORAGE_KEY_STUDENTS) || [];
             const student = students.find((s) => String(s?.id || '') === studentId);
-            const monthlyFee = Number(student?.monthlyFee || 0) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
             const dueAmount = getManualPaymentDueAmount() || monthlyFee;
             const fullAmount = dueAmount;
-            const fineAmount = getFineAmountForMonth(studentId, month);
+            const fineAmount = paymentMode === 'fine_charge'
+                ? rawFineAmount
+                : Math.max(rawFineAmount, getFineAmountForMonth(studentId, month));
 
             const payload = {
                 studentId,
@@ -2388,8 +2977,16 @@
 
                 closeManualPaymentModal();
                 renderMonthlyFeeRecord(studentId);
-                alert('Payment recorded successfully!');
+                alert(amount > 0 ? 'Payment recorded successfully!' : 'Fine saved successfully!');
             } catch (e) {
+                if (rawFineAmount > 0) {
+                    saveFineChargeInLocalStore(studentId, month, rawFineAmount);
+                    closeManualPaymentModal();
+                    renderMonthlyFeeRecord(studentId);
+                    refreshCurrentFeeViewsAfterFineChange();
+                    alert('Fine saved locally. Server sync was not available.');
+                    return;
+                }
                 alert(`Payment could not be saved to server: ${e.message || e}`);
             }
         }
@@ -2401,7 +2998,7 @@
 
             const students = getData(STORAGE_KEY_STUDENTS) || [];
             const student = students.find((s) => String(s?.id || '') === sid);
-            const monthlyFee = Number(student?.monthlyFee || 0) || 0;
+            const monthlyFee = getEffectiveMonthlyFee(student);
 
             // "Mark Paid" should persist as a manual payment, otherwise it resets after refresh.
             const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
@@ -2446,10 +3043,13 @@
                     }
                 }
 
+                markFeeMonthPaidInLocalStore(sid, key, monthTotalDue || due);
                 await mergeFeePaymentsIntoMonthlyStore();
                 renderMonthlyFeeRecord(sid);
             } catch (e) {
-                alert(`Could not mark paid: ${e.message || e}`);
+                markFeeMonthPaidInLocalStore(sid, key, monthTotalDue || due);
+                renderMonthlyFeeRecord(sid);
+                alert('Month marked paid locally. Server sync was not available.');
             }
         }
 
@@ -2486,12 +3086,15 @@
                     throw new Error(body?.message || 'Could not mark unpaid.');
                 }
 
+                markFeeMonthPendingInLocalStore(sid, key);
                 await mergeFeePaymentsIntoMonthlyStore();
                 markFeeMonthPendingInLocalStore(sid, key);
                 renderMonthlyFeeRecord(sid);
                 alert('Fee marked as unpaid.');
             } catch (e) {
-                alert(`Could not mark unpaid: ${e.message || e}`);
+                markFeeMonthPendingInLocalStore(sid, key);
+                renderMonthlyFeeRecord(sid);
+                alert('Month marked unpaid locally. Server sync was not available.');
             }
         }
 
@@ -2516,6 +3119,8 @@
                 document.getElementById('searchResultsInfo').style.display = 'block';
             } else if (classId === 'all') {
                 document.getElementById('pageTitle').innerText = 'Fees: All Students';
+            } else if (classId === 'pending') {
+                document.getElementById('pageTitle').innerText = 'Fees: Pending Fees';
             } else {
                 const cls = feeClasses.find(c => c.id === classId);
                 document.getElementById('pageTitle').innerText = 'Fees: ' + (cls ? cls.name : '');

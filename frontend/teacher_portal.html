@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Portal</title>
-    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
+    <link rel="stylesheet" href="style.css?v=20260520-teacher-portal-mobile-profile">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
@@ -185,7 +185,11 @@
         }
 
         body.teacher-panel-open .teacher-portal {
-            padding-top: 18px;
+            max-width: none;
+            width: 100%;
+            min-height: 100dvh;
+            padding: clamp(14px, 2vw, 26px);
+            margin: 0;
         }
 
         .profile-card,
@@ -204,6 +208,18 @@
             justify-content: space-between;
             gap: 18px;
             margin-bottom: 18px;
+            position: relative;
+        }
+
+        .profile-card > .portal-menu-wrap {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+        }
+
+        .profile-card > .portal-menu-wrap .portal-menu {
+            left: auto;
+            right: 0;
         }
 
         .profile-main {
@@ -281,6 +297,7 @@
             border-left: 4px solid var(--portal-primary);
             position: relative;
             overflow: hidden;
+            min-width: 0;
         }
 
         .stat-card::after {
@@ -524,10 +541,12 @@
             margin-top: 0;
             width: 100%;
             max-width: none;
+            min-height: calc(100dvh - clamp(14px, 2vw, 26px) * 2);
+            padding: clamp(18px, 2.5vw, 34px);
         }
 
         .complaints-panel {
-            max-width: 860px;
+            max-width: none;
             margin-left: auto;
             margin-right: auto;
         }
@@ -557,9 +576,82 @@
         .portal-form-grid,
         .portal-mini-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 12px;
             margin-top: 12px;
+        }
+
+        .portal-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            max-width: 980px;
+        }
+
+        .teacher-option-panel.portal-screen-active > .portal-mini-grid,
+        .teacher-option-panel.portal-screen-active > .portal-form-grid,
+        .teacher-option-panel.portal-screen-active > .notice-list,
+        .teacher-option-panel.portal-screen-active > .portal-table-wrap,
+        .teacher-option-panel.portal-screen-active > .complaint-form,
+        .teacher-option-panel.portal-screen-active > .attendance-board,
+        .teacher-option-panel.portal-screen-active > .attendance-toolbar,
+        .teacher-option-panel.portal-screen-active > .muted,
+        .teacher-option-panel.portal-screen-active > h3 {
+            max-width: 1180px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .teacher-option-panel.portal-screen-active > h3 {
+            font-size: clamp(1.45rem, 2.2vw, 2rem);
+            margin-bottom: 16px;
+        }
+
+        .teacher-option-panel.portal-screen-active > .muted {
+            display: block;
+            line-height: 1.65;
+        }
+
+        .attendance-toolbar {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 14px;
+            margin: 16px 0 12px;
+            flex-wrap: wrap;
+        }
+
+        .attendance-month-field {
+            display: grid;
+            gap: 6px;
+            width: min(260px, 100%);
+        }
+
+        .attendance-month-field label {
+            color: var(--portal-muted);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .attendance-month-field input {
+            width: 100%;
+            min-height: 44px;
+            border: 1px solid #cae8e4;
+            border-radius: 12px;
+            background: var(--portal-card);
+            color: var(--portal-text);
+            font: inherit;
+            font-weight: 800;
+            padding: 10px 12px;
+            outline: none;
+        }
+
+        .attendance-month-field input:focus {
+            border-color: var(--portal-primary-dark);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        #teacherAttendanceSummary {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
         }
 
         .portal-field {
@@ -698,6 +790,10 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
+            #teacherAttendanceSummary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
             .teacher-options {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
@@ -711,9 +807,21 @@
 
             .portal-grid,
             .info-grid,
-            .portal-form-grid,
-            .portal-mini-grid {
+            .portal-form-grid {
                 grid-template-columns: 1fr;
+            }
+
+            .portal-mini-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            body.teacher-panel-open .teacher-portal {
+                padding: 12px;
+            }
+
+            .teacher-option-panel.portal-screen-active {
+                min-height: calc(100dvh - 24px);
+                padding: 18px;
             }
 
             .profile-card {
@@ -723,16 +831,69 @@
 
         @media (max-width: 560px) {
             .teacher-portal-header {
-                padding: 10px 12px 0;
+                display: none;
             }
 
             .teacher-portal {
                 padding: 12px 12px 30px;
             }
 
+            body.teacher-panel-open {
+                background: var(--portal-card);
+            }
+
+            body.teacher-panel-open .teacher-portal {
+                padding: 0;
+            }
+
+            .panel-card {
+                padding: 16px 14px;
+            }
+
+            .teacher-option-panel.portal-screen-active {
+                min-height: 100dvh;
+                border-radius: 0;
+                border: 0;
+                box-shadow: none;
+                padding: 18px 14px 28px;
+            }
+
+            .teacher-option-panel.portal-screen-active > .portal-mini-grid,
+            .teacher-option-panel.portal-screen-active > .portal-form-grid,
+            .teacher-option-panel.portal-screen-active > .notice-list,
+            .teacher-option-panel.portal-screen-active > .portal-table-wrap,
+            .teacher-option-panel.portal-screen-active > .complaint-form,
+            .teacher-option-panel.portal-screen-active > .attendance-board,
+            .teacher-option-panel.portal-screen-active > .attendance-toolbar,
+            .teacher-option-panel.portal-screen-active > .muted,
+            .teacher-option-panel.portal-screen-active > h3 {
+                max-width: none;
+            }
+
+            .portal-screen-back {
+                width: 52px;
+                height: 52px;
+                margin-bottom: 1.15rem;
+            }
+
+            .teacher-option-panel.portal-screen-active > h3 {
+                font-size: 1.38rem;
+                margin-bottom: 1rem;
+            }
+
             .profile-card {
                 align-items: center;
                 text-align: center;
+                padding-top: 28px;
+            }
+
+            .profile-card > .portal-menu-wrap {
+                top: 12px;
+                right: 12px;
+            }
+
+            .profile-card > .portal-menu-wrap .portal-menu {
+                width: min(245px, calc(100vw - 42px));
             }
 
             .profile-main {
@@ -747,6 +908,71 @@
 
             .profile-main h2 {
                 font-size: 1.65rem;
+            }
+
+            .attendance-toolbar {
+                margin: 14px 0 10px;
+                gap: 10px;
+            }
+
+            .attendance-month-field {
+                width: 100%;
+            }
+
+            #teacherAttendanceSummary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            #teacherAttendanceSummary .portal-metric {
+                min-height: 92px;
+                padding: 12px;
+            }
+
+            .portal-mini-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .portal-metric {
+                min-height: 96px;
+                padding: 12px;
+            }
+
+            .portal-metric span {
+                font-size: 0.72rem;
+                line-height: 1.25;
+            }
+
+            .portal-metric strong {
+                font-size: 1.08rem;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }
+
+            .portal-form-grid,
+            .complaint-form {
+                gap: 12px;
+            }
+
+            .portal-field input,
+            .portal-field select,
+            .portal-field textarea,
+            .complaint-form input,
+            .complaint-form textarea {
+                min-height: 46px;
+                border-radius: 10px;
+                padding: 11px 12px;
+            }
+
+            .empty-note,
+            .list-item {
+                border-radius: 12px;
+                padding: 13px;
+            }
+
+            .portal-table {
+                min-width: 560px;
             }
 
             .pill-row {
@@ -766,13 +992,21 @@
             }
 
             .stats-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                 gap: 10px;
+                align-items: stretch;
             }
 
             .stat-card {
-                min-height: 126px;
+                min-height: 104px;
                 padding: 14px 12px;
+            }
+
+            .stat-card .muted {
+                display: block;
+                min-height: 2.4em;
+                font-size: 0.84rem;
+                line-height: 1.2;
             }
 
             .stat-card strong {
@@ -784,6 +1018,24 @@
             .teacher-options {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
                 gap: 10px;
+            }
+
+            .attendance-board {
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+                gap: 6px;
+                margin-top: 12px;
+            }
+
+            .attendance-day-tile {
+                min-height: 54px;
+                border-radius: 10px;
+                padding: 6px 3px;
+                font-size: 0.85rem;
+            }
+
+            .attendance-day-tile span {
+                font-size: 0.64rem;
+                line-height: 1.1;
             }
 
             .teacher-option-btn {
@@ -810,34 +1062,31 @@
 </head>
 
 <body>
-    <header class="teacher-portal-header">
-        <div class="portal-menu-wrap">
-            <button class="portal-menu-btn" type="button" id="teacherMenuButton" aria-label="Open teacher menu" aria-expanded="false">
-                <i data-lucide="menu"></i>
-            </button>
-            <div class="portal-menu" id="teacherPortalMenu">
-                <button class="portal-menu-item" type="button" id="themeToggleBtn">
-                    <i data-lucide="moon"></i>
-                    <span id="themeToggleText">Dark Mode</span>
-                </button>
-                <a class="portal-menu-item" href="aboutme.html">
-                    <i data-lucide="info"></i>
-                    <span>About Us</span>
-                </a>
-                <button class="portal-menu-item" type="button" id="privacyPolicyBtn">
-                    <i data-lucide="shield"></i>
-                    <span>Privacy Policy</span>
-                </button>
-                <button class="portal-menu-item" type="button" onclick="logoutUser()">
-                    <i data-lucide="log-out"></i>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </div>
-    </header>
-
     <main class="teacher-portal">
         <section class="profile-card">
+            <div class="portal-menu-wrap">
+                <button class="portal-menu-btn" type="button" id="teacherMenuButton" aria-label="Open teacher menu" aria-expanded="false">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="portal-menu" id="teacherPortalMenu">
+                    <button class="portal-menu-item" type="button" id="themeToggleBtn">
+                        <i data-lucide="moon"></i>
+                        <span id="themeToggleText">Dark Mode</span>
+                    </button>
+                    <a class="portal-menu-item" href="aboutme.html">
+                        <i data-lucide="info"></i>
+                        <span>About Us</span>
+                    </a>
+                    <button class="portal-menu-item" type="button" id="privacyPolicyBtn">
+                        <i data-lucide="shield"></i>
+                        <span>Privacy Policy</span>
+                    </button>
+                    <button class="portal-menu-item" type="button" onclick="logoutUser()">
+                        <i data-lucide="log-out"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
             <div class="profile-main">
                 <div class="avatar" id="teacherAvatar">T</div>
                 <div class="profile-details">
@@ -908,7 +1157,13 @@
 
         <section class="panel-card teacher-option-panel" id="attendancePanel">
             <h3>Attendance</h3>
-            <p class="muted">Attendance is marked by authorized admin/staff only. This view shows your current month record.</p>
+            <p class="muted">Attendance is marked by authorized admin/staff only. Select any month to review your record.</p>
+            <div class="attendance-toolbar">
+                <div class="attendance-month-field">
+                    <label for="teacherAttendanceMonth">Select Month</label>
+                    <input type="month" id="teacherAttendanceMonth">
+                </div>
+            </div>
             <div class="portal-mini-grid" id="teacherAttendanceSummary"></div>
             <div class="attendance-board" id="teacherAttendanceBoard"></div>
         </section>
@@ -1136,10 +1391,18 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
+        function getSelectedAttendanceMonth() {
+            const input = document.getElementById('teacherAttendanceMonth');
+            const selected = String(input?.value || '').trim();
+            return /^\d{4}-\d{2}$/.test(selected) ? selected : monthKey();
+        }
+
         async function renderSelfAttendance() {
             const teacherId = getTeacherIdentity();
             const store = await getTeacherAttendanceStore();
-            const month = monthKey();
+            const month = getSelectedAttendanceMonth();
+            const monthInput = document.getElementById('teacherAttendanceMonth');
+            if (monthInput && monthInput.value !== month) monthInput.value = month;
             const monthly = getTeacherAttendanceMonth(store, teacherId, month);
             const normalizedMonthly = monthly.map((status) => normalizeAttendanceLabel(status));
             const counted = normalizedMonthly.filter((status) => ['Present', 'Late', 'Absent', 'Leave'].includes(status));
@@ -1575,6 +1838,7 @@
             document.getElementById('teacherComplaintForm')?.addEventListener('submit', submitTeacherComplaint);
             document.getElementById('teacherComplaintFile')?.addEventListener('change', updateTeacherComplaintFileLabel);
             document.getElementById('teacherLeaveForm')?.addEventListener('submit', submitTeacherLeave);
+            document.getElementById('teacherAttendanceMonth')?.addEventListener('change', renderSelfAttendance);
         }
 
         function updateTeacherComplaintFileLabel() {

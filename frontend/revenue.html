@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Revenue Report - My own Science school</title>
-    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .revenue-stats {
@@ -492,7 +492,7 @@
     </div>
 
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
         const STORAGE_KEY_BILLS = 'eduCore_bills';
@@ -559,6 +559,27 @@
                 }
             }
             return rawClass.trim();
+        }
+
+        function normalizeRevenueClassKey(value = '') {
+            return String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+        }
+
+        function getRevenueClassFeeConfig(className = '') {
+            try {
+                const fees = JSON.parse(localStorage.getItem('eduCore_class_fees') || '{}');
+                const match = Object.entries(fees || {}).find(([name]) => normalizeRevenueClassKey(name) === normalizeRevenueClassKey(className));
+                return match ? (match[1] || null) : null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        function getRevenueStudentMonthlyFee(student = {}) {
+            const directFee = Number(student?.monthlyFee || 0) || 0;
+            if (directFee > 0) return directFee;
+            const classFee = getRevenueClassFeeConfig(student?.classGrade || '');
+            return Number(classFee?.monthlyFee || classFee?.fee || 0) || 0;
         }
 
         function getCurrentMonthMeta() {
@@ -715,7 +736,7 @@
                 let expected = 0;
                 (students || []).forEach((s) => {
                     if (!isStudentActiveForMonth(s, monthKey)) return;
-                    expected += parseInt(s?.monthlyFee || 0, 10) || 0;
+                    expected += getRevenueStudentMonthlyFee(s);
                 });
                 expectedByMonth[monthKey] = expected;
             });
@@ -798,6 +819,49 @@
             return [];
         }
 
+        function getLocalFeePaymentsForRevenue(students = [], monthlyFeesData = {}) {
+            let paymentDetails = {};
+            try {
+                paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
+            } catch (_error) {
+                paymentDetails = {};
+            }
+
+            const rows = [];
+            (students || []).forEach((student) => {
+                const sid = String(student?.id || '').trim();
+                if (!sid) return;
+                const studentPayments = paymentDetails[sid] || {};
+                Object.entries(studentPayments).forEach(([month, detail]) => {
+                    const amount = Number(detail?.amount || 0);
+                    if (amount > 0) {
+                        rows.push({
+                            studentId: sid,
+                            classGrade: student.classGrade || '',
+                            feeMonth: month,
+                            amount,
+                            status: 'Paid'
+                        });
+                    }
+                });
+
+                Object.entries(monthlyFeesData?.[sid] || {}).forEach(([month, status]) => {
+                    if (status !== 'Paid' || studentPayments[month]?.amount > 0) return;
+                    const amount = getRevenueStudentMonthlyFee(student);
+                    if (amount > 0) {
+                        rows.push({
+                            studentId: sid,
+                            classGrade: student.classGrade || '',
+                            feeMonth: month,
+                            amount,
+                            status: 'Paid'
+                        });
+                    }
+                });
+            });
+            return rows;
+        }
+
         async function updateRevenueReport(monthKeyOverride = '') {
             const currentMeta = getCurrentMonthMeta();
             const monthKey = monthKeyOverride || selectedRevenueMonthKey || currentMeta.monthKey;
@@ -811,7 +875,8 @@
             const salarySummary = getMonthlySalarySummary(monthKey);
             const billSummary = getMonthlyBillSummary(monthKey);
             const billMonthKeys = readBillExpenses().map((item) => getBillMonthKey(item)).filter(Boolean);
-            const feePayments = await fetchCollectedFeePayments();
+            let feePayments = await fetchCollectedFeePayments();
+            if (!feePayments.length) feePayments = getLocalFeePaymentsForRevenue(students, monthlyFeesData);
 
             // Build the month range for the summary table (min admission/payment -> current month).
             const paymentMonthKeys = feePayments.flatMap((p) => extractPaymentMonthKeys(p)).filter(Boolean);
@@ -855,7 +920,7 @@
                     const monthName = monthsNames[meta.monthIndex];
                     let sum = 0;
                     (students || []).forEach((s) => {
-                        const fee = parseInt(s?.monthlyFee || 0, 10) || 0;
+                        const fee = getRevenueStudentMonthlyFee(s);
                         if (!isStudentActiveForMonth(s, k)) return;
                         if (monthlyFeesData[s.id] && monthlyFeesData[s.id][monthName] === 'Paid') {
                             sum += fee;
@@ -869,7 +934,7 @@
             const classCollection = {}; // { className: { expected: 0, collected: 0 } }
             (students || []).forEach((s) => {
                 const standardClass = getStandardClassName(s.classGrade);
-                const fee = parseInt(s.monthlyFee) || 0;
+                const fee = getRevenueStudentMonthlyFee(s);
                 if (!isStudentActiveForMonth(s, monthKey)) return;
                 if (!classCollection[standardClass]) classCollection[standardClass] = { expected: 0, collected: 0 };
                 classCollection[standardClass].expected += fee;

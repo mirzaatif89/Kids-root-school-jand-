@@ -41,7 +41,8 @@
             ]
         },
         { type: 'link', page: 'families', label: 'Families', icon: 'home' },
-        { type: 'link', page: 'stuck_off', label: 'Stuch of students', icon: 'user-x' },
+        { type: 'link', page: 'stuck_off', label: 'Stuck of students', icon: 'user-x' },
+        { type: 'link', page: 'classes', label: 'Classes', icon: 'school' },
         {
             type: 'dropdown',
             label: 'Teachers',
@@ -54,7 +55,7 @@
                     icon: 'calendar-days',
                     children: [
                         { type: 'link', page: 'teacher_scheduling', label: 'Teacher time table', icon: 'calendar-days' },
-                        { type: 'link', page: 'teacher_scheduling', label: 'Leave request', icon: 'calendar-check', hash: '#leave-request' }
+                        { type: 'link', page: 'teacher_leave_requests', label: 'Leave request', icon: 'calendar-check' }
                     ]
                 }
             ]

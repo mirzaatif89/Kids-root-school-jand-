@@ -69,6 +69,7 @@ const FALLBACK_ROUTE_TO_PAGE = {
     teachers: 'teachers.html',
     stuck_off: 'stuck_off.html',
     teacher_scheduling: 'teacher_scheduling.html',
+    teacher_leave_requests: 'teacher_leave_requests.html',
     staff: 'staff.html',
     classes: 'classes.html',
     set_fee: 'set_fee.html',
@@ -2830,7 +2831,8 @@ function renderAdminSidebarSequence() {
             ]
         },
         { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-        { type: 'link', page: 'stuck_off.html', label: 'Stuch of students', icon: 'user-x' },
+        { type: 'link', page: 'stuck_off.html', label: 'Stuck of students', icon: 'user-x' },
+        { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
         {
             type: 'dropdown',
             label: 'Teachers',
@@ -2843,7 +2845,7 @@ function renderAdminSidebarSequence() {
                     icon: 'calendar-days',
                     children: [
                         { page: 'teacher_scheduling.html', label: 'Teacher time table', icon: 'calendar-days' },
-                        { page: 'teacher_scheduling.html', label: 'Leave request', icon: 'calendar-check', hash: '#leave-request' }
+                        { page: 'teacher_leave_requests.html', label: 'Leave request', icon: 'calendar-check' }
                     ]
                 }
             ]
@@ -2979,7 +2981,8 @@ function ensureSchedulingNav() {
     const currentPage = getCurrentPageName();
     const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
-    const isTeacherSchedulingPage = currentPage === 'teacher_scheduling.html';
+    const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_leave_requests.html'];
+    const isTeacherSchedulingPage = teacherSchedulingPages.includes(currentPage);
     const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
         .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
 
@@ -3120,10 +3123,8 @@ function saveFamilies(families) {
 }
 
 function buildFamilyNameFromStudentFields() {
-    const guardianName = document.getElementById('guardianName')?.value.trim();
     const fatherName = document.getElementById('fatherName')?.value.trim();
-    const phone = document.getElementById('guardianContact')?.value.trim() || document.getElementById('parentPhone')?.value.trim();
-    if (guardianName) return `${guardianName} Family`;
+    const phone = document.getElementById('parentPhone')?.value.trim();
     if (fatherName) return `${fatherName} Family`;
     if (phone) return `Family ${phone}`;
     return '';
@@ -3133,27 +3134,36 @@ function normalizeFamilyPhone(value = '') {
     return String(value || '').replace(/\D/g, '');
 }
 
-function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', guardianContact = '') {
+function getFamilyMatchKey(fatherName = '', phone = '') {
+    return `${String(fatherName || '').trim().toLowerCase()}|${normalizeFamilyPhone(phone)}`;
+}
+
+function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', guardianContact = '', fatherName = '') {
     const cleanName = String(familyName || '').trim();
     if (!cleanName) return '';
 
     const families = getFamilies();
+    const cleanFatherName = String(fatherName || '').trim();
+    const parentPhoneKey = normalizeFamilyPhone(parentPhone);
     const cleanGuardianName = String(guardianName || '').trim();
-    const cleanGuardianContact = String(guardianContact || parentPhone || '').trim();
+    const cleanGuardianContact = String(guardianContact || '').trim();
     const guardianPhoneKey = normalizeFamilyPhone(cleanGuardianContact);
     const existing = families.find((family) => {
         const sameName = String(family.name || '').toLowerCase() === cleanName.toLowerCase();
-        const sameGuardian = cleanGuardianName &&
-            String(family.guardianName || '').trim().toLowerCase() === cleanGuardianName.toLowerCase() &&
-            (!guardianPhoneKey || normalizeFamilyPhone(family.guardianContact || family.phone || '') === guardianPhoneKey);
-        const samePhone = guardianPhoneKey && normalizeFamilyPhone(family.guardianContact || family.phone || '') === guardianPhoneKey;
-        return sameName || sameGuardian || samePhone;
+        const familyFatherName = String(family.fatherName || '').trim().toLowerCase();
+        const familyPhoneKey = normalizeFamilyPhone(family.parentPhone || family.phone || '');
+        const sameFatherAndPhone = cleanFatherName &&
+            parentPhoneKey &&
+            getFamilyMatchKey(family.fatherName, family.parentPhone || family.phone) === getFamilyMatchKey(cleanFatherName, parentPhone) &&
+            familyPhoneKey === parentPhoneKey;
+        return sameFatherAndPhone || (sameName && (!cleanFatherName || !parentPhoneKey));
     });
     if (existing) {
-        if (parentPhone && !existing.phone) existing.phone = parentPhone;
+        if (parentPhone) existing.phone = parentPhone;
+        if (parentPhone) existing.parentPhone = parentPhone;
+        if (cleanFatherName) existing.fatherName = cleanFatherName;
         if (cleanGuardianName) existing.guardianName = cleanGuardianName;
         if (cleanGuardianContact) existing.guardianContact = cleanGuardianContact;
-        if (cleanGuardianContact) existing.phone = existing.phone || cleanGuardianContact;
         saveFamilies(families);
         return existing.id;
     }
@@ -3161,7 +3171,9 @@ function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', gua
     const family = {
         id: generateUniqueRecordId('FAM'),
         name: cleanName,
-        phone: cleanGuardianContact || parentPhone || '',
+        phone: parentPhone || '',
+        parentPhone,
+        fatherName: cleanFatherName,
         guardianName: cleanGuardianName,
         guardianContact: cleanGuardianContact,
         createdAt: new Date().toISOString()
@@ -3169,6 +3181,19 @@ function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', gua
     families.push(family);
     saveFamilies(families);
     return family.id;
+}
+
+function syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherName, parentPhone) {
+    const matchKey = getFamilyMatchKey(fatherName, parentPhone);
+    if (!familyId || !fatherName || !normalizeFamilyPhone(parentPhone)) return students;
+    return students.map((student) => {
+        if (getFamilyMatchKey(student.fatherName, student.parentPhone) !== matchKey) return student;
+        return {
+            ...student,
+            familyId,
+            familyName
+        };
+    });
 }
 
 function populateStudentFamilyOptions(selectedId = '') {
@@ -4616,7 +4641,8 @@ async function handleStudentFormSubmit(e) {
     const selectedFamilyId = document.getElementById('studentFamilyId')?.value || '';
     const enteredFamilyName = document.getElementById('studentFamilyName')?.value.trim() || '';
     const familyName = enteredFamilyName || getFamilies().find((family) => family.id === selectedFamilyId)?.name || buildFamilyNameFromStudentFields();
-    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone, guardianName, guardianContact);
+    const fatherNameInput = document.getElementById('fatherName').value.trim();
+    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone, guardianName, guardianContact, fatherNameInput);
 
     try {
         if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
@@ -4630,7 +4656,7 @@ async function handleStudentFormSubmit(e) {
         studentCode,
         fullName: document.getElementById('fullName').value.trim(),
         profileImage,
-        fatherName: document.getElementById('fatherName').value.trim(),
+        fatherName: fatherNameInput,
         dob: document.getElementById('studentDob').value,
         admissionDate: document.getElementById('admissionDate') ? document.getElementById('admissionDate').value : (existingStudent?.admissionDate || ''),
         classGrade: document.getElementById('classGrade').value,
@@ -4673,6 +4699,7 @@ async function handleStudentFormSubmit(e) {
     } else {
         students.push(newStudent);
     }
+    students = syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherNameInput, parentPhone);
 
     let localSaveResult;
     try {

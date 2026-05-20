@@ -1,9 +1,8 @@
-const { Op } = require('sequelize');
+const cron = require('node-cron');
 const { sendSmtpEmail } = require('./mailer');
 const { renderSchoolEmail } = require('./email-template');
 
 const REMINDER_LOG_KEY = 'pending_fee_email_log';
-const REMINDER_CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const MONTHS_LIST = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -39,6 +38,16 @@ async function saveReminderLog(AppSetting, log) {
 
 function normalizeEmail(value) {
     return String(value || '').trim();
+}
+
+function resolveStudentEmails(student = {}) {
+    return Array.from(new Set([
+        student.email,
+        student.parentEmail,
+        student.guardianEmail,
+        student.fatherEmail,
+        student.motherEmail
+    ].map(normalizeEmail).filter(Boolean)));
 }
 
 function isPendingStudent(student, dueBalance = 0) {
@@ -203,7 +212,7 @@ function buildPendingFeeEmail(student, dueBalance = 0) {
     });
 
     return {
-        to: normalizeEmail(student.email),
+        to: resolveStudentEmails(student),
         subject: 'Pending Fee Reminder',
         text,
         html
@@ -266,8 +275,8 @@ function buildFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 
 }
 
 async function sendFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 0) {
-    const email = normalizeEmail(student?.email);
-    if (!email) {
+    const emails = resolveStudentEmails(student);
+    if (!emails.length) {
         return { skipped: true, reason: 'Student email is missing.' };
     }
 
@@ -289,20 +298,15 @@ async function sendPendingFeeReminderEmails(db, options = {}) {
         ? new Set(options.studentIds.map((id) => String(id || '').trim()).filter(Boolean))
         : null;
 
-    const where = {
-        email: {
-            [Op.ne]: null
-        }
-    };
-    const students = await Student.findAll({ where });
+    const students = await Student.findAll();
     const dueBalances = await loadDueBalanceMap(FeeDueBalance);
     const paidAmountMap = await loadPaidAmountMap(FeePayment);
     const fineChargeMap = await loadFineChargeMap(FeePayment);
     const pendingByStudentId = new Map();
     const pendingStudents = students.filter((student) => {
         if (requestedStudentIds && !requestedStudentIds.has(String(student.id))) return false;
-        const email = normalizeEmail(student.email);
-        if (!email) return false;
+        const emails = resolveStudentEmails(student);
+        if (!emails.length) return false;
         if (!options.force && alreadySent.has(String(student.id))) return false;
         const pendingDetails = calculateStudentPendingFee(student, paidAmountMap, fineChargeMap, dueBalances.get(String(student.id)) || 0);
         pendingByStudentId.set(String(student.id), pendingDetails);
@@ -325,7 +329,7 @@ async function sendPendingFeeReminderEmails(db, options = {}) {
         } catch (error) {
             result.failed.push({
                 studentId: student.id,
-                email: normalizeEmail(student.email),
+                email: resolveStudentEmails(student).join(', '),
                 message: error.message || 'Email failed.'
             });
         }
@@ -338,20 +342,37 @@ async function sendPendingFeeReminderEmails(db, options = {}) {
 }
 
 function startPendingFeeReminderScheduler(getDb, logger = console) {
+    if (String(process.env.PENDING_FEE_REMINDER_ENABLED || 'true').toLowerCase() === 'false') {
+        logger.log('Pending fee email scheduler disabled.');
+        return null;
+    }
+
     const run = async () => {
         try {
             const db = await getDb();
             const result = await sendPendingFeeReminderEmails(db);
-            if (result.sent || result.failed.length) {
-                logger.log(`Pending fee email reminders: sent ${result.sent}, failed ${result.failed.length}.`);
-            }
+            logger.log(`Pending fee email reminders: attempted ${result.attempted}, sent ${result.sent}, failed ${result.failed.length}.`);
         } catch (error) {
             logger.warn(`Pending fee email reminders skipped: ${error.message || error}`);
         }
     };
 
-    setTimeout(run, 5000);
-    return setInterval(run, REMINDER_CHECK_INTERVAL_MS);
+    const configuredCron = String(process.env.PENDING_FEE_REMINDER_CRON || '').trim();
+    const configuredTime = String(process.env.PENDING_FEE_REMINDER_TIME || '09:00').trim();
+    const timezone = String(process.env.PENDING_FEE_REMINDER_TIMEZONE || 'Asia/Karachi').trim();
+    const timeMatch = configuredTime.match(/^(\d{1,2}):(\d{2})$/);
+    const cronExpression = configuredCron || (timeMatch
+        ? `${Number(timeMatch[2])} ${Number(timeMatch[1])} * * *`
+        : '0 9 * * *');
+
+    const task = cron.schedule(cronExpression, run, { timezone });
+    logger.log(`Pending fee email scheduler active: ${cronExpression} (${timezone}).`);
+
+    if (String(process.env.PENDING_FEE_REMINDER_RUN_ON_START || 'true').toLowerCase() !== 'false') {
+        setTimeout(run, 5000);
+    }
+
+    return task;
 }
 
 module.exports = {

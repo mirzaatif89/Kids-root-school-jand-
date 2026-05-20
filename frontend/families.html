@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Families - Apexiums School System</title>
-    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .family-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
@@ -16,6 +16,12 @@
         .student-chip-row { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.75rem; }
         .student-chip { background:rgba(32,176,164,.1); color:var(--primary-color); border-radius:999px; padding:.25rem .55rem; font-size:.78rem; font-weight:800; }
         .empty-family { background:#fff; border:1px dashed var(--border-color); border-radius:8px; padding:1.25rem; color:var(--text-secondary); }
+        .family-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; }
+        .family-form { display:none; background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1rem; margin-bottom:1.25rem; box-shadow:var(--shadow-sm); }
+        .family-form.active { display:block; }
+        .family-form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1rem; }
+        .family-form .input-group { margin-bottom:0; }
+        .family-form-actions { display:flex; justify-content:flex-end; gap:.65rem; margin-top:1rem; flex-wrap:wrap; }
     </style>
 </head>
 
@@ -33,41 +39,81 @@
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
         </aside>
         <main class="main-content">
-            <header class="header"><div><h1>Families</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Students grouped as brothers and sisters in one family.</p></div></header>
+            <header class="header family-header">
+                <div><h1>Families</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Students grouped by same father name and phone number.</p></div>
+                <button type="button" class="btn btn-primary" onclick="toggleFamilyForm()"><i data-lucide="plus"></i> Add Family</button>
+            </header>
+            <section id="familyFormPanel" class="family-form">
+                <form id="manualFamilyForm" onsubmit="saveManualFamily(event)">
+                    <div class="family-form-grid">
+                        <div class="input-group">
+                            <label>Family Name</label>
+                            <input type="text" id="manualFamilyName" placeholder="e.g. Ahmed Family">
+                        </div>
+                        <div class="input-group">
+                            <label>Father Name</label>
+                            <input type="text" id="manualFatherName" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Phone Number</label>
+                            <input type="tel" id="manualParentPhone" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Guardian Name</label>
+                            <input type="text" id="manualGuardianName">
+                        </div>
+                        <div class="input-group">
+                            <label>Guardian Contact</label>
+                            <input type="tel" id="manualGuardianContact">
+                        </div>
+                    </div>
+                    <div class="family-form-actions">
+                        <button type="button" class="btn btn-outline" onclick="toggleFamilyForm(false)">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i data-lucide="save"></i> Save Family</button>
+                    </div>
+                </form>
+            </section>
             <section id="familiesList" class="family-grid"></section>
         </main>
     </div>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function saveLocalArray(key, value) { localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : [])); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function normalizePhone(value = '') { return String(value || '').replace(/\D/g, ''); }
+        function familyMatchKey(fatherName = '', phone = '') {
+            return `${String(fatherName || '').trim().toLowerCase()}|${normalizePhone(phone)}`;
+        }
         function buildFamilyGroups(families, students) {
             const groups = new Map();
 
             families.forEach((family) => {
-                groups.set(family.id, {
+                const familyPhone = family.parentPhone || family.phone || '';
+                const id = family.id || `family-${familyMatchKey(family.fatherName, familyPhone)}`;
+                groups.set(id, {
                     ...family,
+                    id,
+                    phone: familyPhone,
                     members: []
                 });
             });
 
             students.forEach((student) => {
-                const guardianName = String(student.guardianName || '').trim();
-                const guardianContact = String(student.guardianContact || student.parentPhone || '').trim();
-                const guardianKey = `${guardianName.toLowerCase()}|${normalizePhone(guardianContact)}`;
-                let groupId = student.familyId || '';
+                const fatherName = String(student.fatherName || '').trim();
+                const parentPhone = String(student.parentPhone || '').trim();
+                const fatherPhoneKey = familyMatchKey(fatherName, parentPhone);
+                let groupId = '';
 
-                if (!groupId && (guardianName || guardianContact)) {
-                    const existingByGuardian = Array.from(groups.values()).find((group) => {
-                        const groupGuardianName = String(group.guardianName || '').trim().toLowerCase();
-                        const groupPhone = normalizePhone(group.guardianContact || group.phone || '');
-                        return (guardianName && groupGuardianName === guardianName.toLowerCase()) ||
-                            (guardianContact && groupPhone && groupPhone === normalizePhone(guardianContact));
+                if (fatherName && parentPhone) {
+                    const existingByFatherPhone = Array.from(groups.values()).find((group) => {
+                        return familyMatchKey(group.fatherName, group.parentPhone || group.phone) === fatherPhoneKey;
                     });
-                    groupId = existingByGuardian?.id || `guardian-${guardianKey}`;
+                    groupId = existingByFatherPhone?.id || `father-phone-${fatherPhoneKey}`;
                 }
+
+                if (!groupId) groupId = student.familyId || '';
 
                 if (!groupId) {
                     groupId = `student-${student.id || student.studentCode || Math.random()}`;
@@ -76,18 +122,22 @@
                 if (!groups.has(groupId)) {
                     groups.set(groupId, {
                         id: groupId,
-                        name: guardianName ? `${guardianName} Family` : (student.familyName || `${student.fatherName || student.fullName || 'Student'} Family`),
-                        phone: guardianContact || student.parentPhone || '',
-                        guardianName,
-                        guardianContact,
+                        name: student.familyName || `${fatherName || student.fullName || 'Student'} Family`,
+                        phone: parentPhone,
+                        parentPhone,
+                        fatherName,
+                        guardianName: String(student.guardianName || '').trim(),
+                        guardianContact: String(student.guardianContact || '').trim(),
                         members: []
                     });
                 }
 
                 const group = groups.get(groupId);
-                if (guardianName && !group.guardianName) group.guardianName = guardianName;
-                if (guardianContact && !group.guardianContact) group.guardianContact = guardianContact;
-                if (guardianContact && !group.phone) group.phone = guardianContact;
+                if (fatherName && !group.fatherName) group.fatherName = fatherName;
+                if (parentPhone && !group.parentPhone) group.parentPhone = parentPhone;
+                if (parentPhone && !group.phone) group.phone = parentPhone;
+                if (student.guardianName && !group.guardianName) group.guardianName = student.guardianName;
+                if (student.guardianContact && !group.guardianContact) group.guardianContact = student.guardianContact;
                 group.members.push(student);
             });
 
@@ -109,13 +159,56 @@
                 return `<article class="family-card">
                     <h3>${esc(family.name || 'Family')}</h3>
                     <div class="guardian-line">
+                        <p><strong>Father:</strong> ${esc(family.fatherName || '-')}</p>
+                        <p><strong>Phone:</strong> ${esc(family.parentPhone || family.phone || '-')}</p>
                         <p><strong>Guardian:</strong> ${esc(family.guardianName || '-')}</p>
-                        <p><strong>Guardian Contact:</strong> ${esc(family.guardianContact || family.phone || '-')}</p>
+                        <p><strong>Guardian Contact:</strong> ${esc(family.guardianContact || '-')}</p>
                     </div>
                     <p><strong>Total Students:</strong> ${members.length}</p>
                     <div class="student-chip-row">${members.map((student) => `<span class="student-chip">${esc(student.fullName || 'Student')} (${esc(student.classGrade || '-')})</span>`).join('') || '<span class="student-chip">No students linked</span>'}</div>
                 </article>`;
             }).join('');
+        }
+        function toggleFamilyForm(force) {
+            const panel = document.getElementById('familyFormPanel');
+            const shouldOpen = typeof force === 'boolean' ? force : !panel.classList.contains('active');
+            panel.classList.toggle('active', shouldOpen);
+            if (shouldOpen) document.getElementById('manualFatherName')?.focus();
+        }
+        function saveManualFamily(event) {
+            event.preventDefault();
+            const fatherName = document.getElementById('manualFatherName').value.trim();
+            const parentPhone = document.getElementById('manualParentPhone').value.trim();
+            const familyName = document.getElementById('manualFamilyName').value.trim() || `${fatherName} Family`;
+            const guardianName = document.getElementById('manualGuardianName').value.trim();
+            const guardianContact = document.getElementById('manualGuardianContact').value.trim();
+            const families = readLocalArray('eduCore_families');
+            const matchKey = familyMatchKey(fatherName, parentPhone);
+            const existing = families.find((family) => familyMatchKey(family.fatherName, family.parentPhone || family.phone) === matchKey);
+            if (existing) {
+                existing.name = familyName;
+                existing.fatherName = fatherName;
+                existing.parentPhone = parentPhone;
+                existing.phone = parentPhone;
+                existing.guardianName = guardianName || existing.guardianName || '';
+                existing.guardianContact = guardianContact || existing.guardianContact || '';
+            } else {
+                families.push({
+                    id: `FAM-${Date.now()}`,
+                    name: familyName,
+                    fatherName,
+                    parentPhone,
+                    phone: parentPhone,
+                    guardianName,
+                    guardianContact,
+                    createdAt: new Date().toISOString()
+                });
+            }
+            saveLocalArray('eduCore_families', families);
+            event.target.reset();
+            toggleFamilyForm(false);
+            renderFamiliesPage();
+            if (window.lucide) window.lucide.createIcons();
         }
         renderFamiliesPage();
         if (window.lucide) window.lucide.createIcons();

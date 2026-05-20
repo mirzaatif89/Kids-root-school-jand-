@@ -4,14 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Leave Requests - My own Science school</title>
+    <title>Teacher Leave Requests - My own Science school</title>
     <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .schedule-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
-        .schedule-table { width:100%; border-collapse:collapse; }
+        .schedule-table { width:100%; border-collapse:collapse; min-width:760px; }
         .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.85rem; text-align:left; vertical-align:top; }
         .schedule-table th { background:#f6fbfa; color:#475569; font-size:.78rem; text-transform:uppercase; }
+        .schedule-table-wrap { overflow-x:auto; }
         .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
         .schedule-actions { display:inline-flex; gap:.45rem; flex-wrap:wrap; }
         .schedule-action-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
@@ -41,18 +42,18 @@
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
         </aside>
         <main class="main-content">
-            <a class="back-link" href="student_scheduling.html"><i data-lucide="arrow-left"></i> Back to Student Scheduling</a>
-            <header class="header"><div><h1>Student Leave Requests</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Approve or reject leave applications submitted from student portal.</p></div></header>
-            <section class="schedule-panel"><div id="studentLeaveRequestList"></div></section>
+            <a class="back-link" href="teacher_scheduling.html"><i data-lucide="arrow-left"></i> Back to Teacher Scheduling</a>
+            <header class="header"><div><h1>Teacher Leave Requests</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Approve or reject leave applications submitted from teacher portal.</p></div></header>
+            <section class="schedule-panel"><div id="teacherLeaveRequestList"></div></section>
         </main>
     </div>
     <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
-        const STUDENT_LEAVE_KEY = 'eduCore_student_leave_requests';
-        function data() { try { return JSON.parse(localStorage.getItem(STUDENT_LEAVE_KEY) || '[]'); } catch (_e) { return []; } }
-        function save(value) { localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(value)); }
+        const TEACHER_LEAVE_KEY = 'eduCore_teacher_leave_requests';
+        function data() { try { return JSON.parse(localStorage.getItem(TEACHER_LEAVE_KEY) || '[]'); } catch (_e) { return []; } }
+        function save(value) { localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(value)); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function formatLeaveDate(value) {
             if (!value) return '-';
@@ -66,7 +67,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Leave Application</title>
+    <title>Teacher Leave Application</title>
     <style>
         @page { margin: 16mm; }
         body { margin: 0; font-family: Arial, sans-serif; color: #0f172a; background: #ffffff; }
@@ -78,7 +79,6 @@
         .meta { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 28px; margin-bottom: 24px; }
         .meta div { border-bottom: 1px solid #d9ece9; padding: 0 0 9px; }
         .meta strong { display: block; color: #475569; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; }
-        .reason { margin-top: 8px; }
         .reason h2 { margin: 0 0 10px; color: #0f172a; font-size: 17px; }
         .reason-box { min-height: 150px; line-height: 1.65; white-space: pre-wrap; border-top: 1px solid #d9ece9; border-bottom: 1px solid #d9ece9; padding: 14px 0; }
         .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 54px; }
@@ -93,15 +93,15 @@
         <header class="header">
             <img class="logo" src="images/logo.png" alt="School logo">
             <div>
-                <h1>Leave Application</h1>
-                <div class="subtitle">Student leave request generated from EduCore</div>
+                <h1>Teacher Leave Application</h1>
+                <div class="subtitle">Teacher leave request generated from EduCore</div>
             </div>
         </header>
         <section class="meta">
-            <div><strong>Student Name</strong>${esc(item.studentName || '-')}</div>
-            <div><strong>Roll No</strong>${esc(item.rollNo || '-')}</div>
-            <div><strong>Class</strong>${esc(item.classGrade || '-')}</div>
+            <div><strong>Teacher Name</strong>${esc(item.teacherName || '-')}</div>
+            <div><strong>Subject</strong>${esc(item.subject || '-')}</div>
             <div><strong>Status</strong><span class="status">${status}</span></div>
+            <div><strong>Submitted</strong>${esc(formatLeaveDate(item.createdAt))}</div>
             <div><strong>From Date</strong>${esc(formatLeaveDate(item.fromDate))}</div>
             <div><strong>To Date</strong>${esc(formatLeaveDate(item.toDate))}</div>
         </section>
@@ -110,7 +110,7 @@
             <div class="reason-box">${esc(item.reason || '-')}</div>
         </section>
         <section class="signature-row">
-            <div class="signature">Student / Parent Signature</div>
+            <div class="signature">Teacher Signature</div>
             <div class="signature">School Approval Signature</div>
         </section>
         <div class="footer">Apexiums School System</div>
@@ -136,8 +136,11 @@
         }
         function render() {
             const requests = data().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-            if (!requests.length) { studentLeaveRequestList.innerHTML = '<div class="empty-note">No student leave request received yet.</div>'; return; }
-            studentLeaveRequestList.innerHTML = `<table class="schedule-table"><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.studentName || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.rollNo || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="updateStatus('${item.id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button><button class="schedule-action-btn delete" onclick="updateStatus('${item.id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button><button class="schedule-action-btn delete" onclick="deleteLeaveRequest('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`; }).join('')}</tbody></table>`;
+            if (!requests.length) {
+                teacherLeaveRequestList.innerHTML = '<div class="empty-note">No teacher leave request received yet.</div>';
+                return;
+            }
+            teacherLeaveRequestList.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Subject</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.teacherName || '-')}</td><td>${esc(item.subject || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="updateStatus('${item.id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button><button class="schedule-action-btn delete" onclick="updateStatus('${item.id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button><button class="schedule-action-btn delete" onclick="deleteLeaveRequest('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
             lucide.createIcons();
         }
         async function deleteLeaveRequest(id) {
@@ -152,7 +155,7 @@
             const index = requests.findIndex((item) => item.id === id);
             if (index < 0) return;
             requests[index] = { ...requests[index], status, reviewedAt: new Date().toISOString() };
-            save(requests); render(); showSuccessModal(`Leave ${status}!`, `Student leave request has been ${status.toLowerCase()}.`);
+            save(requests); render(); showSuccessModal(`Leave ${status}!`, `Teacher leave request has been ${status.toLowerCase()}.`);
         }
         render(); lucide.createIcons();
     </script>

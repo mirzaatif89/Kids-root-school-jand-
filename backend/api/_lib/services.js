@@ -52,6 +52,7 @@ const ALLOWED_HOME_PAGES = new Set([
     'student_courses.html',
     'teachers.html',
     'teacher_scheduling.html',
+    'teacher_leave_requests.html',
     'staff.html',
     'classes.html',
     'set_fee.html',

@@ -248,6 +248,7 @@ const ALLOWED_HOME_PAGES = new Set([
     'teachers.html',
     'stuck_off.html',
     'teacher_scheduling.html',
+    'teacher_leave_requests.html',
     'staff.html',
     'classes.html',
     'set_fee.html',
@@ -3286,7 +3287,7 @@ app.post('/api/email/send', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/api/fees/send-pending-reminders', authenticateToken, async (req, res) => {
+app.post('/api/fees/send-pending-reminders', async (req, res) => {
     if (!sequelize) {
         return res.status(503).json({ success: false, message: 'Database offline' });
     }

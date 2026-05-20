@@ -126,6 +126,7 @@
         'teachers.html': { moduleKey: 'teachers', defaultHome: 'dashboard.html', label: 'Teachers', icon: 'book-open' },
         'stuck_off.html': { moduleKey: 'students', defaultHome: 'dashboard.html', label: 'Stuck Off', icon: 'user-x' },
         'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'calendar-days' },
+        'teacher_leave_requests.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Leave Requests', icon: 'calendar-check' },
         'staff.html': { moduleKey: 'staff', defaultHome: 'dashboard.html', label: 'Staff', icon: 'briefcase' },
         'classes.html': { moduleKey: 'classes', defaultHome: 'dashboard.html', label: 'Classes', icon: 'school' },
         'set_fee.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
@@ -600,7 +601,8 @@
                     ]
                 },
                 { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-                { type: 'link', page: 'stuck_off.html', label: 'Stuch of students', icon: 'user-x' },
+                { type: 'link', page: 'stuck_off.html', label: 'Stuck of students', icon: 'user-x' },
+                { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
                 {
                     type: 'dropdown',
                     label: 'Teachers',
@@ -613,7 +615,7 @@
                             icon: 'calendar-days',
                             children: [
                                 { page: 'teacher_scheduling.html', label: 'Teacher time table', icon: 'calendar-days' },
-                                { page: 'teacher_scheduling.html', label: 'Leave request', icon: 'calendar-check', hash: '#leave-request' }
+                                { page: 'teacher_leave_requests.html', label: 'Leave request', icon: 'calendar-check' }
                             ]
                         }
                     ]
