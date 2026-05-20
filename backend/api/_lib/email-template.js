@@ -14,7 +14,7 @@ function escapeHtml(value) {
 function getSchoolLogoAttachment() {
     return {
         filename: 'school-logo.png',
-        path: path.join(__dirname, '..', '..', 'images', 'logo.png'),
+        path: path.join(__dirname, '..', '..', '..', 'frontend', 'images', 'logo.png'),
         cid: SCHOOL_LOGO_CID
     };
 }

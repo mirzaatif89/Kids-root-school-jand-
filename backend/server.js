@@ -23,17 +23,20 @@ const {
 } = require('./api/_lib/student-emails');
 const { startWhatsAppBirthdayScheduler } = require('./api/_lib/cronjob');
 
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+const PROJECT_ROOT = path.join(__dirname, '..');
+const FRONTEND_DIR = path.join(PROJECT_ROOT, 'frontend');
+
+require('dotenv').config({ path: path.join(PROJECT_ROOT, '.env') });
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'eduCore_secret_key_2026';
-const PERMISSIONS_FILE = path.join(__dirname, 'permissions.json');
-const DETAILED_PERMISSIONS_FILE = path.join(__dirname, 'permissions-detailed.json');
-const DATE_SHEET_FILE = path.join(__dirname, 'date_sheet.json');
-const ADMIN_CREDENTIALS_FILE = path.join(__dirname, 'admin_credentials.json');
+const PERMISSIONS_FILE = path.join(PROJECT_ROOT, 'permissions.json');
+const DETAILED_PERMISSIONS_FILE = path.join(PROJECT_ROOT, 'permissions-detailed.json');
+const DATE_SHEET_FILE = path.join(PROJECT_ROOT, 'date_sheet.json');
+const ADMIN_CREDENTIALS_FILE = path.join(PROJECT_ROOT, 'admin_credentials.json');
 const PRINCIPAL_USERNAME = process.env.PRINCIPAL_USERNAME || 'principal@school.com';
 const PRINCIPAL_PASSWORD = process.env.PRINCIPAL_PASSWORD || 'Principal123';
 const ADMIN_OTP_EXPIRY_MS = 10 * 60 * 1000;
@@ -42,6 +45,95 @@ app.use(cors());
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 const RESERVED_ROUTE_NAMES = new Set(['api', 'health', 'socket.io']);
+const SIDEBAR_SCROLL_BOOTSTRAP = `
+<script>
+(function () {
+    var key = 'eduCore_sidebar_scroll_position';
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+    function readSaved() {
+        try {
+            return JSON.parse(sessionStorage.getItem(key) || localStorage.getItem(key) || 'null');
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function saveCurrent(extra) {
+        var nav = document.querySelector('.sidebar .nav-links');
+        if (!nav) return;
+        var payload = JSON.stringify(Object.assign({
+            top: nav.scrollTop || 0,
+            left: nav.scrollLeft || 0,
+            path: location.pathname,
+            savedAt: Date.now()
+        }, extra || {}));
+        sessionStorage.setItem(key, payload);
+        localStorage.setItem(key, payload);
+    }
+
+    function normalizePage(value) {
+        value = String(value || '').split('#')[0].split('?')[0].replace(/^\\/+|\\/+$/g, '').toLowerCase();
+        if (!value || value === 'index' || value === 'home') return 'index.html';
+        if (value === 'login') return 'login.html';
+        return value.endsWith('.html') ? value : value + '.html';
+    }
+
+    function restore() {
+        var nav = document.querySelector('.sidebar .nav-links');
+        var saved = readSaved();
+        if (!nav || !saved) return;
+
+        var href = String(saved.targetHref || '').trim();
+        var targetPage = normalizePage(href || location.pathname);
+        var links = Array.prototype.slice.call(nav.querySelectorAll('a[href]'));
+        var targetLink = links.find(function (link) {
+            return normalizePage(link.getAttribute('href') || '') === targetPage;
+        });
+
+        if (targetLink && Number.isFinite(Number(saved.itemTop))) {
+            nav.scrollTop += targetLink.getBoundingClientRect().top -
+                nav.getBoundingClientRect().top -
+                Number(saved.itemTop);
+        } else if (Number.isFinite(Number(saved.top))) {
+            nav.scrollTop = Number(saved.top) || 0;
+        }
+        nav.scrollLeft = Number(saved.left) || 0;
+    }
+
+    document.addEventListener('pointerdown', function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('.sidebar .nav-links a[href]') : null;
+        var nav = document.querySelector('.sidebar .nav-links');
+        if (!link || !nav) return;
+        var navRect = nav.getBoundingClientRect();
+        var linkRect = link.getBoundingClientRect();
+        saveCurrent({
+            targetHref: link.getAttribute('href') || '',
+            itemTop: linkRect.top - navRect.top
+        });
+    }, true);
+
+    window.addEventListener('pagehide', function () { saveCurrent(); });
+    window.addEventListener('beforeunload', function () { saveCurrent(); });
+    document.addEventListener('DOMContentLoaded', function () {
+        [0, 30, 80, 160, 320, 700, 1200, 2200, 3500].forEach(function (delay) {
+            setTimeout(restore, delay);
+        });
+    });
+})();
+</script>`;
+
+function sendFrontendPage(res, fileName) {
+    const filePath = path.join(FRONTEND_DIR, fileName);
+    fs.readFile(filePath, 'utf8', (error, html) => {
+        if (error) {
+            res.status(error.code === 'ENOENT' ? 404 : 500).send(error.code === 'ENOENT' ? 'Page not found' : 'Page could not be loaded');
+            return;
+        }
+
+        res.type('html').send(html.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`));
+    });
+}
 
 function resolvePageFileByRoute(routeName = '') {
     const normalized = String(routeName || '').trim().toLowerCase();
@@ -52,12 +144,12 @@ function resolvePageFileByRoute(routeName = '') {
     if (!/^[a-z0-9_-]+$/i.test(normalized)) return '';
 
     const candidate = `${normalized}.html`;
-    const candidatePath = path.join(__dirname, candidate);
+    const candidatePath = path.join(FRONTEND_DIR, candidate);
     return fs.existsSync(candidatePath) ? candidate : '';
 }
 
 app.get('/', (_req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    sendFrontendPage(res, 'index.html');
 });
 
 app.get('/:pageName([a-zA-Z0-9_-]+).html', (req, res, next) => {
@@ -77,10 +169,10 @@ app.get('/:pageName([a-zA-Z0-9_-]+).html', (req, res, next) => {
 app.get('/:routeName([a-zA-Z0-9_-]+)', (req, res, next) => {
     const pageFile = resolvePageFileByRoute(req.params.routeName);
     if (!pageFile) return next();
-    return res.sendFile(path.join(__dirname, pageFile));
+    return sendFrontendPage(res, pageFile);
 });
 
-app.use(express.static(__dirname, { index: false }));
+app.use(express.static(FRONTEND_DIR, { index: false }));
 
 app.get('/health', (_req, res) => {
     res.json({

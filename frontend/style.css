@@ -366,6 +366,9 @@ ul {
 .dashboard-container {
     display: flex;
     height: 100vh;
+    width: 100%;
+    position: fixed;
+    inset: 0;
     overflow: hidden;
 }
 
@@ -379,6 +382,8 @@ ul {
     transition: var(--transition);
     z-index: 100;
     color: rgba(255, 255, 255, 0.88);
+    height: 100vh;
+    min-height: 0;
 }
 
 .logo-section {
@@ -429,7 +434,10 @@ ul {
 
 .nav-links {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: auto;
     margin: 0 -0.5rem 1rem 0;
     padding-right: 0.5rem;
 }

@@ -2,7 +2,7 @@ const path = require('path');
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 
-const { startServer, server } = require('./server');
+const { startServer, server } = require('./backend/server');
 
 const PORT = process.env.PORT || 3000;
 

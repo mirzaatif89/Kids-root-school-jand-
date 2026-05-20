@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-require('dotenv').config();
-
 const path = require('path');
 const fs = require('fs');
+
+const PROJECT_ROOT = path.join(__dirname, '..');
+
+require('dotenv').config({ path: path.join(PROJECT_ROOT, '.env') });
 
 // Load the database configuration from environment variables
 const dbConfig = {
@@ -38,7 +40,7 @@ async function syncPermissions() {
         );
 
         // Load permissions.json
-        const permissionsPath = path.join(__dirname, 'permissions.json');
+        const permissionsPath = path.join(PROJECT_ROOT, 'permissions.json');
         if (!fs.existsSync(permissionsPath)) {
             console.error('❌ permissions.json not found');
             process.exit(1);

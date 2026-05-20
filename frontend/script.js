@@ -1939,13 +1939,15 @@ function saveSidebarScrollPosition(extra = {}) {
     const navLinks = getSidebarScrollElement();
     if (!navLinks) return;
 
-    sessionStorage.setItem(SIDEBAR_SCROLL_KEY, JSON.stringify({
+    const payload = JSON.stringify({
         top: navLinks.scrollTop || 0,
         left: navLinks.scrollLeft || 0,
         path: window.location.pathname,
         savedAt: Date.now(),
         ...extra
-    }));
+    });
+    sessionStorage.setItem(SIDEBAR_SCROLL_KEY, payload);
+    localStorage.setItem(SIDEBAR_SCROLL_KEY, payload);
 }
 
 function saveSidebarLinkPosition(link) {
@@ -1962,7 +1964,7 @@ function saveSidebarLinkPosition(link) {
 
 function readSidebarScrollPosition() {
     try {
-        return JSON.parse(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || 'null');
+        return JSON.parse(sessionStorage.getItem(SIDEBAR_SCROLL_KEY) || localStorage.getItem(SIDEBAR_SCROLL_KEY) || 'null');
     } catch (_error) {
         return null;
     }
@@ -1985,6 +1987,7 @@ function restoreSidebarScrollPosition(savedPosition = readSidebarScrollPosition(
             navLinks.scrollTop += targetLink.getBoundingClientRect().top -
                 navLinks.getBoundingClientRect().top -
                 Number(savedPosition.itemTop);
+            navLinks.scrollLeft = Number(savedPosition.left) || 0;
             return;
         }
 
@@ -2001,10 +2004,23 @@ function initializeSidebarScrollMemory() {
     navLinks.dataset.scrollMemoryBound = 'true';
 
     const initialSavedPosition = readSidebarScrollPosition();
-    restoreSidebarScrollPosition(initialSavedPosition);
-    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 80);
-    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 300);
-    window.setTimeout(() => restoreSidebarScrollPosition(initialSavedPosition), 700);
+    const restoreInitialPosition = () => restoreSidebarScrollPosition(initialSavedPosition);
+    [0, 50, 120, 250, 500, 900, 1400, 2200, 3200].forEach((delay) => {
+        window.setTimeout(restoreInitialPosition, delay);
+    });
+
+    const restoreObserver = new MutationObserver(() => {
+        if (Date.now() < sidebarScrollRestoreUntil || Date.now() - Number(initialSavedPosition?.savedAt || 0) < 6000) {
+            restoreSidebarScrollPosition(initialSavedPosition);
+        }
+    });
+    restoreObserver.observe(navLinks, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ['class', 'style']
+    });
+    window.setTimeout(() => restoreObserver.disconnect(), 6500);
 
     let pendingFrame = 0;
     navLinks.addEventListener('scroll', () => {
@@ -2016,17 +2032,29 @@ function initializeSidebarScrollMemory() {
         });
     }, { passive: true });
 
-    navLinks.addEventListener('pointerdown', (event) => {
+    const saveLinkEventPosition = (event) => {
         const link = event.target.closest('a[href]');
         if (link) saveSidebarLinkPosition(link);
+    };
+
+    navLinks.addEventListener('pointerdown', saveLinkEventPosition, { capture: true });
+    navLinks.addEventListener('mousedown', saveLinkEventPosition, { capture: true });
+    navLinks.addEventListener('touchstart', saveLinkEventPosition, { capture: true, passive: true });
+    navLinks.addEventListener('click', saveLinkEventPosition, { capture: true });
+
+    document.addEventListener('click', (event) => {
+        const link = event.target.closest('a[href]');
+        if (!link) return;
+        const href = String(link.getAttribute('href') || '').trim();
+        if (!href || href === '#' || href.startsWith('javascript:') || link.target === '_blank') return;
+        saveSidebarScrollPosition({ targetHref: href });
     }, { capture: true });
 
-    navLinks.addEventListener('click', (event) => {
-        const link = event.target.closest('a[href]');
-        if (link) saveSidebarLinkPosition(link);
-    });
-
     window.addEventListener('beforeunload', saveSidebarScrollPosition);
+    window.addEventListener('pagehide', saveSidebarScrollPosition);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') saveSidebarScrollPosition();
+    });
 }
 
 function ensureDesignationPermissionsNav() {

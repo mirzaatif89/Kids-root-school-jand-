@@ -2,7 +2,7 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const { getSchoolLogoAttachment, SCHOOL_LOGO_CID } = require('./email-template');
 
-require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
 function normalizeBoolean(value, fallback = false) {
     if (value === undefined || value === null || value === '') return fallback;
