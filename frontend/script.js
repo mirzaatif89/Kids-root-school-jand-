@@ -62,6 +62,8 @@ const FALLBACK_ROUTE_TO_PAGE = {
     student_diary: 'student_diary.html',
     student_leave_requests: 'student_leave_requests.html',
     student_courses: 'student_courses.html',
+    quiz_uploading: 'quiz_uploading.html',
+    lecture_uploading: 'lecture_uploading.html',
     banners: 'banners.html',
     teachers: 'teachers.html',
     stuck_off: 'stuck_off.html',
@@ -2703,6 +2705,8 @@ function ensureAdminSidebarCompleteness() {
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+        { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
+        { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
         { page: 'library.html', label: 'Library', icon: 'library' },
         { page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
         { page: 'transport.html', label: 'Transport', icon: 'bus' },
@@ -2748,7 +2752,7 @@ function ensureSchedulingNav() {
     if (navLinks.querySelector('[data-scheduling-nav]')) return;
 
     const currentPage = getCurrentPageName();
-    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html'];
+    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
     const isTeacherSchedulingPage = currentPage === 'teacher_scheduling.html';
     const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
@@ -2760,6 +2764,14 @@ function ensureSchedulingNav() {
         <a href="${toRoutePath('student_scheduling.html')}" class="nav-item${isStudentSchedulingPage ? ' active' : ''}">
             <i data-lucide="users"></i>
             <span>Student Scheduling</span>
+        </a>
+        <a href="${toRoutePath('quiz_uploading.html')}" class="nav-item${currentPage === 'quiz_uploading.html' ? ' active' : ''}">
+            <i data-lucide="circle-help"></i>
+            <span>Quiz Uploading</span>
+        </a>
+        <a href="${toRoutePath('lecture_uploading.html')}" class="nav-item${currentPage === 'lecture_uploading.html' ? ' active' : ''}">
+            <i data-lucide="presentation"></i>
+            <span>Lecture Uploading</span>
         </a>
         <a href="${toRoutePath('teacher_scheduling.html')}" class="nav-item${isTeacherSchedulingPage ? ' active' : ''}">
             <i data-lucide="book-open"></i>

@@ -482,6 +482,18 @@
             background: #fbfefe;
         }
 
+        .complaint-panel-card {
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .complaint-form-grid {
+            grid-template-columns: 1fr;
+            padding: 1.15rem;
+            gap: 1rem;
+        }
+
         .portal-field {
             display: grid;
             gap: 0.45rem;
@@ -503,6 +515,33 @@
             padding: 0.65rem 0.75rem;
             font: inherit;
             outline: none;
+        }
+
+        .portal-field textarea.form-control {
+            min-height: 160px;
+            resize: vertical;
+        }
+
+        .portal-file-box {
+            border: 1px dashed #86d7d0;
+            border-radius: 14px;
+            background: #ffffff;
+            padding: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .portal-file-box input[type="file"] {
+            min-height: auto;
+            padding: 0;
+            border: 0;
+            background: transparent;
+        }
+
+        .portal-file-help {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            line-height: 1.45;
         }
 
         .portal-field .form-control:focus {
@@ -603,6 +642,54 @@
             display: block;
             margin-bottom: 0.35rem;
             color: #0f172a;
+        }
+
+        .portal-quiz-form {
+            display: grid;
+            gap: 0.9rem;
+            margin-top: 0.9rem;
+            border-top: 1px solid #d9ece9;
+            padding-top: 0.9rem;
+        }
+
+        .portal-quiz-question {
+            border: 1px solid #d9ece9;
+            border-radius: 12px;
+            background: #ffffff;
+            padding: 0.9rem;
+        }
+
+        .portal-quiz-question strong {
+            display: block;
+            margin-bottom: 0.65rem;
+            color: #0f172a;
+        }
+
+        .portal-quiz-options {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .portal-quiz-options label {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 0.65rem;
+            cursor: pointer;
+            background: #f8fafc;
+        }
+
+        .portal-quiz-result {
+            display: inline-flex;
+            width: fit-content;
+            border-radius: 999px;
+            padding: 0.35rem 0.7rem;
+            background: #ecfdf5;
+            color: #047857;
+            font-weight: 800;
+            margin-top: 0.65rem;
         }
 
         .leave-status {
@@ -727,6 +814,15 @@
             font: inherit;
             background: #fff;
             color: var(--text-primary);
+        }
+
+        .result-filter-grid.complaint-form-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+            padding: 1.15rem;
+            border: 1px solid #d9ece9;
+            border-radius: 16px;
+            background: #fbfefe;
         }
 
         .result-history-table .btn-inline {
@@ -1285,21 +1381,40 @@
             <div class="empty-note" id="studentCourseEmpty">No course has been added for your class yet.</div>
         </section>
 
-        <section class="panel-card student-portal-section" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
+        <section class="panel-card student-portal-section" id="studentQuizSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Class Quiz</h3>
+            <div class="portal-content-list" id="studentQuizList"></div>
+            <div class="empty-note" id="studentQuizEmpty">No quiz has been uploaded for your class yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentLecturesSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Lectures</h3>
+            <h4>Uploaded Lectures</h4>
+            <div class="portal-content-list" id="studentUploadedLectureList"></div>
+            <div class="empty-note" id="studentUploadedLectureEmpty">No lecture has been uploaded for your class yet.</div>
+
+            <h4 style="margin-top:1.25rem;">Scheduled Lectures</h4>
+            <div class="lecture-summary" id="studentLectureCount">0 Lectures</div>
+            <div class="lecture-list" id="studentLectureList"></div>
+            <div class="empty-note" id="studentLectureEmpty">No scheduled lecture has been added for your class yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section complaint-panel-card" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Complain Box</h3>
             <form id="studentComplaintForm">
-                <div class="result-filter-grid">
+                <div class="result-filter-grid complaint-form-grid">
                     <div class="portal-field">
                         <label for="studentComplaintSubject">Subject</label>
                         <input type="text" id="studentComplaintSubject" class="form-control" required placeholder="Complaint subject">
                     </div>
                     <div class="portal-field" style="grid-column: 1 / -1;">
                         <label for="studentComplaintMessage">Complaint</label>
-                        <textarea id="studentComplaintMessage" class="form-control" rows="4" required placeholder="Write your complaint"></textarea>
+                        <textarea id="studentComplaintMessage" class="form-control" rows="6" required placeholder="Write your complaint"></textarea>
                     </div>
-                    <div class="portal-field" style="grid-column: 1 / -1;">
+                    <div class="portal-field portal-file-box" style="grid-column: 1 / -1;">
                         <label for="studentComplaintFile">Attach File</label>
-                        <input type="file" id="studentComplaintFile" class="form-control">
+                        <input type="file" id="studentComplaintFile" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt">
+                        <div class="portal-file-help" id="studentComplaintFileName">Optional: attach a screenshot, image, PDF, Word, or text file.</div>
                     </div>
                 </div>
                 <div class="portal-action-row">
@@ -1372,6 +1487,9 @@
         const STUDENT_DIARY_KEY = 'eduCore_student_diaries';
         const STUDENT_LEAVE_KEY = 'eduCore_student_leave_requests';
         const STUDENT_COURSE_KEY = 'eduCore_student_courses';
+        const STUDENT_QUIZ_KEY = 'eduCore_student_quizzes';
+        const STUDENT_QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
+        const STUDENT_UPLOADED_LECTURE_KEY = 'eduCore_uploaded_lectures';
         const COMPLAINT_KEY = 'eduCore_complaints';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const authToken = sessionStorage.getItem('eduCore_token');
@@ -1718,6 +1836,161 @@
             renderPortalContentList('studentCourseList', 'studentCourseEmpty', getClassWiseItems(STUDENT_COURSE_KEY, student), STUDENT_COURSE_KEY);
         }
 
+        function getStudentQuizSubmissionKey(student = {}, quizId = '') {
+            return `${String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim()}|${quizId}`;
+        }
+
+        function getStudentQuizSubmissions(student = {}) {
+            const studentKey = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim();
+            return getPortalData(STUDENT_QUIZ_SUBMISSION_KEY)
+                .filter((item) => String(item.studentKey || item.studentId || '').trim() === studentKey);
+        }
+
+        function applyStudentQuizzes(student = {}) {
+            const list = document.getElementById('studentQuizList');
+            const empty = document.getElementById('studentQuizEmpty');
+            if (!list || !empty) return;
+
+            const items = getClassWiseItems(STUDENT_QUIZ_KEY, student);
+            const submissions = getStudentQuizSubmissions(student);
+            if (!items.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = items.map((item) => {
+                const questions = Array.isArray(item.questions) ? item.questions : [];
+                const submission = submissions.find((entry) => entry.quizId === item.id);
+                return `
+                    <article class="portal-content-card">
+                        <h4>${escapeHtml(item.title || 'Quiz')}</h4>
+                        <div class="portal-content-meta">
+                            ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(item.totalMarks || questions.reduce((sum, question) => sum + Number(question.marks || 0), 0) || 0)} Marks
+                        </div>
+                        <p>${escapeHtml(item.details || '-')}</p>
+                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_QUIZ_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
+                        ${submission ? `<div class="portal-quiz-result">Submitted: ${escapeHtml(submission.score)} / ${escapeHtml(submission.totalMarks)} marks</div>` : ''}
+                        ${questions.length ? renderStudentQuizForm(item, submission) : '<div class="empty-note" style="margin-top:.8rem;">This quiz only has an attached file.</div>'}
+                    </article>
+                `;
+            }).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function renderStudentQuizForm(quiz = {}, submission = null) {
+            const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
+            return `
+                <form class="portal-quiz-form" data-student-quiz-form="${escapeHtml(quiz.id || '')}">
+                    ${questions.map((question, questionIndex) => {
+                        const submittedAnswer = Array.isArray(submission?.answers) ? submission.answers[questionIndex] : null;
+                        const checkedRow = Array.isArray(submission?.checkedRows) ? submission.checkedRows[questionIndex] : null;
+                        const correctOption = (question.options || [])[Number(question.correctIndex || 0)] || '-';
+                        return `
+                            <div class="portal-quiz-question">
+                                <strong>${questionIndex + 1}. ${escapeHtml(question.text || 'Question')} (${escapeHtml(question.marks || 1)} mark${Number(question.marks || 1) === 1 ? '' : 's'})</strong>
+                                <div class="portal-quiz-options">
+                                    ${(question.options || []).map((option, optionIndex) => `
+                                        <label>
+                                            <input type="radio" name="quiz-${escapeHtml(quiz.id || '')}-q-${questionIndex}" value="${optionIndex}" ${Number(submittedAnswer) === optionIndex ? 'checked' : ''} ${submission ? 'disabled' : ''} required>
+                                            <span>${escapeHtml(option)}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                                ${submission ? `<div class="portal-quiz-result" style="${checkedRow?.isCorrect ? '' : 'background:#fef2f2;color:#b91c1c;'}">${checkedRow?.isCorrect ? 'Correct' : `Wrong - Correct: ${escapeHtml(correctOption)}`}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                    ${submission ? '' : `<button type="submit" class="btn btn-primary">Submit Quiz</button>`}
+                </form>
+            `;
+        }
+
+        function submitStudentQuiz(event) {
+            const form = event.target.closest('[data-student-quiz-form]');
+            if (!form) return;
+            event.preventDefault();
+
+            const student = getCurrentPortalStudent();
+            const quizId = form.dataset.studentQuizForm;
+            const quiz = getPortalData(STUDENT_QUIZ_KEY).find((item) => String(item.id || '') === String(quizId || ''));
+            const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+            if (!quiz || !questions.length) return;
+
+            const answers = [];
+            let rawScore = 0;
+            let questionMarksTotal = 0;
+            const checkedRows = questions.map((question, index) => {
+                const selected = form.elements[`quiz-${quizId}-q-${index}`]?.value;
+                const answer = selected === undefined || selected === '' ? null : Number(selected);
+                answers.push(answer);
+                const marks = Math.max(1, Number(question.marks || 1));
+                questionMarksTotal += marks;
+                const isCorrect = answer === Number(question.correctIndex || 0);
+                if (isCorrect) rawScore += marks;
+                return { question: question.text || `Question ${index + 1}`, selected: answer, correctIndex: Number(question.correctIndex || 0), isCorrect, marks };
+            });
+
+            if (answers.some((answer) => answer === null)) {
+                showAppAlert('Please answer every question before submitting.', 'Incomplete Quiz');
+                return;
+            }
+
+            const studentKey = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim();
+            const totalMarks = Math.max(1, Number(quiz.totalMarks || questionMarksTotal || 1));
+            const score = questionMarksTotal ? Math.round((rawScore / questionMarksTotal) * totalMarks) : 0;
+            const submissions = getPortalData(STUDENT_QUIZ_SUBMISSION_KEY);
+            const duplicateIndex = submissions.findIndex((item) => item.studentKey === studentKey && item.quizId === quizId);
+            const submission = {
+                id: duplicateIndex >= 0 ? submissions[duplicateIndex].id : `QSUB-${Date.now()}`,
+                quizId,
+                quizTitle: quiz.title || 'Quiz',
+                classGrade: student.classGrade || quiz.classGrade || '',
+                studentKey,
+                studentId: student.studentCode || student.id || loggedInUser?.id || '',
+                studentName: student.fullName || loggedInUser?.fullName || 'Student',
+                rollNo: student.rollNo || '',
+                answers,
+                checkedRows,
+                rawScore,
+                score,
+                totalMarks,
+                submittedAt: new Date().toISOString()
+            };
+            if (duplicateIndex >= 0) submissions[duplicateIndex] = submission; else submissions.push(submission);
+            localStorage.setItem(STUDENT_QUIZ_SUBMISSION_KEY, JSON.stringify(submissions));
+            applyStudentQuizzes(student);
+            showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}`, 'Quiz Result');
+        }
+
+        function applyStudentUploadedLectures(student = {}) {
+            const list = document.getElementById('studentUploadedLectureList');
+            const empty = document.getElementById('studentUploadedLectureEmpty');
+            if (!list || !empty) return;
+
+            const items = getClassWiseItems(STUDENT_UPLOADED_LECTURE_KEY, student);
+            if (!items.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = items.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.title || 'Lecture')}</h4>
+                    <div class="portal-content-meta">${escapeHtml(item.subject || item.classGrade || '-')}</div>
+                    <p>${escapeHtml(item.details || '-')}</p>
+                    <div class="portal-action-row">
+                        ${item.url ? `<a class="portal-download-btn" href="${escapeHtml(item.url)}" target="_blank" rel="noopener"><i data-lucide="external-link" width="16"></i> Open Link</a>` : ''}
+                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_UPLOADED_LECTURE_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                    </div>
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
         function getPortalComplaintsForStudent(student = {}) {
             const senderId = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim().toLowerCase();
             return getPortalData(COMPLAINT_KEY)
@@ -1797,6 +2070,16 @@
             });
         }
 
+        function updateStudentComplaintFileLabel() {
+            const file = document.getElementById('studentComplaintFile')?.files?.[0];
+            const label = document.getElementById('studentComplaintFileName');
+            if (label) {
+                label.textContent = file
+                    ? `Selected: ${file.name}`
+                    : 'Optional: attach a screenshot, image, PDF, Word, or text file.';
+            }
+        }
+
         async function submitStudentComplaint(event) {
             event.preventDefault();
             const student = getCurrentPortalStudent();
@@ -1835,6 +2118,7 @@
                 return;
             }
             event.target.reset();
+            updateStudentComplaintFileLabel();
             renderStudentComplaints(student);
             showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
         }
@@ -2543,6 +2827,7 @@
             const lectureList = document.getElementById('studentLectureList');
             const emptyState = document.getElementById('studentLectureEmpty');
             const countEl = document.getElementById('studentLectureCount');
+            if (!lectureList || !emptyState || !countEl) return;
             const studentClass = normalizeClassName(student.classGrade);
             const teachers = await loadTeachersForLectures();
             const lectures = [];
@@ -2708,6 +2993,9 @@
             applyStudentTimeTable(student);
             applyStudentDiary(student);
             applyStudentCourse(student);
+            applyStudentQuizzes(student);
+            applyStudentUploadedLectures(student);
+            applyStudentLectures(student);
             renderStudentComplaints(student);
             renderStudentLeaveHistory(student);
             applyStudentAttendance(student);
@@ -2816,6 +3104,8 @@
             document.getElementById('printStudentResultBtn')?.addEventListener('click', printStudentResultCard);
             document.getElementById('studentLeaveForm')?.addEventListener('submit', submitStudentLeaveRequest);
             document.getElementById('studentComplaintForm')?.addEventListener('submit', submitStudentComplaint);
+            document.getElementById('studentComplaintFile')?.addEventListener('change', updateStudentComplaintFileLabel);
+            document.getElementById('studentQuizList')?.addEventListener('submit', submitStudentQuiz);
             document.getElementById('studentResultLookup')?.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
                     event.preventDefault();

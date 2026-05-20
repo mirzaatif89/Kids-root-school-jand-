@@ -322,7 +322,8 @@
 
         .complaint-form {
             display: grid;
-            gap: 10px;
+            gap: 14px;
+            width: 100%;
         }
 
         .complaint-form label {
@@ -339,15 +340,37 @@
             width: 100%;
             border: 1px solid rgba(226, 232, 240, 0.95);
             border-radius: 12px;
-            padding: 10px 12px;
+            padding: 13px 14px;
             font: inherit;
             background: #ffffff;
             color: var(--portal-text);
         }
 
         .complaint-form textarea {
-            min-height: 96px;
+            min-height: 160px;
             resize: vertical;
+        }
+
+        .portal-file-box {
+            border: 1px dashed #86d7d0;
+            border-radius: 14px;
+            background: #fbfefe;
+            padding: 14px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .portal-file-box input[type="file"] {
+            min-height: auto;
+            padding: 0;
+            border: 0;
+            background: transparent;
+        }
+
+        .portal-file-help {
+            color: var(--portal-muted);
+            font-size: 12px;
+            line-height: 1.45;
         }
 
         .portal-btn {
@@ -391,6 +414,14 @@
         .teacher-option-panel.portal-screen-active {
             display: block !important;
             margin-top: 0;
+            width: 100%;
+            max-width: none;
+        }
+
+        .complaints-panel {
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .portal-screen-back {
@@ -500,6 +531,51 @@
             gap: 10px;
             flex-wrap: wrap;
             margin-top: 12px;
+        }
+
+        .attendance-board {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(54px, 1fr));
+            gap: 10px;
+            margin-top: 14px;
+        }
+
+        .attendance-day-tile {
+            min-height: 58px;
+            border: 1px solid #dcefed;
+            border-radius: 12px;
+            background: #ffffff;
+            display: grid;
+            place-items: center;
+            gap: 2px;
+            padding: 8px;
+            color: #475569;
+            font-weight: 800;
+        }
+
+        .attendance-day-tile span {
+            font-size: 11px;
+            font-weight: 700;
+            color: inherit;
+        }
+
+        .attendance-day-tile.present,
+        .attendance-day-tile.late {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .attendance-day-tile.leave {
+            background: #dbeafe;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+
+        .attendance-day-tile.absent {
+            background: #ffffff;
+            border-color: #fecaca;
+            color: #991b1b;
         }
 
         @media (max-width: 1040px) {
@@ -664,26 +740,9 @@
 
         <section class="panel-card teacher-option-panel" id="attendancePanel">
             <h3>Attendance</h3>
-            <form id="teacherSelfAttendanceForm" class="portal-form-grid">
-                <div class="portal-field">
-                    <label for="teacherAttendanceDate">Date</label>
-                    <input type="date" id="teacherAttendanceDate" required>
-                </div>
-                <div class="portal-field">
-                    <label for="teacherAttendanceStatus">Status</label>
-                    <select id="teacherAttendanceStatus" required>
-                        <option value="Present">Present</option>
-                        <option value="Late">Late</option>
-                        <option value="Leave">Leave</option>
-                    </select>
-                </div>
-                <div class="portal-field">
-                    <label>&nbsp;</label>
-                    <button class="portal-btn" type="submit"><i data-lucide="check" width="15"></i> Save Attendance</button>
-                </div>
-            </form>
+            <p class="muted">Attendance is marked by authorized admin/staff only. This view shows your current month record.</p>
             <div class="portal-mini-grid" id="teacherAttendanceSummary"></div>
-            <div class="notice-list" id="teacherAttendanceRecords"></div>
+            <div class="attendance-board" id="teacherAttendanceBoard"></div>
         </section>
 
         <section class="panel-card teacher-option-panel" id="salaryPanel">
@@ -696,13 +755,18 @@
             <div id="teacherTimeTable"></div>
         </section>
 
-        <section class="panel-card teacher-option-panel" id="complaintsPanel">
+        <section class="panel-card teacher-option-panel complaints-panel" id="complaintsPanel">
             <h3>Complains</h3>
             <form id="teacherComplaintForm" class="complaint-form">
                 <label for="teacherComplaintSubject">Subject</label>
                 <input type="text" id="teacherComplaintSubject" required placeholder="Complaint subject">
                 <label for="teacherComplaintMessage">Complaint</label>
                 <textarea id="teacherComplaintMessage" required placeholder="Write your complaint"></textarea>
+                <div class="portal-file-box">
+                    <label for="teacherComplaintFile">Attach File</label>
+                    <input type="file" id="teacherComplaintFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt">
+                    <div class="portal-file-help" id="teacherComplaintFileName">Optional: attach a screenshot, image, PDF, Word, or text file.</div>
+                </div>
                 <button class="portal-btn" type="submit"><i data-lucide="send" width="15"></i> Submit Complaint</button>
             </form>
             <h4 style="margin:1rem 0 .75rem;">Complaint History</h4>
@@ -860,9 +924,11 @@
             const store = await getTeacherAttendanceStore();
             const month = monthKey();
             const monthly = getTeacherAttendanceMonth(store, teacherId, month);
-            const counted = monthly.filter((status) => ['Present', 'Late', 'Absent', 'Leave'].includes(status));
+            const normalizedMonthly = monthly.map((status) => normalizeAttendanceLabel(status));
+            const counted = normalizedMonthly.filter((status) => ['Present', 'Late', 'Absent', 'Leave'].includes(status));
             const present = counted.filter((status) => status === 'Present').length;
             const late = counted.filter((status) => status === 'Late').length;
+            const absent = counted.filter((status) => status === 'Absent').length;
             const leave = counted.filter((status) => status === 'Leave').length;
             setText('attendanceSummary', counted.length ? `${present + late}/${counted.length}` : '-');
 
@@ -871,23 +937,39 @@
                 summary.innerHTML = `
                     <div class="portal-metric"><span>Month</span><strong>${escapeHtml(month)}</strong></div>
                     <div class="portal-metric"><span>Present / Late</span><strong>${present + late}</strong></div>
+                    <div class="portal-metric"><span>Absent</span><strong>${absent}</strong></div>
                     <div class="portal-metric"><span>Leave</span><strong>${leave}</strong></div>
                 `;
             }
 
-            const rows = monthly
-                .map((status, index) => ({ day: index + 1, status }))
-                .filter((item) => ['Present', 'Late', 'Absent', 'Leave'].includes(item.status))
-                .slice(-10)
-                .reverse();
-            renderPortalList('teacherAttendanceRecords', rows, 'No attendance record is available for this month.', (item) => `
-                <div class="list-item">
-                    <div class="list-item-top">
-                        <span>${escapeHtml(`${month}-${String(item.day).padStart(2, '0')}`)}</span>
-                        <span>${escapeHtml(item.status)}</span>
-                    </div>
-                </div>
-            `);
+            const board = document.getElementById('teacherAttendanceBoard');
+            if (board) {
+                const [year, monthNumber] = month.split('-').map(Number);
+                const daysInMonth = new Date(year, monthNumber, 0).getDate();
+                board.innerHTML = Array.from({ length: daysInMonth }, (_, index) => {
+                    const day = index + 1;
+                    const status = normalizedMonthly[index] || '';
+                    const cls = status ? status.toLowerCase().replace(/\s+/g, '-') : 'empty';
+                    const label = status || 'Not Marked';
+                    return `
+                        <div class="attendance-day-tile ${escapeHtml(cls)}" title="${escapeHtml(label)}">
+                            <strong>${day}</strong>
+                            <span>${escapeHtml(status ? status : '-')}</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function normalizeAttendanceLabel(status) {
+            const value = String(status || '').trim();
+            if (value === 'P') return 'Present';
+            if (value === 'A') return 'Absent';
+            if (value.toLowerCase() === 'late') return 'Late';
+            if (value.toLowerCase() === 'leave') return 'Leave';
+            if (value.toLowerCase() === 'present') return 'Present';
+            if (value.toLowerCase() === 'absent') return 'Absent';
+            return '';
         }
 
         function renderSalaryRecord() {
@@ -1153,18 +1235,57 @@
                         <span>${escapeHtml(item.status || 'Pending')}</span>
                     </div>
                     <div class="muted">${escapeHtml(item.message || '-')}</div>
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-btn" style="margin-top:8px;width:max-content;" onclick="downloadTeacherComplaintFile('${escapeHtml(item.id || '')}')"><i data-lucide="download" width="15"></i> ${escapeHtml(item.file.name || 'Download File')}</button>` : ''}
                     ${item.reply ? `<div class="empty-note" style="margin-top:8px;"><strong>Admin Reply:</strong><br>${escapeHtml(item.reply)}</div>` : ''}
                     ${item.actionTaken ? `<div class="empty-note" style="margin-top:8px;"><strong>Action Taken:</strong><br>${escapeHtml(item.actionTaken)}</div>` : ''}
                 </div>
             `).join('');
+            if (window.lucide) window.lucide.createIcons();
         }
 
-        function submitTeacherComplaint(event) {
+        function sanitizeTeacherFileName(fileName) {
+            return String(fileName || 'complaint-file').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'complaint-file';
+        }
+
+        function downloadTeacherComplaintFile(id) {
+            const item = readLocal(COMPLAINT_KEY).find((complaint) => complaint.id === id);
+            if (!item?.file?.dataUrl) {
+                showAppAlert('No file is attached to this complaint.', 'File Missing');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = item.file.dataUrl;
+            link.download = sanitizeTeacherFileName(item.file.name || 'complaint-file');
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function readTeacherComplaintFile(input) {
+            const file = input?.files?.[0];
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({ name: file.name, dataUrl: reader.result, type: file.type || '' });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function submitTeacherComplaint(event) {
             event.preventDefault();
             const subject = document.getElementById('teacherComplaintSubject').value.trim();
             const message = document.getElementById('teacherComplaintMessage').value.trim();
             if (!subject || !message) {
                 showAppAlert('Complaint subject and message are required.', 'Missing Complaint');
+                return;
+            }
+            let file = null;
+            try {
+                file = await readTeacherComplaintFile(document.getElementById('teacherComplaintFile'));
+            } catch (_error) {
+                showAppAlert('Complaint file could not be attached.', 'File Error');
                 return;
             }
             const complaints = readLocal(COMPLAINT_KEY);
@@ -1176,44 +1297,22 @@
                 senderClass: currentTeacherProfile?.subject || currentTeacherProfile?.designation || '',
                 subject,
                 message,
+                file,
                 status: 'Pending',
                 thread: [],
                 actionTaken: '',
                 createdAt: new Date().toISOString()
             });
-            localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
-            event.target.reset();
-            renderTeacherComplaints();
-            showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
-        }
-
-        async function submitSelfAttendance(event) {
-            event.preventDefault();
-            const teacherId = getTeacherIdentity();
-            const date = document.getElementById('teacherAttendanceDate')?.value || todayKey();
-            const status = document.getElementById('teacherAttendanceStatus')?.value || 'Present';
-            if (!teacherId) {
-                showAppAlert('Teacher profile is not loaded yet.', 'Attendance Failed');
+            try {
+                localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
+            } catch (_error) {
+                showAppAlert('Complaint could not be saved. The attached file may be too large.', 'Storage Full');
                 return;
             }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/teacher-attendance`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
-                    },
-                    body: JSON.stringify({ teacherId, date, status })
-                });
-                const result = response.ok ? await response.json() : null;
-                if (!response.ok || result?.success === false) throw new Error(result?.message || 'Attendance could not be saved.');
-                if (result?.attendance) localStorage.setItem('eduCore_teacher_attendance', JSON.stringify(result.attendance));
-                await renderSelfAttendance();
-                showAppAlert('Your attendance has been saved.', 'Attendance Saved');
-            } catch (_error) {
-                showAppAlert('Attendance could not be saved. Please try again.', 'Attendance Failed');
-            }
+            event.target.reset();
+            updateTeacherComplaintFileLabel();
+            renderTeacherComplaints();
+            showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
         }
 
         function submitTeacherLeave(event) {
@@ -1252,11 +1351,19 @@
                     showTeacherPanel(panelId);
                 });
             });
-            document.getElementById('teacherSelfAttendanceForm')?.addEventListener('submit', submitSelfAttendance);
             document.getElementById('teacherComplaintForm')?.addEventListener('submit', submitTeacherComplaint);
+            document.getElementById('teacherComplaintFile')?.addEventListener('change', updateTeacherComplaintFileLabel);
             document.getElementById('teacherLeaveForm')?.addEventListener('submit', submitTeacherLeave);
-            const attendanceDate = document.getElementById('teacherAttendanceDate');
-            if (attendanceDate && !attendanceDate.value) attendanceDate.value = todayKey();
+        }
+
+        function updateTeacherComplaintFileLabel() {
+            const file = document.getElementById('teacherComplaintFile')?.files?.[0];
+            const label = document.getElementById('teacherComplaintFileName');
+            if (label) {
+                label.textContent = file
+                    ? `Selected: ${file.name}`
+                    : 'Optional: attach a screenshot, image, PDF, Word, or text file.';
+            }
         }
 
         function getTeacherFallback() {

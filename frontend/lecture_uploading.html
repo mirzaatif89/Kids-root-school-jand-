@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Uploading - Apexiums School System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .upload-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
+        .upload-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; align-items:end; }
+        .upload-panel label { display:block; color:#334155; font-size:.82rem; font-weight:800; margin-bottom:.45rem; }
+        .upload-panel input,.upload-panel select,.upload-panel textarea { width:100%; min-height:42px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; padding:.65rem .75rem; font:inherit; outline:none; }
+        .upload-panel textarea { min-height:120px; resize:vertical; }
+        .upload-table { width:100%; border-collapse:collapse; }
+        .upload-table th,.upload-table td { border-bottom:1px solid #dbecea; padding:.8rem; text-align:left; vertical-align:top; }
+        .upload-table th { background:#f6fbfa; color:#475569; font-size:.78rem; text-transform:uppercase; }
+        .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
+        .action-row { display:inline-flex; gap:.45rem; flex-wrap:wrap; }
+        .mini-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
+        .mini-btn.edit { background:#dbeafe; color:#1d4ed8; }
+        .mini-btn.delete { background:#fee2e2; color:#b91c1c; }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <header class="header"><div><h1>Lecture Uploading</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Upload class-wise lectures for student portal.</p></div></header>
+            <section class="upload-panel">
+                <form id="lectureUploadForm">
+                    <input type="hidden" id="lectureUploadId">
+                    <div class="upload-grid">
+                        <div><label>Class</label><select id="lectureClass" required></select></div>
+                        <div><label>Lecture Title</label><input type="text" id="lectureTitle" required placeholder="e.g. Chapter 3 Lecture"></div>
+                        <div><label>Subject</label><input type="text" id="lectureSubject" placeholder="e.g. Science"></div>
+                        <div><label>Lecture Link</label><input type="url" id="lectureUrl" placeholder="https://..."></div>
+                        <div><label>Attach File / Video</label><input type="file" id="lectureFile" accept=".pdf,.ppt,.pptx,.doc,.docx,.mp4,.webm,.jpg,.jpeg,.png,.txt"></div>
+                    </div>
+                    <div style="margin-top:1rem;"><label>Lecture Notes</label><textarea id="lectureDetails" required placeholder="Write lecture notes, instructions, or links"></textarea></div>
+                    <button type="submit" class="btn btn-primary" id="lectureSaveBtn" style="margin-top:1rem;"><i data-lucide="save"></i> Save Lecture</button>
+                </form>
+            </section>
+            <section class="upload-panel"><h3 style="margin-bottom:1rem;">Uploaded Lectures</h3><div id="lectureUploadList"></div></section>
+        </main>
+    </div>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const LECTURE_KEY = 'eduCore_uploaded_lectures';
+        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        function populateClasses() {
+            const students = data('eduCore_students');
+            const classes = data('eduCore_classes');
+            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+            lectureClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
+        function readFile(input) {
+            const file = input.files?.[0];
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve({ name: file.name, dataUrl: reader.result, type: file.type || '' }); reader.onerror = reject; reader.readAsDataURL(file); });
+        }
+        function render() {
+            const items = data(LECTURE_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            if (!items.length) { lectureUploadList.innerHTML = '<div class="empty-note">No lecture uploaded yet.</div>'; return; }
+            lectureUploadList.innerHTML = `<table class="upload-table"><thead><tr><th>Class</th><th>Lecture</th><th>Link / File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade)}</td><td><strong>${esc(item.title)}</strong><br>${esc(item.subject || '-')}<br>${esc(item.details)}</td><td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open Link</a><br>` : ''}${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'lecture-file')}">${esc(item.file.name || 'Download')}</a>` : (!item.url ? '-' : '')}</td><td><div class="action-row"><button class="mini-btn edit" onclick="editItem('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteItem('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            if (window.lucide) lucide.createIcons();
+        }
+        function editItem(id) {
+            const item = data(LECTURE_KEY).find((entry) => entry.id === id);
+            if (!item) return;
+            lectureUploadId.value = item.id; lectureClass.value = item.classGrade || ''; lectureTitle.value = item.title || ''; lectureSubject.value = item.subject || ''; lectureUrl.value = item.url || ''; lectureDetails.value = item.details || '';
+            lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Update Lecture';
+            lectureUploadForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (window.lucide) lucide.createIcons();
+        }
+        function deleteItem(id) { save(LECTURE_KEY, data(LECTURE_KEY).filter((item) => item.id !== id)); render(); }
+        lectureUploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const editId = lectureUploadId.value;
+            const existing = data(LECTURE_KEY).find((item) => item.id === editId);
+            const file = await readFile(lectureFile);
+            const item = { id: editId || `LECTURE-${Date.now()}`, classGrade: lectureClass.value, title: lectureTitle.value.trim(), subject: lectureSubject.value.trim(), url: lectureUrl.value.trim(), details: lectureDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+            if (!item.classGrade || !item.title || !item.details) { showAppAlert('Class, title, and notes are required.', 'Missing Lecture'); return; }
+            const items = data(LECTURE_KEY); const index = items.findIndex((entry) => entry.id === editId);
+            if (index >= 0) items[index] = item; else items.push(item);
+            if (!save(LECTURE_KEY, items)) return;
+            event.target.reset(); lectureUploadId.value = ''; lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Save Lecture'; render(); showSuccessModal(editId ? 'Lecture Updated!' : 'Lecture Uploaded!', 'Lecture is visible in student portal.');
+        });
+        populateClasses(); render(); if (window.lucide) lucide.createIcons();
+    </script>
+</body>
+
+</html>
