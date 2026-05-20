@@ -157,6 +157,25 @@ function defineStudentAttendanceModel(db) {
     });
 }
 
+function defineStudentAssignmentSubmissionModel(db) {
+    return db.define('StudentAssignmentSubmission', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        studentId: DataTypes.STRING,
+        studentCode: DataTypes.STRING,
+        studentName: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        assignmentTitle: DataTypes.STRING,
+        subject: DataTypes.STRING,
+        note: DataTypes.TEXT,
+        fileName: DataTypes.STRING,
+        fileType: DataTypes.STRING,
+        fileData: DataTypes.TEXT('long'),
+        submittedAt: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Submitted' }
+    });
+}
+
 function defineTeacherAttendanceModel(db) {
     return db.define('TeacherAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -400,6 +419,22 @@ async function ensureLegacySchema(db) {
         groupKey: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true }
     });
+
+    await ensureTableColumns(db, 'StudentAssignmentSubmissions', {
+        studentId: { type: DataTypes.STRING, allowNull: true },
+        studentCode: { type: DataTypes.STRING, allowNull: true },
+        studentName: { type: DataTypes.STRING, allowNull: true },
+        rollNo: { type: DataTypes.STRING, allowNull: true },
+        classGrade: { type: DataTypes.STRING, allowNull: true },
+        assignmentTitle: { type: DataTypes.STRING, allowNull: true },
+        subject: { type: DataTypes.STRING, allowNull: true },
+        note: { type: DataTypes.TEXT, allowNull: true },
+        fileName: { type: DataTypes.STRING, allowNull: true },
+        fileType: { type: DataTypes.STRING, allowNull: true },
+        fileData: { type: DataTypes.TEXT('long'), allowNull: true },
+        submittedAt: { type: DataTypes.STRING, allowNull: true },
+        status: { type: DataTypes.STRING, allowNull: true }
+    });
 }
 
 async function getDb() {
@@ -430,6 +465,7 @@ async function getDb() {
             defineFeePaymentModel(db);
             defineFeeDueBalanceModel(db);
             defineStudentAttendanceModel(db);
+            defineStudentAssignmentSubmissionModel(db);
             defineTeacherAttendanceModel(db);
             defineAppSettingModel(db);
             defineSpecialNoticeModel(db);

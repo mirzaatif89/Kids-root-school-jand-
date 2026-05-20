@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Class Course - My own Science school</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .schedule-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
@@ -59,8 +59,8 @@
         </main>
     </div>
     <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
-    <script src="auth.js?v=20260520-sidebar-sequence"></script>
-    <script src="script.js?v=20260520-sidebar-sequence"></script>
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         const STUDENT_COURSE_KEY = 'eduCore_student_courses';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }

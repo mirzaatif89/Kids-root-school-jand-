@@ -232,6 +232,7 @@ const ALLOWED_HOME_PAGES = new Set([
     'students.html',
     'families.html',
     'student_scheduling.html',
+    'assignments.html',
     'student_timetable.html',
     'student_diary.html',
     'student_leave_requests.html',
@@ -2029,6 +2030,92 @@ app.get('/api/student/me', authenticateToken, async (req, res) => {
     }
 });
 
+function formatStudentAssignmentSubmission(record) {
+    const raw = record && typeof record.toJSON === 'function' ? record.toJSON() : (record || {});
+    return {
+        id: raw.id || '',
+        studentId: raw.studentId || '',
+        studentCode: raw.studentCode || '',
+        studentName: raw.studentName || '',
+        rollNo: raw.rollNo || '',
+        classGrade: raw.classGrade || '',
+        assignmentTitle: raw.assignmentTitle || '',
+        subject: raw.subject || '',
+        note: raw.note || '',
+        fileName: raw.fileName || '',
+        fileType: raw.fileType || '',
+        fileData: raw.fileData || '',
+        submittedAt: raw.submittedAt || raw.createdAt || '',
+        status: raw.status || 'Submitted'
+    };
+}
+
+app.get('/api/student-assignments', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const role = String(req.user?.role || '');
+        if (!['Admin', 'Principal', 'Teacher', 'Staff'].includes(role)) {
+            return res.status(403).json({ success: false, message: 'Assignment submissions access denied.' });
+        }
+
+        const records = await sequelize.models.StudentAssignmentSubmission.findAll({
+            order: [['submittedAt', 'DESC']]
+        });
+        return res.json({ success: true, assignments: records.map(formatStudentAssignmentSubmission) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Assignment submissions could not be loaded.' });
+    }
+});
+
+app.post('/api/student-assignments', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        if (req.user.role !== 'Student') {
+            return res.status(403).json({ success: false, message: 'Student access only.' });
+        }
+
+        const body = req.body || {};
+        const assignmentTitle = String(body.assignmentTitle || '').trim();
+        if (!assignmentTitle) {
+            return res.status(400).json({ success: false, message: 'Assignment title is required.' });
+        }
+
+        const Student = sequelize.models.Student;
+        const student = await Student.findByPk(req.user.id).catch(() => null);
+        const submittedAt = new Date().toISOString();
+        const record = {
+            id: body.id || `ASG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            studentId: student?.id || req.user.id || '',
+            studentCode: student?.studentCode || body.studentCode || '',
+            studentName: student?.fullName || body.studentName || req.user.fullName || 'Student',
+            rollNo: student?.rollNo || body.rollNo || '',
+            classGrade: student?.classGrade || body.classGrade || '',
+            assignmentTitle,
+            subject: String(body.subject || '').trim(),
+            note: String(body.note || '').trim(),
+            fileName: String(body.fileName || body.file?.name || '').trim(),
+            fileType: String(body.fileType || body.file?.type || '').trim(),
+            fileData: String(body.fileData || body.file?.dataUrl || '').trim(),
+            submittedAt,
+            status: 'Submitted'
+        };
+
+        await sequelize.models.StudentAssignmentSubmission.upsert(record);
+        const records = await sequelize.models.StudentAssignmentSubmission.findAll({
+            order: [['submittedAt', 'DESC']]
+        });
+        return res.json({
+            success: true,
+            assignment: formatStudentAssignmentSubmission(record),
+            assignments: records.map(formatStudentAssignmentSubmission)
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Assignment could not be submitted.' });
+    }
+});
+
 app.post('/api/students', authenticateToken, async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 
@@ -3723,6 +3810,25 @@ function defineStudentAttendanceModel(db) {
     });
 }
 
+function defineStudentAssignmentSubmissionModel(db) {
+    return db.define('StudentAssignmentSubmission', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        studentId: DataTypes.STRING,
+        studentCode: DataTypes.STRING,
+        studentName: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        assignmentTitle: DataTypes.STRING,
+        subject: DataTypes.STRING,
+        note: DataTypes.TEXT,
+        fileName: DataTypes.STRING,
+        fileType: DataTypes.STRING,
+        fileData: DataTypes.TEXT('long'),
+        submittedAt: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Submitted' }
+    });
+}
+
 function defineTeacherAttendanceModel(db) {
     return db.define('TeacherAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -4182,6 +4288,22 @@ async function ensureLegacySchema() {
         groupKey: { type: DataTypes.STRING, allowNull: true },
         role: { type: DataTypes.STRING, allowNull: true }
     });
+
+    await ensureTableColumns('StudentAssignmentSubmissions', {
+        studentId: { type: DataTypes.STRING, allowNull: true },
+        studentCode: { type: DataTypes.STRING, allowNull: true },
+        studentName: { type: DataTypes.STRING, allowNull: true },
+        rollNo: { type: DataTypes.STRING, allowNull: true },
+        classGrade: { type: DataTypes.STRING, allowNull: true },
+        assignmentTitle: { type: DataTypes.STRING, allowNull: true },
+        subject: { type: DataTypes.STRING, allowNull: true },
+        note: { type: DataTypes.TEXT, allowNull: true },
+        fileName: { type: DataTypes.STRING, allowNull: true },
+        fileType: { type: DataTypes.STRING, allowNull: true },
+        fileData: { type: DataTypes.TEXT('long'), allowNull: true },
+        submittedAt: { type: DataTypes.STRING, allowNull: true },
+        status: { type: DataTypes.STRING, allowNull: true }
+    });
 }
 
 async function startServer() {
@@ -4213,6 +4335,7 @@ async function startServer() {
         defineFeePaymentModel(sequelize);
         defineFeeDueBalanceModel(sequelize);
         defineStudentAttendanceModel(sequelize);
+        defineStudentAssignmentSubmissionModel(sequelize);
         defineTeacherAttendanceModel(sequelize);
         defineSpecialNoticeModel(sequelize);
         defineBannerModel(sequelize);

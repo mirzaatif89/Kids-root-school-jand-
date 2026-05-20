@@ -58,6 +58,7 @@ const FALLBACK_ROUTE_TO_PAGE = {
     students: 'students.html',
     families: 'families.html',
     student_scheduling: 'student_scheduling.html',
+    assignments: 'assignments.html',
     student_timetable: 'student_timetable.html',
     student_diary: 'student_diary.html',
     student_leave_requests: 'student_leave_requests.html',
@@ -2793,6 +2794,8 @@ function renderAdminSidebarSequence() {
             children: [
                 { page: 'students.html', label: 'Students', icon: 'users' },
                 { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
+                { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
+                { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
                 { page: 'certificate.html', label: 'Certificates', icon: 'award' },
                 { page: 'library.html', label: 'Library', icon: 'library' },
                 { page: 'families.html', label: 'Families', icon: 'home' }

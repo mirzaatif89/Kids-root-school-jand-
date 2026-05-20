@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lecture Uploading - Apexiums School System</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .upload-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
@@ -54,8 +54,8 @@
             <section class="upload-panel"><h3 style="margin-bottom:1rem;">Uploaded Lectures</h3><div id="lectureUploadList"></div></section>
         </main>
     </div>
-    <script src="auth.js?v=20260520-sidebar-sequence"></script>
-    <script src="script.js?v=20260520-sidebar-sequence"></script>
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         const LECTURE_KEY = 'eduCore_uploaded_lectures';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }

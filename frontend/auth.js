@@ -115,6 +115,7 @@
         'students.html': { moduleKey: 'students', defaultHome: 'students.html', label: 'Students', icon: 'users' },
         'families.html': { moduleKey: 'families', defaultHome: 'dashboard.html', label: 'Families', icon: 'home' },
         'student_scheduling.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Student Scheduling', icon: 'calendar-clock' },
+        'assignments.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Assignments', icon: 'upload' },
         'student_timetable.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Timetable', icon: 'calendar-clock' },
         'student_diary.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Diary', icon: 'book-open' },
         'student_leave_requests.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Leave Requests', icon: 'calendar-check' },
@@ -573,6 +574,8 @@
                     children: [
                         { page: 'students.html', label: 'Students', icon: 'users' },
                         { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
+                        { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
+                        { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
                         { page: 'certificate.html', label: 'Certificates', icon: 'award' },
                         { page: 'library.html', label: 'Library', icon: 'library' },
                         { page: 'families.html', label: 'Families', icon: 'home' }

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Fees - My own Science school</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -829,8 +829,8 @@
         </main>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-sequence"></script>
-    <script src="script.js?v=20260520-sidebar-sequence"></script>
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
         const STORAGE_KEY_FINE_PAYMENTS = 'eduCore_fine_payments';
@@ -1966,7 +1966,7 @@
 
             // Create header section showing summary
             const headerDiv = document.createElement('div');
-            headerDiv.style.cssText = `
+            headerDiv.style.css?v=20260520-responsive-systemText = `
                 padding: 1.5rem;
                 background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
                 border-radius: 0.75rem;
@@ -2015,7 +2015,7 @@
             // Show pending months
             if (pendingMonths.length === 0) {
                 const noData = document.createElement('div');
-                noData.style.cssText = `
+                noData.style.css?v=20260520-responsive-systemText = `
                     padding: 2rem;
                     text-align: center;
                     background: #dcfce7;
@@ -2031,7 +2031,7 @@
                 container.appendChild(noData);
             } else {
                 const titleDiv = document.createElement('div');
-                titleDiv.style.cssText = `
+                titleDiv.style.css?v=20260520-responsive-systemText = `
                     padding: 1rem 0;
                     border-bottom: 2px solid #e5e7eb;
                     margin-bottom: 1rem;
@@ -2098,7 +2098,7 @@
                 // Show Paid Months section
                 if (paidMonths.length > 0) {
                     const paidTitleDiv = document.createElement('div');
-                    paidTitleDiv.style.cssText = `
+                    paidTitleDiv.style.css?v=20260520-responsive-systemText = `
                         padding: 1rem 0;
                         border-bottom: 2px solid #e5e7eb;
                         margin-top: 2rem;

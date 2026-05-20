@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Portal - EduCore</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -340,6 +340,7 @@
 
         .portal-container.portal-screen-open .user-card,
         .portal-container.portal-screen-open .stats-grid,
+        .portal-container.portal-screen-open .portal-module-heading,
         .portal-container.portal-screen-open .student-action-grid {
             display: none !important;
         }
@@ -1003,25 +1004,389 @@
             display: none;
         }
 
+        body {
+            background:
+                linear-gradient(180deg, #f7fafc 0%, #eef7f6 44%, #f8fafc 100%);
+            color: #0f172a;
+        }
+
+        .portal-header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            min-height: 76px;
+            padding: 12px clamp(18px, 4vw, 44px);
+            border-bottom: 1px solid #dce8ef;
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(12px);
+        }
+
+        .portal-menu-btn {
+            border-radius: 8px;
+            border-color: #cbd5e1;
+            color: #0f172a;
+            min-width: 112px;
+        }
+
+        .portal-menu-btn:hover {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #ffffff;
+        }
+
+        .portal-container {
+            width: min(100%, 1180px);
+            max-width: 1180px;
+            padding: clamp(1rem, 3vw, 2rem);
+        }
+
+        .portal-shell {
+            display: grid;
+            gap: 1.15rem;
+        }
+
+        .portal-welcome-strip {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0.35rem 0 1rem;
+        }
+
+        .portal-welcome-strip h1 {
+            margin: 0;
+            font-size: clamp(1.45rem, 3vw, 2.1rem);
+            letter-spacing: 0;
+            color: #0f172a;
+        }
+
+        .portal-welcome-strip p {
+            margin: 0.25rem 0 0;
+            color: #64748b;
+            font-weight: 700;
+        }
+
+        .portal-date-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            min-height: 38px;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid #d9e7ea;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #334155;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .user-card {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: stretch;
+            gap: clamp(1rem, 2.5vw, 2rem);
+            min-height: 214px;
+            padding: clamp(1.25rem, 3vw, 2rem);
+            border-radius: 8px;
+            border: 1px solid #d9e7ea;
+            background: #ffffff;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.08);
+            text-align: left;
+            overflow: hidden;
+        }
+
+        .user-card::before {
+            content: "";
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            background: linear-gradient(180deg, #0f766e, #2563eb 54%, #d97706);
+        }
+
+        .user-card::after {
+            content: "";
+            position: absolute;
+            right: -90px;
+            top: -120px;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.12), rgba(37, 99, 235, 0));
+            pointer-events: none;
+        }
+
+        .user-card-main {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: clamp(1rem, 2vw, 1.4rem);
+        }
+
+        .user-avatar {
+            width: clamp(86px, 12vw, 116px);
+            height: clamp(86px, 12vw, 116px);
+            border-radius: 8px;
+            border: 0;
+            background: #0f766e;
+            box-shadow: none;
+            font-size: 2.35rem;
+            flex: 0 0 auto;
+            outline: 6px solid #f1f5f9;
+        }
+
+        .student-profile-copy {
+            min-width: 0;
+        }
+
+        .student-profile-copy h2 {
+            margin: 0;
+            font-size: clamp(1.45rem, 3vw, 2rem);
+            line-height: 1.12;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .student-profile-copy > p {
+            margin-top: 0.45rem !important;
+            font-size: 1rem;
+            color: #475569 !important;
+            font-weight: 800;
+        }
+
+        .profile-meta {
+            justify-content: flex-start;
+            margin-top: 1rem;
+        }
+
+        .meta-pill {
+            min-height: 34px;
+            border-radius: 999px;
+            border: 1px solid #d6e5ea;
+            background: #f8fafc;
+            color: #334155;
+            font-weight: 800;
+        }
+
+        .portal-profile-side {
+            position: relative;
+            z-index: 1;
+            min-width: 250px;
+            display: grid !important;
+            align-content: stretch;
+            gap: 0.85rem;
+        }
+
+        .portal-status-card {
+            display: grid;
+            gap: 0.45rem;
+            min-height: 86px;
+            padding: 1rem;
+            border: 1px solid #d9e7ea;
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        .portal-status-card span {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .portal-status-card strong {
+            color: #0f172a;
+            font-size: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 1rem;
+            margin: 1rem 0 1.25rem;
+        }
+
+        .stat-box {
+            display: grid;
+            gap: 0.45rem;
+            min-height: 104px;
+            padding: 1rem;
+            border: 1px solid #d9e7ea;
+            border-left: 4px solid #0f766e;
+            border-radius: 8px;
+            background: #ffffff;
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+        }
+
+        .stat-box:hover,
+        .student-action-btn:hover {
+            border-color: #b6d7dd;
+        }
+
+        .stat-box:nth-child(2) {
+            border-left-color: #2563eb;
+        }
+
+        .stat-box:nth-child(3) {
+            border-left-color: #d97706;
+        }
+
+        .stat-box:nth-child(4) {
+            border-left-color: #7c3aed;
+        }
+
+        .stat-box span {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .stat-box strong {
+            color: #0f172a;
+            font-size: 1.35rem;
+            line-height: 1.1;
+        }
+
+        .student-action-grid {
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 1rem;
+            margin: 0 0 1.5rem;
+        }
+
+        .portal-module-heading {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin: 0.35rem 0 0;
+        }
+
+        .portal-module-heading h2 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #0f172a;
+            letter-spacing: 0;
+        }
+
+        .portal-module-heading p {
+            margin: 0.2rem 0 0;
+            color: #64748b;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .portal-module-count {
+            display: inline-flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 0.4rem 0.7rem;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-weight: 900;
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .student-action-btn {
+            position: relative;
+            min-height: 104px;
+            justify-content: flex-start;
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #d9e7ea !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+            text-align: left;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .student-action-btn::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(15, 118, 110, 0.08), rgba(37, 99, 235, 0.05));
+            opacity: 0;
+            transition: opacity 0.18s ease;
+            z-index: -1;
+        }
+
+        .student-action-btn i,
+        .student-action-btn svg {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            color: #0f766e;
+        }
+
+        .student-action-btn::after {
+            content: "Open";
+            margin-top: auto;
+            color: #64748b;
+            font-size: 0.76rem;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .student-action-btn:hover {
+            transform: translateY(-2px);
+            border-color: #0f766e !important;
+            box-shadow: 0 16px 34px rgba(15, 23, 42, 0.11);
+        }
+
+        .student-action-btn:hover::before {
+            opacity: 1;
+        }
+
+        .student-action-btn:hover::after,
+        .student-action-btn:hover i,
+        .student-action-btn:hover svg {
+            color: #0f766e;
+        }
+
+        .panel-card {
+            border-radius: 8px;
+            border: 1px solid #d9e7ea;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+        }
+
         @media (max-width: 900px) {
             .portal-container {
                 padding: 1.25rem;
             }
 
             .user-card {
+                grid-template-columns: 1fr;
                 padding: 1.15rem;
             }
 
-            .portal-grid {
-                grid-template-columns: 1fr;
+            .portal-profile-side {
+                min-width: 0;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .info-grid {
                 grid-template-columns: 1fr;
             }
 
+            .stats-grid,
             .student-action-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .portal-grid {
+                grid-template-columns: 1fr;
             }
 
             .lecture-card {
@@ -1047,13 +1412,28 @@
                 padding: 0.9rem;
             }
 
+            .portal-welcome-strip {
+                display: grid;
+            }
+
+            .portal-module-heading {
+                display: grid;
+                align-items: start;
+            }
+
+            .user-card-main {
+                align-items: flex-start;
+            }
+
+            .portal-profile-side,
+            .stats-grid,
             .student-action-grid {
                 gap: 0.75rem;
                 grid-template-columns: 1fr;
             }
 
             .student-action-btn {
-                min-height: 54px;
+                min-height: 88px;
                 justify-content: flex-start;
                 font-size: 0.92rem;
                 padding: 0.75rem 1rem;
@@ -1129,11 +1509,22 @@
         </button>
     </header>
 
-    <div class="portal-container">
+    <div class="portal-container portal-shell">
+        <section class="portal-welcome-strip" aria-label="Student portal overview">
+            <div>
+                <h1>Student Portal</h1>
+                <p>Track attendance, learning tasks, notices, fees, and academic progress.</p>
+            </div>
+            <div class="portal-date-chip">
+                <i data-lucide="calendar-days" width="16"></i>
+                <span id="portalTodayLabel">Today</span>
+            </div>
+        </section>
+
         <div class="user-card">
             <div class="user-card-main">
                 <div class="user-avatar" id="avatarLetter">S</div>
-                <div>
+                <div class="student-profile-copy">
                     <h2 id="studentName">Loading...</h2>
                     <p style="color: var(--text-secondary);" id="studentClass">Class: -</p>
                     <div class="profile-meta">
@@ -1149,11 +1540,44 @@
                 </div>
             </div>
 
-            <div style="min-width: 220px;">
-                <div style="font-size: 0.84rem; color: var(--text-secondary); margin-bottom: 0.4rem;">Current Fee Status</div>
-                <div id="feeStatusBadge" class="status-badge status-pending">Pending</div>
+            <div class="portal-profile-side">
+                <div class="portal-status-card">
+                    <span>Current Fee Status</span>
+                    <div id="feeStatusBadge" class="status-badge status-pending">Pending</div>
+                </div>
+                <div class="portal-status-card">
+                    <span>Campus</span>
+                    <strong id="portalCampusName">-</strong>
+                </div>
             </div>
         </div>
+
+        <section class="stats-grid" aria-label="Student quick summary">
+            <div class="stat-box">
+                <span>Attendance</span>
+                <strong id="portalSummaryAttendance">-</strong>
+            </div>
+            <div class="stat-box">
+                <span>Monthly Fee</span>
+                <strong id="portalSummaryMonthlyFee">PKR 0</strong>
+            </div>
+            <div class="stat-box">
+                <span>Pending Fee</span>
+                <strong id="portalSummaryPendingFee">PKR 0</strong>
+            </div>
+            <div class="stat-box">
+                <span>Active Class</span>
+                <strong id="portalSummaryClass">-</strong>
+            </div>
+        </section>
+
+        <section class="portal-module-heading" aria-label="Student module overview">
+            <div>
+                <h2>Portal Modules</h2>
+                <p>Open any academic, fee, attendance, or communication workspace.</p>
+            </div>
+            <span class="portal-module-count">14 modules</span>
+        </section>
 
         <section class="student-action-grid" aria-label="Student portal actions">
             <button type="button" class="student-action-btn" data-student-action-target="studentAttendanceSection">
@@ -1399,6 +1823,40 @@
             <div class="empty-note" id="studentLectureEmpty">No scheduled lecture has been added for your class yet.</div>
         </section>
 
+        <section class="panel-card student-portal-section" id="studentAssignmentSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Submitted Assignments</h3>
+            <div class="portal-content-list" id="studentAssignmentHistory"></div>
+            <div class="empty-note" id="studentAssignmentEmpty">You have not submitted any assignment yet.</div>
+        </section>
+
+        <section class="panel-card student-portal-section" id="studentSubmitAssignmentSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Submit Assignment</h3>
+            <form id="studentAssignmentForm">
+                <div class="result-filter-grid complaint-form-grid">
+                    <div class="portal-field">
+                        <label for="studentAssignmentTitle">Assignment Title</label>
+                        <input type="text" id="studentAssignmentTitle" class="form-control" required placeholder="e.g. Science Chapter 4">
+                    </div>
+                    <div class="portal-field">
+                        <label for="studentAssignmentSubject">Subject</label>
+                        <input type="text" id="studentAssignmentSubject" class="form-control" placeholder="e.g. Science">
+                    </div>
+                    <div class="portal-field" style="grid-column: 1 / -1;">
+                        <label for="studentAssignmentNote">Notes</label>
+                        <textarea id="studentAssignmentNote" class="form-control" rows="4" placeholder="Write any note for the teacher/admin"></textarea>
+                    </div>
+                    <div class="portal-field portal-file-box" style="grid-column: 1 / -1;">
+                        <label for="studentAssignmentFile">Upload Assignment File</label>
+                        <input type="file" id="studentAssignmentFile" class="form-control" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt">
+                        <div class="portal-file-help" id="studentAssignmentFileName">Attach assignment file: PDF, Word, image, or text.</div>
+                    </div>
+                </div>
+                <div class="portal-action-row">
+                    <button type="submit" class="btn btn-primary">Submit Assignment</button>
+                </div>
+            </form>
+        </section>
+
         <section class="panel-card student-portal-section complaint-panel-card" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Complain Box</h3>
             <form id="studentComplaintForm">
@@ -1466,7 +1924,7 @@
         </section>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-sequence"></script>
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
     <script>
         const isLocalhost = window.location.hostname === 'localhost' ||
             window.location.hostname === '127.0.0.1' ||
@@ -1491,6 +1949,7 @@
         const STUDENT_QUIZ_KEY = 'eduCore_student_quizzes';
         const STUDENT_QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
         const STUDENT_UPLOADED_LECTURE_KEY = 'eduCore_uploaded_lectures';
+        const STUDENT_ASSIGNMENT_SUBMISSION_KEY = 'eduCore_student_assignment_submissions';
         const COMPLAINT_KEY = 'eduCore_complaints';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const authToken = sessionStorage.getItem('eduCore_token');
@@ -1734,6 +2193,8 @@
 
             setText('portalMonthlyFee', formatCurrency(feeAmount));
             setText('portalPendingFee', formatCurrency(pendingAmount));
+            setText('portalSummaryMonthlyFee', formatCurrency(feeAmount));
+            setText('portalSummaryPendingFee', formatCurrency(pendingAmount));
             setText('portalFeeFrequency', student.feeFrequency || 'Monthly');
             setText('portalLastPayment', student.paymentDate || 'Not paid yet');
             setText('portalFeeStatusText', student.feesStatus || 'Pending');
@@ -1855,6 +2316,121 @@
 
         function applyStudentCourse(student = {}) {
             renderPortalContentList('studentCourseList', 'studentCourseEmpty', getClassWiseItems(STUDENT_COURSE_KEY, student), STUDENT_COURSE_KEY);
+        }
+
+        function getStudentAssignmentSubmissions(student = {}) {
+            const candidates = getStudentIdentityCandidates(student);
+            return getPortalData(STUDENT_ASSIGNMENT_SUBMISSION_KEY)
+                .filter((item) => candidates.includes(String(item.studentId || item.studentCode || '').trim().toLowerCase()))
+                .sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || '')));
+        }
+
+        function renderStudentAssignmentSubmissions(student = {}) {
+            const list = document.getElementById('studentAssignmentHistory');
+            const empty = document.getElementById('studentAssignmentEmpty');
+            if (!list || !empty) return;
+
+            const submissions = getStudentAssignmentSubmissions(student);
+            if (!submissions.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = submissions.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.assignmentTitle || 'Assignment')}</h4>
+                    <div class="portal-content-meta">
+                        ${escapeHtml(item.subject || 'Subject')} | ${escapeHtml(item.classGrade || '-')} | ${escapeHtml(item.submittedAt ? new Date(item.submittedAt).toLocaleString() : '-')}
+                    </div>
+                    <p>${escapeHtml(item.note || 'Submitted')}</p>
+                    ${item.fileData ? `<a class="portal-download-btn" href="${escapeHtml(item.fileData)}" download="${escapeHtml(item.fileName || 'assignment')}"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.fileName || 'Assignment File')}</a>` : ''}
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function updateStudentAssignmentFileLabel() {
+            const file = document.getElementById('studentAssignmentFile')?.files?.[0];
+            const label = document.getElementById('studentAssignmentFileName');
+            if (label) {
+                label.textContent = file
+                    ? `Selected: ${file.name}`
+                    : 'Attach assignment file: PDF, Word, image, or text.';
+            }
+        }
+
+        async function submitStudentAssignment(event) {
+            event.preventDefault();
+            const student = getCurrentPortalStudent();
+            const title = document.getElementById('studentAssignmentTitle').value.trim();
+            const subject = document.getElementById('studentAssignmentSubject').value.trim();
+            const note = document.getElementById('studentAssignmentNote').value.trim();
+            if (!title) {
+                showAppAlert('Assignment title is required.', 'Missing Assignment');
+                return;
+            }
+
+            let file = null;
+            try {
+                file = await readPortalFile(document.getElementById('studentAssignmentFile'));
+            } catch (_error) {
+                showAppAlert('Assignment file could not be attached.', 'File Error');
+                return;
+            }
+            if (!file) {
+                showAppAlert('Please attach an assignment file.', 'Missing File');
+                return;
+            }
+
+            const payload = {
+                id: `ASG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                studentId: student.id || loggedInUser.id || '',
+                studentCode: student.studentCode || '',
+                studentName: student.fullName || loggedInUser.fullName || 'Student',
+                rollNo: student.rollNo || '',
+                classGrade: student.classGrade || '',
+                assignmentTitle: title,
+                subject,
+                note,
+                fileName: file.name,
+                fileType: file.type,
+                fileData: file.dataUrl,
+                submittedAt: new Date().toISOString(),
+                status: 'Submitted'
+            };
+
+            const submissions = getPortalData(STUDENT_ASSIGNMENT_SUBMISSION_KEY);
+            submissions.unshift(payload);
+            try {
+                localStorage.setItem(STUDENT_ASSIGNMENT_SUBMISSION_KEY, JSON.stringify(submissions));
+            } catch (_error) {
+                showAppAlert('Assignment file is too large to save in browser storage.', 'Storage Full');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/student-assignments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json().catch(() => null);
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'Database sync failed.');
+                }
+            } catch (error) {
+                showAppAlert(`Assignment saved locally, but database sync failed: ${error.message}`, 'Saved Locally');
+            }
+
+            document.getElementById('studentAssignmentForm').reset();
+            updateStudentAssignmentFileLabel();
+            renderStudentAssignmentSubmissions(student);
+            showAppAlert('Your assignment has been submitted.', 'Assignment Submitted');
         }
 
         function getStudentQuizSubmissionKey(student = {}, quizId = '') {
@@ -2702,6 +3278,7 @@
             const rate = total ? Math.round((attended / total) * 100) : 0;
 
             document.getElementById('attendanceRate').innerText = total ? `${rate}%` : 'No record';
+            document.getElementById('portalSummaryAttendance').innerText = total ? `${rate}%` : 'No record';
             document.getElementById('attendanceTotal').innerText = total ? String(total) : '-';
             document.getElementById('attendancePresent').innerText = total ? String(present) : '-';
             document.getElementById('attendanceAbsent').innerText = total ? String(absent) : '-';
@@ -3001,6 +3578,19 @@
             }
             document.getElementById('studentClass').innerText = `Class: ${student.classGrade || '-'}`;
             document.getElementById('rollNo').innerText = student.rollNo || '-';
+            const campusName = student.campusName || student.branchName || '-';
+            const setTextContent = (id, value) => {
+                const element = document.getElementById(id);
+                if (element) element.innerText = value;
+            };
+            setTextContent('portalCampusName', campusName);
+            setTextContent('portalSummaryClass', student.classGrade || '-');
+            setTextContent('portalTodayLabel', new Date().toLocaleDateString(undefined, {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            }));
             const setFieldValue = (id, value) => {
                 const field = document.getElementById(id);
                 if (field) field.value = value || '-';
@@ -3018,6 +3608,7 @@
             applyStudentTimeTable(student);
             applyStudentDiary(student);
             applyStudentCourse(student);
+            renderStudentAssignmentSubmissions(student);
             applyStudentQuizzes(student);
             applyStudentUploadedLectures(student);
             applyStudentLectures(student);
@@ -3124,10 +3715,21 @@
         }
 
         window.onload = () => {
+            const todayLabel = document.getElementById('portalTodayLabel');
+            if (todayLabel) {
+                todayLabel.innerText = new Date().toLocaleDateString(undefined, {
+                    weekday: 'short',
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
             document.getElementById('downloadDateSheetBtn')?.addEventListener('click', downloadDateSheet);
             document.getElementById('loadStudentResultBtn')?.addEventListener('click', loadStudentResultByLookup);
             document.getElementById('printStudentResultBtn')?.addEventListener('click', printStudentResultCard);
             document.getElementById('studentLeaveForm')?.addEventListener('submit', submitStudentLeaveRequest);
+            document.getElementById('studentAssignmentForm')?.addEventListener('submit', submitStudentAssignment);
+            document.getElementById('studentAssignmentFile')?.addEventListener('change', updateStudentAssignmentFileLabel);
             document.getElementById('studentComplaintForm')?.addEventListener('submit', submitStudentComplaint);
             document.getElementById('studentComplaintFile')?.addEventListener('change', updateStudentComplaintFileLabel);
             document.getElementById('studentQuizList')?.addEventListener('submit', submitStudentQuiz);

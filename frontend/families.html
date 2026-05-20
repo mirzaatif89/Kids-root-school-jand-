@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Families - Apexiums School System</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .family-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
@@ -37,8 +37,8 @@
             <section id="familiesList" class="family-grid"></section>
         </main>
     </div>
-    <script src="auth.js?v=20260520-sidebar-sequence"></script>
-    <script src="script.js?v=20260520-sidebar-sequence"></script>
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }

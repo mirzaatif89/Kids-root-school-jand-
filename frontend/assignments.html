@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Assignments - My own Science school</title>
+    <link rel="stylesheet" href="style.css?v=20260520-responsive-system">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .assignment-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .assignment-filter-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.85rem;
+            margin-bottom: 1rem;
+        }
+
+        .assignment-filter-bar input,
+        .assignment-filter-bar select {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 0.85rem;
+            background: #fff;
+            font: inherit;
+        }
+
+        .assignment-file-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 0;
+            background: transparent;
+            color: #0f766e;
+            font-weight: 800;
+            cursor: pointer;
+            padding: 0;
+            font: inherit;
+        }
+
+        .assignment-note {
+            max-width: 320px;
+            white-space: pre-wrap;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Student Assignments</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Review submitted assignments by class, student, subject, and upload file.</p>
+                </div>
+            </header>
+
+            <section class="assignment-summary">
+                <div class="card">
+                    <div class="card-title">Total Submissions</div>
+                    <div class="card-value" id="assignmentTotalCount">0</div>
+                    <div class="card-trend">All uploaded assignments</div>
+                    <div class="card-icon"><i data-lucide="upload"></i></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Classes</div>
+                    <div class="card-value" id="assignmentClassCount">0</div>
+                    <div class="card-trend">Classes with submissions</div>
+                    <div class="card-icon"><i data-lucide="school"></i></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Students</div>
+                    <div class="card-value" id="assignmentStudentCount">0</div>
+                    <div class="card-trend">Unique students</div>
+                    <div class="card-icon"><i data-lucide="users"></i></div>
+                </div>
+            </section>
+
+            <section class="table-container">
+                <div class="table-header">
+                    <div>
+                        <h3>Submitted Work</h3>
+                        <p style="color: var(--text-secondary); margin-top: 0.2rem;">Latest submissions appear first.</p>
+                    </div>
+                </div>
+
+                <div class="assignment-filter-bar">
+                    <input type="search" id="assignmentSearch" placeholder="Search student, title, subject">
+                    <select id="assignmentClassFilter">
+                        <option value="">All Classes</option>
+                    </select>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Class</th>
+                            <th>Student</th>
+                            <th>Roll No</th>
+                            <th>Assignment</th>
+                            <th>Subject</th>
+                            <th>Submitted</th>
+                            <th>File</th>
+                            <th>Note</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assignmentTableBody">
+                        <tr><td colspan="8">Loading assignments...</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="script.js?v=20260520-sidebar-assignments"></script>
+    <script>
+        const ASSIGNMENT_LOCAL_KEY = 'eduCore_student_assignment_submissions';
+        let assignmentRows = [];
+
+        function escapeAssignmentHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function normalizeAssignmentText(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function downloadAssignmentFile(index) {
+            const item = assignmentRows[index];
+            if (!item?.fileData) {
+                alert('No file is available for this assignment.');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = item.fileData;
+            link.download = item.fileName || 'assignment-file';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+
+        function updateAssignmentSummary(rows) {
+            document.getElementById('assignmentTotalCount').textContent = rows.length;
+            document.getElementById('assignmentClassCount').textContent = new Set(rows.map((item) => item.classGrade).filter(Boolean)).size;
+            document.getElementById('assignmentStudentCount').textContent = new Set(rows.map((item) => item.studentId || item.studentCode || item.studentName).filter(Boolean)).size;
+        }
+
+        function populateAssignmentClassFilter(rows) {
+            const select = document.getElementById('assignmentClassFilter');
+            const selected = select.value;
+            const classes = [...new Set(rows.map((item) => item.classGrade).filter(Boolean))]
+                .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+            select.innerHTML = '<option value="">All Classes</option>' + classes.map((className) => (
+                `<option value="${escapeAssignmentHtml(className)}">${escapeAssignmentHtml(className)}</option>`
+            )).join('');
+            select.value = selected;
+        }
+
+        function renderAssignments() {
+            const tbody = document.getElementById('assignmentTableBody');
+            const search = normalizeAssignmentText(document.getElementById('assignmentSearch').value);
+            const classFilter = document.getElementById('assignmentClassFilter').value;
+            const rows = assignmentRows.filter((item) => {
+                const haystack = [
+                    item.studentName,
+                    item.rollNo,
+                    item.classGrade,
+                    item.assignmentTitle,
+                    item.subject,
+                    item.fileName
+                ].map(normalizeAssignmentText).join(' ');
+                return (!search || haystack.includes(search)) &&
+                    (!classFilter || String(item.classGrade || '') === classFilter);
+            });
+
+            updateAssignmentSummary(rows);
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="8">No assignment submissions found.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map((item) => {
+                const originalIndex = assignmentRows.indexOf(item);
+                return `
+                    <tr>
+                        <td>${escapeAssignmentHtml(item.classGrade || '-')}</td>
+                        <td>${escapeAssignmentHtml(item.studentName || '-')}</td>
+                        <td>${escapeAssignmentHtml(item.rollNo || '-')}</td>
+                        <td>${escapeAssignmentHtml(item.assignmentTitle || '-')}</td>
+                        <td>${escapeAssignmentHtml(item.subject || '-')}</td>
+                        <td>${escapeAssignmentHtml(item.submittedAt ? new Date(item.submittedAt).toLocaleString() : '-')}</td>
+                        <td>${item.fileData ? `<button type="button" class="assignment-file-link" onclick="downloadAssignmentFile(${originalIndex})"><i data-lucide="download" width="15"></i>${escapeAssignmentHtml(item.fileName || 'Download')}</button>` : '-'}</td>
+                        <td><div class="assignment-note">${escapeAssignmentHtml(item.note || '-')}</div></td>
+                    </tr>
+                `;
+            }).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadAssignments() {
+            const token = sessionStorage.getItem('eduCore_token') || '';
+            try {
+                const response = await fetch(`${API_BASE_URL}/student-assignments`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+                const result = await response.json();
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'Assignments could not be loaded.');
+                }
+                assignmentRows = Array.isArray(result.assignments) ? result.assignments : [];
+                localStorage.setItem(ASSIGNMENT_LOCAL_KEY, JSON.stringify(assignmentRows));
+            } catch (error) {
+                try {
+                    assignmentRows = JSON.parse(localStorage.getItem(ASSIGNMENT_LOCAL_KEY) || '[]');
+                } catch (_error) {
+                    assignmentRows = [];
+                }
+            }
+
+            populateAssignmentClassFilter(assignmentRows);
+            renderAssignments();
+        }
+
+        document.getElementById('assignmentSearch').addEventListener('input', renderAssignments);
+        document.getElementById('assignmentClassFilter').addEventListener('change', renderAssignments);
+        loadAssignments();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>
