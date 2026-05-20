@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Fee - Apexiums School System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .set-fee-layout { display:grid; grid-template-columns:minmax(300px,420px) minmax(0,1fr); gap:1rem; align-items:start; }
+        .set-fee-panel { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
+        .set-fee-panel h2 { margin:0 0 1rem; color:var(--text-primary); font-size:1.15rem; }
+        .set-fee-form { display:grid; gap:1rem; }
+        .set-fee-field label { display:block; margin-bottom:.45rem; color:var(--text-secondary); font-size:.85rem; font-weight:800; }
+        .set-fee-field input, .set-fee-field select { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .8rem; font:inherit; background:#fff; }
+        .set-fee-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+        .set-fee-pills { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem; }
+        .set-fee-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.36rem .7rem; background:#ecfeff; color:#155e75; font-size:.82rem; font-weight:800; }
+        .history-table { width:100%; border-collapse:collapse; }
+        .history-table th, .history-table td { padding:.75rem; border-bottom:1px solid var(--border-color); text-align:left; }
+        .history-table th { background:#f8fafc; color:var(--text-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
+        .empty-history { padding:1rem; border:1px dashed var(--border-color); border-radius:8px; color:var(--text-secondary); background:#f8fafc; }
+        @media (max-width:900px){ .set-fee-layout{ grid-template-columns:1fr; } }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="set_fee.html" class="nav-item active"><i data-lucide="badge-dollar-sign"></i><span>Set Fee</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Set Fee</h1>
+                    <p style="color:var(--text-secondary); margin-top:.3rem;">Set class fee by month and year, and review fee history.</p>
+                </div>
+            </header>
+
+            <section class="set-fee-layout">
+                <div class="set-fee-panel">
+                    <h2>Class Fee Setup</h2>
+                    <form id="classFeeForm" class="set-fee-form">
+                        <div class="set-fee-field">
+                            <label for="classFeeClassSelect">Class</label>
+                            <select id="classFeeClassSelect" required></select>
+                        </div>
+                        <div class="set-fee-field">
+                            <label for="classFeeAmount">Monthly Fee</label>
+                            <input type="number" id="classFeeAmount" placeholder="e.g. 5000" min="0" required>
+                        </div>
+                        <div class="set-fee-field">
+                            <label for="classFeeFrequency">Frequency</label>
+                            <select id="classFeeFrequency">
+                                <option value="Monthly">Monthly</option>
+                                <option value="Yearly">Yearly</option>
+                            </select>
+                        </div>
+                        <div class="set-fee-field">
+                            <label for="classFeeMonth">Month</label>
+                            <select id="classFeeMonth"></select>
+                        </div>
+                        <div class="set-fee-field">
+                            <label for="classFeeYear">Year</label>
+                            <input type="number" id="classFeeYear" min="2000" max="2100">
+                        </div>
+                        <div class="set-fee-actions">
+                            <button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Fee</button>
+                        </div>
+                    </form>
+                    <div id="classFeeList" class="set-fee-pills"></div>
+                </div>
+
+                <div class="set-fee-panel">
+                    <h2>Fee History</h2>
+                    <div id="classFeeHistoryWrap"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        const FEE_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        function initSetFeePage() {
+            const monthSelect = document.getElementById('classFeeMonth');
+            if (monthSelect) {
+                monthSelect.innerHTML = FEE_MONTHS.map((month) => `<option value="${month}">${month}</option>`).join('');
+                monthSelect.value = FEE_MONTHS[new Date().getMonth()];
+            }
+            const yearInput = document.getElementById('classFeeYear');
+            if (yearInput) yearInput.value = String(new Date().getFullYear());
+            if (typeof setupClassFeeSettings === 'function') setupClassFeeSettings();
+            renderClassFeeHistory();
+        }
+        document.addEventListener('DOMContentLoaded', initSetFeePage);
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

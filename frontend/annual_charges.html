@@ -7,7 +7,30 @@
     <title>Annual Charges - Apexiums School System</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>.module-panel{background:#fff;border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow-sm)}.module-panel h2{margin:0 0 .5rem;font-size:1.15rem}.module-panel p{margin:0;color:var(--text-secondary)}</style>
+    <style>
+        .charges-layout { display:grid; grid-template-columns:minmax(280px,380px) minmax(0,1fr); gap:1rem; align-items:start; }
+        .charges-panel { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
+        .charges-form { display:grid; gap:1rem; }
+        .charges-form label { display:block; margin-bottom:.4rem; color:var(--text-secondary); font-weight:700; font-size:.85rem; }
+        .charges-form input, .charges-form select { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .8rem; font:inherit; }
+        .slip-preview { width:min(760px,100%); margin:0 auto; border:1px solid #0f766e; background:#fff; color:#111827; }
+        .slip-head { display:grid; grid-template-columns:70px 1fr 120px; gap:.75rem; align-items:center; padding:1rem; border-bottom:2px solid #0f766e; }
+        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; }
+        .slip-head h2 { margin:0; color:#0f4f4a; font-size:1.35rem; text-align:center; }
+        .slip-head p { margin:.2rem 0 0; text-align:center; color:#475569; }
+        .slip-copy { border:1px solid #94a3b8; margin:1rem; }
+        .slip-copy-title { background:#0f766e; color:#fff; padding:.45rem .75rem; font-weight:800; display:flex; justify-content:space-between; }
+        .slip-grid { display:grid; grid-template-columns:repeat(2,1fr); border-bottom:1px solid #94a3b8; }
+        .slip-grid div { padding:.55rem .75rem; border-right:1px solid #cbd5e1; }
+        .slip-grid div:nth-child(even) { border-right:0; }
+        .slip-table { width:100%; border-collapse:collapse; }
+        .slip-table th, .slip-table td { border:1px solid #cbd5e1; padding:.6rem .75rem; text-align:left; }
+        .slip-table th { background:#f1f5f9; }
+        .slip-total { display:flex; justify-content:flex-end; padding:.75rem; font-weight:900; color:#0f4f4a; }
+        .print-actions { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; }
+        @media (max-width:980px){ .charges-layout{ grid-template-columns:1fr; } }
+        @media print { .sidebar,.header,.charges-panel:first-child,.print-actions{ display:none!important; } .main-content{ margin:0!important; padding:0!important; } .charges-layout{ display:block; } .charges-panel{ border:0; box-shadow:none; } }
+    </style>
 </head>
 
 <body>
@@ -22,22 +45,69 @@
                 <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
                 <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
                 <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
-                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
-                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
-                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
-                <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
-                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
-                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+                <a href="annual_charges.html" class="nav-item active"><i data-lucide="receipt"></i><span>Annual Charges</span></a>
             </nav>
-            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
         </aside>
         <main class="main-content">
-            <header class="header"><h1>Annual Charges</h1></header>
-            <section class="module-panel"><h2>Annual Charges</h2><p>This section is ready for annual charges setup and records.</p></section>
+            <header class="header"><div><h1>Annual Charges</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Generate annual charges slip.</p></div></header>
+            <section class="charges-layout">
+                <div class="charges-panel">
+                    <form class="charges-form" id="annualChargesForm">
+                        <div><label>Student Name</label><input id="annualStudentName" placeholder="Student name"></div>
+                        <div><label>Class</label><input id="annualClass" placeholder="Class"></div>
+                        <div><label>Roll No</label><input id="annualRoll" placeholder="Roll no"></div>
+                        <div><label>Session</label><input id="annualSession" value="2025-26"></div>
+                        <div><label>Annual Charges</label><input type="number" id="annualAmount" value="0"></div>
+                        <div><label>Due Date</label><input type="date" id="annualDueDate"></div>
+                    </form>
+                    <div class="print-actions">
+                        <button class="btn btn-primary" type="button" onclick="window.print()"><i data-lucide="printer"></i> Print Slip</button>
+                    </div>
+                </div>
+                <div class="charges-panel">
+                    <div class="slip-preview">
+                        <div class="slip-head">
+                            <div class="slip-logo"><i data-lucide="school"></i></div>
+                            <div><h2>Apexiums School System</h2><p>Annual Charges Slip</p></div>
+                            <div style="text-align:right;font-weight:800;">Office Copy</div>
+                        </div>
+                        <div class="slip-copy">
+                            <div class="slip-copy-title"><span>Annual Charges</span><span id="slipSession">2025-26</span></div>
+                            <div class="slip-grid">
+                                <div><strong>Student:</strong> <span id="slipStudent">-</span></div>
+                                <div><strong>Class:</strong> <span id="slipClass">-</span></div>
+                                <div><strong>Roll No:</strong> <span id="slipRoll">-</span></div>
+                                <div><strong>Due Date:</strong> <span id="slipDue">-</span></div>
+                            </div>
+                            <table class="slip-table">
+                                <thead><tr><th>Description</th><th>Amount</th></tr></thead>
+                                <tbody><tr><td>Annual Charges</td><td id="slipAmount">PKR 0</td></tr></tbody>
+                            </table>
+                            <div class="slip-total">Total: <span id="slipTotal" style="margin-left:.5rem;">PKR 0</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
     <script src="auth.js"></script>
     <script src="script.js"></script>
+    <script>
+        function updateAnnualSlip() {
+            const amount = Number(document.getElementById('annualAmount').value || 0);
+            document.getElementById('slipStudent').textContent = document.getElementById('annualStudentName').value || '-';
+            document.getElementById('slipClass').textContent = document.getElementById('annualClass').value || '-';
+            document.getElementById('slipRoll').textContent = document.getElementById('annualRoll').value || '-';
+            document.getElementById('slipSession').textContent = document.getElementById('annualSession').value || '-';
+            document.getElementById('slipDue').textContent = document.getElementById('annualDueDate').value || '-';
+            document.getElementById('slipAmount').textContent = `PKR ${amount.toLocaleString('en-PK')}`;
+            document.getElementById('slipTotal').textContent = `PKR ${amount.toLocaleString('en-PK')}`;
+        }
+        document.querySelectorAll('#annualChargesForm input').forEach((input) => input.addEventListener('input', updateAnnualSlip));
+        updateAnnualSlip();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
 </body>
 
 </html>

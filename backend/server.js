@@ -191,6 +191,7 @@ const activeSessions = new Map();
 const MODULE_KEYS = [
     'dashboard',
     'students',
+    'families',
     'student_scheduling',
     'banners',
     'teachers',
@@ -227,6 +228,7 @@ const ACCESS_LEVELS = ['none', 'view', 'edit', 'manage'];
 const ALLOWED_HOME_PAGES = new Set([
     'dashboard.html',
     'students.html',
+    'families.html',
     'student_scheduling.html',
     'student_timetable.html',
     'student_diary.html',
@@ -305,6 +307,7 @@ const defaultPermissions = {
             permissions: buildModuleSet('none', {
                 dashboard: 'manage',
                 students: 'manage',
+                families: 'manage',
                 student_scheduling: 'manage',
                 banners: 'manage',
                 teachers: 'manage',
@@ -1813,6 +1816,10 @@ app.post('/api/branches', async (req, res) => {
 
             const branchId = item.profileId || item.id || `branch_${String(item.campusName).toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
             const existingBranch = item.id ? await User.findByPk(item.id) : await User.findOne({ where: { id: branchId, role: 'Branch' } });
+            const existingUsername = await User.findOne({ where: { username: item.username } });
+            if (existingUsername && existingUsername.id !== (item.id || branchId)) {
+                return res.status(409).json({ success: false, message: 'This username is already used. Please use a different branch username.' });
+            }
             const rawPassword = item.plainPassword || item.password || existingBranch?.plainPassword || '';
 
             if (!rawPassword) {
@@ -3447,6 +3454,8 @@ function defineStudentModel(db) {
         email: { type: DataTypes.STRING, unique: true, allowNull: true },
         rollNo: DataTypes.STRING,
         formB: DataTypes.STRING,
+        familyId: DataTypes.STRING,
+        familyName: DataTypes.STRING,
         monthlyFee: DataTypes.STRING,
         feeFrequency: DataTypes.STRING,
         feesStatus: { type: DataTypes.STRING, defaultValue: 'Pending' },

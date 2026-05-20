@@ -8,6 +8,7 @@ const STORAGE_KEY_AUTH = 'eduCore_auth';
 const STORAGE_KEY_TEACHER_ATTENDANCE = 'eduCore_teacher_attendance';
 const STORAGE_KEY_STUDENT_ATTENDANCE_CACHE = 'eduCore_student_attendance';
 const STORAGE_KEY_STAFF = 'eduCore_staff';
+const STORAGE_KEY_FAMILIES = 'eduCore_families';
 const STORAGE_KEY_TEACHER_SALARIES = 'eduCore_teacher_salaries';
 const STORAGE_KEY_USERS = 'eduCore_users'; // New Key for student/teacher credentials
 const STORAGE_KEY_PROMOTION_HISTORY = 'eduCore_promotion_history';
@@ -44,12 +45,14 @@ const DEFAULT_STUDENT_CLASS_ORDER = [
 let studentQuickFilterBranchCampuses = [];
 let studentColumnSearchFilter = null;
 let classFeeDefaults = {};
+let branchRecordsCache = [];
 const FALLBACK_ROUTE_TO_PAGE = {
     login: 'login.html',
     index: 'index.html',
     home: 'index.html',
     dashboard: 'dashboard.html',
     students: 'students.html',
+    families: 'families.html',
     student_scheduling: 'student_scheduling.html',
     student_timetable: 'student_timetable.html',
     student_diary: 'student_diary.html',
@@ -782,6 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const printMode = document.getElementById('studentPrintMode');
         const studentProfileImage = document.getElementById('studentProfileImage');
         const studentNameInput = document.getElementById('fullName');
+        populateStudentFamilyOptions();
         bindStudentQuickFilterMultiSelect();
         if (studentProfileImage) {
             studentProfileImage.addEventListener('change', handleStudentPhotoSelection);
@@ -860,9 +864,20 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch((error) => {
                 console.warn('Staff could not be refreshed from database:', error.message);
                 renderStaff();
-            });
+        });
         bindStaffFormSubmit();
         const sSearch = document.getElementById('staffSearchInput');
+        const staffProfileImage = document.getElementById('sProfileImage');
+        const staffNameInput = document.getElementById('sFullName');
+        if (staffProfileImage) {
+            staffProfileImage.addEventListener('change', handleStaffPhotoSelection);
+        }
+        if (staffNameInput) {
+            staffNameInput.addEventListener('input', () => {
+                const currentImage = document.querySelector('#staffPhotoPreview img')?.getAttribute('src') || '';
+                setStaffPhotoPreview(currentImage, staffNameInput.value);
+            });
+        }
         if (sSearch) {
             sSearch.addEventListener('input', (e) => renderStaff(e.target.value.toLowerCase()));
         }
@@ -890,6 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (branchRegistrationForm) {
         renderBranches();
         branchRegistrationForm.addEventListener('submit', handleBranchRegistrationSubmit);
+        document.getElementById('branchCampusName')?.addEventListener('input', handleBranchCampusInput);
     }
 
     // === DASHBOARD HOME LOGIC ===
@@ -1259,6 +1275,23 @@ function setTeacherPhotoPreview(imageSrc = '', fullName = '') {
     }
 
     preview.textContent = getTeacherInitial(fullName);
+}
+
+function getStaffInitial(fullName = '') {
+    const value = String(fullName || '').trim();
+    return value ? value.charAt(0).toUpperCase() : 'S';
+}
+
+function setStaffPhotoPreview(imageSrc = '', fullName = '') {
+    const preview = document.getElementById('staffPhotoPreview');
+    if (!preview) return;
+
+    if (imageSrc) {
+        preview.innerHTML = `<img src="${imageSrc}" alt="${fullName || 'Staff'}">`;
+        return;
+    }
+
+    preview.textContent = getStaffInitial(fullName);
 }
 
 function readFileAsDataUrl(file) {
@@ -1970,6 +2003,30 @@ function readSidebarScrollPosition() {
     }
 }
 
+async function handleStaffPhotoSelection(event) {
+    const file = event.target?.files?.[0];
+    const fullName = document.getElementById('sFullName')?.value || '';
+
+    if (!file) {
+        setStaffPhotoPreview('', fullName);
+        return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+        alert('Please upload an image file only.');
+        event.target.value = '';
+        setStaffPhotoPreview('', fullName);
+        return;
+    }
+
+    try {
+        const imageSrc = await readFileAsDataUrl(file);
+        setStaffPhotoPreview(imageSrc, fullName);
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
 function restoreSidebarScrollPosition(savedPosition = readSidebarScrollPosition()) {
     const navLinks = getSidebarScrollElement();
     if (!navLinks) return;
@@ -2565,6 +2622,7 @@ function ensureAdminSidebarCompleteness() {
     const completeLinks = [
         { page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         { page: 'students.html', label: 'Students', icon: 'users' },
+        { page: 'families.html', label: 'Families', icon: 'home' },
         { page: 'banners.html', label: 'Banners', icon: 'image' },
         { page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
         { page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
@@ -2622,59 +2680,23 @@ function ensureSchedulingNav() {
 
     const currentPage = getCurrentPageName();
     const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html'];
-    const isSchedulingPage = studentSchedulingPages.includes(currentPage) || currentPage === 'teacher_scheduling.html';
+    const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
+    const isTeacherSchedulingPage = currentPage === 'teacher_scheduling.html';
     const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
         .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
 
     const wrapper = document.createElement('div');
-    wrapper.className = `nav-dropdown${isSchedulingPage ? ' open' : ''}`;
     wrapper.dataset.schedulingNav = 'true';
-
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = `nav-item nav-dropdown-toggle${isSchedulingPage ? ' active' : ''}`;
-    toggle.innerHTML = `
-        <span class="nav-item-main">
-            <i data-lucide="calendar-clock"></i>
-            <span>Scheduling</span>
-        </span>
-        <i data-lucide="chevron-down" class="dropdown-chevron"></i>
-    `;
-    toggle.addEventListener('click', () => {
-        wrapper.classList.toggle('open');
-    });
-
-    const submenu = document.createElement('div');
-    submenu.className = 'nav-submenu';
-    submenu.innerHTML = `
-        <a href="${toRoutePath('student_scheduling.html')}" class="nav-subitem${currentPage === 'student_scheduling.html' ? ' active' : ''}">
+    wrapper.innerHTML = `
+        <a href="${toRoutePath('student_scheduling.html')}" class="nav-item${isStudentSchedulingPage ? ' active' : ''}">
             <i data-lucide="users"></i>
             <span>Student Scheduling</span>
         </a>
-        <a href="${toRoutePath('student_timetable.html')}" class="nav-subitem${currentPage === 'student_timetable.html' ? ' active' : ''}">
-            <i data-lucide="calendar-clock"></i>
-            <span>Class Timetable</span>
-        </a>
-        <a href="${toRoutePath('student_diary.html')}" class="nav-subitem${currentPage === 'student_diary.html' ? ' active' : ''}">
-            <i data-lucide="book-open"></i>
-            <span>Class Diary</span>
-        </a>
-        <a href="${toRoutePath('student_leave_requests.html')}" class="nav-subitem${currentPage === 'student_leave_requests.html' ? ' active' : ''}">
-            <i data-lucide="calendar-check"></i>
-            <span>Leave Requests</span>
-        </a>
-        <a href="${toRoutePath('student_courses.html')}" class="nav-subitem${currentPage === 'student_courses.html' ? ' active' : ''}">
-            <i data-lucide="library"></i>
-            <span>Class Course</span>
-        </a>
-        <a href="${toRoutePath('teacher_scheduling.html')}" class="nav-subitem${currentPage === 'teacher_scheduling.html' ? ' active' : ''}">
+        <a href="${toRoutePath('teacher_scheduling.html')}" class="nav-item${isTeacherSchedulingPage ? ' active' : ''}">
             <i data-lucide="book-open"></i>
             <span>Teacher Scheduling</span>
         </a>
     `;
-
-    wrapper.appendChild(toggle);
-    wrapper.appendChild(submenu);
 
     if (insertAfter) {
         insertAfter.insertAdjacentElement('afterend', wrapper);
@@ -2725,8 +2747,12 @@ async function renderBranches() {
             throw new Error(branches.error || 'Branches could not be loaded.');
         }
 
+        branchRecordsCache = Array.isArray(branches) ? branches : [];
         updateBranchAccessSummary(branches);
         tbody.innerHTML = '';
+        if (!document.getElementById('branchRecordId')?.value) {
+            setDefaultNewBranchFields();
+        }
         if (!Array.isArray(branches) || branches.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">No branches registered yet.</td></tr>';
             return;
@@ -2756,9 +2782,107 @@ async function renderBranches() {
         });
         if (window.lucide) window.lucide.createIcons();
     } catch (error) {
+        branchRecordsCache = [];
         updateBranchAccessSummary([]);
+        setDefaultNewBranchFields();
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded.</td></tr>';
     }
+}
+
+function getFamilies() {
+    return getArrayData(STORAGE_KEY_FAMILIES);
+}
+
+function saveFamilies(families) {
+    localStorage.setItem(STORAGE_KEY_FAMILIES, JSON.stringify(Array.isArray(families) ? families : []));
+}
+
+function buildFamilyNameFromStudentFields() {
+    const fatherName = document.getElementById('fatherName')?.value.trim();
+    const phone = document.getElementById('parentPhone')?.value.trim();
+    if (fatherName) return `${fatherName} Family`;
+    if (phone) return `Family ${phone}`;
+    return '';
+}
+
+function ensureFamilyRecord(familyName, parentPhone = '') {
+    const cleanName = String(familyName || '').trim();
+    if (!cleanName) return '';
+
+    const families = getFamilies();
+    const existing = families.find((family) => String(family.name || '').toLowerCase() === cleanName.toLowerCase());
+    if (existing) {
+        if (parentPhone && !existing.phone) existing.phone = parentPhone;
+        saveFamilies(families);
+        return existing.id;
+    }
+
+    const family = {
+        id: generateUniqueRecordId('FAM'),
+        name: cleanName,
+        phone: parentPhone || '',
+        createdAt: new Date().toISOString()
+    };
+    families.push(family);
+    saveFamilies(families);
+    return family.id;
+}
+
+function populateStudentFamilyOptions(selectedId = '') {
+    const select = document.getElementById('studentFamilyId');
+    if (!select) return;
+
+    const families = getFamilies().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    select.innerHTML = '<option value="">Create new family from this student</option>' + families.map((family) => (
+        `<option value="${escapeHtml(family.id)}">${escapeHtml(family.name || 'Family')}</option>`
+    )).join('');
+    select.value = selectedId || '';
+}
+
+function getNextBranchNumber() {
+    const usedNumbers = branchRecordsCache
+        .map((branch) => String(branch?.campusName || '').match(/campus\s*(\d+)/i)?.[1])
+        .map((value) => Number.parseInt(value, 10))
+        .filter((value) => Number.isFinite(value) && value > 0);
+
+    let nextNumber = 1;
+    while (usedNumbers.includes(nextNumber)) nextNumber += 1;
+    return nextNumber;
+}
+
+function formatBranchUsername(campusName) {
+    return String(campusName || 'Campus 1')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '') + '_admin';
+}
+
+function setDefaultNewBranchFields() {
+    const recordId = document.getElementById('branchRecordId');
+    const campusInput = document.getElementById('branchCampusName');
+    const displayInput = document.getElementById('branchDisplayName');
+    const usernameInput = document.getElementById('branchUsername');
+    if (!campusInput || recordId?.value) return;
+
+    const campusName = `Campus ${getNextBranchNumber()}`;
+    campusInput.value = campusName;
+    if (displayInput) displayInput.value = `${campusName} Office`;
+    if (usernameInput) usernameInput.value = formatBranchUsername(campusName);
+}
+
+function handleBranchCampusInput() {
+    const recordId = document.getElementById('branchRecordId');
+    if (recordId?.value) return;
+
+    const campusInput = document.getElementById('branchCampusName');
+    const displayInput = document.getElementById('branchDisplayName');
+    const usernameInput = document.getElementById('branchUsername');
+    const campusName = campusInput?.value.trim();
+    if (!campusName) return;
+
+    if (displayInput) displayInput.value = `${campusName} Office`;
+    if (usernameInput) usernameInput.value = formatBranchUsername(campusName);
 }
 
 function updateBranchAccessSummary(branches = []) {
@@ -2783,7 +2907,7 @@ async function handleBranchRegistrationSubmit(event) {
     event.preventDefault();
 
     const recordId = document.getElementById('branchRecordId').value.trim();
-    const campusName = document.getElementById('branchCampusName').value;
+    const campusName = document.getElementById('branchCampusName').value.trim();
     const fullName = document.getElementById('branchDisplayName').value.trim() || campusName;
     const username = document.getElementById('branchUsername').value.trim();
     const password = document.getElementById('branchPassword').value.trim();
@@ -2830,7 +2954,7 @@ function editBranch(branch) {
 
     const submitButton = document.querySelector('#branchRegistrationForm button[type="submit"]');
     if (submitButton) {
-        submitButton.innerHTML = '<i data-lucide="save"></i> Update Branch Login';
+        submitButton.innerHTML = '<i data-lucide="save"></i> Update Branch';
     }
     if (window.lucide) window.lucide.createIcons();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2842,11 +2966,11 @@ function resetBranchRegistrationForm() {
 
     form.reset();
     document.getElementById('branchRecordId').value = '';
-    document.getElementById('branchCampusName').value = '';
+    setDefaultNewBranchFields();
 
     const submitButton = document.querySelector('#branchRegistrationForm button[type="submit"]');
     if (submitButton) {
-        submitButton.innerHTML = '<i data-lucide="save"></i> Save Branch Login';
+        submitButton.innerHTML = '<i data-lucide="save"></i> Save Branch';
     }
     if (window.lucide) window.lucide.createIcons();
 }
@@ -3618,6 +3742,7 @@ function toggleStudentForm(editMode = false) {
         form.reset();
         document.getElementById('studentId').value = '';
         setStudentPhotoPreview('');
+        populateStudentFamilyOptions();
     } else {
         const classSelect = document.getElementById('classGrade');
         if (classSelect && classSelect.tagName === 'SELECT') {
@@ -3643,6 +3768,7 @@ function toggleStudentForm(editMode = false) {
             const admissionDateField = document.getElementById('admissionDate');
             if (admissionDateField) admissionDateField.value = new Date().toISOString().split('T')[0];
             if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = 'Monthly';
+            populateStudentFamilyOptions();
             setStudentPhotoPreview('');
             title.innerText = 'Add New Student';
         } else {
@@ -3930,6 +4056,10 @@ async function handleStudentFormSubmit(e) {
 
     const photoInput = document.getElementById('studentProfileImage');
     let profileImage = existingStudent?.profileImage || '';
+    const selectedFamilyId = document.getElementById('studentFamilyId')?.value || '';
+    const enteredFamilyName = document.getElementById('studentFamilyName')?.value.trim() || '';
+    const familyName = enteredFamilyName || getFamilies().find((family) => family.id === selectedFamilyId)?.name || buildFamilyNameFromStudentFields();
+    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone);
 
     try {
         if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
@@ -3953,6 +4083,8 @@ async function handleStudentFormSubmit(e) {
         gender: document.getElementById('gender').value,
         rollNo: document.getElementById('rollNo').value.trim(),
         formB: document.getElementById('formB').value.trim(),
+        familyId,
+        familyName,
         feesStatus: currentStatus,
         enrollmentStatus,
         monthlyFee: monthlyFeeInput || '0',
@@ -5099,14 +5231,10 @@ function printStudentsList() {
                     <td>${escapeHtml(s.classGrade || '-')}</td>
                     <td>${escapeHtml(s.campusName || '-')}</td>
                     <td>${escapeHtml(s.gender || '-')}</td>
-                    <td>${escapeHtml(s.email || '-')}</td>
-                    <td>${escapeHtml(s.formB || '-')}</td>
-                    <td>${escapeHtml(s.monthlyFee || '-')}</td>
-                    <td>${escapeHtml(isStudentTerminated(s) ? 'Terminated' : (s.feesStatus || '-'))}</td>
                 </tr>
             `;
         }).join('')
-        : `<tr><td colspan="${printMode === 'outer' ? 5 : 15}" class="empty">No students match the current filter.</td></tr>`;
+        : `<tr><td colspan="${printMode === 'outer' ? 5 : 11}" class="empty">No students match the current filter.</td></tr>`;
 
     const html = `
         <!doctype html>
@@ -5163,10 +5291,6 @@ function printStudentsList() {
                             <th>Class</th>
                             <th>Campus</th>
                             <th>Gender</th>
-                            <th>Email</th>
-                            <th class="nowrap">Form B</th>
-                            <th class="nowrap">Monthly Fee</th>
-                            <th class="nowrap">Fee Status</th>
                         </tr>
                     `}
                 </thead>
@@ -5338,6 +5462,8 @@ function editStudent(s) {
     document.getElementById('gender').value = s.gender || '';
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
+    populateStudentFamilyOptions(s.familyId || '');
+    if (document.getElementById('studentFamilyName')) document.getElementById('studentFamilyName').value = s.familyName || '';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').dataset.autoClassFee = '';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
@@ -5789,14 +5915,22 @@ function renderTeachers(term = '') {
     const selectedCampus = campusFilter ? campusFilter.value : '';
     const selectedGender = genderFilter ? genderFilter.value : '';
     const teachers = getArrayData(STORAGE_KEY_TEACHERS);
-    const filtered = teachers.filter(t =>
-        (
-            (t.fullName && t.fullName.toLowerCase().includes(term)) ||
-            (t.subject && t.subject.toString().toLowerCase().includes(term))
-        ) &&
-        (!selectedCampus || (t.campusName || '') === selectedCampus) &&
-        (!selectedGender || (t.gender || '') === selectedGender)
-    );
+    const filtered = teachers
+        .filter(t =>
+            (
+                (t.fullName && t.fullName.toLowerCase().includes(term)) ||
+                (t.subject && t.subject.toString().toLowerCase().includes(term))
+            ) &&
+            (!selectedCampus || (t.campusName || '') === selectedCampus) &&
+            (!selectedGender || (t.gender || '') === selectedGender)
+        )
+        .sort((a, b) => {
+            const codeA = String(a.employeeCode || a.id || '').toLowerCase();
+            const codeB = String(b.employeeCode || b.id || '').toLowerCase();
+            const codeCompare = codeA.localeCompare(codeB, undefined, { numeric: true, sensitivity: 'base' });
+            if (codeCompare !== 0) return codeCompare;
+            return String(a.fullName || '').localeCompare(String(b.fullName || ''), undefined, { sensitivity: 'base' });
+        });
 
     // Update total count display
     const totalCountEl = document.getElementById('totalTeacherCount');
@@ -6110,6 +6244,7 @@ function toggleStaffForm(editMode = false) {
         container.style.display = 'none';
         form.reset();
         document.getElementById('staffId').value = '';
+        setStaffPhotoPreview('');
     } else {
         container.style.display = 'block';
         if (!editMode) {
@@ -6117,6 +6252,7 @@ function toggleStaffForm(editMode = false) {
             document.getElementById('staffId').value = '';
             const staffCodeField = document.getElementById('staffCode');
             if (staffCodeField) staffCodeField.value = generateEntityCode(STORAGE_KEY_STAFF, 'STF');
+            setStaffPhotoPreview('');
             title.innerText = 'Add New Staff Member';
         } else {
             title.innerText = 'Edit Staff Member';
@@ -6134,8 +6270,12 @@ async function handleStaffFormSubmit(e) {
 
     let idCardFront = existingStaff?.idCardFront || null;
     let idCardBack = existingStaff?.idCardBack || null;
+    let profileImage = existingStaff?.profileImage || '';
 
     try {
+        if (document.getElementById('sProfileImage')?.files?.[0]) {
+            profileImage = await readFileAsDataUrl(document.getElementById('sProfileImage').files[0]);
+        }
         idCardFront = await getOptionalFilePayload('sIdCardFront', idCardFront);
         idCardBack = await getOptionalFilePayload('sIdCardBack', idCardBack);
     } catch (error) {
@@ -6147,6 +6287,7 @@ async function handleStaffFormSubmit(e) {
         id: isEdit ? idField.value : generateUniqueRecordId('STF'),
         employeeCode: document.getElementById('staffCode').value || generateEntityCode(STORAGE_KEY_STAFF, 'STF'),
         fullName: document.getElementById('sFullName').value,
+        profileImage,
         fatherName: document.getElementById('sFatherName').value,
         dob: document.getElementById('sDob').value,
         designation: document.getElementById('sDesignation').value,
@@ -6247,9 +6388,12 @@ function renderStaff(term = '') {
         noData.style.display = 'none';
         filtered.forEach(s => {
             const tr = document.createElement('tr');
+            const staffAvatar = s.profileImage
+                ? `<img src="${s.profileImage}" alt="${s.fullName || 'Staff'}">`
+                : getStaffInitial(s.fullName);
             tr.innerHTML = `
-                <td><div style="display:flex;align-items:center;gap:0.5rem">
-                    <div style="width:30px;height:30px;background:#dcfce7;color:#166534;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold">${s.fullName.charAt(0).toUpperCase()}</div>
+                <td><div class="staff-name-cell">
+                    <div class="staff-avatar">${staffAvatar}</div>
                     <div>
                         <div style="font-weight:500">${s.fullName}</div>
                         <div style="font-size:0.75rem;color:var(--text-secondary)">${s.employeeCode || ''} ${s.designation ? `• ${s.designation}` : ''}</div>
@@ -6305,6 +6449,8 @@ function editStaff(s) {
     if (document.getElementById('sBankAccountTitle')) document.getElementById('sBankAccountTitle').value = s.bankAccountTitle || '';
     if (document.getElementById('sBankAccountNumber')) document.getElementById('sBankAccountNumber').value = s.bankAccountNumber || '';
     if (document.getElementById('sBankBranch')) document.getElementById('sBankBranch').value = s.bankBranch || '';
+    if (document.getElementById('sProfileImage')) document.getElementById('sProfileImage').value = '';
+    setStaffPhotoPreview(s.profileImage || '', s.fullName || '');
     if (document.getElementById('sIdCardFront')) document.getElementById('sIdCardFront').value = '';
     if (document.getElementById('sIdCardBack')) document.getElementById('sIdCardBack').value = '';
 }

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Families - Apexiums School System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .family-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+        .family-card { background:#fff; border:1px solid var(--border-color); border-radius:8px; padding:1rem; box-shadow:var(--shadow-sm); }
+        .family-card h3 { margin:0 0 .4rem; color:var(--text-primary); }
+        .family-card p { margin:.25rem 0; color:var(--text-secondary); }
+        .student-chip-row { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.75rem; }
+        .student-chip { background:rgba(32,176,164,.1); color:var(--primary-color); border-radius:999px; padding:.25rem .55rem; font-size:.78rem; font-weight:800; }
+        .empty-family { background:#fff; border:1px dashed var(--border-color); border-radius:8px; padding:1.25rem; color:var(--text-secondary); }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="families.html" class="nav-item active"><i data-lucide="home"></i><span>Families</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <header class="header"><div><h1>Families</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Students grouped as brothers and sisters in one family.</p></div></header>
+            <section id="familiesList" class="family-grid"></section>
+        </main>
+    </div>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+    <script>
+        function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        function renderFamiliesPage() {
+            const families = readLocalArray('eduCore_families');
+            const students = readLocalArray('eduCore_students');
+            const list = document.getElementById('familiesList');
+            if (!families.length) {
+                list.innerHTML = '<div class="empty-family">No families created yet. Add or edit a student and select/create family.</div>';
+                return;
+            }
+            list.innerHTML = families.map((family) => {
+                const members = students.filter((student) => student.familyId === family.id);
+                return `<article class="family-card">
+                    <h3>${esc(family.name || 'Family')}</h3>
+                    <p><strong>Phone:</strong> ${esc(family.phone || '-')}</p>
+                    <p><strong>Total Students:</strong> ${members.length}</p>
+                    <div class="student-chip-row">${members.map((student) => `<span class="student-chip">${esc(student.fullName || 'Student')}</span>`).join('') || '<span class="student-chip">No students linked</span>'}</div>
+                </article>`;
+            }).join('');
+        }
+        renderFamiliesPage();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

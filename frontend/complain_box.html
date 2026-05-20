@@ -8,7 +8,18 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        .complaint-type-grid { display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:1rem; margin-bottom:1rem; }
+        .complaint-type-card { background:#fff; border:1px solid #cfe8e5; border-radius:12px; padding:1rem; box-shadow:0 10px 24px rgba(15,23,42,.05); display:flex; align-items:center; gap:.85rem; cursor:pointer; }
+        .complaint-type-card.active { border-color:#14b8a6; box-shadow:0 0 0 3px rgba(20,184,166,.12); }
+        .complaint-type-icon { width:42px; height:42px; border-radius:10px; background:rgba(20,184,166,.12); color:#0f766e; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+        .complaint-type-card h3 { margin:0; font-size:.98rem; }
+        .complaint-type-card p { margin:.2rem 0 0; color:var(--text-secondary); font-size:.8rem; }
         .module-panel { background:#fff; border:1px solid #cfe8e5; border-radius:14px; padding:1.25rem; box-shadow:0 12px 28px rgba(15,23,42,.06); margin-bottom:1rem; }
+        .family-complaint-form { display:grid; grid-template-columns:repeat(3,minmax(180px,1fr)); gap:1rem; align-items:end; }
+        .family-complaint-form .wide { grid-column:1 / -1; }
+        .family-complaint-form label { display:block; margin-bottom:.4rem; color:var(--text-secondary); font-weight:700; font-size:.85rem; }
+        .family-complaint-form input, .family-complaint-form textarea { width:100%; border:1px solid var(--border-color); border-radius:8px; padding:.7rem .8rem; font:inherit; }
+        .family-complaint-form textarea { min-height:86px; resize:vertical; }
         .complaint-list { display:grid; gap:1rem; }
         .complaint-card { border:1px solid #d9ece9; border-radius:12px; padding:1rem; background:#fbfefe; }
         .complaint-top { display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:.75rem; }
@@ -25,6 +36,7 @@
         .mini-btn.file { background:#e0f2fe; color:#0369a1; }
         .mini-btn.delete { background:#fee2e2; color:#b91c1c; }
         .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
+        @media (max-width:900px){ .complaint-type-grid,.family-complaint-form{ grid-template-columns:1fr; } }
     </style>
 </head>
 
@@ -50,7 +62,31 @@
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Principal</p></div></a>
         </aside>
         <main class="main-content">
-            <header class="header"><div><h1>Complain Box</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Review complaints from students and teachers, then send replies.</p></div></header>
+            <header class="header"><div><h1>Complain Box</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Review student, teacher, and family complaints.</p></div></header>
+            <section class="complaint-type-grid">
+                <button class="complaint-type-card active" type="button" data-complaint-filter="Student">
+                    <span class="complaint-type-icon"><i data-lucide="graduation-cap"></i></span>
+                    <span><h3>Student Side Complain</h3><p>Student portal complaints</p></span>
+                </button>
+                <button class="complaint-type-card" type="button" data-complaint-filter="Teacher">
+                    <span class="complaint-type-icon"><i data-lucide="book-open"></i></span>
+                    <span><h3>Teacher Side</h3><p>Teacher portal complaints</p></span>
+                </button>
+                <button class="complaint-type-card" type="button" data-complaint-filter="Family">
+                    <span class="complaint-type-icon"><i data-lucide="home"></i></span>
+                    <span><h3>Family Complain</h3><p>Physically received complaints</p></span>
+                </button>
+            </section>
+            <section class="module-panel" id="familyComplaintPanel" style="display:none;">
+                <h2 style="margin:0 0 1rem;">Enter Family Complaint</h2>
+                <form id="familyComplaintForm" class="family-complaint-form">
+                    <div><label>Family Name</label><input type="text" id="familyComplaintName" placeholder="e.g. Ahmed Family" required></div>
+                    <div><label>Contact No</label><input type="tel" id="familyComplaintPhone" placeholder="03xxxxxxxxx"></div>
+                    <div><label>Subject</label><input type="text" id="familyComplaintSubject" placeholder="Complaint subject" required></div>
+                    <div class="wide"><label>Complaint Details</label><textarea id="familyComplaintMessage" required placeholder="Write family complaint details"></textarea></div>
+                    <div><button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Family Complaint</button></div>
+                </form>
+            </section>
             <section class="module-panel">
                 <div id="complaintList" class="complaint-list"></div>
             </section>
@@ -60,6 +96,7 @@
     <script src="script.js"></script>
     <script>
         const COMPLAINT_KEY = 'eduCore_complaints';
+        let activeComplaintFilter = 'Student';
         function readComplaints() { try { return JSON.parse(localStorage.getItem(COMPLAINT_KEY) || '[]'); } catch (_e) { return []; } }
         function saveComplaints(items) { localStorage.setItem(COMPLAINT_KEY, JSON.stringify(items)); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
@@ -88,9 +125,11 @@
             return thread.sort((a, b) => String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
         }
         function renderComplaints() {
-            const complaints = readComplaints().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+            const complaints = readComplaints()
+                .filter((item) => String(item.senderRole || '').toLowerCase() === activeComplaintFilter.toLowerCase())
+                .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
             if (!complaints.length) {
-                complaintList.innerHTML = '<div class="empty-note">No complaints have been submitted yet.</div>';
+                complaintList.innerHTML = `<div class="empty-note">No ${esc(activeComplaintFilter.toLowerCase())} complaints have been submitted yet.</div>`;
                 return;
             }
             complaintList.innerHTML = complaints.map((item) => {
@@ -141,6 +180,32 @@
             saveComplaints(readComplaints().filter((item) => item.id !== id));
             renderComplaints();
         }
+        document.querySelectorAll('[data-complaint-filter]').forEach((card) => {
+            card.addEventListener('click', () => {
+                activeComplaintFilter = card.dataset.complaintFilter || 'Student';
+                document.querySelectorAll('[data-complaint-filter]').forEach((item) => item.classList.toggle('active', item === card));
+                document.getElementById('familyComplaintPanel').style.display = activeComplaintFilter === 'Family' ? 'block' : 'none';
+                renderComplaints();
+            });
+        });
+        document.getElementById('familyComplaintForm').addEventListener('submit', (event) => {
+            event.preventDefault();
+            const items = readComplaints();
+            items.push({
+                id: `CMP-${Date.now()}`,
+                senderRole: 'Family',
+                senderName: document.getElementById('familyComplaintName').value.trim(),
+                senderClass: document.getElementById('familyComplaintPhone').value.trim(),
+                subject: document.getElementById('familyComplaintSubject').value.trim(),
+                message: document.getElementById('familyComplaintMessage').value.trim(),
+                status: 'Pending',
+                createdAt: new Date().toISOString()
+            });
+            saveComplaints(items);
+            event.target.reset();
+            renderComplaints();
+            showAppAlert('Family complaint saved.', 'Complaint Saved');
+        });
         renderComplaints();
         if (window.lucide) window.lucide.createIcons();
     </script>
