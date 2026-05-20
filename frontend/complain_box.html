@@ -98,11 +98,18 @@
             </section>
         </main>
     </div>
-    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         const COMPLAINT_KEY = 'eduCore_complaints';
         let activeComplaintFilter = 'Student';
+        const complaintHashFilters = {
+            '#student': 'Student',
+            '#teacher': 'Teacher',
+            '#parents': 'Family',
+            '#parent': 'Family',
+            '#family': 'Family'
+        };
         function readComplaints() { try { return JSON.parse(localStorage.getItem(COMPLAINT_KEY) || '[]'); } catch (_e) { return []; } }
         function saveComplaints(items) { localStorage.setItem(COMPLAINT_KEY, JSON.stringify(items)); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
@@ -226,12 +233,21 @@
             saveComplaints(readComplaints().filter((item) => item.id !== id));
             renderComplaints();
         }
+        function applyComplaintFilter(filter) {
+            activeComplaintFilter = filter || 'Student';
+            document.querySelectorAll('[data-complaint-filter]').forEach((item) => {
+                item.classList.toggle('active', item.dataset.complaintFilter === activeComplaintFilter);
+            });
+            document.getElementById('familyComplaintPanel').style.display = activeComplaintFilter === 'Family' ? 'block' : 'none';
+            renderComplaints();
+        }
+        function applyComplaintHashFilter() {
+            const filter = complaintHashFilters[String(window.location.hash || '').toLowerCase()];
+            if (filter) applyComplaintFilter(filter);
+        }
         document.querySelectorAll('[data-complaint-filter]').forEach((card) => {
             card.addEventListener('click', () => {
-                activeComplaintFilter = card.dataset.complaintFilter || 'Student';
-                document.querySelectorAll('[data-complaint-filter]').forEach((item) => item.classList.toggle('active', item === card));
-                document.getElementById('familyComplaintPanel').style.display = activeComplaintFilter === 'Family' ? 'block' : 'none';
-                renderComplaints();
+                applyComplaintFilter(card.dataset.complaintFilter || 'Student');
             });
         });
         document.getElementById('familyComplaintForm').addEventListener('submit', (event) => {
@@ -254,7 +270,9 @@
             renderComplaints();
             showAppAlert('Family complaint saved.', 'Complaint Saved');
         });
-        renderComplaints();
+        applyComplaintHashFilter();
+        if (!complaintHashFilters[String(window.location.hash || '').toLowerCase()]) renderComplaints();
+        window.addEventListener('hashchange', applyComplaintHashFilter);
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>

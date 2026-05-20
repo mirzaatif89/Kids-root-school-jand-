@@ -88,6 +88,9 @@ const FALLBACK_ROUTE_TO_PAGE = {
     notifications: 'notifications.html',
     special_notices: 'special_notices.html',
     exams: 'exams.html',
+    exam_schedule: 'exam_schedule.html',
+    exam_result: 'exam_result.html',
+    exam_result_history: 'exam_result_history.html',
     revenue: 'revenue.html',
     settings: 'settings.html',
     permissions: 'permissions.html',
@@ -578,16 +581,26 @@ document.addEventListener('DOMContentLoaded', () => {
         initialSQLSync();
     }
     populateCampusDropdowns();
-    ensureBranchRegistrationNav();
-    ensureBannersNav();
-    ensureSchedulingNav();
-    ensureAdminRecordsNav();
-    ensureFacilityNav();
-    ensureAdminSidebarCompleteness();
-    ensureAttendanceNav();
-    ensureNotificationsNav();
-    ensureSpecialNoticesNav();
+    [
+        ensureBranchRegistrationNav,
+        ensureBannersNav,
+        ensureSchedulingNav,
+        ensureAdminRecordsNav,
+        ensureFacilityNav,
+        ensureAdminSidebarCompleteness,
+        ensureAttendanceNav,
+        ensureNotificationsNav,
+        ensureSpecialNoticesNav
+    ].forEach((initializer) => {
+        try {
+            initializer();
+        } catch (error) {
+            console.warn('Sidebar initializer skipped:', error);
+        }
+    });
     renderAdminSidebarSequence();
+    window.setTimeout(renderAdminSidebarSequence, 0);
+    window.setTimeout(renderAdminSidebarSequence, 250);
     initializeSidebarScrollMemory();
     applyBranchScopedStudentsView();
     if (sessionStorage.getItem('eduCore_token')) {
@@ -2778,74 +2791,87 @@ function ensureAdminSidebarCompleteness() {
 function renderAdminSidebarSequence() {
     const navLinks = document.querySelector('.nav-links');
     const loggedInUser = getLoggedInUser();
-    if (!navLinks || !loggedInUser || loggedInUser.role !== 'Admin') return;
+    if (!navLinks) return;
+    if (loggedInUser && (loggedInUser.role === 'Student' || loggedInUser.role === 'Teacher')) return;
     if (navLinks.dataset.adminSidebarSequenced === 'true') return;
 
     const currentPage = getCurrentPageName();
-    const isActivePage = (page) => normalizeClientPageName(page) === currentPage;
-    const hasActiveChild = (children = []) => children.some((child) => isActivePage(child.page));
+    const isActivePage = (page, hash = '') => {
+        if (normalizeClientPageName(page) !== currentPage) return false;
+        return !hash || window.location.hash === hash;
+    };
+    const hasActiveChild = (children = []) => children.some((child) => (
+        child.type === 'dropdown' ? hasActiveChild(child.children) : isActivePage(child.page, child.hash)
+    ));
 
     const navItems = [
         { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
+        { type: 'link', page: 'banners.html', label: 'Banners', icon: 'image' },
+        { type: 'link', page: 'revenue.html', label: 'Reveneue', icon: 'trending-up' },
+        { type: 'link', page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         {
             type: 'dropdown',
             label: 'Students',
             icon: 'users',
             children: [
                 { page: 'students.html', label: 'Students', icon: 'users' },
-                { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
-                { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
-                { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
-                { page: 'certificate.html', label: 'Certificates', icon: 'award' },
-                { page: 'library.html', label: 'Library', icon: 'library' },
-                { page: 'families.html', label: 'Families', icon: 'home' }
+                {
+                    type: 'dropdown',
+                    label: 'Students Scheduling',
+                    icon: 'calendar-clock',
+                    children: [
+                        { page: 'student_timetable.html', label: 'Class time table', icon: 'calendar-clock' },
+                        { page: 'student_leave_requests.html', label: 'Leave requeste', icon: 'calendar-check' },
+                        { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
+                        { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
+                        { page: 'quiz_uploading.html', label: 'Quiz Class', icon: 'circle-help' }
+                    ]
+                }
             ]
         },
+        { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
+        { type: 'link', page: 'stuck_off.html', label: 'Stuch of students', icon: 'user-x' },
         {
             type: 'dropdown',
-            label: 'Teacher',
+            label: 'Teachers',
             icon: 'book-open',
             children: [
-                { page: 'teachers.html', label: 'Teacher', icon: 'book-open' },
-                { page: 'teacher_scheduling.html', label: 'Teacher Scheduling', icon: 'calendar-days' }
+                { page: 'teachers.html', label: 'Teahers', icon: 'book-open' },
+                {
+                    type: 'dropdown',
+                    label: 'Teachers scheduling',
+                    icon: 'calendar-days',
+                    children: [
+                        { page: 'teacher_scheduling.html', label: 'Teacher time table', icon: 'calendar-days' },
+                        { page: 'teacher_scheduling.html', label: 'Leave request', icon: 'calendar-check', hash: '#leave-request' }
+                    ]
+                }
             ]
         },
-        { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
-        {
-            type: 'dropdown',
-            label: 'Banners',
-            icon: 'image',
-            children: [
-                { page: 'banners.html', label: 'Banners', icon: 'image' },
-                { page: 'settings.html', label: 'Logos', icon: 'badge' }
-            ]
-        },
-        { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
-        { type: 'link', page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
+        { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
         {
             type: 'dropdown',
             label: 'Examination',
             icon: 'clipboard-list',
             children: [
-                { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
-                { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
-                { page: 'exams.html', label: 'Exams', icon: 'clipboard-list' }
+                { page: 'exam_schedule.html', label: 'Exam schedule', icon: 'calendar-days' },
+                { page: 'student_courses.html', label: 'sallabus', icon: 'library' },
+                { page: 'exam_result.html', label: 'Result', icon: 'file-badge' },
+                { page: 'exam_result_history.html', label: 'student result history', icon: 'history' }
             ]
         },
         {
             type: 'dropdown',
-            label: 'Fees Structure',
-            icon: 'credit-card',
+            label: 'Notifications',
+            icon: 'bell-ring',
             children: [
-                { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
-                { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
-                { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+                { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
+                { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' }
             ]
         },
-        { type: 'link', page: 'stuck_off.html', label: 'Stuck Off', icon: 'user-x' },
         {
             type: 'dropdown',
-            label: 'Finance',
+            label: 'Finanace',
             icon: 'landmark',
             children: [
                 { page: 'bills.html', label: 'Bills', icon: 'receipt' },
@@ -2853,39 +2879,74 @@ function renderAdminSidebarSequence() {
                 { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' }
             ]
         },
-        {
-            type: 'dropdown',
-            label: 'Notifications Section',
-            icon: 'bell-ring',
-            children: [
-                { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
-                { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' },
-                { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' }
-            ]
-        },
         { type: 'link', page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
         { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
+        { type: 'link', page: 'library.html', label: 'Librart', icon: 'library' },
         {
             type: 'dropdown',
-            label: 'Security',
+            label: 'permissions',
             icon: 'shield',
             children: [
                 { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
                 { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
             ]
         },
+        { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+        { type: 'link', page: 'annual_charges.html', label: 'Annual charges', icon: 'receipt' },
+        {
+            type: 'dropdown',
+            label: 'Fee structure',
+            icon: 'credit-card',
+            children: [
+                { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
+            ]
+        },
+        {
+            type: 'dropdown',
+            label: 'complain box',
+            icon: 'message-square',
+            children: [
+                { page: 'complain_box.html', label: 'Student complain', icon: 'graduation-cap', hash: '#student' },
+                { page: 'complain_box.html', label: 'Teachers complain', icon: 'book-open', hash: '#teacher' },
+                { page: 'complain_box.html', label: 'Parents Complain', icon: 'home', hash: '#parents' }
+            ]
+        },
+        { type: 'link', page: 'special_notices.html', label: 'notices', icon: 'megaphone' },
+        { type: 'link', page: 'visitor_books.html', label: 'visitors book', icon: 'clipboard-list' },
+        { type: 'link', page: 'certificate.html', label: 'Certificates', icon: 'award' },
         { type: 'logout', label: 'Logout', icon: 'log-out' }
     ];
 
     const buildLink = (item, className = 'nav-item') => `
-        <a href="${toRoutePath(item.page)}" class="${className}${isActivePage(item.page) ? ' active' : ''}">
+        <a href="${toRoutePath(item.page)}${item.hash || ''}" class="${className}${isActivePage(item.page, item.hash) ? ' active' : ''}">
             <i data-lucide="${item.icon}"></i>
             <span>${item.label}</span>
         </a>
     `;
 
-    navLinks.innerHTML = navItems.map((item) => {
-        if (item.type === 'link') return buildLink(item);
+    const buildDropdown = (item, nested = false) => {
+        const open = hasActiveChild(item.children);
+        const toggleClass = nested ? 'nav-subitem nav-dropdown-toggle' : 'nav-item nav-dropdown-toggle';
+        return `
+            <div class="nav-dropdown${open ? ' open' : ''}" data-sequenced-sidebar-dropdown="true">
+                <button type="button" class="${toggleClass}${open ? ' active' : ''}">
+                    <span class="nav-item-main">
+                        <i data-lucide="${item.icon}"></i>
+                        <span>${item.label}</span>
+                    </span>
+                    <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+                </button>
+                <div class="nav-submenu">
+                    ${item.children.map((child) => buildItem(child, true)).join('')}
+                </div>
+            </div>
+        `;
+    };
+
+    const buildItem = (item, nested = false) => {
+        if (item.type === 'link') return buildLink(item, nested ? 'nav-subitem' : 'nav-item');
         if (item.type === 'logout') {
             return `
                 <a href="#" class="nav-item" onclick="logoutUser(event)">
@@ -2894,23 +2955,10 @@ function renderAdminSidebarSequence() {
                 </a>
             `;
         }
+        return buildDropdown(item, nested);
+    };
 
-        const open = hasActiveChild(item.children);
-        return `
-            <div class="nav-dropdown${open ? ' open' : ''}" data-sequenced-sidebar-dropdown="true">
-                <button type="button" class="nav-item nav-dropdown-toggle${open ? ' active' : ''}">
-                    <span class="nav-item-main">
-                        <i data-lucide="${item.icon}"></i>
-                        <span>${item.label}</span>
-                    </span>
-                    <i data-lucide="chevron-down" class="dropdown-chevron"></i>
-                </button>
-                <div class="nav-submenu">
-                    ${item.children.map((child) => buildLink(child, 'nav-subitem')).join('')}
-                </div>
-            </div>
-        `;
-    }).join('');
+    navLinks.innerHTML = navItems.map((item) => buildItem(item)).join('');
 
     navLinks.dataset.adminSidebarSequenced = 'true';
     navLinks.querySelectorAll('[data-sequenced-sidebar-dropdown] > .nav-dropdown-toggle').forEach((toggle) => {

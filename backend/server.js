@@ -131,7 +131,12 @@ function sendFrontendPage(res, fileName) {
             return;
         }
 
-        res.type('html').send(html.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`));
+        const sidebarOrderScript = '<script src="/sidebar-order.js?v=20260520-sidebar-force"></script>';
+        const withScrollMemory = html.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`);
+        const withSidebarOrder = withScrollMemory.includes('sidebar-order.js')
+            ? withScrollMemory
+            : withScrollMemory.replace('</body>', `    ${sidebarOrderScript}\n</body>`);
+        res.type('html').send(withSidebarOrder);
     });
 }
 

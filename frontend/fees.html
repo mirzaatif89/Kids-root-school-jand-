@@ -829,7 +829,7 @@
         </main>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-assignments"></script>
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-assignments"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
@@ -1966,7 +1966,7 @@
 
             // Create header section showing summary
             const headerDiv = document.createElement('div');
-            headerDiv.style.css?v=20260520-responsive-systemText = `
+            headerDiv.style.cssText = `
                 padding: 1.5rem;
                 background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
                 border-radius: 0.75rem;
@@ -2015,7 +2015,7 @@
             // Show pending months
             if (pendingMonths.length === 0) {
                 const noData = document.createElement('div');
-                noData.style.css?v=20260520-responsive-systemText = `
+                noData.style.cssText = `
                     padding: 2rem;
                     text-align: center;
                     background: #dcfce7;
@@ -2031,7 +2031,7 @@
                 container.appendChild(noData);
             } else {
                 const titleDiv = document.createElement('div');
-                titleDiv.style.css?v=20260520-responsive-systemText = `
+                titleDiv.style.cssText = `
                     padding: 1rem 0;
                     border-bottom: 2px solid #e5e7eb;
                     margin-bottom: 1rem;
@@ -2098,7 +2098,7 @@
                 // Show Paid Months section
                 if (paidMonths.length > 0) {
                     const paidTitleDiv = document.createElement('div');
-                    paidTitleDiv.style.css?v=20260520-responsive-systemText = `
+                    paidTitleDiv.style.cssText = `
                         padding: 1rem 0;
                         border-bottom: 2px solid #e5e7eb;
                         margin-top: 2rem;

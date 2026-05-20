@@ -31,7 +31,7 @@
 </div><div class="actions"><button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Contract</button><button class="btn btn-outline" type="button" onclick="resetForm()">Clear</button></div></form></div>
 <div class="panel"><div class="stats"><div class="stat"><span>Total</span><strong id="total">0</strong></div><div class="stat"><span>Active</span><strong id="active">0</strong></div><div class="stat"><span>Pending Rent</span><strong id="pending">0</strong></div><div class="stat"><span>Rent</span><strong id="rent">0</strong></div></div><div class="toolbar"><div class="search-bar"><i data-lucide="search" size="18"></i><input id="search" placeholder="Search cafe contract..."></div><button class="btn btn-outline" onclick="loadContracts()"><i data-lucide="refresh-cw"></i> Refresh</button></div><div class="table-wrap"><table class="facility"><thead><tr><th>Contractor</th><th>Contract</th><th>Financial</th><th>Operations</th><th>Status</th><th>Actions</th></tr></thead><tbody id="body"></tbody></table></div></div>
 </section></main></div>
-<script src="auth.js?v=20260520-sidebar-assignments"></script><script src="script.js?v=20260520-sidebar-assignments"></script>
+<script src="auth.js?v=20260520-sidebar-requested-order"></script><script src="script.js?v=20260520-sidebar-assignments"></script>
 <script>
 let records=[];const fields=['contractorName','companyName','contactNumber','cnic','email','contractType','startDate','endDate','monthlyRent','securityDeposit','paymentStatus','menuItems','hygieneStatus','licenseNumber','staffCount','status','notes'];
 function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
