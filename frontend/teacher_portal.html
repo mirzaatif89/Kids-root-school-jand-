@@ -29,16 +29,29 @@
             font-family: 'Nunito', 'Inter', sans-serif;
         }
 
+        body.portal-dark {
+            --portal-bg: #0f172a;
+            --portal-card: #172033;
+            --portal-border: #2d3b52;
+            --portal-text: #e5eefb;
+            --portal-muted: #9caec4;
+            --portal-soft: #111c2f;
+            background: #0f172a;
+        }
+
         .teacher-portal-header {
-            background: #ffffff;
+            background: transparent;
             color: var(--portal-text);
-            padding: 14px clamp(16px, 4vw, 40px);
-            display: grid;
-            grid-template-columns: 1fr auto 1fr;
-            gap: 20px;
+            padding: 14px clamp(14px, 3vw, 28px) 0;
+            display: flex;
             align-items: center;
-            border-bottom: 1px solid #cae8e4;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            justify-content: flex-start;
+            max-width: 1180px;
+            width: 100%;
+            margin: 0 auto;
+            position: relative;
+            border-bottom: 0;
+            box-shadow: none;
         }
 
         .portal-logo {
@@ -79,17 +92,107 @@
             gap: 8px;
         }
 
+        .portal-menu-wrap {
+            position: relative;
+            z-index: 20;
+        }
+
+        .portal-menu-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid #cae8e4;
+            border-radius: 12px;
+            background: var(--portal-card);
+            color: var(--portal-primary-dark);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .portal-menu-btn i {
+            width: 22px;
+            height: 22px;
+        }
+
+        .portal-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            width: min(260px, calc(100vw - 28px));
+            border: 1px solid var(--portal-border);
+            border-radius: 14px;
+            background: var(--portal-card);
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+            padding: 8px;
+            display: none;
+        }
+
+        .portal-menu.open {
+            display: block;
+        }
+
+        .portal-menu-item {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--portal-text);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 12px;
+            font: inherit;
+            font-weight: 800;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .portal-menu-item:hover {
+            background: var(--portal-soft);
+            color: var(--portal-primary-dark);
+        }
+
+        .portal-menu-item i {
+            width: 18px;
+            height: 18px;
+            color: var(--portal-primary-dark);
+        }
+
+        body.portal-dark .teacher-option-btn,
+        body.portal-dark .portal-screen-back,
+        body.portal-dark .portal-metric,
+        body.portal-dark .empty-note,
+        body.portal-dark .list-item,
+        body.portal-dark .attendance-day-tile,
+        body.portal-dark input,
+        body.portal-dark textarea,
+        body.portal-dark select {
+            background: var(--portal-card);
+            border-color: var(--portal-border);
+            color: var(--portal-text);
+        }
+
         .teacher-portal {
             max-width: 1180px;
             margin: 0 auto;
-            padding: 24px clamp(14px, 3vw, 28px) 40px;
+            padding: 14px clamp(14px, 3vw, 28px) 40px;
+        }
+
+        body.teacher-panel-open .teacher-portal-header {
+            display: none;
+        }
+
+        body.teacher-panel-open .teacher-portal {
+            padding-top: 18px;
         }
 
         .profile-card,
         .panel-card,
         .stat-card {
-            background: #ffffff;
-            border: 1px solid #cae8e4;
+            background: var(--portal-card);
+            border: 1px solid var(--portal-border);
             border-radius: 18px;
             box-shadow: 0 16px 36px rgba(15, 23, 42, 0.09);
         }
@@ -107,6 +210,10 @@
             display: flex;
             align-items: center;
             gap: 16px;
+            min-width: 0;
+        }
+
+        .profile-details {
             min-width: 0;
         }
 
@@ -158,7 +265,8 @@
             padding: 6px 10px;
             color: var(--portal-primary-dark);
             font-size: 13px;
-            background: #ffffff;
+            background: var(--portal-card);
+            white-space: nowrap;
         }
 
         .stats-grid {
@@ -425,7 +533,8 @@
         }
 
         .portal-screen-back {
-            min-height: 40px;
+            width: 44px;
+            height: 44px;
             border: 1px solid #cae8e4;
             border-radius: 10px;
             background: #ffffff;
@@ -433,10 +542,16 @@
             font-weight: 800;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 0.45rem;
-            padding: 0.55rem 0.8rem;
+            padding: 0;
             cursor: pointer;
             margin-bottom: 1rem;
+        }
+
+        .portal-screen-back i {
+            width: 20px;
+            height: 20px;
         }
 
         .portal-form-grid,
@@ -589,14 +704,9 @@
         }
 
         @media (max-width: 860px) {
-            .teacher-portal-header,
             .profile-card {
                 align-items: flex-start;
                 flex-direction: column;
-            }
-
-            .portal-header-actions {
-                justify-content: flex-start;
             }
 
             .portal-grid,
@@ -613,34 +723,77 @@
 
         @media (max-width: 560px) {
             .teacher-portal-header {
-                padding: 12px 16px;
-            }
-
-            .portal-logo {
-                width: 150px;
-                height: 54px;
-            }
-
-            .portal-header-title {
-                font-size: 18px;
+                padding: 10px 12px 0;
             }
 
             .teacher-portal {
-                padding: 16px 12px 30px;
+                padding: 12px 12px 30px;
+            }
+
+            .profile-card {
+                align-items: center;
+                text-align: center;
             }
 
             .profile-main {
-                align-items: flex-start;
+                align-items: center;
                 flex-direction: column;
+                width: 100%;
+            }
+
+            .profile-details {
+                width: 100%;
+            }
+
+            .profile-main h2 {
+                font-size: 1.65rem;
+            }
+
+            .pill-row {
+                flex-wrap: nowrap;
+                justify-content: center;
+                gap: 6px;
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 2px;
+            }
+
+            .meta-pill {
+                flex: 0 0 auto;
+                padding: 6px 8px;
+                font-size: 0.74rem;
+                gap: 4px;
             }
 
             .stats-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .stat-card {
+                min-height: 126px;
+                padding: 14px 12px;
+            }
+
+            .stat-card strong {
+                font-size: 1.12rem;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
             }
 
             .teacher-options {
-                grid-template-columns: 1fr;
-                gap: 12px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+
+            .teacher-option-btn {
+                min-height: 78px;
+                flex-direction: column;
+                gap: 6px;
+                padding: 0.75rem 0.5rem;
+                font-size: 0.78rem;
+                line-height: 1.18;
+                overflow-wrap: anywhere;
             }
 
             .panel-card,
@@ -658,13 +811,28 @@
 
 <body>
     <header class="teacher-portal-header">
-        <img class="portal-logo" src="images/logo.png" alt="Apexiums School System logo">
-        <h1 class="portal-header-title">Teacher Portal</h1>
-        <div class="portal-header-actions">
-            <button class="logout-btn" onclick="logoutUser()">
-                <i data-lucide="log-out" width="16"></i>
-                Logout
+        <div class="portal-menu-wrap">
+            <button class="portal-menu-btn" type="button" id="teacherMenuButton" aria-label="Open teacher menu" aria-expanded="false">
+                <i data-lucide="menu"></i>
             </button>
+            <div class="portal-menu" id="teacherPortalMenu">
+                <button class="portal-menu-item" type="button" id="themeToggleBtn">
+                    <i data-lucide="moon"></i>
+                    <span id="themeToggleText">Dark Mode</span>
+                </button>
+                <a class="portal-menu-item" href="aboutme.html">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+                <button class="portal-menu-item" type="button" id="privacyPolicyBtn">
+                    <i data-lucide="shield"></i>
+                    <span>Privacy Policy</span>
+                </button>
+                <button class="portal-menu-item" type="button" onclick="logoutUser()">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -672,7 +840,7 @@
         <section class="profile-card">
             <div class="profile-main">
                 <div class="avatar" id="teacherAvatar">T</div>
-                <div>
+                <div class="profile-details">
                     <h2 id="teacherName">Loading...</h2>
                     <div class="muted" id="teacherRoleLine">Teacher</div>
                     <div class="pill-row">
@@ -821,7 +989,56 @@
         const COMPLAINT_KEY = 'eduCore_complaints';
         const TEACHER_LEAVE_KEY = 'eduCore_teacher_leave_requests';
         const TEACHER_SALARY_KEY = 'eduCore_teacher_salaries';
+        const TEACHER_THEME_KEY = 'eduCore_teacher_portal_theme';
         let currentTeacherProfile = null;
+
+        function syncThemeMenu() {
+            const isDark = document.body.classList.contains('portal-dark');
+            const icon = document.querySelector('#themeToggleBtn i');
+            const text = document.getElementById('themeToggleText');
+            if (icon) icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            if (text) text.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function applyTeacherTheme(theme) {
+            document.body.classList.toggle('portal-dark', theme === 'dark');
+            syncThemeMenu();
+        }
+
+        function bindTeacherMenu() {
+            const menuButton = document.getElementById('teacherMenuButton');
+            const menu = document.getElementById('teacherPortalMenu');
+            const themeButton = document.getElementById('themeToggleBtn');
+            const privacyButton = document.getElementById('privacyPolicyBtn');
+
+            applyTeacherTheme(localStorage.getItem(TEACHER_THEME_KEY) || 'light');
+
+            menuButton?.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isOpen = menu?.classList.toggle('open');
+                menuButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+
+            themeButton?.addEventListener('click', () => {
+                const nextTheme = document.body.classList.contains('portal-dark') ? 'light' : 'dark';
+                localStorage.setItem(TEACHER_THEME_KEY, nextTheme);
+                applyTeacherTheme(nextTheme);
+            });
+
+            privacyButton?.addEventListener('click', () => {
+                menu?.classList.remove('open');
+                menuButton?.setAttribute('aria-expanded', 'false');
+                showAppAlert('Your portal data is used only for school account access, attendance, salary, leave, and complaint records.', 'Privacy Policy');
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!menu?.classList.contains('open')) return;
+                if (event.target.closest('.portal-menu-wrap')) return;
+                menu.classList.remove('open');
+                menuButton?.setAttribute('aria-expanded', 'false');
+            });
+        }
 
         function setText(id, value) {
             const el = document.getElementById(id);
@@ -1077,12 +1294,15 @@
             });
 
             portal.classList.add('portal-screen-open');
+            document.body.classList.add('teacher-panel-open');
             target.classList.add('active', 'portal-screen-active');
 
             const backButton = document.createElement('button');
             backButton.type = 'button';
             backButton.className = 'portal-screen-back';
-            backButton.innerHTML = `<i data-lucide="arrow-left" width="16"></i> Back to Menu`;
+            backButton.setAttribute('aria-label', 'Back to menu');
+            backButton.title = 'Back';
+            backButton.innerHTML = `<i data-lucide="arrow-left" width="20"></i>`;
             backButton.addEventListener('click', closeTeacherPanelScreen);
             target.insertBefore(backButton, target.firstChild);
 
@@ -1093,6 +1313,7 @@
         function closeTeacherPanelScreen() {
             const portal = document.querySelector('.teacher-portal');
             portal?.classList.remove('portal-screen-open');
+            document.body.classList.remove('teacher-panel-open');
             document.querySelectorAll('.teacher-option-panel').forEach((panel) => {
                 panel.classList.remove('active', 'portal-screen-active');
                 const existingBack = panel.querySelector('.portal-screen-back');
@@ -1396,6 +1617,7 @@
         }
 
         window.addEventListener('load', () => {
+            bindTeacherMenu();
             loadTeacherProfile();
             bindTeacherPortalOptions();
             lucide.createIcons();
