@@ -1462,6 +1462,7 @@
         const printCopies = ['Parents Copy', 'School Copy', 'Information Copy'];
         const CHALLAN_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
         const CHALLAN_PAYMENT_DETAILS_KEY = 'eduCore_payment_details';
+        const CHALLAN_FEE_FINE_RULE_KEY = 'eduCore_fee_fine_rule';
         const CHALLAN_MONTHS = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -2402,6 +2403,64 @@
                 .filter(Boolean);
         }
 
+        function readSavedFeeFineRuleForChallan() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(CHALLAN_FEE_FINE_RULE_KEY) || '{}');
+                const frequency = ['day', 'week', 'month'].includes(saved.frequency) ? saved.frequency : 'day';
+                const amount = Math.max(Number(saved.amount || 0), 0);
+                const targetDay = Math.min(Math.max(parseInt(saved.targetDay || 0, 10) || 0, 0), 31);
+                return { frequency, amount, targetDay, active: amount > 0 && targetDay > 0 };
+            } catch (_error) {
+                return { frequency: 'day', amount: 0, targetDay: 0, active: false };
+            }
+        }
+
+        function getSavedFeeFineLateUnitsForChallan(month, rule = readSavedFeeFineRuleForChallan()) {
+            const monthIndex = CHALLAN_MONTHS.indexOf(String(month || '').trim());
+            if (monthIndex < 0 || !rule.active) return 0;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const lastDay = new Date(today.getFullYear(), monthIndex + 1, 0).getDate();
+            const targetDate = new Date(today.getFullYear(), monthIndex, Math.min(rule.targetDay, lastDay));
+            targetDate.setHours(0, 0, 0, 0);
+            if (today <= targetDate) return 0;
+
+            const lateDays = Math.ceil((today - targetDate) / 86400000);
+            if (rule.frequency === 'week') return Math.ceil(lateDays / 7);
+            if (rule.frequency === 'month') return Math.ceil(lateDays / 30);
+            return lateDays;
+        }
+
+        function getSavedFeeFineAmountForChallan(months, rule = readSavedFeeFineRuleForChallan()) {
+            if (!rule.active) return 0;
+            const lateUnits = (Array.isArray(months) ? months : [])
+                .reduce((total, month) => total + getSavedFeeFineLateUnitsForChallan(month, rule), 0);
+            return lateUnits * rule.amount;
+        }
+
+        function getChallanFineAmountForMonths(months, fallbackFineAmount = 0) {
+            const rule = readSavedFeeFineRuleForChallan();
+            return rule.active ? getSavedFeeFineAmountForChallan(months, rule) : Math.max(Number(fallbackFineAmount || 0), 0);
+        }
+
+        function applySavedFeeFineRuleToChallan(months) {
+            const rule = readSavedFeeFineRuleForChallan();
+            if (!rule.active) return;
+
+            const fineFrequency = document.getElementById('fineFrequency');
+            const fineRate = document.getElementById('fineRate');
+            const fineUnits = document.getElementById('fineUnits');
+            if (!fineFrequency || !fineRate || !fineUnits) return;
+
+            const lateUnits = (Array.isArray(months) ? months : [])
+                .reduce((total, month) => total + getSavedFeeFineLateUnitsForChallan(month, rule), 0);
+            fineFrequency.value = lateUnits > 0 ? rule.frequency : 'none';
+            fineRate.value = lateUnits > 0 ? String(rule.amount) : '0';
+            fineUnits.value = lateUnits > 0 ? String(lateUnits) : '0';
+            syncChallanFineAmount();
+        }
+
         function applySelectedFeeMonthsToChallan(summary) {
             const pendingMonths = getPendingMonthsForPicker(summary);
             const pendingSet = new Set(pendingMonths);
@@ -2410,17 +2469,9 @@
             challanSelectedFeeMonths = safeSelected;
 
             const monthlyFee = Number(summary?.monthlyFee || 0);
-            const selectedStudent = getSelectedChallanStudent();
-            const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
-            const studentPayments = paymentDetails[selectedStudent?.id] || {};
             const baseFee = Number.isFinite(monthlyFee) ? monthlyFee : 0;
-            const baseAmountValue = safeSelected.reduce((total, month) => {
-                const monthKey = String(month || '').trim();
-                if (!monthKey) return total;
-                const alreadyPaid = Number(studentPayments[monthKey]?.amount || 0);
-                const remainingForMonth = Math.max(baseFee - alreadyPaid, 0);
-                return total + remainingForMonth;
-            }, 0);
+            const baseAmountValue = safeSelected.reduce((total, month) =>
+                String(month || '').trim() ? total + baseFee : total, 0);
 
             const feeMonthInput = document.getElementById('feeMonth');
             if (feeMonthInput) {
@@ -2446,6 +2497,7 @@
                 payNowInput.value = baseAmountValue ? String(baseAmountValue) : '';
             }
 
+            applySavedFeeFineRuleToChallan(safeSelected);
             togglePayNowFieldVisibility();
             updatePayNowStatusLine();
         }
@@ -2638,9 +2690,8 @@
         }
 
         function isStudentFeePaid(student, summary = getChallanStudentFeeSummary(student)) {
-            const explicitPaid = String(student?.feesStatus || '').toLowerCase() === 'paid';
             const noPending = !summary.pendingMonths.length || summary.pendingAmount <= 0;
-            return explicitPaid && noPending;
+            return noPending;
         }
 
         function updateChallanPaidStateUI(isPaid) {
@@ -2687,6 +2738,8 @@
 
             const currentMonthIndex = effectiveNow.getMonth();
             const currentYear = effectiveNow.getFullYear();
+            const monthlyFees = JSON.parse(localStorage.getItem(CHALLAN_MONTHLY_FEES_KEY) || '{}');
+            const studentMonthlyFees = monthlyFees[student.id] || {};
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
             
@@ -2725,11 +2778,12 @@
 
             applicableMonths.forEach((month) => {
                 const paidAmount = Number(studentPayments[month]?.amount || 0);
-                if (monthlyFee > 0 && paidAmount >= monthlyFee) {
+                const paidInMonthlyRecord = String(studentMonthlyFees[month] || '').toLowerCase() === 'paid';
+                if (paidInMonthlyRecord || (monthlyFee > 0 && paidAmount >= monthlyFee)) {
                     paidMonths.push(month);
                 } else {
                     pendingMonths.push(month);
-                    pendingAmount += Math.max(monthlyFee - paidAmount, 0);
+                    pendingAmount += monthlyFee;
                 }
             });
 
@@ -2809,11 +2863,10 @@
             const pendingDetails = summary.pendingMonths.length > 0 
                 ? summary.pendingMonths.map(m => {
                     const paidAmount = Number(studentPayments[m]?.amount || 0);
-                    const dueAmount = Math.max(Number(summary.monthlyFee || 0) - paidAmount, 0);
                     if (paidAmount > 0) {
-                        return `${m} (Paid PKR ${formatCurrency(paidAmount)}, Due PKR ${formatCurrency(dueAmount)})`;
+                        return `${m} (Paid PKR ${formatCurrency(paidAmount)}, Full Fee PKR ${formatCurrency(summary.monthlyFee)})`;
                     }
-                    return `${m} (Due PKR ${formatCurrency(dueAmount)})`;
+                    return `${m} (Full Fee PKR ${formatCurrency(summary.monthlyFee)})`;
                 }).join(', ')
                 : 'None';
 
@@ -3488,9 +3541,6 @@
 
                 const monthlyFee = parseInt(selectedStudent?.monthlyFee || 0, 10) || 0;
                 const baseAmountFallback = Number(document.getElementById('baseAmount').value || 0);
-                const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
-                const studentPayments = paymentDetails[selectedStudent.id] || {};
-
                 const challans = [];
                 const items = [];
 
@@ -3501,10 +3551,9 @@
                     const challanNumber = generateBulkChallanNumber(selectedStudent, cleanMonth);
                     const challanMonthLabel = buildChallanMonthLabelForFeeMonth(cleanMonth, challanMonthBase);
 
-                    const paidForThisMonth = Number(studentPayments[cleanMonth]?.amount || 0);
-                    const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
-                    const baseAmount = dueForThisMonth || monthlyFee || baseAmountFallback;
-                    const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
+                    const baseAmount = monthlyFee || baseAmountFallback;
+                    const appliedFineAmount = getChallanFineAmountForMonths([cleanMonth], fineAmount);
+                    const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
 
                     const data = {
                         studentId: selectedStudent?.id || '',
@@ -3523,7 +3572,7 @@
                         dueDate: dueDateLabel,
                         baseAmount,
                         additionalCharges,
-                        fineAmount,
+                        fineAmount: appliedFineAmount,
                         fineLabel,
                         discountLabel: discountInput || '0',
                         discountAmount,
@@ -3724,9 +3773,6 @@
 
                 if (statusFilter === 'pending' && (!pendingMonths.length || summary.pendingAmount <= 0)) continue;
                 if (statusFilter === 'paid' && !paidMonths.length) continue;
-                const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
-                const studentPayments = paymentDetails[student.id] || {};
-                
                 // Bulk prints: single challan per student (current month + all pending dues).
                 let monthsToProcess = [];
                 if (statusFilter === 'paid') {
@@ -3749,13 +3795,9 @@
 
                 const baseAmount = statusFilter === 'paid'
                     ? 0
-                    : monthsUnique.reduce((total, month) => {
-                        const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
-                        const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
-                        return total + (dueForThisMonth || 0);
-                    }, 0) || (monthlyFee || baseAmountFallback);
+                    : (monthsUnique.length * monthlyFee) || (monthlyFee || baseAmountFallback);
 
-                const appliedFineAmount = statusFilter === 'paid' ? 0 : fineAmount;
+                const appliedFineAmount = statusFilter === 'paid' ? 0 : getChallanFineAmountForMonths(monthsUnique, fineAmount);
                 const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
 
                 const data = {
@@ -3990,9 +4032,6 @@
                     const pendingMonths = Array.from(new Set(pendingMonthsRaw.map((m) => String(m || '').trim()).filter(Boolean)));
                     if (!pendingMonths.length) continue;
 
-                    const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
-                    const studentPayments = paymentDetails[student.id] || {};
-
                     const generatedStudentId = student?.studentCode || student?.id || student?.rollNo || '';
                     const branchDetails = getChallanBranchContactDetails(student?.campusName);
                     const defaultCampusAddress = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
@@ -4000,13 +4039,9 @@
                     const feeMonthCombined = pendingMonths.join(', ');
                     const challanNumber = generateBulkChallanNumber(student, pendingMonths[0] || 'Dues');
 
-                    const baseAmount = pendingMonths.reduce((total, month) => {
-                        const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
-                        const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
-                        return total + (dueForThisMonth || 0);
-                    }, 0) || (monthlyFee || baseAmountFallback);
-
-                    const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
+                    const baseAmount = (pendingMonths.length * monthlyFee) || (monthlyFee || baseAmountFallback);
+                    const appliedFineAmount = getChallanFineAmountForMonths(pendingMonths, fineAmount);
+                    const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
 
                     const data = {
                         studentId: student?.id || '',
@@ -4025,7 +4060,7 @@
                         dueDate: dueDateLabel,
                         baseAmount,
                         additionalCharges,
-                        fineAmount,
+                        fineAmount: appliedFineAmount,
                         fineLabel,
                         discountLabel: discountInput || '0',
                         discountAmount,
