@@ -947,16 +947,18 @@
             }
 
             .profile-main {
-                align-items: flex-start;
-                flex-direction: row;
+                align-items: stretch;
+                flex-direction: column;
                 width: 100%;
                 gap: 0.8rem;
-                flex-wrap: wrap;
+            }
+
+            .profile-main .portal-photo-picker {
+                align-self: center;
             }
 
             .profile-details {
-                flex: 1;
-                min-width: 120px;
+                width: 100%;
             }
 
             .profile-main h2 {

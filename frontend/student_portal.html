@@ -1538,11 +1538,14 @@
             }
 
             .user-card-main {
-                align-items: flex-start;
-                flex-direction: row;
+                align-items: stretch;
+                flex-direction: column;
                 width: 100%;
                 gap: 0.8rem;
-                flex-wrap: wrap;
+            }
+
+            .user-card-main .portal-photo-picker {
+                align-self: center;
             }
 
             .portal-photo-action {
@@ -1565,8 +1568,7 @@
             }
 
             .student-profile-copy {
-                flex: 1;
-                min-width: 120px;
+                width: 100%;
             }
 
             .student-profile-copy h2 {
@@ -1819,9 +1821,7 @@
         <section class="portal-module-heading" aria-label="Student module overview">
             <div>
                 <h2>Portal Modules</h2>
-                <p>Open any academic, fee, attendance, or communication workspace.</p>
             </div>
-            <span class="portal-module-count">14 modules</span>
         </section>
 
         <section class="student-action-grid" aria-label="Student portal actions">
