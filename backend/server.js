@@ -1700,6 +1700,45 @@ app.delete('/api/banners/:id', async (req, res) => {
     }
 });
 
+async function readTeacherSalaryPayments() {
+    const row = await sequelize.models.AppSetting.findByPk('teacher_salary_payments');
+    if (!row?.settingValue) return {};
+    try {
+        const parsed = JSON.parse(row.settingValue);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (_error) {
+        return {};
+    }
+}
+
+app.get('/api/teacher-salaries', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        res.json({ success: true, salaries: await readTeacherSalaryPayments() });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message || 'Salary payments could not be loaded.' });
+    }
+});
+
+app.post('/api/teacher-salaries', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const salaries = req.body?.salaries && typeof req.body.salaries === 'object' && !Array.isArray(req.body.salaries)
+            ? req.body.salaries
+            : {};
+        await sequelize.models.AppSetting.upsert({
+            settingKey: 'teacher_salary_payments',
+            settingValue: JSON.stringify(salaries)
+        });
+        io.emit('salary_payment_update', { salaries });
+        res.json({ success: true, salaries });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message || 'Salary payments could not be saved.' });
+    }
+});
+
 function normalizeClassFeeConfig(input = {}) {
     const raw = input && typeof input === 'object' ? input : {};
     return Object.entries(raw).reduce((acc, [className, config]) => {

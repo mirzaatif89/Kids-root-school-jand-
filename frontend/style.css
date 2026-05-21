@@ -846,8 +846,8 @@ ul {
 
 .card {
     background: var(--surface-color);
-    min-height: 150px;
-    padding: 1.25rem;
+    min-height: 128px;
+    padding: 1rem;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-color);
@@ -877,7 +877,7 @@ ul {
 }
 
 .card-value {
-    font-size: 1.85rem;
+    font-size: 1.65rem;
     font-weight: 700;
     color: var(--text-primary);
     margin-bottom: 0.5rem;
@@ -900,10 +900,10 @@ ul {
 
 .card-icon {
     position: absolute;
-    right: 1.25rem;
-    top: 1.25rem;
-    width: 48px;
-    height: 48px;
+    right: 1rem;
+    top: 1rem;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     background-color: rgba(32, 176, 164, 0.12);
     color: var(--primary-color);
@@ -2933,5 +2933,111 @@ td {
     .panel-card,
     .modal-content {
         border-radius: 8px !important;
+    }
+}
+
+/* === ADMIN SYSTEM VIEWPORT NORMALIZATION === */
+.dashboard-container {
+    width: 100vw;
+    max-width: 100%;
+    height: 100dvh;
+    min-height: 100dvh;
+}
+
+.dashboard-container .sidebar {
+    flex: 0 0 244px;
+    height: 100dvh;
+}
+
+.dashboard-container .main-content {
+    width: 100%;
+    height: 100dvh;
+    min-height: 0;
+    padding: clamp(1rem, 2vw, 2rem);
+}
+
+.dashboard-container .header,
+.dashboard-container .toolbar,
+.dashboard-container .table-header,
+.dashboard-container .form-container,
+.dashboard-container .panel-card,
+.dashboard-container .stats-grid,
+.dashboard-container .table-container {
+    max-width: 100%;
+}
+
+.dashboard-container .header,
+.dashboard-container .toolbar,
+.dashboard-container .table-header {
+    margin-bottom: clamp(1rem, 2vw, 2rem);
+}
+
+.dashboard-container .form-container,
+.dashboard-container .panel-card,
+.dashboard-container .table-container,
+.dashboard-container .card {
+    border-radius: 8px;
+}
+
+.dashboard-container .card {
+    min-height: clamp(108px, 14vw, 128px);
+    padding: clamp(0.85rem, 1.4vw, 1rem);
+}
+
+.dashboard-container .card-value {
+    font-size: clamp(1.35rem, 2vw, 1.65rem);
+}
+
+.dashboard-container .card-title,
+.dashboard-container .card-trend {
+    font-size: 0.78rem;
+}
+
+.dashboard-container .card-icon {
+    width: 38px;
+    height: 38px;
+    right: 0.85rem;
+    top: 0.85rem;
+}
+
+@media (max-width: 1180px) {
+    .dashboard-container {
+        width: 100%;
+        height: auto;
+        min-height: 100dvh;
+    }
+
+    .dashboard-container .sidebar {
+        flex-basis: 230px;
+    }
+
+    .dashboard-container .main-content {
+        height: auto;
+        min-height: 100dvh;
+        padding: clamp(0.9rem, 2vw, 1.35rem) !important;
+    }
+}
+
+@media (max-width: 900px) {
+    .dashboard-container .sidebar {
+        flex: 0 0 auto;
+        height: auto;
+    }
+
+    .dashboard-container .main-content {
+        width: 100%;
+        min-height: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-container .main-content {
+        padding: 0.85rem !important;
+    }
+
+    .dashboard-container .header,
+    .dashboard-container .toolbar,
+    .dashboard-container .table-header {
+        margin-bottom: 1rem;
     }
 }

@@ -421,7 +421,8 @@ async function initialSQLSync() {
 
         await Promise.all([
             loadStudentAttendanceFromSQL(),
-            loadTeacherAttendanceFromSQL()
+            loadTeacherAttendanceFromSQL(),
+            loadTeacherSalariesFromSQL()
         ]);
     } catch (e) {
         console.warn("SQL Server Connection Failed: Ensure 'node server.js' is running and MySQL is active.");
@@ -3813,21 +3814,12 @@ function getDashboardStudentFee(student = {}) {
     return Number(config.monthlyFee || config.fee || 0) || 0;
 }
 
-async function fetchDashboardFeePayments() {
-    try {
-        const response = await fetch(`${API_BASE_URL}/fees/payments`);
-        const result = await parseJsonResponse(response, 'Fee payments could not be loaded.');
-        if (!response.ok || result?.success === false) {
-            throw new Error(result?.message || 'Fee payments could not be loaded.');
-        }
-        return Array.isArray(result?.payments) ? result.payments : [];
-    } catch (error) {
-        console.warn('Dashboard fee payments could not be loaded from server:', error.message);
-        return [];
-    }
+function getCurrentDashboardFeeMonth() {
+    return new Date().toLocaleString('en-US', { month: 'long' });
 }
 
-function getLocalDashboardFeePayments(students = []) {
+function getDashboardFeeStatusRevenue(students = []) {
+    const currentMonth = getCurrentDashboardFeeMonth();
     let monthlyFeesData = {};
     let paymentDetails = {};
 
@@ -3843,59 +3835,42 @@ function getLocalDashboardFeePayments(students = []) {
         paymentDetails = {};
     }
 
-    const rows = [];
-    const pushedKeys = new Set();
-
-    (students || []).forEach((student) => {
+    return (students || []).reduce((summary, student) => {
         const studentId = String(student?.id || '').trim();
-        if (!studentId) return;
+        if (!studentId) return summary;
 
-        Object.entries(paymentDetails[studentId] || {}).forEach(([month, detail]) => {
-            const amount = Number(detail?.amount || 0);
-            if (!(amount > 0)) return;
-            pushedKeys.add(`${studentId}::${month}`);
-            rows.push({ studentId, feeMonth: month, amount, status: 'Paid' });
-        });
+        const feeAmount = getDashboardStudentFee(student);
+        if (!(feeAmount > 0)) return summary;
 
-        Object.entries(monthlyFeesData[studentId] || {}).forEach(([month, status]) => {
-            if (status !== 'Paid' || pushedKeys.has(`${studentId}::${month}`)) return;
-            const amount = getDashboardStudentFee(student);
-            if (amount > 0) rows.push({ studentId, feeMonth: month, amount, status: 'Paid' });
-        });
+        const monthStatus = monthlyFeesData?.[studentId]?.[currentMonth];
+        const paidRecordAmount = Number(paymentDetails?.[studentId]?.[currentMonth]?.amount || 0) || 0;
+        const studentStatus = String(student?.feesStatus || '').trim().toLowerCase();
 
-        if (student.feesStatus === 'Paid' && !Object.keys(monthlyFeesData[studentId] || {}).length && !Object.keys(paymentDetails[studentId] || {}).length) {
-            const amount = getDashboardStudentFee(student);
-            if (amount > 0) rows.push({ studentId, feeMonth: 'Current', amount, status: 'Paid' });
+        let paidAmount = 0;
+        if (monthStatus === 'Paid') paidAmount = feeAmount;
+        else if (paidRecordAmount > 0) paidAmount = Math.min(paidRecordAmount, feeAmount);
+        else if (studentStatus === 'paid') paidAmount = feeAmount;
+
+        if (paidAmount > 0) {
+            summary.total += paidAmount;
+            summary.paidStudents += 1;
         }
-    });
 
-    return rows;
+        return summary;
+    }, { total: 0, paidStudents: 0, month: currentMonth });
 }
 
-async function updateDashboardRevenueStats() {
+function updateDashboardRevenueStats() {
     const amountEl = document.getElementById('dashRevenue');
     const detailEl = document.getElementById('dashRevenueDetail');
     if (!amountEl && !detailEl) return;
 
     const students = getArrayData(STORAGE_KEY_STUDENTS);
-    let payments = await fetchDashboardFeePayments();
-    let sourceLabel = 'fee payments';
+    const feeSummary = getDashboardFeeStatusRevenue(students);
 
-    if (!payments.length) {
-        payments = getLocalDashboardFeePayments(students);
-        sourceLabel = 'local fee records';
-    }
-
-    const paidPayments = payments.filter((payment) => {
-        const status = String(payment?.status || 'Paid').toLowerCase();
-        return status === 'paid' || status === 'partial';
-    });
-    const totalRevenue = paidPayments.reduce((sum, payment) => sum + (Number(payment?.amount || 0) || 0), 0);
-
-    if (amountEl) amountEl.innerText = formatDashboardCurrency(totalRevenue);
+    if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.total);
     if (detailEl) {
-        const paymentCount = paidPayments.length;
-        detailEl.innerHTML = `<i data-lucide="dollar-sign" size="16"></i> ${paymentCount} ${paymentCount === 1 ? 'payment' : 'payments'} from ${sourceLabel}`;
+        detailEl.textContent = `${feeSummary.paidStudents} ${feeSummary.paidStudents === 1 ? 'student' : 'students'} paid for ${feeSummary.month}`;
         if (window.lucide) window.lucide.createIcons();
     }
 }
@@ -8038,6 +8013,29 @@ function getTeacherSalaries() {
 
 function saveTeacherSalaries(salaries) {
     localStorage.setItem(STORAGE_KEY_TEACHER_SALARIES, JSON.stringify(salaries));
+    fetch(`${API_BASE_URL}/teacher-salaries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ salaries })
+    }).catch((error) => console.warn('Teacher salary payments could not be saved to DB:', error.message));
+}
+
+async function loadTeacherSalariesFromSQL() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/teacher-salaries`);
+        const result = await parseJsonResponse(response, 'Teacher salary payments could not be loaded.');
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Teacher salary payments could not be loaded.');
+        }
+        const salaries = result?.salaries && typeof result.salaries === 'object' && !Array.isArray(result.salaries)
+            ? result.salaries
+            : {};
+        localStorage.setItem(STORAGE_KEY_TEACHER_SALARIES, JSON.stringify(salaries));
+        return salaries;
+    } catch (error) {
+        console.warn('Teacher salary payments DB load skipped:', error.message);
+        return getTeacherSalaries();
+    }
 }
 
 function getSalaryPaymentRecord(salaries, entityType, entityId, monthKey) {
@@ -8170,6 +8168,7 @@ function toggleSalaryPayment(entityId, monthKey, entityType = 'teacher') {
     }
 
     saveTeacherSalaries(salaries);
+    window.dispatchEvent(new CustomEvent('salary_payment_update', { detail: { entityId, monthKey, entityType } }));
     if (typeof renderTeacherSalaries === 'function') {
         renderTeacherSalaries();
     }
