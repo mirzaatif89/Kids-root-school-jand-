@@ -38,6 +38,11 @@ module.exports = createHandler({
         const fineOnly = String(paymentMode || '').toLowerCase() === 'fine' || (requestedPaymentAmount <= 0 && safeFineAmount > 0);
         const safeFullAmount = Number(fullAmount || student.monthlyFee || 0);
 
+        if (!fineOnly && safeFullAmount <= 0) {
+            sendJson(res, 400, { success: false, message: 'Monthly fee is not set for this student.' });
+            return;
+        }
+
         const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         const normalizeMonthList = (value) => Array.isArray(value)
             ? value.map((item) => String(item || '').trim()).filter(Boolean)

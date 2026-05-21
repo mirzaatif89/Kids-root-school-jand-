@@ -267,7 +267,7 @@ function buildFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 
     });
 
     return {
-        to: normalizeEmail(student.email),
+        to: resolveStudentEmails(student),
         subject,
         text,
         html

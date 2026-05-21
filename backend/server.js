@@ -2512,6 +2512,10 @@ app.post('/api/fees/manual-payment', async (req, res) => {
         const fineOnly = String(paymentMode || '').toLowerCase() === 'fine' || (requestedPaymentAmount <= 0 && safeFineAmount > 0);
         const safeFullAmount = Number(fullAmount || student.monthlyFee || 0);
 
+        if (!fineOnly && safeFullAmount <= 0) {
+            return res.status(400).json({ success: false, message: 'Monthly fee is not set for this student.' });
+        }
+
         const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
         const normalizeMonthList = (value) => Array.isArray(value)
