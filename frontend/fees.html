@@ -216,6 +216,23 @@
             font-weight: 600;
         }
 
+        .month-payment-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .btn-add-payment {
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-primary);
+        }
+
+        .btn-add-payment:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-dark);
+        }
+
         .btn-mark-paid {
             background: var(--primary-color);
             color: white;
@@ -612,6 +629,7 @@
     <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+        const STORAGE_KEY_PAYMENT_DETAILS = 'eduCore_payment_details';
         const STORAGE_KEY_FEE_FINE_RULE = 'eduCore_fee_fine_rule';
         const monthsList = [
             "January", "February", "March", "April", "May", "June",
@@ -858,6 +876,11 @@
             return monthsList.find(month => lower.includes(month.toLowerCase()) || lower.includes(month.slice(0, 3).toLowerCase())) || raw;
         }
 
+        function getFeeMonthPaymentAmount(studentId, month) {
+            const paymentDetails = JSON.parse(localStorage.getItem(STORAGE_KEY_PAYMENT_DETAILS) || '{}');
+            return Math.max(Number(paymentDetails?.[studentId]?.[month]?.amount || 0), 0);
+        }
+
         async function mergeFeePaymentsIntoMonthlyStore() {
             try {
                 const response = await fetch(`${API_BASE_URL}/fees/payments`);
@@ -865,16 +888,26 @@
                 const result = await response.json();
                 const payments = Array.isArray(result.payments) ? result.payments : [];
                 const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
+                const paymentDetails = {};
 
                 payments.forEach((payment) => {
-                    if (payment.status !== 'Paid' || !payment.studentId || String(payment.paymentSource || '').toLowerCase() === 'fine') return;
+                    if (!['Paid', 'Partial'].includes(String(payment.status || '')) || !payment.studentId) return;
+                    if (String(payment.paymentSource || '').toLowerCase() === 'fine') return;
                     const month = getLongMonthName(payment.feeMonth);
                     if (!month) return;
+                    paymentDetails[payment.studentId] = paymentDetails[payment.studentId] || {};
+                    const previous = paymentDetails[payment.studentId][month] || { amount: 0, challanNumbers: [] };
+                    paymentDetails[payment.studentId][month] = {
+                        amount: Number(previous.amount || 0) + Number(payment.amount || 0),
+                        challanNumbers: Array.from(new Set([...(previous.challanNumbers || []), payment.challanNumber || ''].filter(Boolean)))
+                    };
+                    if (payment.status !== 'Paid') return;
                     monthlyFees[payment.studentId] = monthlyFees[payment.studentId] || {};
                     monthlyFees[payment.studentId][month] = 'Paid';
                 });
 
                 localStorage.setItem(STORAGE_KEY_MONTHLY_FEES, JSON.stringify(monthlyFees));
+                localStorage.setItem(STORAGE_KEY_PAYMENT_DETAILS, JSON.stringify(paymentDetails));
             } catch (error) {
                 console.warn('Fee payments could not be loaded:', error.message);
             }
@@ -1126,6 +1159,8 @@
                 const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
                 const fineAmount = getStudentMonthFineAmount(student, month, studentRecord[month]);
                 const dueAmount = monthlyFee + fineAmount;
+                const paidAmount = getFeeMonthPaymentAmount(studentId, month);
+                const remainingAmount = Math.max(dueAmount - paidAmount, 0);
                 const row = document.createElement('div');
                 row.className = `month-row${isCurrentMonth ? ' current-month' : ''}`;
 
@@ -1150,6 +1185,7 @@
                         <div class="month-name">${month}</div>
                         <div class="fee-due-breakdown">
                             <span>Total Fee: PKR ${dueAmount.toLocaleString('en-PK')}</span>
+                            ${paidAmount > 0 ? `<span>Added Payment: PKR ${paidAmount.toLocaleString('en-PK')} | Remaining: PKR ${remainingAmount.toLocaleString('en-PK')}</span>` : ''}
                         </div>
                     </div>
                     <div class="month-status">
@@ -1157,9 +1193,12 @@
                             <i data-lucide="${badgeIcon}"></i>
                             ${badgeLabel}
                         </span>
-                        <button class="toggle-fee-btn ${isPaid ? 'btn-mark-unpaid' : 'btn-mark-paid'}" onclick="toggleMonthFee('${studentId}', '${month}')">
-                            ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
-                        </button>
+                        <div class="month-payment-actions">
+                            ${!isPaid ? `<button class="toggle-fee-btn btn-add-payment" onclick="addManualMonthPayment('${studentId}', '${month}')">Add Payment</button>` : ''}
+                            <button class="toggle-fee-btn ${isPaid ? 'btn-mark-unpaid' : 'btn-mark-paid'}" onclick="toggleMonthFee('${studentId}', '${month}')">
+                                ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+                            </button>
+                        </div>
                     </div>
                 `;
                 container.appendChild(row);
@@ -1170,6 +1209,70 @@
             }
 
             if (window.lucide) lucide.createIcons();
+        }
+
+        async function addManualMonthPayment(studentId, month) {
+            const students = getData(STORAGE_KEY_STUDENTS);
+            const student = students.find((item) => String(item.id) === String(studentId));
+            if (!student) return;
+
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
+            const studentRecord = monthlyFees[studentId] || {};
+            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const fineAmount = getStudentMonthFineAmount(student, month, studentRecord[month]);
+            const totalFee = monthlyFee + fineAmount;
+            const paidAmount = getFeeMonthPaymentAmount(studentId, month);
+            const remainingAmount = Math.max(totalFee - paidAmount, 0);
+            if (!(remainingAmount > 0)) {
+                alert(`${month} fee is already fully covered.`);
+                return;
+            }
+
+            const entered = window.prompt(`Add payment for ${month}. Remaining amount is PKR ${remainingAmount.toLocaleString('en-PK')}.`, '');
+            if (entered === null) return;
+            const amount = Number(String(entered).replace(/,/g, '').trim());
+            if (!Number.isFinite(amount) || amount <= 0) {
+                alert('Enter a valid payment amount.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/fees/manual-payment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        studentId: student.id,
+                        studentName: student.fullName,
+                        rollNo: student.rollNo,
+                        classGrade: student.classGrade,
+                        feeMonth: month,
+                        feeMonths: [month],
+                        session: student.session || '',
+                        amount,
+                        fullAmount: totalFee,
+                        fineAmount: 0,
+                        challanNumber: `MAN-FEE-${student.id}-${month}-${Date.now()}`
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Payment could not be saved.');
+                }
+
+                await mergeFeePaymentsIntoMonthlyStore();
+                if (month === CURRENT_MONTH_NAME && String(result?.payment?.status || '') === 'Paid') {
+                    const idx = students.findIndex((item) => String(item.id) === String(studentId));
+                    if (idx !== -1) {
+                        students[idx].feesStatus = 'Paid';
+                        saveData(STORAGE_KEY_STUDENTS, students);
+                    }
+                }
+                renderMonthlyFeeRecord(studentId);
+                refreshVisibleFeeView();
+                alert('Payment added successfully.');
+            } catch (error) {
+                alert(error?.message || 'Payment could not be saved.');
+            }
         }
 
         function toggleMonthFee(studentId, month) {

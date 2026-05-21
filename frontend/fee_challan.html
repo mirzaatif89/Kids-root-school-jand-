@@ -2444,6 +2444,16 @@
             return rule.active ? getSavedFeeFineAmountForChallan(months, rule) : Math.max(Number(fallbackFineAmount || 0), 0);
         }
 
+        function getChallanPaidAmountForMonths(student, months) {
+            if (!student?.id) return 0;
+            const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
+            const studentPayments = paymentDetails[student.id] || {};
+            return (Array.isArray(months) ? months : []).reduce((total, month) => {
+                const key = String(month || '').trim();
+                return key ? total + Math.max(Number(studentPayments[key]?.amount || 0), 0) : total;
+            }, 0);
+        }
+
         function applySavedFeeFineRuleToChallan(months) {
             const rule = readSavedFeeFineRuleForChallan();
             if (!rule.active) return;
@@ -2585,7 +2595,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.payNowAmount,
-                        fullAmount: data.totalDue,
+                        fullAmount: data.grossTotal || data.totalDue,
                         fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     })
@@ -2783,7 +2793,7 @@
                     paidMonths.push(month);
                 } else {
                     pendingMonths.push(month);
-                    pendingAmount += monthlyFee;
+                    pendingAmount += Math.max(monthlyFee - paidAmount, 0);
                 }
             });
 
@@ -2853,6 +2863,8 @@
             const studentPayments = paymentDetails[student.id] || {};
             let totalPaidAmount = 0;
             const totalPendingAmount = Number(summary?.pendingAmount || 0);
+            const partialPaidAmount = summary.pendingMonths.reduce((total, month) =>
+                total + Math.max(Number(studentPayments[month]?.amount || 0), 0), 0);
 
             summary.paidMonths.forEach(month => {
                 const payment = studentPayments[month];
@@ -2886,8 +2898,9 @@
                 <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
                 <div>Paid Months: ${escapeHtml(paidDetails)} | <strong>Amount: PKR ${totalPaidAmount.toLocaleString('en-PK')}</strong></div>
                 <div>Pending Months: <strong>${pendingDetails}</strong></div>
+                ${partialPaidAmount > 0 ? `<div>Added Payment: <strong>PKR ${partialPaidAmount.toLocaleString('en-PK')}</strong></div>` : ''}
                 <div>Pending Amount: <strong>PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
-                <div>Total Due: <strong style="color: #dc2626;">PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
+                <div>Total Due: <strong style="color: #dc2626;">PKR ${Number(data.totalDue || totalPendingAmount).toLocaleString('en-PK')}</strong></div>
             `;
         }
 
@@ -3022,7 +3035,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.payNowAmount,
-                        fullAmount: data.totalDue,
+                        fullAmount: data.grossTotal || data.totalDue,
                         fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     })
@@ -3080,7 +3093,7 @@
                     feeMonths: payload.feeMonths,
                     session: payload.session,
                     amount: payload.payNowAmount ?? payload.totalDue ?? payload.amount,
-                    fullAmount: payload.totalDue ?? payload.fullAmount ?? payload.amount,
+                    fullAmount: payload.grossTotal ?? payload.totalDue ?? payload.fullAmount ?? payload.amount,
                     fineAmount: payload.fineAmount ?? 0,
                     challanNumber: payload.challanNumber
                 })
@@ -3217,7 +3230,10 @@
                 const discountInput = String(document.getElementById('discountValue')?.value || '').trim();
                 const numericDiscount = Number(discountInput);
                 const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-                const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
+                const selectedStudent = getSelectedChallanStudent();
+                const feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths : [];
+                const paidAmount = getChallanPaidAmountForMonths(selectedStudent, feeMonths);
+                const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount - paidAmount, 0);
                 payNowInput.value = totalDue ? String(totalDue) : '';
             }
             return fineAmount;
@@ -3232,7 +3248,14 @@
             const discountInput = document.getElementById('discountValue').value.trim();
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-            const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
+            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
+            let feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths.slice() : [];
+            if (!feeMonths.length) {
+                feeMonths = extractChallanMonthNames(feeMonthLabel);
+            }
+            const paidAmount = getChallanPaidAmountForMonths(selectedStudent, feeMonths);
+            const grossTotal = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
+            const totalDue = Math.max(grossTotal - paidAmount, 0);
 
             const payNowField = document.getElementById('payNowAmount');
             const payNowRaw = payNowField ? String(payNowField.value || '').trim() : '';
@@ -3244,12 +3267,6 @@
             payNowAmount = Math.max(payNowAmount, 0);
             if (payNowAmount > totalDue) payNowAmount = totalDue;
             const remainingDue = Math.max(totalDue - payNowAmount, 0);
-
-            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
-            let feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths.slice() : [];
-            if (!feeMonths.length) {
-                feeMonths = extractChallanMonthNames(feeMonthLabel);
-            }
 
             const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
             return {
@@ -3272,6 +3289,7 @@
                 additionalCharges,
                 fineAmount,
                 fineLabel,
+                paidAmount,
                 discountLabel: discountInput || '0',
                 discountAmount,
                 particulars: document.getElementById('particulars').value.trim() || 'Tuition Fee',
@@ -3279,6 +3297,7 @@
                 schoolAddress: document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`,
                 urduNote: document.getElementById('urduNote').value.trim() || '',
                 notes: document.getElementById('challanNotes').value.trim() || 'No additional instructions.',
+                grossTotal,
                 totalDue,
                 payNowAmount,
                 remainingDue
@@ -3397,6 +3416,11 @@
                             <tr>
                                 <td colspan="3">${escapeHtml(data.fineLabel || 'Late Fine')}</td>
                                 <td colspan="3">${formatCurrency(data.fineAmount)}</td>
+                            </tr>` : ''}
+                            ${!terminated && data.paidAmount > 0 ? `
+                            <tr>
+                                <td colspan="3">Added Payment</td>
+                                <td colspan="3">-${formatCurrency(data.paidAmount)}</td>
                             </tr>` : ''}
                             ${!terminated && data.discountAmount > 0 ? `
                             <tr>
@@ -3552,8 +3576,10 @@
                     const challanMonthLabel = buildChallanMonthLabelForFeeMonth(cleanMonth, challanMonthBase);
 
                     const baseAmount = monthlyFee || baseAmountFallback;
+                    const paidAmount = getChallanPaidAmountForMonths(selectedStudent, [cleanMonth]);
                     const appliedFineAmount = getChallanFineAmountForMonths([cleanMonth], fineAmount);
-                    const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                    const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                    const totalDue = Math.max(grossTotal - paidAmount, 0);
 
                     const data = {
                         studentId: selectedStudent?.id || '',
@@ -3574,6 +3600,7 @@
                         additionalCharges,
                         fineAmount: appliedFineAmount,
                         fineLabel,
+                        paidAmount,
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
@@ -3581,6 +3608,7 @@
                         schoolAddress,
                         urduNote,
                         notes,
+                        grossTotal,
                         totalDue,
                         payNowAmount: totalDue,
                         remainingDue: 0
@@ -3602,7 +3630,7 @@
                             feeMonth: data.feeMonth,
                             session: data.session,
                             amount: data.totalDue,
-                            fullAmount: data.totalDue,
+                            fullAmount: data.grossTotal || data.totalDue,
                             fineAmount: data.fineAmount,
                             challanNumber: data.challanNumber
                         });
@@ -3797,8 +3825,10 @@
                     ? 0
                     : (monthsUnique.length * monthlyFee) || (monthlyFee || baseAmountFallback);
 
+                const paidAmount = statusFilter === 'paid' ? 0 : getChallanPaidAmountForMonths(student, monthsUnique);
                 const appliedFineAmount = statusFilter === 'paid' ? 0 : getChallanFineAmountForMonths(monthsUnique, fineAmount);
-                const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                const totalDue = Math.max(grossTotal - paidAmount, 0);
 
                 const data = {
                     studentId: student?.id || '',
@@ -3819,6 +3849,7 @@
                     additionalCharges,
                     fineAmount: appliedFineAmount,
                     fineLabel,
+                    paidAmount,
                     discountLabel: discountInput || '0',
                     discountAmount,
                     particulars,
@@ -3826,6 +3857,7 @@
                     schoolAddress: campusAwareAddress,
                     urduNote,
                     notes,
+                    grossTotal,
                     totalDue,
                     payNowAmount: totalDue,
                     remainingDue: 0
@@ -3848,7 +3880,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.totalDue,
-                        fullAmount: data.totalDue,
+                        fullAmount: data.grossTotal || data.totalDue,
                         fineAmount: data.fineAmount,
                         challanNumber: data.challanNumber
                     });
@@ -4040,8 +4072,10 @@
                     const challanNumber = generateBulkChallanNumber(student, pendingMonths[0] || 'Dues');
 
                     const baseAmount = (pendingMonths.length * monthlyFee) || (monthlyFee || baseAmountFallback);
+                    const paidAmount = getChallanPaidAmountForMonths(student, pendingMonths);
                     const appliedFineAmount = getChallanFineAmountForMonths(pendingMonths, fineAmount);
-                    const totalDue = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                    const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
+                    const totalDue = Math.max(grossTotal - paidAmount, 0);
 
                     const data = {
                         studentId: student?.id || '',
@@ -4062,6 +4096,7 @@
                         additionalCharges,
                         fineAmount: appliedFineAmount,
                         fineLabel,
+                        paidAmount,
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
@@ -4069,6 +4104,7 @@
                         schoolAddress: defaultCampusAddress,
                         urduNote,
                         notes,
+                        grossTotal,
                         totalDue,
                         payNowAmount: totalDue,
                         remainingDue: 0
@@ -4091,7 +4127,7 @@
                             feeMonths: data.feeMonths,
                             session: data.session,
                             amount: data.totalDue,
-                            fullAmount: data.totalDue,
+                            fullAmount: data.grossTotal || data.totalDue,
                             fineAmount: data.fineAmount,
                             challanNumber: data.challanNumber
                         });
