@@ -592,6 +592,7 @@
                     icon: 'credit-card',
                     children: [
                         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                        { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
                         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
                     ]

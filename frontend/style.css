@@ -3006,7 +3006,7 @@ td {
 
 .dashboard-container .search-bar {
     min-height: var(--app-control-height);
-    padding: 0.34rem 0.68rem;
+    padding: 0.00rem 0.68rem;
     border-radius: 8px;
 }
 

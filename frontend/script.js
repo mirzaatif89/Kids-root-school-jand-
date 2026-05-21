@@ -2747,6 +2747,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+        { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
         { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
@@ -2824,6 +2825,7 @@ function renderAdminSidebarSequence() {
             icon: 'credit-card',
             children: [
                 { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                 { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
                 { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
             ]

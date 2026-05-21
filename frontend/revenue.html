@@ -4,129 +4,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Revenue Report - My own Science school</title>
-    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <title>Revenue Report - Apexiums School management</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .revenue-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
         .rev-card {
-            background: linear-gradient(135deg, var(--surface-color) 0%, rgba(255,255,255, 0.5) 100%);
-            min-height: 130px;
+            background: var(--surface-color);
             padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid rgba(32, 176, 164, 0.1);
+            border-radius: 1rem;
+            border: 1px solid var(--border-color);
             display: flex;
             align-items: center;
-            gap: 1.25rem;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .rev-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, var(--primary-color), transparent);
-        }
-
-        .rev-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(32, 176, 164, 0.15);
-            border-color: rgba(32, 176, 164, 0.3);
+            gap: 1rem;
+            box-shadow: var(--shadow-sm);
         }
 
         .rev-icon {
-            width: 52px;
-            height: 52px;
+            width: 50px;
+            height: 50px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
-            flex-shrink: 0;
-        }
-
-        .rev-data {
-            flex: 1;
+            font-size: 1.5rem;
         }
 
         .rev-data h3 {
             font-size: 1.5rem;
-            font-weight: 800;
+            font-weight: 700;
             color: var(--text-primary);
-            margin: 0.25rem 0 0 0;
         }
 
         .rev-data p {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            font-weight: 600;
-            margin: 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-weight: 500;
         }
 
         .revenue-grid {
             display: grid;
-            grid-template-columns: 2.5fr 1fr;
-            gap: 2rem;
-            margin-top: 2rem;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
         }
 
         .chart-container {
             background: var(--surface-color);
-            padding: 2rem;
-            border-radius: 12px;
+            padding: 1.5rem;
+            border-radius: 1rem;
             border: 1px solid var(--border-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            box-shadow: var(--shadow-sm);
         }
 
         .class-revenue-list {
             background: var(--surface-color);
-            padding: 2rem;
-            border-radius: 12px;
+            padding: 1.5rem;
+            border-radius: 1rem;
             border: 1px solid var(--border-color);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-        }
-
-        .class-revenue-list h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            margin: 0 0 1.5rem 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .class-revenue-list h3::before {
-            content: '';
-            width: 4px;
-            height: 24px;
-            background: var(--primary-color);
-            border-radius: 2px;
+            box-shadow: var(--shadow-sm);
         }
 
         .bar-row {
-            margin-bottom: 1.75rem;
-            padding-bottom: 0.75rem;
-        }
-
-        .bar-row:last-child {
-            margin-bottom: 0;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
         }
 
         .bar-label {
@@ -140,152 +86,37 @@
 
         .bar-label .class-name {
             color: var(--text-primary);
-            font-size: 0.98rem;
-            font-weight: 700;
+            font-size: 1rem;
         }
 
         .bar-label .amount-display {
             color: var(--primary-color);
-            font-size: 0.85rem;
-            font-weight: 700;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
         .bar-bg {
-            height: 8px;
+            height: 6px;
             background: #f1f5f9;
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
         }
 
         .bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), #10b981);
-            border-radius: 6px;
+            background: var(--primary-color);
+            border-radius: 4px;
             transition: width 1s ease-in-out;
         }
 
         .month-selector {
-            padding: 0.8rem 1.25rem;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
             background: white;
-            font-weight: 700;
+            font-weight: 600;
             color: var(--text-primary);
             cursor: pointer;
-            font-size: 0.95rem;
-            min-width: 200px;
-            min-height: 45px;
-            transition: all 0.3s ease;
-        }
-
-        .month-selector:hover {
-            border-color: var(--primary-color);
-            background: rgba(32, 176, 164, 0.02);
-        }
-
-        .month-selector:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.1);
-        }
-
-        .monthwise-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            table-layout: auto;
-        }
-
-        .monthwise-table th,
-        .monthwise-table td {
-            text-align: left;
-            padding: 1rem 0.9rem;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
-            white-space: normal;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-
-        .monthwise-table th {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-weight: 800;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .monthwise-table tbody tr:hover {
-            background: rgba(32, 176, 164, 0.08);
-        }
-
-        .monthwise-table tbody tr:nth-child(even) {
-            background: rgba(0, 0, 0, 0.01);
-        }
-
-        .monthwise-wrap {
-            max-height: 550px;
-            overflow: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow-x: auto;
-            background: white;
-        }
-
-        .overall-metrics {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0.85rem;
-        }
-
-        .overall-metric {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: 1rem;
-            padding: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255, 0.5) 100%);
-            transition: all 0.3s ease;
-        }
-
-        .overall-metric:hover {
-            border-color: rgba(32, 176, 164, 0.3);
-            background: rgba(32, 176, 164, 0.03);
-        }
-
-        .overall-metric .label {
-            color: var(--text-secondary);
-            font-weight: 700;
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .overall-metric .value {
-            font-weight: 800;
-            color: var(--text-primary);
-            font-size: 1.1rem;
-        }
-
-        .overall-metric.profit .value {
-            color: #15803d;
-            background: rgba(21, 128, 61, 0.08);
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
-        }
-
-        .overall-metric.pending .value {
-            color: #dc2626;
-            background: rgba(220, 38, 38, 0.08);
-            padding: 0.25rem 0.75rem;
-            border-radius: 6px;
         }
     </style>
 </head>
@@ -332,7 +163,7 @@
                     <i data-lucide="wallet"></i>
                     <span>Salaries</span>
                 </a>
-                <a href="bills.html" class="nav-item">
+                <a href="finance.html" class="nav-item" style="display: none;">
                     <i data-lucide="receipt"></i>
                     <span>Bills</span>
                 </a>
@@ -370,24 +201,18 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="header">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; width: 100%;">
-                    <div style="flex: 1; min-width: 300px;">
-                        <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem; font-weight: 800;">Revenue Analytics</h1>
-                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.95rem; font-weight: 500;">
-                            Real-time financial overview for <strong id="currentMonthDisplay" style="color: var(--primary-color); font-weight: 700;"></strong>
-                        </p>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; min-width: 200px;">
-                        <label for="revenueMonthSelect" style="font-weight: 700; color: var(--text-secondary); font-size: 0.9rem; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;">📅 Period:</label>
-                        <select id="revenueMonthSelect" class="month-selector" aria-label="Select revenue month"></select>
-                    </div>
+                <div>
+                    <h1>Revenue Analytics</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem; font-size: 0.9rem;">
+                        Real-time revenue tracking for <strong id="currentMonthDisplay"></strong>
+                    </p>
                 </div>
             </header>
 
             <div class="revenue-stats">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(32, 176, 164, 0.15), rgba(32, 176, 164, 0.05)); color: var(--primary-color);">
-                        <i data-lucide="trending-up"></i>
+                    <div class="rev-icon" style="background: rgba(32, 176, 164, 0.1); color: var(--primary-color);">
+                        <i data-lucide="dollar-sign"></i>
                     </div>
                     <div class="rev-data">
                         <p>Expected Revenue</p>
@@ -395,8 +220,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
-                        <i data-lucide="check-circle-2"></i>
+                    <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
+                        <i data-lucide="check-circle"></i>
                     </div>
                     <div class="rev-data">
                         <p>Collected Revenue</p>
@@ -404,8 +229,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05)); color: #dc2626;">
-                        <i data-lucide="alert-circle"></i>
+                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                        <i data-lucide="clock"></i>
                     </div>
                     <div class="rev-data">
                         <p>Pending Amount</p>
@@ -414,9 +239,9 @@
                 </div>
             </div>
 
-            <div class="revenue-stats" style="margin-top: 2rem;">
+            <div class="revenue-stats" style="margin-top: 1.5rem;">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.05)); color: #4f46e5;">
+                    <div class="rev-icon" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5;">
                         <i data-lucide="wallet"></i>
                     </div>
                     <div class="rev-data">
@@ -425,8 +250,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
-                        <i data-lucide="arrow-up-right"></i>
+                    <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
+                        <i data-lucide="send"></i>
                     </div>
                     <div class="rev-data">
                         <p>Transferred Salaries</p>
@@ -434,8 +259,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
-                        <i data-lucide="clock"></i>
+                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                        <i data-lucide="clock-3"></i>
                     </div>
                     <div class="rev-data">
                         <p>Pending Salaries</p>
@@ -444,58 +269,28 @@
                 </div>
             </div>
 
-            <div class="revenue-stats" style="margin-top: 2rem;">
+            <div class="revenue-stats" style="margin-top: 1.5rem;">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
-                        <i data-lucide="receipt"></i>
+                    <div class="rev-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
+                        <i data-lucide="badge-dollar-sign"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Bills / Expenses</p>
-                        <h3 id="billExpenseTotal">PKR 0</h3>
-                    </div>
-                </div>
-                <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
-                        <i data-lucide="check-square"></i>
-                    </div>
-                    <div class="rev-data">
-                        <p>Paid Bills</p>
-                        <h3 id="paidBillExpense">PKR 0</h3>
-                    </div>
-                </div>
-                <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05)); color: #dc2626;">
-                        <i data-lucide="alert-triangle"></i>
-                    </div>
-                    <div class="rev-data">
-                        <p>Pending Bills</p>
-                        <h3 id="pendingBillExpense">PKR 0</h3>
-                    </div>
-                </div>
-            </div>
-
-            <div class="revenue-stats" style="margin-top: 2rem;">
-                <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05)); color: #0284c7;">
-                        <i data-lucide="zap"></i>
-                    </div>
-                    <div class="rev-data">
-                        <p>Net Expected</p>
+                        <p>Net Expected After Salaries</p>
                         <h3 id="netExpectedRevenue">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05)); color: #15803d;">
+                    <div class="rev-icon" style="background: rgba(34, 197, 94, 0.12); color: #15803d;">
                         <i data-lucide="landmark"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Net Collected</p>
+                        <p>Net Collected After Transfers</p>
                         <h3 id="netCollectedRevenue">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
-                        <i data-lucide="balance-3"></i>
+                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
+                        <i data-lucide="scale"></i>
                     </div>
                     <div class="rev-data">
                         <p>Remaining Balance</p>
@@ -504,201 +299,63 @@
                 </div>
             </div>
 
-            <div class="revenue-grid" style="margin-top: 3rem;">
-                <div>
-                    <div class="class-revenue-list">
-                        <h3>📊 Collection by Class</h3>
-                        <div id="classBreakdownContainer">
-                            <!-- Bars by JS -->
-                        </div>
-                    </div>
-
-                    <div class="class-revenue-list" style="margin-top: 2rem;">
-                        <h3>📅 Month-wise Summary</h3>
-                        <div class="monthwise-wrap">
-                            <table class="monthwise-table" aria-label="Monthly revenue summary table">
-                                <thead>
-                                    <tr>
-                                        <th>Month</th>
-                                        <th>Expected</th>
-                                        <th>Collected</th>
-                                        <th>Pending</th>
-                                        <th>Salary Budget</th>
-                                        <th>Transferred</th>
-                                        <th>Pending Sal</th>
-                                        <th>Bills</th>
-                                        <th>Paid Bills</th>
-                                        <th>Pending Bills</th>
-                                        <th>Net Collected</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="monthWiseRevenueBody">
-                                    <tr><td colspan="11" style="color: var(--text-secondary); padding: 1.25rem; text-align: center;">Loading...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="class-revenue-list">
-                    <h3>📈 Overall Summary (All Months)</h3>
-                    <div class="overall-metrics">
-                        <div class="overall-metric">
-                            <div class="label">💰 Total Expected</div>
-                            <div class="value" id="overallExpectedRevenue">PKR 0</div>
-                        </div>
-                        <div class="overall-metric">
-                            <div class="label">✅ Total Revenue</div>
-                            <div class="value" id="overallCollectedRevenue">PKR 0</div>
-                        </div>
-                        <div class="overall-metric pending">
-                            <div class="label">⏳ Total Pending Fees</div>
-                            <div class="value" id="overallPendingRevenue">PKR 0</div>
-                        </div>
-                        <div class="overall-metric">
-                            <div class="label">💼 Salary Budget</div>
-                            <div class="value" id="overallSalaryBudget">PKR 0</div>
-                        </div>
-                        <div class="overall-metric">
-                            <div class="label">📤 Salaries Transferred</div>
-                            <div class="value" id="overallTransferredSalaries">PKR 0</div>
-                        </div>
-                        <div class="overall-metric pending">
-                            <div class="label">⏳ Pending Salaries</div>
-                            <div class="value" id="overallPendingSalaries">PKR 0</div>
-                        </div>
-                        <div class="overall-metric">
-                            <div class="label">📋 Total Bills</div>
-                            <div class="value" id="overallBillExpenses">PKR 0</div>
-                        </div>
-                        <div class="overall-metric">
-                            <div class="label">✔️ Paid Bills</div>
-                            <div class="value" id="overallPaidBills">PKR 0</div>
-                        </div>
-                        <div class="overall-metric pending">
-                            <div class="label">⏳ Pending Bills</div>
-                            <div class="value" id="overallPendingBills">PKR 0</div>
-                        </div>
-                        <div class="overall-metric profit">
-                            <div class="label">📊 Net Profit</div>
-                            <div class="value" id="overallProfit">PKR 0</div>
-                        </div>
-                        <div class="overall-metric profit">
-                            <div class="label">% Profit Margin</div>
-                            <div class="value" id="overallMarginPct">0%</div>
-                        </div>
-                    </div>
+            <div class="class-revenue-list" style="margin-top: 2rem;">
+                <h3 style="margin-bottom: 1.5rem;">Collection by Class</h3>
+                <div id="classBreakdownContainer">
+                    <!-- Bars by JS -->
                 </div>
             </div>
 
         </main>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
-        const STORAGE_KEY_BILLS = 'eduCore_bills';
         const monthsNames = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ];
 
         let revenueRefreshTimer = null;
-        let selectedRevenueMonthKey = '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            console.log('Revenue page loaded');
+            // Display current month
+            const currentMonth = monthsNames[new Date().getMonth()];
+            const monthDisplay = document.getElementById('currentMonthDisplay');
+            if (monthDisplay) monthDisplay.innerText = currentMonth + ' ' + new Date().getFullYear();
+
             attachRevenueLiveUpdates();
-            initRevenueMonthSelector();
             updateRevenueReport();
-            setTimeout(() => {
-                console.log('Revenue page - delayed update 1');
-                updateRevenueReport();
-            }, 400);
-            setTimeout(() => {
-                console.log('Revenue page - delayed update 2');
-                updateRevenueReport();
-            }, 1200);
+            setTimeout(updateRevenueReport, 400);
+            setTimeout(updateRevenueReport, 1200);
         });
 
         function scheduleRevenueRefresh(delay = 150) {
             clearTimeout(revenueRefreshTimer);
             revenueRefreshTimer = setTimeout(() => {
-                console.log('Revenue refresh triggered');
-                updateRevenueReport(selectedRevenueMonthKey);
-                syncRevenueDataToBackend();
+                updateRevenueReport();
             }, delay);
-        }
-        
-        async function syncRevenueDataToBackend() {
-            try {
-                const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
-                const salaries = typeof getTeacherSalaries === 'function' ? getTeacherSalaries() : {};
-                const bills = readBillExpenses();
-                
-                if (Object.keys(salaries).length > 0) {
-                    await fetch(`${API_BASE_URL}/teacher-salaries`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ salaries })
-                    }).catch(e => console.warn('Could not sync salaries:', e.message));
-                }
-                
-                console.log('Revenue data synced with backend');
-            } catch (error) {
-                console.warn('Revenue sync error:', error.message);
-            }
         }
 
         function attachRevenueLiveUpdates() {
             window.addEventListener('storage', () => scheduleRevenueRefresh(50));
             window.addEventListener('focus', () => scheduleRevenueRefresh(50));
             window.addEventListener('pageshow', () => scheduleRevenueRefresh(50));
-            window.addEventListener('salary_payment_update', () => scheduleRevenueRefresh(50));
 
             if (typeof socket !== 'undefined' && socket) {
                 socket.on('students_update', () => scheduleRevenueRefresh());
                 socket.on('teachers_update', () => scheduleRevenueRefresh());
                 socket.on('staff_update', () => scheduleRevenueRefresh());
-                socket.on('fee_payment_update', () => scheduleRevenueRefresh());
-                socket.on('salary_payment_update', () => scheduleRevenueRefresh());
             }
-        }
-
-        async function fetchRevenueArray(endpoint, storageKey) {
-            try {
-                const response = await fetch(`${API_BASE_URL}/${endpoint}`);
-                const result = await parseJsonResponse(response, `${endpoint} could not be loaded.`);
-                if (!response.ok) throw new Error(result?.message || result?.error || `${endpoint} could not be loaded.`);
-                const rows = Array.isArray(result) ? result : Array.isArray(result?.data) ? result.data : [];
-                if (rows.length > 0) localStorage.setItem(storageKey, JSON.stringify(rows));
-                return rows;
-            } catch (error) {
-                console.warn(`Revenue page using local ${endpoint} data:`, error.message);
-                return getArrayData(storageKey);
-            }
-        }
-
-        async function loadRevenueBaseData() {
-            const [students] = await Promise.all([
-                fetchRevenueArray('students', STORAGE_KEY_STUDENTS),
-                fetchRevenueArray('teachers', STORAGE_KEY_TEACHERS),
-                fetchRevenueArray('staff', STORAGE_KEY_STAFF),
-                typeof loadTeacherSalariesFromSQL === 'function' ? loadTeacherSalariesFromSQL() : Promise.resolve()
-            ]);
-            
-            // Ensure we have at least local data
-            const localStudents = students && students.length > 0 ? students : getArrayData(STORAGE_KEY_STUDENTS);
-            console.log(`Loaded ${localStudents.length} students for revenue report`);
-            return localStudents;
         }
 
         // Define standard class mapping (same as fees.html)
         const feeClasses = [
             { id: 'play', name: 'Play Group', keywords: ['play', 'pg', 'playgroup'] },
-            { id: 'kg1', name: 'KG1', keywords: ['kg1', 'nursery', 'nursary'] },
-            { id: 'kg2', name: 'KG2', keywords: ['kg2', 'prep', 'preschool'] },
+            { id: 'nursery', name: 'Nursery', keywords: ['nursery', 'nursary'] },
+            { id: 'prep', name: 'Prep', keywords: ['prep', 'preschool'] },
             { id: '1', name: 'Class One', keywords: ['1', 'one', '1st'] },
             { id: '2', name: 'Class Two', keywords: ['2', 'two', '2nd'] },
             { id: '3', name: 'Class Three', keywords: ['3', 'three', '3rd'] },
@@ -723,27 +380,6 @@
             return rawClass.trim();
         }
 
-        function normalizeRevenueClassKey(value = '') {
-            return String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
-        }
-
-        function getRevenueClassFeeConfig(className = '') {
-            try {
-                const fees = JSON.parse(localStorage.getItem('eduCore_class_fees') || '{}');
-                const match = Object.entries(fees || {}).find(([name]) => normalizeRevenueClassKey(name) === normalizeRevenueClassKey(className));
-                return match ? (match[1] || null) : null;
-            } catch (_error) {
-                return null;
-            }
-        }
-
-        function getRevenueStudentMonthlyFee(student = {}) {
-            const directFee = Number(student?.monthlyFee || 0) || 0;
-            if (directFee > 0) return directFee;
-            const classFee = getRevenueClassFeeConfig(student?.classGrade || '');
-            return Number(classFee?.monthlyFee || classFee?.fee || 0) || 0;
-        }
-
         function getCurrentMonthMeta() {
             const now = new Date();
             return {
@@ -753,212 +389,6 @@
                 year: now.getFullYear(),
                 monthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
             };
-        }
-
-        function monthKeyToLabel(monthKey) {
-            const [y, m] = String(monthKey || '').split('-').map(Number);
-            if (!y || !m) return String(monthKey || '');
-            const idx = m - 1;
-            const name = monthsNames[idx] || 'Month';
-            return `${name} ${y}`;
-        }
-
-        function monthKeyFromYearMonth(year, monthIndex) {
-            return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
-        }
-
-        function parseMonthKey(monthKey) {
-            const [y, m] = String(monthKey || '').split('-').map(Number);
-            if (!y || !m) return null;
-            return { year: y, monthIndex: m - 1 };
-        }
-
-        function readBillExpenses() {
-            try {
-                const items = JSON.parse(localStorage.getItem(STORAGE_KEY_BILLS) || '[]');
-                return Array.isArray(items) ? items : [];
-            } catch (_error) {
-                return [];
-            }
-        }
-
-        function getBillMonthKey(item = {}) {
-            const rawDate = item.billDate || item.date || item.createdAt || '';
-            const parsed = rawDate ? new Date(rawDate) : null;
-            if (!parsed || Number.isNaN(parsed.getTime())) return '';
-            return monthKeyFromYearMonth(parsed.getFullYear(), parsed.getMonth());
-        }
-
-        function getMonthlyBillSummary(monthKey = '') {
-            return readBillExpenses()
-                .filter((item) => getBillMonthKey(item) === monthKey)
-                .reduce((summary, item) => {
-                    const amount = Number(item.amount || 0);
-                    summary.total += amount;
-                    if (item.status === 'Paid') summary.paid += amount;
-                    else summary.pending += amount;
-                    return summary;
-                }, { total: 0, paid: 0, pending: 0 });
-        }
-
-        function getMonthKeyRange(startKey, endKey) {
-            const start = parseMonthKey(startKey);
-            const end = parseMonthKey(endKey);
-            if (!start || !end) return [];
-            const keys = [];
-            let y = start.year;
-            let m = start.monthIndex;
-            while (y < end.year || (y === end.year && m <= end.monthIndex)) {
-                keys.push(monthKeyFromYearMonth(y, m));
-                m += 1;
-                if (m > 11) {
-                    m = 0;
-                    y += 1;
-                }
-            }
-            return keys;
-        }
-
-        function extractMonthIndicesFromText(value) {
-            const raw = String(value || '').trim();
-            if (!raw) return [];
-            const lower = raw.toLowerCase();
-            const hits = monthsNames
-                .map((m, idx) => ({ idx, full: m.toLowerCase(), short: m.slice(0, 3).toLowerCase() }))
-                .filter((m) => lower.includes(m.full) || lower.includes(m.short))
-                .map((m) => m.idx);
-            return Array.from(new Set(hits)).sort((a, b) => a - b);
-        }
-
-        function extractPaymentMonthKeys(payment) {
-            const feeMonthRaw = String(payment?.feeMonth || '').trim();
-            const monthIndices = extractMonthIndicesFromText(feeMonthRaw);
-            const paidAt = payment?.paidAt ? new Date(payment.paidAt) : null;
-
-            let year = null;
-            const yearMatch = feeMonthRaw.toLowerCase().match(/\b(20\d{2})\b/);
-            if (yearMatch) year = Number(yearMatch[1]);
-
-            if (!year) {
-                if (paidAt && !Number.isNaN(paidAt.getTime())) year = paidAt.getFullYear();
-            }
-
-            if (!year) year = new Date().getFullYear();
-
-            if (monthIndices.length) {
-                return monthIndices.map((idx) => monthKeyFromYearMonth(year, idx));
-            }
-
-            // Fallback: if feeMonth is a date string
-            const parsed = new Date(feeMonthRaw.replace(',', ' 1,'));
-            if (!Number.isNaN(parsed.getTime())) {
-                return [monthKeyFromYearMonth(parsed.getFullYear(), parsed.getMonth())];
-            }
-
-            if (paidAt && !Number.isNaN(paidAt.getTime())) {
-                return [monthKeyFromYearMonth(paidAt.getFullYear(), paidAt.getMonth())];
-            }
-
-            return [];
-        }
-
-        function isCollectedFeePayment(payment = {}) {
-            const status = String(payment?.status || 'Paid').trim().toLowerCase();
-            return status === 'paid' || status === 'partial';
-        }
-
-        function getPaymentAmount(payment = {}) {
-            const amount = Number(payment?.amount || 0);
-            return Number.isFinite(amount) && amount > 0 ? amount : 0;
-        }
-
-        function getTotalCollectedFeePayments(payments = []) {
-            return (payments || []).reduce((sum, payment) => {
-                if (!isCollectedFeePayment(payment)) return sum;
-                return sum + getPaymentAmount(payment);
-            }, 0);
-        }
-
-        function isStudentActiveForMonth(student, monthKey) {
-            const meta = parseMonthKey(monthKey);
-            if (!meta) return true;
-
-            const enrollmentStatus = String(student?.enrollmentStatus || '').trim().toLowerCase();
-            if (enrollmentStatus === 'terminated' || enrollmentStatus === 'left' || enrollmentStatus === 'inactive' || student?.isTerminated === true) {
-                const terminatedRaw = student?.terminatedAt || student?.terminationDate || '';
-                const terminatedDate = terminatedRaw ? new Date(String(terminatedRaw).slice(0, 10)) : null;
-                if (terminatedDate && !Number.isNaN(terminatedDate.getTime())) {
-                    const monthStart = new Date(meta.year, meta.monthIndex, 1, 0, 0, 0, 0);
-                    if (terminatedDate.getTime() <= monthStart.getTime()) return false;
-                } else {
-                    return false;
-                }
-            }
-
-            const admissionRaw = student?.admissionDate;
-            if (!admissionRaw) return true;
-            const admissionDate = new Date(admissionRaw);
-            if (Number.isNaN(admissionDate.getTime())) return true;
-            const monthEnd = new Date(meta.year, meta.monthIndex + 1, 0, 23, 59, 59, 999);
-            return admissionDate.getTime() <= monthEnd.getTime();
-        }
-
-        function computeMonthlyFeeMetrics(students, payments, monthKeys) {
-            const studentsById = new Map((students || []).map((s) => [String(s?.id || ''), s]));
-            const expectedByMonth = {};
-            const collectedByMonth = {};
-            const classByMonth = {};
-
-            monthKeys.forEach((k) => {
-                expectedByMonth[k] = 0;
-                collectedByMonth[k] = 0;
-                classByMonth[k] = {};
-            });
-
-            monthKeys.forEach((monthKey) => {
-                let expected = 0;
-                (students || []).forEach((s) => {
-                    if (!isStudentActiveForMonth(s, monthKey)) return;
-                    expected += getRevenueStudentMonthlyFee(s);
-                });
-                expectedByMonth[monthKey] = expected;
-            });
-
-            (payments || []).forEach((payment) => {
-                if (!payment?.studentId) return;
-                if (!isCollectedFeePayment(payment)) return;
-                const keys = extractPaymentMonthKeys(payment);
-                if (!keys.length) return;
-                const amount = getPaymentAmount(payment);
-                if (!(amount > 0)) return;
-
-                const perMonthAmount = amount / keys.length;
-                const student = studentsById.get(String(payment.studentId));
-                const className = getStandardClassName(payment.classGrade || student?.classGrade || '');
-
-                keys.forEach((k) => {
-                    if (!collectedByMonth[k] && collectedByMonth[k] !== 0) return;
-                    collectedByMonth[k] += perMonthAmount;
-                    classByMonth[k][className] = (classByMonth[k][className] || 0) + perMonthAmount;
-                });
-            });
-
-            return { expectedByMonth, collectedByMonth, classByMonth };
-        }
-
-        function initRevenueMonthSelector() {
-            const select = document.getElementById('revenueMonthSelect');
-            if (!select) return;
-
-            const currentMeta = getCurrentMonthMeta();
-            selectedRevenueMonthKey = currentMeta.monthKey;
-
-            select.addEventListener('change', () => {
-                selectedRevenueMonthKey = String(select.value || currentMeta.monthKey);
-                updateRevenueReport(selectedRevenueMonthKey);
-            });
-
-            // Initial options will be set on first updateRevenueReport call.
         }
 
         function normalizeFeeMonthToKey(value) {
@@ -994,177 +424,62 @@
                         throw new Error(result?.message || 'Fee payments could not be loaded.');
                     }
 
-                    const payments = Array.isArray(result?.payments) ? result.payments : Array.isArray(result) ? result : [];
-                    console.log(`Fetched ${payments.length} fee payments from ${endpoint}`);
-                    return payments;
+                    return Array.isArray(result?.payments) ? result.payments : [];
                 } catch (error) {
                     console.warn(`Revenue page could not load backend fee payments from ${endpoint}:`, error.message);
                 }
             }
 
-            console.log('Using local fee payment data for revenue');
             return [];
         }
 
-        function getLocalFeePaymentsForRevenue(students = [], monthlyFeesData = {}) {
-            let paymentDetails = {};
-            try {
-                paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
-            } catch (_error) {
-                paymentDetails = {};
-            }
-
-            const rows = [];
-            (students || []).forEach((student) => {
-                const sid = String(student?.id || '').trim();
-                if (!sid) return;
-                const studentPayments = paymentDetails[sid] || {};
-                Object.entries(studentPayments).forEach(([month, detail]) => {
-                    const amount = Number(detail?.amount || 0);
-                    if (amount > 0) {
-                        rows.push({
-                            studentId: sid,
-                            classGrade: student.classGrade || '',
-                            feeMonth: month,
-                            amount,
-                            status: 'Paid'
-                        });
-                    }
-                });
-
-                Object.entries(monthlyFeesData?.[sid] || {}).forEach(([month, status]) => {
-                    if (status !== 'Paid' || studentPayments[month]?.amount > 0) return;
-                    const amount = getRevenueStudentMonthlyFee(student);
-                    if (amount > 0) {
-                        rows.push({
-                            studentId: sid,
-                            classGrade: student.classGrade || '',
-                            feeMonth: month,
-                            amount,
-                            status: 'Paid'
-                        });
-                    }
-                });
-            });
-            return rows;
-        }
-
-        async function updateRevenueReport(monthKeyOverride = '') {
-            const currentMeta = getCurrentMonthMeta();
-            const monthKey = monthKeyOverride || selectedRevenueMonthKey || currentMeta.monthKey;
-            selectedRevenueMonthKey = monthKey;
-
-            const monthDisplay = document.getElementById('currentMonthDisplay');
-            if (monthDisplay) monthDisplay.innerText = monthKeyToLabel(monthKey);
-
-            const students = await loadRevenueBaseData();
+        async function updateRevenueReport() {
+            // Always use current month for real-time data
+            const currentMonthMeta = getCurrentMonthMeta();
+            const students = getData(STORAGE_KEY_STUDENTS);
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
-            const salarySummary = getMonthlySalarySummary(monthKey);
-            const billSummary = getMonthlyBillSummary(monthKey);
-            const billMonthKeys = readBillExpenses().map((item) => getBillMonthKey(item)).filter(Boolean);
-            let feePayments = await fetchCollectedFeePayments();
-            if (!feePayments.length) feePayments = getLocalFeePaymentsForRevenue(students, monthlyFeesData);
+            const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
+            const feePayments = await fetchCollectedFeePayments();
 
-            // Build the month range for the summary table (min admission/payment -> current month).
-            const paymentMonthKeys = feePayments.flatMap((p) => extractPaymentMonthKeys(p)).filter(Boolean);
-            const admissionMonthKeys = (students || []).map((s) => {
-                const d = s?.admissionDate ? new Date(s.admissionDate) : null;
-                if (!d || Number.isNaN(d.getTime())) return '';
-                return monthKeyFromYearMonth(d.getFullYear(), d.getMonth());
-            }).filter(Boolean);
+            const backendCollectedMap = new Map();
+            feePayments.forEach(payment => {
+                if (!payment || !payment.studentId) return;
+                if (normalizeFeeMonthToKey(payment.feeMonth) !== currentMonthMeta.monthKey) return;
 
-            const allKeys = [...paymentMonthKeys, ...admissionMonthKeys, ...billMonthKeys, currentMeta.monthKey].filter(Boolean);
-            let monthKeys = [];
-            
-            if (allKeys.length > 0) {
-                const sortedAll = allKeys.sort();
-                const startKey = sortedAll[0];
-                monthKeys = getMonthKeyRange(startKey, currentMeta.monthKey);
-            } else {
-                // Fallback: if no data, show last 12 months from current month
-                monthKeys = [];
-                let y = currentMeta.year;
-                let m = currentMeta.monthIndex;
-                for (let i = 0; i < 12; i++) {
-                    monthKeys.unshift(monthKeyFromYearMonth(y, m));
-                    m -= 1;
-                    if (m < 0) {
-                        m = 11;
-                        y -= 1;
-                    }
-                }
-            }
+                const paidAmount = Number(payment.amount || 0);
+                const previousAmount = backendCollectedMap.get(payment.studentId) || 0;
+                backendCollectedMap.set(payment.studentId, Math.max(previousAmount, paidAmount));
+            });
 
-            // Populate month selector options (latest first).
-            const select = document.getElementById('revenueMonthSelect');
-            if (select) {
-                const existing = Array.from(select.options).map((o) => o.value);
-                if (existing.length !== monthKeys.length || existing[0] !== monthKeys[monthKeys.length - 1]) {
-                    select.innerHTML = '';
-                    [...monthKeys].reverse().forEach((k) => {
-                        const opt = document.createElement('option');
-                        opt.value = k;
-                        opt.textContent = monthKeyToLabel(k);
-                        select.appendChild(opt);
-                    });
-                }
-                select.value = monthKey;
-            }
-
-            const metrics = computeMonthlyFeeMetrics(students, feePayments, monthKeys);
-            const totalExpected = metrics.expectedByMonth[monthKey] || 0;
-            let totalCollected = metrics.collectedByMonth[monthKey] || 0;
-
-            // Fallback: if no metrics computed, calculate from students directly
-            if (totalExpected === 0 && students.length > 0) {
-                let sum = 0;
-                students.forEach((s) => {
-                    if (isStudentActiveForMonth(s, monthKey)) {
-                        sum += getRevenueStudentMonthlyFee(s);
-                    }
-                });
-                metrics.expectedByMonth[monthKey] = sum;
-            }
-
-            // Fallback to local store when backend is unavailable (keeps current behavior).
-            if (!(totalCollected > 0) && !feePayments.length) {
-                // Populate per-month collection from local Paid flags.
-                monthKeys.forEach((k) => {
-                    const meta = parseMonthKey(k);
-                    if (!meta) return;
-                    const monthName = monthsNames[meta.monthIndex];
-                    let sum = 0;
-                    (students || []).forEach((s) => {
-                        const fee = getRevenueStudentMonthlyFee(s);
-                        if (!isStudentActiveForMonth(s, k)) return;
-                        if (monthlyFeesData[s.id] && monthlyFeesData[s.id][monthName] === 'Paid') {
-                            sum += fee;
-                        }
-                    });
-                    metrics.collectedByMonth[k] = sum;
-                });
-                totalCollected = metrics.collectedByMonth[monthKey] || 0;
-            }
+            let totalExpected = 0;
+            let totalCollected = 0;
 
             const classCollection = {}; // { className: { expected: 0, collected: 0 } }
-            (students || []).forEach((s) => {
-                const standardClass = getStandardClassName(s.classGrade);
-                const fee = getRevenueStudentMonthlyFee(s);
-                if (!isStudentActiveForMonth(s, monthKey)) return;
-                if (!classCollection[standardClass]) classCollection[standardClass] = { expected: 0, collected: 0 };
-                classCollection[standardClass].expected += fee;
-            });
 
-            const classCollected = metrics.classByMonth[monthKey] || {};
-            Object.keys(classCollected).forEach((className) => {
-                if (!classCollection[className]) classCollection[className] = { expected: 0, collected: 0 };
-                classCollection[className].collected += classCollected[className] || 0;
+            students.forEach(s => {
+                const standardClass = getStandardClassName(s.classGrade);
+                const fee = parseInt(s.monthlyFee) || 0;
+                const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
+                const collectedAmount = backendCollectedMap.has(s.id)
+                    ? backendCollectedMap.get(s.id)
+                    : (isPaidLocally ? fee : 0);
+
+                totalExpected += fee;
+                if (collectedAmount > 0) {
+                    totalCollected += collectedAmount;
+                }
+
+                if (!classCollection[standardClass]) {
+                    classCollection[standardClass] = { expected: 0, collected: 0 };
+                }
+                classCollection[standardClass].expected += fee;
+                if (collectedAmount > 0) classCollection[standardClass].collected += collectedAmount;
             });
 
             // Update UI Stats
-            const netExpected = totalExpected - salarySummary.expected - billSummary.total;
-            const netCollected = totalCollected - salarySummary.transferred - billSummary.paid;
-            const remainingBalance = netCollected + salarySummary.pending - billSummary.pending;
+            const netExpected = totalExpected - salarySummary.expected;
+            const netCollected = totalCollected - salarySummary.transferred;
+            const remainingBalance = netCollected + salarySummary.pending;
 
             document.getElementById('expectedRevenue').innerText = 'PKR ' + totalExpected.toLocaleString();
             document.getElementById('collectedRevenue').innerText = 'PKR ' + totalCollected.toLocaleString();
@@ -1172,9 +487,6 @@
             document.getElementById('salaryBudget').innerText = 'PKR ' + salarySummary.expected.toLocaleString();
             document.getElementById('transferredSalaries').innerText = 'PKR ' + salarySummary.transferred.toLocaleString();
             document.getElementById('pendingSalaries').innerText = 'PKR ' + salarySummary.pending.toLocaleString();
-            document.getElementById('billExpenseTotal').innerText = 'PKR ' + billSummary.total.toLocaleString();
-            document.getElementById('paidBillExpense').innerText = 'PKR ' + billSummary.paid.toLocaleString();
-            document.getElementById('pendingBillExpense').innerText = 'PKR ' + billSummary.pending.toLocaleString();
             document.getElementById('netExpectedRevenue').innerText = 'PKR ' + netExpected.toLocaleString();
             document.getElementById('netCollectedRevenue').innerText = 'PKR ' + netCollected.toLocaleString();
             document.getElementById('netPendingRevenue').innerText = 'PKR ' + remainingBalance.toLocaleString();
@@ -1213,112 +525,6 @@
                     barContainer.appendChild(row);
                 });
             }
-
-            // Render month-wise summary table (latest first).
-            const body = document.getElementById('monthWiseRevenueBody');
-            if (body) {
-                body.innerHTML = '';
-                [...monthKeys].reverse().forEach((k) => {
-                    const exp = metrics.expectedByMonth[k] || 0;
-                    const col = metrics.collectedByMonth[k] || 0;
-                    const pend = Math.max(exp - col, 0);
-                    const salary = getMonthlySalarySummary(k);
-                    const bills = getMonthlyBillSummary(k);
-                    const pendingSalaries = Math.max(salary.expected - salary.transferred, 0);
-                    const pendingBills = Math.max(bills.total - bills.paid, 0);
-                    const netCol = (col - salary.transferred - bills.paid);
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td style="font-weight: 700; color: var(--text-primary); cursor: pointer;" data-monthkey="${k}">${monthKeyToLabel(k)}</td>
-                        <td>PKR ${Math.round(exp).toLocaleString('en-PK')}</td>
-                        <td>PKR ${Math.round(col).toLocaleString('en-PK')}</td>
-                        <td style="color:#dc2626; font-weight:700;">PKR ${Math.round(pend).toLocaleString('en-PK')}</td>
-                        <td>PKR ${Math.round(salary.expected).toLocaleString('en-PK')}</td>
-                        <td>PKR ${Math.round(salary.transferred).toLocaleString('en-PK')}</td>
-                        <td style="color:#b45309; font-weight:700;">PKR ${Math.round(pendingSalaries).toLocaleString('en-PK')}</td>
-                        <td>PKR ${Math.round(bills.total).toLocaleString('en-PK')}</td>
-                        <td>PKR ${Math.round(bills.paid).toLocaleString('en-PK')}</td>
-                        <td style="color:#b45309; font-weight:700;">PKR ${Math.round(pendingBills).toLocaleString('en-PK')}</td>
-                        <td style="font-weight:700;">PKR ${Math.round(netCol).toLocaleString('en-PK')}</td>
-                    `;
-                    tr.querySelector('td')?.addEventListener('click', () => {
-                        selectedRevenueMonthKey = k;
-                        if (select) select.value = k;
-                        updateRevenueReport(k);
-                    });
-                    body.appendChild(tr);
-                });
-
-                if (!monthKeys.length) {
-                    body.innerHTML = '<tr><td colspan="11" style="color: var(--text-secondary); padding: 1.25rem;">No data.</td></tr>';
-                }
-            }
-
-            // Render overall (all months) totals.
-            let overallExpected = 0;
-            let overallCollected = 0;
-            let overallSalaryBudget = 0;
-            let overallTransferred = 0;
-            let overallBillExpenses = 0;
-            let overallPaidBills = 0;
-            
-            monthKeys.forEach((k) => {
-                const exp = Number(metrics.expectedByMonth[k] || 0);
-                const col = Number(metrics.collectedByMonth[k] || 0);
-                const sal = getMonthlySalarySummary(k);
-                const bills = getMonthlyBillSummary(k);
-                
-                overallExpected += exp;
-                overallCollected += col;
-                overallSalaryBudget += Number(sal?.expected || 0);
-                overallTransferred += Number(sal?.transferred || 0);
-                overallBillExpenses += Number(bills?.total || 0);
-                overallPaidBills += Number(bills?.paid || 0);
-            });
-            
-            // Override collected with actual paid fees if available
-            const actualCollected = getTotalCollectedFeePayments(feePayments);
-            if (actualCollected > 0) {
-                overallCollected = actualCollected;
-            }
-
-            const overallPending = Math.max(overallExpected - overallCollected, 0);
-            const overallPendingSalaries = Math.max(overallSalaryBudget - overallTransferred, 0);
-            const overallPendingBills = Math.max(overallBillExpenses - overallPaidBills, 0);
-            const overallProfit = overallCollected - overallTransferred - overallPaidBills;
-            const overallMarginPct = overallCollected > 0 ? (overallProfit / overallCollected) * 100 : 0;
-
-            const setText = (id, text) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = text;
-            };
-
-            setText('overallExpectedRevenue', `PKR ${Math.round(overallExpected).toLocaleString('en-PK')}`);
-            setText('overallCollectedRevenue', `PKR ${Math.round(overallCollected).toLocaleString('en-PK')}`);
-            setText('overallPendingRevenue', `PKR ${Math.round(overallPending).toLocaleString('en-PK')}`);
-            setText('overallSalaryBudget', `PKR ${Math.round(overallSalaryBudget).toLocaleString('en-PK')}`);
-            setText('overallTransferredSalaries', `PKR ${Math.round(overallTransferred).toLocaleString('en-PK')}`);
-            setText('overallPendingSalaries', `PKR ${Math.round(overallPendingSalaries).toLocaleString('en-PK')}`);
-            setText('overallBillExpenses', `PKR ${Math.round(overallBillExpenses).toLocaleString('en-PK')}`);
-            setText('overallPaidBills', `PKR ${Math.round(overallPaidBills).toLocaleString('en-PK')}`);
-            setText('overallPendingBills', `PKR ${Math.round(overallPendingBills).toLocaleString('en-PK')}`);
-            setText('overallProfit', `PKR ${Math.round(overallProfit).toLocaleString('en-PK')}`);
-            setText('overallMarginPct', `${overallMarginPct.toFixed(1)}%`);
-            
-            console.log('Revenue report updated:', {
-                monthKey,
-                totalExpected,
-                totalCollected,
-                salarySummary,
-                billSummary,
-                overallExpected,
-                overallCollected,
-                overallSalaryBudget,
-                overallTransferred,
-                overallBillExpenses,
-                overallPaidBills
-            });
 
             if (window.lucide) lucide.createIcons();
         }
