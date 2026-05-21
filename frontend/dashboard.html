@@ -141,16 +141,16 @@
 
         .dashboard-header-actions {
             display: grid;
-            grid-template-columns: minmax(150px, 200px) minmax(160px, 210px) 34px;
+            grid-template-columns: minmax(150px, 200px) minmax(150px, 200px) 34px;
             align-items: center;
             gap: 0.55rem;
         }
 
         .dashboard-header-actions .search-bar {
-            width: min(100%, 210px) !important;
-            max-width: 210px !important;
+            width: min(100%, 200px) !important;
+            max-width: 200px !important;
             min-height: 34px;
-            padding: 0.35rem 0.65rem;
+            padding: 0.00rem 0.65rem;
             border-radius: 8px;
         }
 
@@ -173,27 +173,30 @@
         }
 
         #dashboardStatsGrid .card {
+            display: flex;
+            flex-direction: column;
             min-height: 104px;
-            height: 104px;
-            padding: 0.78rem 0.9rem;
+            height: 126px;
+            padding: 0.95rem 1rem;
             border-radius: 8px;
         }
 
         #dashboardStatsGrid .card-title {
             font-size: 0.76rem;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.42rem;
             padding-right: 2.4rem;
         }
 
         #dashboardStatsGrid .card-value {
             font-size: 1.35rem;
-            line-height: 1.1;
-            margin-bottom: 0.55rem;
+            line-height: 2.1;
+            margin-bottom: 0.3rem;
         }
 
         #dashboardStatsGrid .card-trend {
             font-size: 0.76rem;
             line-height: 1.2;
+            margin-top: auto;
         }
 
         #dashboardStatsGrid .card-icon {
