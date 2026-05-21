@@ -90,6 +90,10 @@
     overflow-x: auto;
 }
 
+.schedule-panel:has(input, select, textarea) {
+    padding: var(--app-field-panel-padding, 0.9rem);
+}
+
 .schedule-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));

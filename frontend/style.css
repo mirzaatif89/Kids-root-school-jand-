@@ -19,6 +19,7 @@
     --radius-md: 0.5rem;
     --radius-lg: 1rem;
     --transition: all 0.3s ease;
+    --app-field-panel-padding: clamp(0.75rem, 1vw, 0.9rem);
 }
 
 * {
@@ -3047,9 +3048,22 @@ td {
     margin-bottom: 1rem;
 }
 
-.dashboard-container .form-container,
-.dashboard-container .panel-card {
-    padding: clamp(0.9rem, 1.35vw, 1.15rem);
+.dashboard-container :is(
+    .form-container,
+    .panel-card,
+    .schedule-panel,
+    .step-panel,
+    .settings-card,
+    .charges-panel,
+    .module-panel,
+    .bill-panel,
+    .upload-panel,
+    .set-fee-panel,
+    .library-panel,
+    .input-card
+):has(input, select, textarea),
+.dashboard-container .facility-layout .panel:has(input, select, textarea) {
+    padding: var(--app-field-panel-padding);
 }
 
 .dashboard-container .input-group {
