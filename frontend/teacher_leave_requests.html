@@ -52,8 +52,16 @@
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         const TEACHER_LEAVE_KEY = 'eduCore_teacher_leave_requests';
-        function data() { try { return JSON.parse(localStorage.getItem(TEACHER_LEAVE_KEY) || '[]'); } catch (_e) { return []; } }
-        function save(value) { localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(value)); }
+        const LEAVE_API_BASE = (() => {
+            const local = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.protocol === 'file:';
+            const backend = local ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin) : (window.ENV_BACKEND_URL || window.location.origin);
+            return `${backend}/api`;
+        })();
+        const LEAVE_AUTH_TOKEN = sessionStorage.getItem('eduCore_token') || '';
+        let teacherLeaveRequests = [];
+        function cachedData() { try { return JSON.parse(localStorage.getItem(TEACHER_LEAVE_KEY) || '[]'); } catch (_e) { return []; } }
+        function data() { return teacherLeaveRequests.length ? teacherLeaveRequests : cachedData(); }
+        function cache(value) { localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(value)); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function formatLeaveDate(value) {
             if (!value) return '-';
@@ -98,7 +106,7 @@
             </div>
         </header>
         <section class="meta">
-            <div><strong>Teacher Name</strong>${esc(item.teacherName || '-')}</div>
+            <div><strong>Teacher Name</strong>${esc(item.applicantName || item.teacherName || '-')}</div>
             <div><strong>Subject</strong>${esc(item.subject || '-')}</div>
             <div><strong>Status</strong><span class="status">${status}</span></div>
             <div><strong>Submitted</strong>${esc(formatLeaveDate(item.createdAt))}</div>
@@ -140,24 +148,69 @@
                 teacherLeaveRequestList.innerHTML = '<div class="empty-note">No teacher leave request received yet.</div>';
                 return;
             }
-            teacherLeaveRequestList.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Subject</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.teacherName || '-')}</td><td>${esc(item.subject || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="updateStatus('${item.id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button><button class="schedule-action-btn delete" onclick="updateStatus('${item.id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button><button class="schedule-action-btn delete" onclick="deleteLeaveRequest('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
+            teacherLeaveRequestList.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Subject</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.teacherName || '-')}</td><td>${esc(item.subject || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="updateStatus('${item.id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button><button class="schedule-action-btn delete" onclick="updateStatus('${item.id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button><button class="schedule-action-btn delete" onclick="deleteLeaveRequest('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
             lucide.createIcons();
+        }
+        async function loadLeaveRequests() {
+            try {
+                const response = await fetch(`${LEAVE_API_BASE}/leave-requests?role=Teacher`, {
+                    headers: { Authorization: `Bearer ${LEAVE_AUTH_TOKEN}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) throw new Error(result?.message || 'Teacher leave requests could not be loaded.');
+                teacherLeaveRequests = result.leaveRequests || [];
+                cache(teacherLeaveRequests);
+            } catch (error) {
+                teacherLeaveRequests = cachedData();
+                showAppAlert(error.message || 'Teacher leave requests could not be loaded.', 'Leave Load Failed');
+            }
+            render();
         }
         async function deleteLeaveRequest(id) {
             const confirmed = await showAppConfirm('Delete this leave request permanently?', 'Delete Leave');
             if (!confirmed) return;
-            save(data().filter((item) => item.id !== id));
+            try {
+                const response = await fetch(`${LEAVE_API_BASE}/leave-requests/${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${LEAVE_AUTH_TOKEN}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) throw new Error(result?.message || 'Leave request could not be deleted.');
+            } catch (error) {
+                showAppAlert(error.message || 'Leave request could not be deleted.', 'Delete Failed');
+                return;
+            }
+            teacherLeaveRequests = data().filter((item) => item.id !== id);
+            cache(teacherLeaveRequests);
             render();
             showSuccessModal('Leave Deleted!', 'Leave request has been deleted.');
         }
-        function updateStatus(id, status) {
-            const requests = data();
-            const index = requests.findIndex((item) => item.id === id);
-            if (index < 0) return;
-            requests[index] = { ...requests[index], status, reviewedAt: new Date().toISOString() };
-            save(requests); render(); showSuccessModal(`Leave ${status}!`, `Teacher leave request has been ${status.toLowerCase()}.`);
+        function emailStatusText(emailResult) {
+            if (emailResult?.skipped) return ` Email skipped: ${emailResult.reason}`;
+            if (emailResult?.success === false) return ` Status saved, but email failed: ${emailResult.message}`;
+            return ' Status email sent.';
         }
-        render(); lucide.createIcons();
+        async function updateStatus(id, status) {
+            try {
+                const response = await fetch(`${LEAVE_API_BASE}/leave-requests/${encodeURIComponent(id)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${LEAVE_AUTH_TOKEN}`
+                    },
+                    body: JSON.stringify({ status })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) throw new Error(result?.message || 'Leave status could not be updated.');
+                teacherLeaveRequests = data().map((item) => item.id === id ? result.leaveRequest : item);
+                cache(teacherLeaveRequests);
+                render();
+                showSuccessModal(`Leave ${status}!`, `Teacher leave request has been ${status.toLowerCase()}.${emailStatusText(result.emailResult)}`);
+            } catch (error) {
+                showAppAlert(error.message || 'Leave status could not be updated.', 'Review Failed');
+            }
+        }
+        loadLeaveRequests(); lucide.createIcons();
     </script>
 </body>
 

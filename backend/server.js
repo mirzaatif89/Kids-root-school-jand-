@@ -21,6 +21,14 @@ const {
     sendFineAppliedEmail,
     startStudentEmailNotificationScheduler
 } = require('./api/_lib/student-emails');
+const { sendLeaveReviewEmail } = require('./api/_lib/leave-emails');
+const {
+    canReviewLeaves,
+    createOwnLeaveRequest,
+    formatLeaveRequest,
+    ownLeaveWhere,
+    readReviewStatus
+} = require('./api/_lib/leave-requests');
 const { startWhatsAppBirthdayScheduler } = require('./api/_lib/cronjob');
 
 const PROJECT_ROOT = path.join(__dirname, '..');
@@ -1527,6 +1535,93 @@ app.post('/api/teacher/me', authenticateToken, async (req, res) => {
         return res.json({ success: true, teacher: refreshed });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message || 'Teacher photo could not be saved.' });
+    }
+});
+
+app.get('/api/leave-requests', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) return res.status(503).json({ success: false, message: 'Database not available' });
+        const role = String(req.query.role || '').trim();
+        const where = ownLeaveWhere(req.user);
+        if (canReviewLeaves(req.user) && ['Student', 'Teacher'].includes(role)) {
+            where.applicantRole = role;
+        }
+        const records = await sequelize.models.LeaveRequest.findAll({
+            where,
+            order: [['createdAt', 'DESC']]
+        });
+        return res.json({ success: true, leaveRequests: records.map(formatLeaveRequest) });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Leave requests could not be loaded.' });
+    }
+});
+
+app.post('/api/leave-requests', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) return res.status(503).json({ success: false, message: 'Database not available' });
+        const leaveRequest = await createOwnLeaveRequest(sequelize, req.user, req.body || {});
+        io.emit('leave_requests_update', { applicantRole: leaveRequest.applicantRole });
+        return res.json({ success: true, leaveRequest });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Leave request could not be saved.' });
+    }
+});
+
+app.post('/api/leave-requests/:id', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) return res.status(503).json({ success: false, message: 'Database not available' });
+        if (!canReviewLeaves(req.user)) return res.status(403).json({ success: false, message: 'Admin or staff access required.' });
+        const status = readReviewStatus(req.body?.status);
+        if (!status) return res.status(400).json({ success: false, message: 'Review status must be Approved or Rejected.' });
+
+        const record = await sequelize.models.LeaveRequest.findByPk(req.params.id);
+        if (!record) return res.status(404).json({ success: false, message: 'Leave request not found.' });
+
+        await record.update({
+            status,
+            reviewedAt: new Date().toISOString()
+        });
+        let emailResult = null;
+        try {
+            emailResult = await sendLeaveReviewEmail(formatLeaveRequest(record));
+            if (!emailResult?.skipped) {
+                await record.update({ reviewEmailSentAt: new Date().toISOString() });
+            }
+        } catch (error) {
+            emailResult = { success: false, message: error.message || 'Leave status email could not be sent.' };
+        }
+
+        io.emit('leave_requests_update', { applicantRole: record.applicantRole, applicantId: record.applicantId });
+        return res.json({
+            success: true,
+            leaveRequest: formatLeaveRequest(record),
+            emailResult
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Leave request could not be reviewed.' });
+    }
+});
+
+app.delete('/api/leave-requests/:id', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) return res.status(503).json({ success: false, message: 'Database not available' });
+        const record = await sequelize.models.LeaveRequest.findByPk(req.params.id);
+        if (!record) return res.json({ success: true, deleted: false });
+
+        const ownPendingRequest = ['Student', 'Teacher'].includes(req.user.role)
+            && record.applicantRole === req.user.role
+            && String(record.applicantId) === String(req.user.id)
+            && String(record.status || 'Pending') === 'Pending';
+        if (!canReviewLeaves(req.user) && !ownPendingRequest) {
+            return res.status(403).json({ success: false, message: 'Only pending portal leave requests can be deleted.' });
+        }
+
+        const applicantRole = record.applicantRole;
+        await record.destroy();
+        io.emit('leave_requests_update', { applicantRole });
+        return res.json({ success: true, deleted: true });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ success: false, message: error.message || 'Leave request could not be deleted.' });
     }
 });
 
@@ -3928,6 +4023,27 @@ function defineTeacherAttendanceModel(db) {
     });
 }
 
+function defineLeaveRequestModel(db) {
+    return db.define('LeaveRequest', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        applicantRole: { type: DataTypes.STRING, allowNull: false },
+        applicantId: { type: DataTypes.STRING, allowNull: false },
+        applicantName: DataTypes.STRING,
+        email: DataTypes.STRING,
+        studentCode: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        subject: DataTypes.STRING,
+        campusName: DataTypes.STRING,
+        fromDate: { type: DataTypes.STRING, allowNull: false },
+        toDate: { type: DataTypes.STRING, allowNull: false },
+        reason: { type: DataTypes.TEXT, allowNull: false },
+        status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        reviewedAt: DataTypes.STRING,
+        reviewEmailSentAt: DataTypes.STRING
+    });
+}
+
 function defineSpecialNoticeModel(db) {
     return db.define('SpecialNotice', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -4427,6 +4543,7 @@ async function startServer() {
         defineStudentAttendanceModel(sequelize);
         defineStudentAssignmentSubmissionModel(sequelize);
         defineTeacherAttendanceModel(sequelize);
+        defineLeaveRequestModel(sequelize);
         defineSpecialNoticeModel(sequelize);
         defineBannerModel(sequelize);
         defineAppSettingModel(sequelize);

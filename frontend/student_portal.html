@@ -2968,8 +2968,24 @@
         function getStudentLeaveRequests(student = {}) {
             const candidates = getStudentIdentityCandidates(student);
             return getPortalData(STUDENT_LEAVE_KEY)
-                .filter((item) => candidates.includes(String(item.studentIdentity || item.studentId || item.rollNo || '').trim().toLowerCase()))
+                .filter((item) => candidates.includes(String(item.applicantId || item.studentIdentity || item.studentId || item.rollNo || '').trim().toLowerCase()))
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        }
+
+        async function loadStudentLeaveRequests(student = getCurrentPortalStudent()) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Leave history could not be loaded.');
+                }
+                localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(result.leaveRequests || []));
+            } catch (_error) {
+                // Keep the last cached history visible when the API is temporarily unavailable.
+            }
+            renderStudentLeaveHistory(student);
         }
 
         function renderStudentLeaveHistory(student = {}) {
@@ -2993,8 +3009,8 @@
                         <div class="portal-content-meta"><span class="leave-status ${status}">${escapeHtml(item.status || 'Pending')}</span></div>
                         <p>${escapeHtml(item.reason || '-')}</p>
                         <div class="portal-action-row">
-                            <button type="button" class="btn btn-secondary" onclick="editStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="edit-2" width="16"></i> Edit</button>
-                            <button type="button" class="btn btn-secondary" onclick="deleteStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="trash-2" width="16"></i> Delete</button>
+                            ${status === 'pending' ? `<button type="button" class="btn btn-secondary" onclick="editStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="edit-2" width="16"></i> Edit</button>
+                            <button type="button" class="btn btn-secondary" onclick="deleteStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="trash-2" width="16"></i> Delete</button>` : ''}
                         </div>
                     </article>
                 `;
@@ -3031,6 +3047,19 @@
                 showAppAlert('This leave request could not be deleted.', 'Delete Failed');
                 return;
             }
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests/${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Leave request could not be deleted.');
+                }
+            } catch (error) {
+                showAppAlert(error.message || 'Leave request could not be deleted.', 'Delete Failed');
+                return;
+            }
             const requests = getPortalData(STUDENT_LEAVE_KEY).filter((item) => item.id !== id);
             localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(requests));
             if (editingStudentLeaveId === id) {
@@ -3042,7 +3071,7 @@
             showAppAlert('Leave request deleted.', 'Leave Deleted');
         }
 
-        function submitStudentLeaveRequest(event) {
+        async function submitStudentLeaveRequest(event) {
             event.preventDefault();
             const student = JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback();
             if (!student) return;
@@ -3055,47 +3084,33 @@
                 return;
             }
 
-            const requests = getPortalData(STUDENT_LEAVE_KEY);
-            if (editingStudentLeaveId) {
-                const ownIds = new Set(getStudentLeaveRequests(student).map((item) => item.id));
-                const index = requests.findIndex((item) => item.id === editingStudentLeaveId && ownIds.has(item.id));
-                if (index < 0) {
-                    showAppAlert('Leave request could not be updated.', 'Update Failed');
-                    return;
-                }
-                requests[index] = {
-                    ...requests[index],
-                    fromDate,
-                    toDate,
-                    reason,
-                    status: 'Pending',
-                    updatedAt: new Date().toISOString()
-                };
-            } else {
-                requests.push({
-                    id: `LEAVE-${Date.now()}`,
-                    studentIdentity: String(student.id || student.studentCode || student.rollNo || loggedInUser.id || '').trim().toLowerCase(),
-                    studentName: student.fullName || loggedInUser.fullName || 'Student',
-                    rollNo: student.rollNo || '-',
-                    classGrade: student.classGrade || '-',
-                    fromDate,
-                    toDate,
-                    reason,
-                    status: 'Pending',
-                    createdAt: new Date().toISOString()
-                });
-            }
             try {
-                localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(requests));
-            } catch (_error) {
-                showAppAlert('Leave request could not be saved because browser storage is full.', 'Storage Full');
+                const response = await fetch(`${API_BASE_URL}/leave-requests`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        ...(editingStudentLeaveId ? { id: editingStudentLeaveId } : {}),
+                        fromDate,
+                        toDate,
+                        reason
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Leave request could not be saved.');
+                }
+            } catch (error) {
+                showAppAlert(error.message || 'Leave request could not be saved.', 'Leave Save Failed');
                 return;
             }
             event.target.reset();
             const wasEditing = Boolean(editingStudentLeaveId);
             editingStudentLeaveId = '';
             setStudentLeaveSubmitText('Submit Leave');
-            renderStudentLeaveHistory(student);
+            await loadStudentLeaveRequests(student);
             showAppAlert(wasEditing ? 'Your leave request has been updated.' : 'Your leave request has been submitted.', wasEditing ? 'Leave Updated' : 'Leave Submitted');
         }
 
@@ -3970,6 +3985,7 @@
                 await loadStudentAttendanceForPortal();
                 await loadExecutedDateSheet();
                 applyStudentData(student);
+                await loadStudentLeaveRequests(student);
                 return;
             } catch (error) {
                 const fallbackStudent = getStudentFromLocalFallback() ||
@@ -3979,6 +3995,7 @@
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     applyStudentData(fallbackStudent);
+                    await loadStudentLeaveRequests(fallbackStudent);
                     return;
                 }
 

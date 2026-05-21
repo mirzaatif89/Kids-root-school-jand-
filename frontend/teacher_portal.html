@@ -1312,6 +1312,7 @@
         const TEACHER_SALARY_KEY = 'eduCore_teacher_salaries';
         const TEACHER_THEME_KEY = 'eduCore_teacher_portal_theme';
         let currentTeacherProfile = null;
+        let remoteTeacherLeaveRequests = null;
 
         function syncThemeMenu() {
             const isDark = document.body.classList.contains('portal-dark');
@@ -1562,9 +1563,27 @@
 
         function getTeacherLeaveRequests() {
             const teacherId = getTeacherIdentity().toLowerCase();
-            return readLocal(TEACHER_LEAVE_KEY)
-                .filter((item) => String(item.teacherId || '').toLowerCase() === teacherId)
+            const requests = Array.isArray(remoteTeacherLeaveRequests) ? remoteTeacherLeaveRequests : readLocal(TEACHER_LEAVE_KEY);
+            return requests
+                .filter((item) => String(item.applicantId || item.teacherId || '').toLowerCase() === teacherId)
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+        }
+
+        async function loadTeacherLeaveRequests() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Leave history could not be loaded.');
+                }
+                remoteTeacherLeaveRequests = result.leaveRequests || [];
+                localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(remoteTeacherLeaveRequests));
+            } catch (_error) {
+                remoteTeacherLeaveRequests = null;
+            }
+            renderTeacherLeaveHistory();
         }
 
         function renderTeacherLeaveHistory() {
@@ -1919,7 +1938,7 @@
             showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
         }
 
-        function submitTeacherLeave(event) {
+        async function submitTeacherLeave(event) {
             event.preventDefault();
             const fromDate = document.getElementById('teacherLeaveFrom')?.value || '';
             const toDate = document.getElementById('teacherLeaveTo')?.value || '';
@@ -1929,21 +1948,25 @@
                 return;
             }
 
-            const requests = readLocal(TEACHER_LEAVE_KEY);
-            requests.push({
-                id: `TLEAVE-${Date.now()}`,
-                teacherId: getTeacherIdentity(),
-                teacherName: currentTeacherProfile?.fullName || loggedInUser?.fullName || 'Teacher',
-                subject: currentTeacherProfile?.subject || '',
-                fromDate,
-                toDate,
-                reason,
-                status: 'Pending',
-                createdAt: new Date().toISOString()
-            });
-            localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(requests));
+            try {
+                const response = await fetch(`${API_BASE_URL}/leave-requests`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ fromDate, toDate, reason })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Leave request could not be saved.');
+                }
+            } catch (error) {
+                showAppAlert(error.message || 'Leave request could not be saved.', 'Leave Save Failed');
+                return;
+            }
             event.target.reset();
-            renderTeacherLeaveHistory();
+            await loadTeacherLeaveRequests();
             showAppAlert('Your leave request has been submitted.', 'Leave Submitted');
         }
 
@@ -1989,10 +2012,12 @@
                 if (!response.ok) throw new Error('Unable to load teacher profile.');
                 const teacher = await response.json();
                 applyTeacherData(teacher);
+                await loadTeacherLeaveRequests();
             } catch (_error) {
                 const fallback = getTeacherFallback();
                 if (fallback) {
                     applyTeacherData(fallback);
+                    await loadTeacherLeaveRequests();
                     return;
                 }
                 await showAppAlert('The teacher profile could not be loaded. Please sign in again.');

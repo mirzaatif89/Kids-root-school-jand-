@@ -185,6 +185,27 @@ function defineTeacherAttendanceModel(db) {
     });
 }
 
+function defineLeaveRequestModel(db) {
+    return db.define('LeaveRequest', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        applicantRole: { type: DataTypes.STRING, allowNull: false },
+        applicantId: { type: DataTypes.STRING, allowNull: false },
+        applicantName: DataTypes.STRING,
+        email: DataTypes.STRING,
+        studentCode: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        subject: DataTypes.STRING,
+        campusName: DataTypes.STRING,
+        fromDate: { type: DataTypes.STRING, allowNull: false },
+        toDate: { type: DataTypes.STRING, allowNull: false },
+        reason: { type: DataTypes.TEXT, allowNull: false },
+        status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        reviewedAt: DataTypes.STRING,
+        reviewEmailSentAt: DataTypes.STRING
+    });
+}
+
 function defineSpecialNoticeModel(db) {
     return db.define('SpecialNotice', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -467,6 +488,7 @@ async function getDb() {
             defineStudentAttendanceModel(db);
             defineStudentAssignmentSubmissionModel(db);
             defineTeacherAttendanceModel(db);
+            defineLeaveRequestModel(db);
             defineAppSettingModel(db);
             defineSpecialNoticeModel(db);
             defineBannerModel(db);
