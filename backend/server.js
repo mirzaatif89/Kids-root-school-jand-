@@ -1658,13 +1658,13 @@ app.post('/api/banners', async (req, res) => {
         const title = String(payload.title || '').trim();
         const imageUrl = String(payload.imageUrl || '').trim();
 
-        if (!title || !imageUrl) {
-            return res.status(400).json({ success: false, message: 'Banner title and image URL are required.' });
+        if (!imageUrl) {
+            return res.status(400).json({ success: false, message: 'Banner image URL is required.' });
         }
 
         const banner = {
             id: payload.id || `BANNER-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            title,
+            title: title || 'Untitled Banner',
             subtitle: String(payload.subtitle || '').trim(),
             imageUrl,
             linkUrl: String(payload.linkUrl || '').trim(),

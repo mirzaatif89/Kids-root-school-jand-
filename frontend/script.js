@@ -297,6 +297,10 @@ if (typeof io !== 'undefined') {
         if (isCurrentPage('dashboard.html')) updateDashboardBannerStats(data);
     });
 
+    socket.on('fee_payment_update', () => {
+        if (isCurrentPage('dashboard.html')) updateDashboardRevenueStats();
+    });
+
     socket.on('session_forced_logout', (payload) => {
         const targetSessionId = String(payload?.sessionId || '').trim();
         const currentSessionId = String(sessionStorage.getItem('eduCore_session_id') || '').trim();
@@ -3786,6 +3790,116 @@ function closePaymentModal() {
     if (modal) modal.style.display = 'none';
 }
 
+function formatDashboardCurrency(amount) {
+    const value = Number(amount || 0);
+    return `PKR ${Math.round(value).toLocaleString('en-PK')}`;
+}
+
+function getDashboardStudentFee(student = {}) {
+    const directFee = Number(student?.monthlyFee || student?.fee || 0) || 0;
+    if (directFee > 0) return directFee;
+
+    let classFees = {};
+    try {
+        classFees = JSON.parse(localStorage.getItem(STORAGE_KEY_CLASS_FEES) || '{}') || {};
+    } catch (_error) {
+        classFees = {};
+    }
+
+    const normalize = (value) => String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+    const targetClass = normalize(student?.classGrade || '');
+    const match = Object.entries(classFees).find(([className]) => normalize(className) === targetClass);
+    const config = match ? (match[1] || {}) : {};
+    return Number(config.monthlyFee || config.fee || 0) || 0;
+}
+
+async function fetchDashboardFeePayments() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/fees/payments`);
+        const result = await parseJsonResponse(response, 'Fee payments could not be loaded.');
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || 'Fee payments could not be loaded.');
+        }
+        return Array.isArray(result?.payments) ? result.payments : [];
+    } catch (error) {
+        console.warn('Dashboard fee payments could not be loaded from server:', error.message);
+        return [];
+    }
+}
+
+function getLocalDashboardFeePayments(students = []) {
+    let monthlyFeesData = {};
+    let paymentDetails = {};
+
+    try {
+        monthlyFeesData = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}') || {};
+    } catch (_error) {
+        monthlyFeesData = {};
+    }
+
+    try {
+        paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}') || {};
+    } catch (_error) {
+        paymentDetails = {};
+    }
+
+    const rows = [];
+    const pushedKeys = new Set();
+
+    (students || []).forEach((student) => {
+        const studentId = String(student?.id || '').trim();
+        if (!studentId) return;
+
+        Object.entries(paymentDetails[studentId] || {}).forEach(([month, detail]) => {
+            const amount = Number(detail?.amount || 0);
+            if (!(amount > 0)) return;
+            pushedKeys.add(`${studentId}::${month}`);
+            rows.push({ studentId, feeMonth: month, amount, status: 'Paid' });
+        });
+
+        Object.entries(monthlyFeesData[studentId] || {}).forEach(([month, status]) => {
+            if (status !== 'Paid' || pushedKeys.has(`${studentId}::${month}`)) return;
+            const amount = getDashboardStudentFee(student);
+            if (amount > 0) rows.push({ studentId, feeMonth: month, amount, status: 'Paid' });
+        });
+
+        if (student.feesStatus === 'Paid' && !Object.keys(monthlyFeesData[studentId] || {}).length && !Object.keys(paymentDetails[studentId] || {}).length) {
+            const amount = getDashboardStudentFee(student);
+            if (amount > 0) rows.push({ studentId, feeMonth: 'Current', amount, status: 'Paid' });
+        }
+    });
+
+    return rows;
+}
+
+async function updateDashboardRevenueStats() {
+    const amountEl = document.getElementById('dashRevenue');
+    const detailEl = document.getElementById('dashRevenueDetail');
+    if (!amountEl && !detailEl) return;
+
+    const students = getArrayData(STORAGE_KEY_STUDENTS);
+    let payments = await fetchDashboardFeePayments();
+    let sourceLabel = 'fee payments';
+
+    if (!payments.length) {
+        payments = getLocalDashboardFeePayments(students);
+        sourceLabel = 'local fee records';
+    }
+
+    const paidPayments = payments.filter((payment) => {
+        const status = String(payment?.status || 'Paid').toLowerCase();
+        return status === 'paid' || status === 'partial';
+    });
+    const totalRevenue = paidPayments.reduce((sum, payment) => sum + (Number(payment?.amount || 0) || 0), 0);
+
+    if (amountEl) amountEl.innerText = formatDashboardCurrency(totalRevenue);
+    if (detailEl) {
+        const paymentCount = paidPayments.length;
+        detailEl.innerHTML = `<i data-lucide="dollar-sign" size="16"></i> ${paymentCount} ${paymentCount === 1 ? 'payment' : 'payments'} from ${sourceLabel}`;
+        if (window.lucide) window.lucide.createIcons();
+    }
+}
+
 // Preview Image
 document.addEventListener('change', (e) => {
     if (e.target && e.target.id === 'paymentReceipt') {
@@ -3836,16 +3950,7 @@ function updateDashboardStats() {
     if (document.getElementById('dashTeacherCount')) document.getElementById('dashTeacherCount').innerText = teachers.length || '0';
     if (document.getElementById('dashStaffCount')) document.getElementById('dashStaffCount').innerText = staffMembers.length || '0';
 
-    // Calculate Total Revenue (Sum of monthlyFee for students with feesStatus === 'Paid')
-    if (document.getElementById('dashRevenue')) {
-        const totalRevenue = students.reduce((sum, student) => {
-            if (student.feesStatus === 'Paid') {
-                return sum + (parseInt(student.monthlyFee) || 0);
-            }
-            return sum;
-        }, 0);
-        document.getElementById('dashRevenue').innerText = 'PKR ' + totalRevenue.toLocaleString();
-    }
+    updateDashboardRevenueStats();
 
     updateDashboardComplaintStats();
     updateDashboardBannerStats();

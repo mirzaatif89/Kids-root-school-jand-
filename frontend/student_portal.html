@@ -1034,6 +1034,74 @@
             color: #ffffff;
         }
 
+        .student-portal-menu-wrap {
+            display: none;
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 12;
+        }
+
+        .student-portal-menu-button {
+            width: 44px;
+            min-width: 0;
+            height: 44px;
+            padding: 0;
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        }
+
+        .student-portal-menu-button i,
+        .student-portal-menu-button svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .student-portal-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: min(245px, calc(100vw - 42px));
+            border: 1px solid #dbe3ee;
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+            padding: 8px;
+            display: none;
+        }
+
+        .student-portal-menu.open {
+            display: block;
+        }
+
+        .student-portal-menu-item {
+            width: 100%;
+            border: 0;
+            border-radius: 10px;
+            background: transparent;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 12px;
+            font: inherit;
+            font-weight: 800;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .student-portal-menu-item:hover {
+            background: #eef7f6;
+            color: #0f766e;
+        }
+
+        .student-portal-menu-item i,
+        .student-portal-menu-item svg {
+            width: 18px;
+            height: 18px;
+            color: #0f766e;
+        }
+
         .portal-container {
             width: min(100%, 1180px);
             max-width: 1180px;
@@ -1400,16 +1468,15 @@
 
         @media (max-width: 520px) {
             .portal-header {
-                padding: 12px 16px;
+                display: none;
             }
 
-            .portal-logo {
-                width: 150px;
-                height: 54px;
+            .student-portal-menu-wrap {
+                display: block;
             }
 
             .portal-container {
-                padding: 0.9rem;
+                padding: 12px 12px 30px;
             }
 
             .portal-welcome-strip {
@@ -1421,30 +1488,114 @@
                 align-items: start;
             }
 
+            .user-card {
+                align-items: center;
+                text-align: center;
+                padding: 28px 14px 16px;
+                border-radius: 16px;
+            }
+
             .user-card-main {
-                align-items: flex-start;
+                align-items: center;
+                flex-direction: column;
+                width: 100%;
+                gap: 0.8rem;
+            }
+
+            .user-avatar {
+                width: 96px;
+                height: 96px;
+            }
+
+            .student-profile-copy {
+                width: 100%;
+            }
+
+            .student-profile-copy h2 {
+                font-size: 1.65rem;
+            }
+
+            .student-profile-copy > p {
+                font-size: 0.95rem;
+            }
+
+            .profile-meta {
+                justify-content: center;
+                flex-wrap: nowrap;
+                gap: 6px;
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 2px;
+            }
+
+            .meta-pill {
+                flex: 0 0 auto;
+                min-height: 32px;
+                padding: 6px 8px;
+                font-size: 0.74rem;
+                gap: 4px;
             }
 
             .portal-profile-side,
             .stats-grid,
             .student-action-grid {
-                gap: 0.75rem;
-                grid-template-columns: 1fr;
+                gap: 10px;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .portal-status-card {
+                min-height: 96px;
+                padding: 12px;
+            }
+
+            .portal-status-card span,
+            .stat-box span {
+                font-size: 0.72rem;
+                line-height: 1.25;
+            }
+
+            .portal-status-card strong,
+            .stat-box strong {
+                font-size: 1.08rem;
+                line-height: 1.25;
+                overflow-wrap: anywhere;
+            }
+
+            .stat-box {
+                min-height: 104px;
+                padding: 14px 12px;
             }
 
             .student-action-btn {
-                min-height: 88px;
-                justify-content: flex-start;
-                font-size: 0.92rem;
-                padding: 0.75rem 1rem;
+                min-height: 78px;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                gap: 6px;
+                font-size: 0.78rem;
+                line-height: 1.18;
+                text-align: center;
+                padding: 0.75rem 0.5rem;
+                overflow-wrap: anywhere;
+            }
+
+            .student-action-btn::after {
+                display: none;
+            }
+
+            .student-action-btn i,
+            .student-action-btn svg {
+                width: 20px;
+                height: 20px;
             }
 
             .panel-card {
                 padding: 1rem;
+                border-radius: 16px;
             }
 
             .mini-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .portal-action-row .btn {
@@ -1522,6 +1673,17 @@
         </section>
 
         <div class="user-card">
+            <div class="student-portal-menu-wrap">
+                <button class="portal-menu-btn student-portal-menu-button" type="button" id="studentMenuButton" aria-label="Open student menu" aria-expanded="false">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="student-portal-menu" id="studentPortalMenu">
+                    <button class="student-portal-menu-item" type="button" onclick="logout()">
+                        <i data-lucide="log-out"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </div>
             <div class="user-card-main">
                 <div class="user-avatar" id="avatarLetter">S</div>
                 <div class="student-profile-copy">
@@ -2059,20 +2221,20 @@
             const date = escapeHtml(firstItem.date || '-');
             const subjectBlocks = diaryItems.map((item, index) => `
                 <tr>
-                    <td>${index + 1}</td>
-                    <td>${escapeHtml(item.title || 'Subject')}</td>
-                    <td>${escapeHtml(item.details || '-').replace(/\n/g, '<br>')}</td>
-                </tr>
+                    <td>${index + 1}<\/td>
+                    <td>${escapeHtml(item.title || 'Subject')}<\/td>
+                    <td>${escapeHtml(item.details || '-').replace(/\n/g, '<br>')}<\/td>
+                <\/tr>
             `).join('');
             const logoMarkup = logoDataUrl
                 ? `<img class="logo" src="${logoDataUrl}" alt="School logo">`
-                : '<div class="logo-fallback">APEXIUMS</div>';
+                : '<div class="logo-fallback">APEXIUMS<\/div>';
 
             return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Class Diary</title>
+    <title>Class Diary<\/title>
     <style>
         @page { margin: 16mm; }
         body { font-family: Arial, sans-serif; color: #0f172a; margin: 0; background: #ffffff; }
@@ -2091,36 +2253,36 @@
         td:nth-child(2) { width: 170px; font-weight: 700; color: #0f172a; }
         .footer { margin-top: 22px; color: #64748b; font-size: 12px; text-align: center; }
         @media print { body { background: #fff; } .page { width: auto; margin: 0; padding: 0; } }
-    </style>
-</head>
+    <\/style>
+<\/head>
 <body>
     <main class="page">
         <header class="header">
             ${logoMarkup}
             <div>
-                <h1>Class Diary</h1>
-                <div class="subtitle">Student: ${studentName}</div>
-            </div>
-        </header>
+                <h1>Class Diary<\/h1>
+                <div class="subtitle">Student: ${studentName}<\/div>
+            <\/div>
+        <\/header>
         <section class="meta">
-            <div><strong>Student Name</strong>${studentName}</div>
-            <div><strong>Class</strong>${className}</div>
-            <div><strong>Date</strong>${date}</div>
-        </section>
+            <div><strong>Student Name<\/strong>${studentName}<\/div>
+            <div><strong>Class<\/strong>${className}<\/div>
+            <div><strong>Date<\/strong>${date}<\/div>
+        <\/section>
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Subject</th>
-                    <th>Diary</th>
-                </tr>
-            </thead>
-            <tbody>${subjectBlocks}</tbody>
-        </table>
-        <div class="footer">Apexiums School System</div>
-    </main>
-</body>
-</html>`;
+                    <th>#<\/th>
+                    <th>Subject<\/th>
+                    <th>Diary<\/th>
+                <\/tr>
+            <\/thead>
+            <tbody>${subjectBlocks}<\/tbody>
+        <\/table>
+        <div class="footer">Apexiums School System<\/div>
+    <\/main>
+<\/body>
+<\/html>`;
         }
 
         function openDiaryPrintWindow(html) {
@@ -2891,6 +3053,27 @@
             });
         }
 
+        function bindStudentPortalMenu() {
+            const menuButton = document.getElementById('studentMenuButton');
+            const menu = document.getElementById('studentPortalMenu');
+            if (!menuButton || !menu) return;
+
+            menuButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isOpen = menu.classList.toggle('open');
+                menuButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+
+            menu.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', () => {
+                menu.classList.remove('open');
+                menuButton.setAttribute('aria-expanded', 'false');
+            });
+        }
+
         async function loadSpecialNoticesForPortal() {
             try {
                 const response = await fetch(`${API_BASE_URL}/special-notices?portal=student`);
@@ -3191,7 +3374,7 @@
             printable.document.write(`
                 <html>
                     <head>
-                        <title>Student Result Card</title>
+                        <title>Student Result Card<\/title>
                         <style>
                             body { font-family: "Times New Roman", serif; padding: 24px; color: #111; }
                             .sheet { border: 1px solid #222; padding: 20px; max-width: 900px; margin: 0 auto; }
@@ -3209,8 +3392,8 @@
                             .summary div { border: 1px solid #ccc; padding: 10px; }
                             .label { color: #555; font-size: 12px; margin-bottom: 4px; }
                             .value { font-weight: 700; }
-                        </style>
-                    </head>
+                        <\/style>
+                    <\/head>
                     <body>
                         <div class="sheet">
                             <div class="head">
@@ -3251,10 +3434,10 @@
                                 <div><div class="label">Teacher Remarks</div><div class="value">${cachedResult.teacherRemarks || '-'}</div></div>
                                 <div><div class="label">Teacher Signature</div><div class="value">${cachedResult.teacherSignature || '-'}</div></div>
                                 <div><div class="label">Principal Signature</div><div class="value">${cachedResult.principalSignature || '-'}</div></div>
-                            </div>
-                        </div>
-                    </body>
-                </html>
+                            <\/div>
+                        <\/div>
+                    <\/body>
+                <\/html>
             `);
             printable.document.close();
             printable.focus();
@@ -3525,7 +3708,7 @@
             printable.document.write(`
                 <html>
                     <head>
-                        <title>Date Sheet</title>
+                        <title>Date Sheet<\/title>
                         <style>
                             body { font-family: Arial, sans-serif; padding: 24px; }
                             .print-header { display: grid; grid-template-columns: 78px 1fr 78px; align-items: center; gap: 14px; text-align: center; margin-bottom: 16px; }
@@ -3535,17 +3718,17 @@
                             table { width: 100%; border-collapse: collapse; margin-top: 16px; }
                             th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
                             th { background: #f3f4f6; }
-                        </style>
-                    </head>
+                        <\/style>
+                    <\/head>
                     <body>
                         <div class="print-header">
                             <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                             <div>
                                 <h2>${escapeHtml(state.dateSheetSchoolName || branding.schoolName || 'School Date Sheet')}</h2>
                                 <p>${escapeHtml(state.dateSheetExamTitle || branding.schoolTitle || 'Exam Schedule')}</p>
-                            </div>
+                            <\/div>
                             <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
-                        </div>
+                        <\/div>
                         <table>
                             <thead>
                                 <tr>
@@ -3557,9 +3740,9 @@
                                 </tr>
                             </thead>
                             <tbody>${tableRows}</tbody>
-                        </table>
-                    </body>
-                </html>
+                        <\/table>
+                    <\/body>
+                <\/html>
             `);
             printable.document.close();
             printable.focus();
@@ -3758,6 +3941,7 @@
             loadStudentProfile();
             loadSpecialNoticesForPortal();
             bindStudentPortalActions();
+            bindStudentPortalMenu();
             lucide.createIcons();
         };
     </script>
