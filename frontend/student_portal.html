@@ -76,6 +76,39 @@
             display: block;
         }
 
+        .portal-photo-picker {
+            position: relative;
+            display: inline-flex;
+            flex: 0 0 auto;
+        }
+
+        .portal-photo-picker input {
+            display: none;
+        }
+
+        .portal-photo-action {
+            position: absolute;
+            right: -8px;
+            bottom: -8px;
+            width: 36px;
+            height: 36px;
+            border: 1px solid #d9e7ea;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #0f766e;
+            display: grid;
+            place-items: center;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .portal-photo-action svg,
+        .portal-photo-action i {
+            width: 17px;
+            height: 17px;
+        }
+
         .profile-meta {
             display: flex;
             gap: 0.75rem;
@@ -1473,6 +1506,13 @@
 
             .student-portal-menu-wrap {
                 display: block;
+                left: 12px;
+                right: auto;
+            }
+
+            .student-portal-menu {
+                left: 0;
+                right: auto;
             }
 
             .portal-container {
@@ -1480,7 +1520,7 @@
             }
 
             .portal-welcome-strip {
-                display: grid;
+                display: none;
             }
 
             .portal-module-heading {
@@ -1489,51 +1529,75 @@
             }
 
             .user-card {
-                align-items: center;
-                text-align: center;
-                padding: 28px 14px 16px;
-                border-radius: 16px;
+                align-items: flex-start;
+                text-align: left;
+                padding: 16px 14px;
+                border-radius: 32px;
+                flex-direction: row;
+                gap: 1rem;
             }
 
             .user-card-main {
-                align-items: center;
-                flex-direction: column;
+                align-items: flex-start;
+                flex-direction: row;
                 width: 100%;
                 gap: 0.8rem;
+                flex-wrap: wrap;
+            }
+
+            .portal-photo-action {
+                width: 30px;
+                height: 30px;
+                right: -4px;
+                bottom: -4px;
+            }
+
+            .portal-photo-action svg,
+            .portal-photo-action i {
+                width: 14px;
+                height: 14px;
             }
 
             .user-avatar {
-                width: 96px;
-                height: 96px;
+                width: 80px;
+                height: 80px;
+                flex-shrink: 0;
             }
 
             .student-profile-copy {
-                width: 100%;
+                flex: 1;
+                min-width: 120px;
             }
 
             .student-profile-copy h2 {
-                font-size: 1.65rem;
+                font-size: 1.35rem;
+                margin: 0 0 0.3rem;
+                line-height: 1.2;
             }
 
             .student-profile-copy > p {
-                font-size: 0.95rem;
+                font-size: 0.82rem;
+                margin: 0 0 0.4rem;
+                color: #64748b;
             }
 
             .profile-meta {
-                justify-content: center;
-                flex-wrap: nowrap;
-                gap: 6px;
+                justify-content: flex-start;
+                flex-wrap: wrap;
+                gap: 4px;
                 width: 100%;
-                overflow-x: auto;
-                padding-bottom: 2px;
+                padding: 0;
+                flex-basis: 100%;
             }
 
             .meta-pill {
                 flex: 0 0 auto;
-                min-height: 32px;
-                padding: 6px 8px;
-                font-size: 0.74rem;
-                gap: 4px;
+                min-height: 28px;
+                padding: 4px 6px;
+                font-size: 0.68rem;
+                gap: 3px;
+                white-space: nowrap;
+                border-radius: 14px;
             }
 
             .portal-profile-side,
@@ -1541,6 +1605,10 @@
             .student-action-grid {
                 gap: 10px;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .portal-profile-side {
+                display: none !important;
             }
 
             .portal-shell > .stats-grid,
@@ -1552,6 +1620,7 @@
             .portal-status-card {
                 min-height: 96px;
                 padding: 12px;
+                border-radius: 24px;
             }
 
             .portal-status-card span,
@@ -1570,6 +1639,7 @@
             .stat-box {
                 min-height: 104px;
                 padding: 14px 12px;
+                border-radius: 28px;
             }
 
             .student-action-btn {
@@ -1583,6 +1653,7 @@
                 text-align: center;
                 padding: 0.75rem 0.5rem;
                 overflow-wrap: anywhere;
+                border-radius: 28px;
             }
 
             .student-action-btn::after {
@@ -1597,7 +1668,7 @@
 
             .panel-card {
                 padding: 1rem;
-                border-radius: 16px;
+                border-radius: 28px;
             }
 
             .mini-grid {
@@ -1691,7 +1762,13 @@
                 </div>
             </div>
             <div class="user-card-main">
-                <div class="user-avatar" id="avatarLetter">S</div>
+                <div class="portal-photo-picker">
+                    <div class="user-avatar" id="avatarLetter">S</div>
+                    <label class="portal-photo-action" for="studentPortalPhoto" title="Change profile photo" aria-label="Change profile photo">
+                        <i data-lucide="camera"></i>
+                    </label>
+                    <input id="studentPortalPhoto" type="file" accept="image/*">
+                </div>
                 <div class="student-profile-copy">
                     <h2 id="studentName">Loading...</h2>
                     <p style="color: var(--text-secondary);" id="studentClass">Class: -</p>
@@ -3817,6 +3894,61 @@
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
         }
 
+        function readStudentPortalPhoto(file) {
+            return new Promise((resolve, reject) => {
+                if (!file || !String(file.type || '').startsWith('image/')) {
+                    reject(new Error('Select an image file.'));
+                    return;
+                }
+                if (file.size > 3 * 1024 * 1024) {
+                    reject(new Error('Select an image under 3 MB.'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error('Profile image could not be read.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function cacheStudentPortalProfile(student) {
+            sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
+            const students = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS) || '[]');
+            const index = students.findIndex((item) => String(item.id) === String(student.id));
+            if (index >= 0) {
+                students[index] = { ...students[index], profileImage: student.profileImage || '' };
+                localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
+            }
+        }
+
+        async function updateStudentPortalPhoto(event) {
+            const input = event.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+            try {
+                const profileImage = await readStudentPortalPhoto(file);
+                const response = await fetch(`${API_BASE_URL}/student/me`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ profileImage })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success || !result?.student) {
+                    throw new Error(result?.message || 'Profile photo could not be saved.');
+                }
+                cacheStudentPortalProfile(result.student);
+                applyStudentData(result.student);
+                await showAppAlert('Your profile photo has been updated.', 'Photo Updated');
+            } catch (error) {
+                await showAppAlert(error.message || 'Profile photo could not be saved.', 'Photo Error');
+            } finally {
+                if (input) input.value = '';
+            }
+        }
+
         function getStudentFromLocalFallback() {
             const students = JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENTS)) || [];
             return students.find((student) => student.id === loggedInUser.id);
@@ -3945,6 +4077,7 @@
                 if (result) applyStudentResult(result);
             });
             loadStudentProfile();
+            document.getElementById('studentPortalPhoto')?.addEventListener('change', updateStudentPortalPhoto);
             loadSpecialNoticesForPortal();
             bindStudentPortalActions();
             bindStudentPortalMenu();

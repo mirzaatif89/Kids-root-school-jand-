@@ -1511,6 +1511,25 @@ app.get('/api/teacher/me', authenticateToken, async (req, res) => {
     }
 });
 
+app.post('/api/teacher/me', authenticateToken, async (req, res) => {
+    try {
+        if (!sequelize) return res.status(503).json({ success: false, message: 'Database not available' });
+        if (req.user.role !== 'Teacher') return res.status(403).json({ success: false, message: 'Teacher access only.' });
+        const profileImage = String(req.body?.profileImage || '').trim();
+        if (!profileImage || !profileImage.startsWith('data:image/')) {
+            return res.status(400).json({ success: false, message: 'A profile image is required.' });
+        }
+        const teacher = await sequelize.models.Teacher.findByPk(req.user.id);
+        if (!teacher) return res.status(404).json({ success: false, message: 'Teacher record not found.' });
+        await teacher.update({ profileImage });
+        const refreshed = await sequelize.models.Teacher.findByPk(req.user.id, { attributes: { exclude: ['password'] } });
+        io.emit('teachers_update', await sequelize.models.Teacher.findAll());
+        return res.json({ success: true, teacher: refreshed });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message || 'Teacher photo could not be saved.' });
+    }
+});
+
 function normalizeNoticeTargets(targetPortals) {
     const allowedTargets = new Set(['student', 'teacher', 'staff']);
     const targets = Array.isArray(targetPortals) ? targetPortals : [];
@@ -2072,6 +2091,28 @@ app.get('/api/student/me', authenticateToken, async (req, res) => {
         return res.json(student);
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.post('/api/student/me', authenticateToken, async (req, res) => {
+    if (req.user.role !== 'Student') {
+        return res.status(403).json({ success: false, message: 'Student access only.' });
+    }
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const profileImage = String(req.body?.profileImage || '').trim();
+        if (!profileImage || !profileImage.startsWith('data:image/')) {
+            return res.status(400).json({ success: false, message: 'A profile image is required.' });
+        }
+        const student = await sequelize.models.Student.findByPk(req.user.id);
+        if (!student) return res.status(404).json({ success: false, message: 'Student record not found.' });
+        await student.update({ profileImage });
+        const refreshed = await sequelize.models.Student.findByPk(req.user.id, { attributes: { exclude: ['password'] } });
+        io.emit('students_update', await sequelize.models.Student.findAll());
+        return res.json({ success: true, student: refreshed });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: err.message || 'Student photo could not be saved.' });
     }
 });
 

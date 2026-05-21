@@ -109,7 +109,8 @@
             transition: width 1s ease-in-out;
         }
 
-        .month-selector {
+        .month-picker {
+            min-height: var(--app-control-height);
             padding: 0.5rem 1rem;
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
@@ -117,6 +118,70 @@
             font-weight: 600;
             color: var(--text-primary);
             cursor: pointer;
+        }
+
+        .revenue-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            flex-wrap: wrap;
+        }
+
+        .revenue-toolbar label {
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-weight: 800;
+        }
+
+        .revenue-summary-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+            gap: 1.5rem;
+            align-items: start;
+            margin-bottom: 1.5rem;
+        }
+
+        .all-months-panel {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            display: grid;
+            gap: 0.85rem;
+        }
+
+        .all-months-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 0.7rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .all-months-row:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .all-months-row span {
+            color: var(--text-secondary);
+            font-weight: 700;
+        }
+
+        .profit-value.profit {
+            color: #15803d;
+        }
+
+        .profit-value.loss {
+            color: #dc2626;
+        }
+
+        @media (max-width: 920px) {
+            .revenue-summary-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -207,34 +272,80 @@
                         Real-time revenue tracking for <strong id="currentMonthDisplay"></strong>
                     </p>
                 </div>
+                <div class="revenue-toolbar">
+                    <label for="revenueMonthPicker">Month</label>
+                    <input class="month-picker" id="revenueMonthPicker" type="month" aria-label="Select revenue month">
+                </div>
             </header>
+
+            <div class="revenue-summary-grid">
+                <div class="revenue-stats" style="margin-bottom: 0;">
+                    <div class="rev-card">
+                        <div class="rev-icon" style="background: rgba(32, 176, 164, 0.1); color: var(--primary-color);">
+                            <i data-lucide="dollar-sign"></i>
+                        </div>
+                        <div class="rev-data">
+                            <p>Expected Revenue</p>
+                            <h3 id="expectedRevenue">PKR 0</h3>
+                        </div>
+                    </div>
+                    <div class="rev-card">
+                        <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
+                            <i data-lucide="check-circle"></i>
+                        </div>
+                        <div class="rev-data">
+                            <p>Collected Revenue</p>
+                            <h3 id="collectedRevenue">PKR 0</h3>
+                        </div>
+                    </div>
+                    <div class="rev-card">
+                        <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
+                            <i data-lucide="clock"></i>
+                        </div>
+                        <div class="rev-data">
+                            <p>Pending Amount</p>
+                            <h3 id="pendingRevenue">PKR 0</h3>
+                        </div>
+                    </div>
+                </div>
+                <aside class="all-months-panel">
+                    <div>
+                        <h3>All Months Total</h3>
+                        <p style="color:var(--text-secondary); font-size:.85rem; margin-top:.25rem;">Collected revenue and paid expenses.</p>
+                    </div>
+                    <div class="all-months-row"><span>Total Revenue</span><strong id="allMonthsRevenue">PKR 0</strong></div>
+                    <div class="all-months-row"><span>Salary Transfers</span><strong id="allMonthsSalaries">PKR 0</strong></div>
+                    <div class="all-months-row"><span>Paid Bills</span><strong id="allMonthsBills">PKR 0</strong></div>
+                    <div class="all-months-row"><span>Profit / Loss</span><strong id="allMonthsProfitLoss" class="profit-value">PKR 0</strong></div>
+                </aside>
+            </div>
 
             <div class="revenue-stats">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(32, 176, 164, 0.1); color: var(--primary-color);">
-                        <i data-lucide="dollar-sign"></i>
+                    <div class="rev-icon" style="background: rgba(251, 191, 36, 0.16); color: #b45309;">
+                        <i data-lucide="receipt"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Expected Revenue</p>
-                        <h3 id="expectedRevenue">PKR 0</h3>
+                        <p>Paid Bills / Expenses</p>
+                        <h3 id="paidBillsExpense">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
-                        <i data-lucide="check-circle"></i>
+                    <div class="rev-icon" style="background: rgba(59, 130, 246, 0.12); color: #1d4ed8;">
+                        <i data-lucide="calculator"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Collected Revenue</p>
-                        <h3 id="collectedRevenue">PKR 0</h3>
+                        <p>Total Paid Expenses</p>
+                        <h3 id="paidExpensesTotal">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
-                        <i data-lucide="clock"></i>
+                    <div class="rev-icon" style="background: rgba(34, 197, 94, 0.12); color: #15803d;">
+                        <i data-lucide="trending-up"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Pending Amount</p>
-                        <h3 id="pendingRevenue">PKR 0</h3>
+                        <p>Profit / Loss</p>
+                        <h3 id="profitLossRevenue" class="profit-value">PKR 0</h3>
                     </div>
                 </div>
             </div>
@@ -313,18 +424,22 @@
     <script src="script.js"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
+        const STORAGE_KEY_REVENUE_BILLS = 'eduCore_bills';
         const monthsNames = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
         ];
 
         let revenueRefreshTimer = null;
+        let selectedRevenueMonthKey = '';
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Display current month
-            const currentMonth = monthsNames[new Date().getMonth()];
-            const monthDisplay = document.getElementById('currentMonthDisplay');
-            if (monthDisplay) monthDisplay.innerText = currentMonth + ' ' + new Date().getFullYear();
+            selectedRevenueMonthKey = getCurrentMonthMeta().monthKey;
+            initRevenueMonthPicker();
+            document.getElementById('revenueMonthPicker')?.addEventListener('change', (event) => {
+                selectedRevenueMonthKey = String(event.target.value || getCurrentMonthMeta().monthKey);
+                updateRevenueReport();
+            });
 
             attachRevenueLiveUpdates();
             updateRevenueReport();
@@ -382,13 +497,31 @@
 
         function getCurrentMonthMeta() {
             const now = new Date();
+            return getMonthMetaFromKey(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+        }
+
+        function getMonthMetaFromKey(monthKey) {
+            const match = String(monthKey || '').match(/^(\d{4})-(\d{2})$/);
+            const now = new Date();
+            const year = match ? Number(match[1]) : now.getFullYear();
+            const monthIndex = match ? Math.min(Math.max(Number(match[2]) - 1, 0), 11) : now.getMonth();
             return {
-                monthName: monthsNames[now.getMonth()],
-                monthShort: now.toLocaleString('en-US', { month: 'short' }),
-                monthIndex: now.getMonth(),
-                year: now.getFullYear(),
-                monthKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+                monthName: monthsNames[monthIndex],
+                monthShort: monthsNames[monthIndex].slice(0, 3),
+                monthIndex,
+                year,
+                monthKey: `${year}-${String(monthIndex + 1).padStart(2, '0')}`
             };
+        }
+
+        function initRevenueMonthPicker() {
+            const picker = document.getElementById('revenueMonthPicker');
+            if (!picker) return;
+            picker.value = selectedRevenueMonthKey || getCurrentMonthMeta().monthKey;
+        }
+
+        function formatRevenueMoney(value) {
+            return 'PKR ' + Math.round(Number(value || 0)).toLocaleString('en-PK');
         }
 
         function normalizeFeeMonthToKey(value) {
@@ -410,6 +543,70 @@
             const yearMatch = lowered.match(/\b(20\d{2})\b/);
             const year = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
             return `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+        }
+
+        function getPaymentMonthKeys(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return [];
+            const lowered = raw.toLowerCase();
+            const yearMatch = lowered.match(/\b(20\d{2})\b/);
+            const fallbackYear = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+            const monthKeys = monthsNames
+                .map((month, monthIndex) => ({ month, monthIndex }))
+                .filter(({ month }) => lowered.includes(month.toLowerCase()) || lowered.includes(month.slice(0, 3).toLowerCase()))
+                .map(({ monthIndex }) => `${fallbackYear}-${String(monthIndex + 1).padStart(2, '0')}`);
+            if (monthKeys.length) return Array.from(new Set(monthKeys));
+            const single = normalizeFeeMonthToKey(raw);
+            return single ? [single] : [];
+        }
+
+        function studentAppliesToRevenueMonth(student, monthMeta) {
+            const rawStart = student?.admissionDate || student?.createdAt || '';
+            if (!rawStart) return true;
+            const parsed = new Date(rawStart);
+            if (Number.isNaN(parsed.getTime())) return true;
+            const startKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+            return startKey <= monthMeta.monthKey;
+        }
+
+        function readRevenueBills() {
+            try {
+                const bills = JSON.parse(localStorage.getItem(STORAGE_KEY_REVENUE_BILLS) || '[]');
+                return Array.isArray(bills) ? bills : [];
+            } catch (_error) {
+                return [];
+            }
+        }
+
+        function normalizeRevenueBillMonthKey(bill) {
+            const dateValue = bill?.billDate || bill?.date || bill?.paidAt || bill?.createdAt || '';
+            const parsed = new Date(dateValue);
+            if (Number.isNaN(parsed.getTime())) return '';
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function getPaidBillsAmount(monthKey = '') {
+            return readRevenueBills()
+                .filter((bill) => String(bill.status || '').toLowerCase() === 'paid')
+                .filter((bill) => !monthKey || normalizeRevenueBillMonthKey(bill) === monthKey)
+                .reduce((total, bill) => total + Math.max(Number(bill.amount || 0), 0), 0);
+        }
+
+        function getAllSalaryTransfers() {
+            const salaries = typeof getTeacherSalaries === 'function' ? getTeacherSalaries() : {};
+            return Object.entries(salaries || {}).reduce((total, [key, payment]) => {
+                if (!/20\d{2}-\d{2}$/.test(String(key || ''))) return total;
+                return total + Math.max(Number(payment?.amount || 0), 0);
+            }, 0);
+        }
+
+        function setProfitLossValue(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            const amount = Number(value || 0);
+            element.innerText = `${amount < 0 ? 'Loss: ' : 'Profit: '}${formatRevenueMoney(Math.abs(amount))}`;
+            element.classList.toggle('loss', amount < 0);
+            element.classList.toggle('profit', amount >= 0);
         }
 
         async function fetchCollectedFeePayments() {
@@ -434,21 +631,26 @@
         }
 
         async function updateRevenueReport() {
-            // Always use current month for real-time data
-            const currentMonthMeta = getCurrentMonthMeta();
+            const currentMonthMeta = getMonthMetaFromKey(selectedRevenueMonthKey || getCurrentMonthMeta().monthKey);
             const students = getData(STORAGE_KEY_STUDENTS);
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
             const feePayments = await fetchCollectedFeePayments();
+            const monthDisplay = document.getElementById('currentMonthDisplay');
+            if (monthDisplay) monthDisplay.innerText = `${currentMonthMeta.monthName} ${currentMonthMeta.year}`;
 
             const backendCollectedMap = new Map();
+            let allMonthsCollected = 0;
             feePayments.forEach(payment => {
                 if (!payment || !payment.studentId) return;
-                if (normalizeFeeMonthToKey(payment.feeMonth) !== currentMonthMeta.monthKey) return;
-
                 const paidAmount = Number(payment.amount || 0);
+                if (!(paidAmount > 0)) return;
+                allMonthsCollected += paidAmount;
+                const paymentMonths = getPaymentMonthKeys(payment.feeMonth);
+                if (!paymentMonths.includes(currentMonthMeta.monthKey)) return;
+                const amountForMonth = paidAmount / Math.max(paymentMonths.length, 1);
                 const previousAmount = backendCollectedMap.get(payment.studentId) || 0;
-                backendCollectedMap.set(payment.studentId, Math.max(previousAmount, paidAmount));
+                backendCollectedMap.set(payment.studentId, previousAmount + amountForMonth);
             });
 
             let totalExpected = 0;
@@ -456,7 +658,7 @@
 
             const classCollection = {}; // { className: { expected: 0, collected: 0 } }
 
-            students.forEach(s => {
+            students.filter((student) => studentAppliesToRevenueMonth(student, currentMonthMeta)).forEach(s => {
                 const standardClass = getStandardClassName(s.classGrade);
                 const fee = parseInt(s.monthlyFee) || 0;
                 const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
@@ -480,16 +682,29 @@
             const netExpected = totalExpected - salarySummary.expected;
             const netCollected = totalCollected - salarySummary.transferred;
             const remainingBalance = netCollected + salarySummary.pending;
+            const paidBills = getPaidBillsAmount(currentMonthMeta.monthKey);
+            const paidExpenses = salarySummary.transferred + paidBills;
+            const profitLoss = totalCollected - paidExpenses;
+            const allMonthsSalaries = getAllSalaryTransfers();
+            const allMonthsBills = getPaidBillsAmount();
+            const allMonthsProfitLoss = allMonthsCollected - allMonthsSalaries - allMonthsBills;
 
-            document.getElementById('expectedRevenue').innerText = 'PKR ' + totalExpected.toLocaleString();
-            document.getElementById('collectedRevenue').innerText = 'PKR ' + totalCollected.toLocaleString();
-            document.getElementById('pendingRevenue').innerText = 'PKR ' + Math.max(totalExpected - totalCollected, 0).toLocaleString();
-            document.getElementById('salaryBudget').innerText = 'PKR ' + salarySummary.expected.toLocaleString();
-            document.getElementById('transferredSalaries').innerText = 'PKR ' + salarySummary.transferred.toLocaleString();
-            document.getElementById('pendingSalaries').innerText = 'PKR ' + salarySummary.pending.toLocaleString();
-            document.getElementById('netExpectedRevenue').innerText = 'PKR ' + netExpected.toLocaleString();
-            document.getElementById('netCollectedRevenue').innerText = 'PKR ' + netCollected.toLocaleString();
-            document.getElementById('netPendingRevenue').innerText = 'PKR ' + remainingBalance.toLocaleString();
+            document.getElementById('expectedRevenue').innerText = formatRevenueMoney(totalExpected);
+            document.getElementById('collectedRevenue').innerText = formatRevenueMoney(totalCollected);
+            document.getElementById('pendingRevenue').innerText = formatRevenueMoney(Math.max(totalExpected - totalCollected, 0));
+            document.getElementById('salaryBudget').innerText = formatRevenueMoney(salarySummary.expected);
+            document.getElementById('transferredSalaries').innerText = formatRevenueMoney(salarySummary.transferred);
+            document.getElementById('pendingSalaries').innerText = formatRevenueMoney(salarySummary.pending);
+            document.getElementById('netExpectedRevenue').innerText = formatRevenueMoney(netExpected);
+            document.getElementById('netCollectedRevenue').innerText = formatRevenueMoney(netCollected);
+            document.getElementById('netPendingRevenue').innerText = formatRevenueMoney(remainingBalance);
+            document.getElementById('paidBillsExpense').innerText = formatRevenueMoney(paidBills);
+            document.getElementById('paidExpensesTotal').innerText = formatRevenueMoney(paidExpenses);
+            document.getElementById('allMonthsRevenue').innerText = formatRevenueMoney(allMonthsCollected);
+            document.getElementById('allMonthsSalaries').innerText = formatRevenueMoney(allMonthsSalaries);
+            document.getElementById('allMonthsBills').innerText = formatRevenueMoney(allMonthsBills);
+            setProfitLossValue('profitLossRevenue', profitLoss);
+            setProfitLossValue('allMonthsProfitLoss', allMonthsProfitLoss);
 
             // Render Class Bars (sorted by class order)
             const barContainer = document.getElementById('classBreakdownContainer');

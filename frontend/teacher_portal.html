@@ -255,6 +255,39 @@
             object-fit: cover;
         }
 
+        .portal-photo-picker {
+            position: relative;
+            display: inline-flex;
+            flex: 0 0 auto;
+        }
+
+        .portal-photo-picker input {
+            display: none;
+        }
+
+        .portal-photo-action {
+            position: absolute;
+            right: -8px;
+            bottom: -8px;
+            width: 36px;
+            height: 36px;
+            border: 1px solid var(--portal-border);
+            border-radius: 999px;
+            background: var(--portal-card);
+            color: var(--portal-primary-dark);
+            display: grid;
+            place-items: center;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.14);
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .portal-photo-action i,
+        .portal-photo-action svg {
+            width: 17px;
+            height: 17px;
+        }
+
         .profile-main h2 {
             margin: 0 0 5px;
             font-size: 24px;
@@ -882,32 +915,54 @@
             }
 
             .profile-card {
-                align-items: center;
-                text-align: center;
-                padding-top: 28px;
+                align-items: flex-start;
+                text-align: left;
+                padding: 16px 14px;
+                border-radius: 32px;
+            }
+
+            .portal-photo-action {
+                width: 30px;
+                height: 30px;
+                right: -4px;
+                bottom: -4px;
+            }
+
+            .portal-photo-action svg,
+            .portal-photo-action i {
+                width: 14px;
+                height: 14px;
             }
 
             .profile-card > .portal-menu-wrap {
                 top: 12px;
-                right: 12px;
+                left: 12px;
+                right: auto;
             }
 
             .profile-card > .portal-menu-wrap .portal-menu {
+                left: 0;
+                right: auto;
                 width: min(245px, calc(100vw - 42px));
             }
 
             .profile-main {
-                align-items: center;
-                flex-direction: column;
+                align-items: flex-start;
+                flex-direction: row;
                 width: 100%;
+                gap: 0.8rem;
+                flex-wrap: wrap;
             }
 
             .profile-details {
-                width: 100%;
+                flex: 1;
+                min-width: 120px;
             }
 
             .profile-main h2 {
-                font-size: 1.65rem;
+                font-size: 1.35rem;
+                margin: 0 0 0.3rem;
+                line-height: 1.2;
             }
 
             .attendance-toolbar {
@@ -937,6 +992,7 @@
             .portal-metric {
                 min-height: 96px;
                 padding: 12px;
+                border-radius: 20px;
             }
 
             .portal-metric span {
@@ -1000,6 +1056,7 @@
             .stat-card {
                 min-height: 104px;
                 padding: 14px 12px;
+                border-radius: 28px;
             }
 
             .stat-card .muted {
@@ -1046,12 +1103,13 @@
                 font-size: 0.78rem;
                 line-height: 1.18;
                 overflow-wrap: anywhere;
+                border-radius: 28px;
             }
 
             .panel-card,
             .stat-card,
             .profile-card {
-                border-radius: 16px;
+                border-radius: 28px;
             }
 
             .list-item-top {
@@ -1088,7 +1146,13 @@
                 </div>
             </div>
             <div class="profile-main">
-                <div class="avatar" id="teacherAvatar">T</div>
+                <div class="portal-photo-picker">
+                    <div class="avatar" id="teacherAvatar">T</div>
+                    <label class="portal-photo-action" for="teacherPortalPhoto" title="Change profile photo" aria-label="Change profile photo">
+                        <i data-lucide="camera"></i>
+                    </label>
+                    <input id="teacherPortalPhoto" type="file" accept="image/*">
+                </div>
                 <div class="profile-details">
                     <h2 id="teacherName">Loading...</h2>
                     <div class="muted" id="teacherRoleLine">Teacher</div>
@@ -1697,6 +1761,60 @@
             renderTeacherPanels();
         }
 
+        function readTeacherPortalPhoto(file) {
+            return new Promise((resolve, reject) => {
+                if (!file || !String(file.type || '').startsWith('image/')) {
+                    reject(new Error('Select an image file.'));
+                    return;
+                }
+                if (file.size > 3 * 1024 * 1024) {
+                    reject(new Error('Select an image under 3 MB.'));
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result || ''));
+                reader.onerror = () => reject(new Error('Profile image could not be read.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function cacheTeacherPortalProfile(teacher) {
+            const teachers = JSON.parse(localStorage.getItem('eduCore_teachers') || '[]');
+            const index = teachers.findIndex((item) => String(item.id) === String(teacher.id));
+            if (index >= 0) {
+                teachers[index] = { ...teachers[index], profileImage: teacher.profileImage || '' };
+                localStorage.setItem('eduCore_teachers', JSON.stringify(teachers));
+            }
+        }
+
+        async function updateTeacherPortalPhoto(event) {
+            const input = event.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+            try {
+                const profileImage = await readTeacherPortalPhoto(file);
+                const response = await fetch(`${API_BASE_URL}/teacher/me`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ profileImage })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success || !result?.teacher) {
+                    throw new Error(result?.message || 'Profile photo could not be saved.');
+                }
+                cacheTeacherPortalProfile(result.teacher);
+                applyTeacherData(result.teacher);
+                await showAppAlert('Your profile photo has been updated.', 'Photo Updated');
+            } catch (error) {
+                await showAppAlert(error.message || 'Profile photo could not be saved.', 'Photo Error');
+            } finally {
+                if (input) input.value = '';
+            }
+        }
+
         function getTeacherComplaintSenderId() {
             return String(currentTeacherProfile?.id || currentTeacherProfile?.employeeCode || loggedInUser?.id || loggedInUser?.username || '').trim().toLowerCase();
         }
@@ -1884,6 +2002,7 @@
             bindTeacherMenu();
             loadTeacherProfile();
             bindTeacherPortalOptions();
+            document.getElementById('teacherPortalPhoto')?.addEventListener('change', updateTeacherPortalPhoto);
             lucide.createIcons();
         });
     </script>
