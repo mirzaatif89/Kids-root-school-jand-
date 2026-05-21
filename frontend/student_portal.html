@@ -2972,8 +2972,44 @@
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
         }
 
+        function mergeStudentLeaveRequests(remote = [], cached = []) {
+            const requests = new Map();
+            [...cached, ...remote].forEach((item) => {
+                if (!item?.id) return;
+                requests.set(String(item.id), { ...(requests.get(String(item.id)) || {}), ...item });
+            });
+            return Array.from(requests.values());
+        }
+
+        async function syncLegacyStudentLeaveRequests(student = getCurrentPortalStudent()) {
+            const legacyRequests = getStudentLeaveRequests(student)
+                .filter((item) => !item.applicantRole && String(item.status || 'Pending') === 'Pending');
+            for (const item of legacyRequests) {
+                if (!item.fromDate || !item.toDate || !item.reason) continue;
+                try {
+                    await fetch(`${API_BASE_URL}/leave-requests`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            id: item.id,
+                            fromDate: item.fromDate,
+                            toDate: item.toDate,
+                            reason: item.reason
+                        })
+                    });
+                } catch (_error) {
+                    return;
+                }
+            }
+        }
+
         async function loadStudentLeaveRequests(student = getCurrentPortalStudent()) {
             try {
+                const cachedRequests = getPortalData(STUDENT_LEAVE_KEY);
+                await syncLegacyStudentLeaveRequests(student);
                 const response = await fetch(`${API_BASE_URL}/leave-requests`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
@@ -2981,7 +3017,7 @@
                 if (!response.ok || !result?.success) {
                     throw new Error(result?.message || 'Leave history could not be loaded.');
                 }
-                localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(result.leaveRequests || []));
+                localStorage.setItem(STUDENT_LEAVE_KEY, JSON.stringify(mergeStudentLeaveRequests(result.leaveRequests || [], cachedRequests)));
             } catch (_error) {
                 // Keep the last cached history visible when the API is temporarily unavailable.
             }

@@ -1569,8 +1569,44 @@
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
         }
 
+        function mergeTeacherLeaveRequests(remote = [], cached = []) {
+            const requests = new Map();
+            [...cached, ...remote].forEach((item) => {
+                if (!item?.id) return;
+                requests.set(String(item.id), { ...(requests.get(String(item.id)) || {}), ...item });
+            });
+            return Array.from(requests.values());
+        }
+
+        async function syncLegacyTeacherLeaveRequests() {
+            const legacyRequests = getTeacherLeaveRequests()
+                .filter((item) => !item.applicantRole && String(item.status || 'Pending') === 'Pending');
+            for (const item of legacyRequests) {
+                if (!item.fromDate || !item.toDate || !item.reason) continue;
+                try {
+                    await fetch(`${API_BASE_URL}/leave-requests`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${authToken}`
+                        },
+                        body: JSON.stringify({
+                            id: item.id,
+                            fromDate: item.fromDate,
+                            toDate: item.toDate,
+                            reason: item.reason
+                        })
+                    });
+                } catch (_error) {
+                    return;
+                }
+            }
+        }
+
         async function loadTeacherLeaveRequests() {
             try {
+                const cachedRequests = readLocal(TEACHER_LEAVE_KEY);
+                await syncLegacyTeacherLeaveRequests();
                 const response = await fetch(`${API_BASE_URL}/leave-requests`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
@@ -1578,7 +1614,7 @@
                 if (!response.ok || !result?.success) {
                     throw new Error(result?.message || 'Leave history could not be loaded.');
                 }
-                remoteTeacherLeaveRequests = result.leaveRequests || [];
+                remoteTeacherLeaveRequests = mergeTeacherLeaveRequests(result.leaveRequests || [], cachedRequests);
                 localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(remoteTeacherLeaveRequests));
             } catch (_error) {
                 remoteTeacherLeaveRequests = null;
