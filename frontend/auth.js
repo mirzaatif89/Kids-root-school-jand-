@@ -126,6 +126,7 @@
         'teachers.html': { moduleKey: 'teachers', defaultHome: 'dashboard.html', label: 'Teachers', icon: 'book-open' },
         'stuck_off.html': { moduleKey: 'students', defaultHome: 'dashboard.html', label: 'Stuck Off', icon: 'user-x' },
         'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'calendar-days' },
+        'teacher_timetable.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Timetable', icon: 'calendar-days' },
         'teacher_leave_requests.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Leave Requests', icon: 'calendar-check' },
         'staff.html': { moduleKey: 'staff', defaultHome: 'dashboard.html', label: 'Staff', icon: 'briefcase' },
         'classes.html': { moduleKey: 'classes', defaultHome: 'dashboard.html', label: 'Classes', icon: 'school' },
@@ -578,96 +579,16 @@
             const navItems = [
                 { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
                 { type: 'link', page: 'banners.html', label: 'Banners', icon: 'image' },
-                { type: 'link', page: 'revenue.html', label: 'Reveneue', icon: 'trending-up' },
-                { type: 'link', page: 'fees.html', label: 'Fees', icon: 'credit-card' },
-                {
-                    type: 'dropdown',
-                    label: 'Students',
-                    icon: 'users',
-                    children: [
-                        { page: 'students.html', label: 'Students', icon: 'users' },
-                        {
-                            type: 'dropdown',
-                            label: 'Students Scheduling',
-                            icon: 'calendar-clock',
-                            children: [
-                                { page: 'student_timetable.html', label: 'Class time table', icon: 'calendar-clock' },
-                                { page: 'student_leave_requests.html', label: 'Leave requeste', icon: 'calendar-check' },
-                                { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
-                                { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
-                                { page: 'quiz_uploading.html', label: 'Quiz Class', icon: 'circle-help' }
-                            ]
-                        }
-                    ]
-                },
-                { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-                { type: 'link', page: 'stuck_off.html', label: 'Stuck of students', icon: 'user-x' },
                 { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
-                {
-                    type: 'dropdown',
-                    label: 'Teachers',
-                    icon: 'book-open',
-                    children: [
-                        { page: 'teachers.html', label: 'Teahers', icon: 'book-open' },
-                        {
-                            type: 'dropdown',
-                            label: 'Teachers scheduling',
-                            icon: 'calendar-days',
-                            children: [
-                                { page: 'teacher_scheduling.html', label: 'Teacher time table', icon: 'calendar-days' },
-                                { page: 'teacher_leave_requests.html', label: 'Leave request', icon: 'calendar-check' }
-                            ]
-                        }
-                    ]
-                },
+                { type: 'link', page: 'students.html', label: 'Students', icon: 'users' },
+                { type: 'link', page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
                 { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-                {
-                    type: 'dropdown',
-                    label: 'Examination',
-                    icon: 'clipboard-list',
-                    children: [
-                        { page: 'exam_schedule.html', label: 'Exam schedule', icon: 'calendar-days' },
-                        { page: 'student_courses.html', label: 'sallabus', icon: 'library' },
-                        { page: 'exam_result.html', label: 'Result', icon: 'file-badge' },
-                        { page: 'exam_result_history.html', label: 'student result history', icon: 'history' }
-                    ]
-                },
-                {
-                    type: 'dropdown',
-                    label: 'Notifications',
-                    icon: 'bell-ring',
-                    children: [
-                        { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
-                        { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' }
-                    ]
-                },
-                {
-                    type: 'dropdown',
-                    label: 'Finanace',
-                    icon: 'landmark',
-                    children: [
-                        { page: 'bills.html', label: 'Bills', icon: 'receipt' },
-                        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
-                        { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' }
-                    ]
-                },
-                { type: 'link', page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
-                { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
-                { type: 'link', page: 'library.html', label: 'Librart', icon: 'library' },
-                {
-                    type: 'dropdown',
-                    label: 'permissions',
-                    icon: 'shield',
-                    children: [
-                        { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
-                        { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
-                    ]
-                },
+                { type: 'link', page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
+                { type: 'link', page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
                 { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
-                { type: 'link', page: 'annual_charges.html', label: 'Annual charges', icon: 'receipt' },
                 {
                     type: 'dropdown',
-                    label: 'Fee structure',
+                    label: 'Fee Structure',
                     icon: 'credit-card',
                     children: [
                         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
@@ -677,17 +598,41 @@
                 },
                 {
                     type: 'dropdown',
-                    label: 'complain box',
-                    icon: 'message-square',
+                    label: 'Examination',
+                    icon: 'clipboard-list',
                     children: [
-                        { page: 'complain_box.html', label: 'Student complain', icon: 'graduation-cap', hash: '#student' },
-                        { page: 'complain_box.html', label: 'Teachers complain', icon: 'book-open', hash: '#teacher' },
-                        { page: 'complain_box.html', label: 'Parents Complain', icon: 'home', hash: '#parents' }
+                        { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
+                        { page: 'exam_result_history.html', label: 'Result History', icon: 'history' },
+                        { page: 'exams.html', label: 'Result Cards', icon: 'badge-check' }
                     ]
                 },
-                { type: 'link', page: 'special_notices.html', label: 'notices', icon: 'megaphone' },
-                { type: 'link', page: 'visitor_books.html', label: 'visitors book', icon: 'clipboard-list' },
+                {
+                    type: 'dropdown',
+                    label: 'Finance',
+                    icon: 'landmark',
+                    children: [
+                        { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' },
+                        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+                        { page: 'bills.html', label: 'Bills', icon: 'receipt' }
+                    ]
+                },
+                { type: 'link', page: 'notifications.html', label: 'Notifications', icon: 'bell-ring' },
+                {
+                    type: 'dropdown',
+                    label: 'Permissions',
+                    icon: 'shield',
+                    children: [
+                        { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
+                        { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
+                    ]
+                },
+                { type: 'link', page: 'library.html', label: 'Library', icon: 'library' },
+                { type: 'link', page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+                { type: 'link', page: 'visitor_books.html', label: 'Visitor Records', icon: 'clipboard-list' },
                 { type: 'link', page: 'certificate.html', label: 'Certificates', icon: 'award' },
+                { type: 'link', page: 'cafe.html', label: 'Cafe Records', icon: 'coffee' },
+                { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
+                { type: 'link', page: 'aboutme.html', label: 'About', icon: 'info' },
                 { type: 'logout', label: 'Logout', icon: 'log-out' }
             ];
 

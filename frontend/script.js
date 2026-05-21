@@ -2738,35 +2738,33 @@ function ensureAdminSidebarCompleteness() {
     const currentPage = getCurrentPageName();
     const completeLinks = [
         { page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
-        { page: 'students.html', label: 'Students', icon: 'users' },
-        { page: 'families.html', label: 'Families', icon: 'home' },
         { page: 'banners.html', label: 'Banners', icon: 'image' },
-        { page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
-        { page: 'stuck_off.html', label: 'Stuck Off', icon: 'user-x' },
-        { page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
-        { page: 'certificate.html', label: 'Certificate', icon: 'award' },
-        { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
-        { page: 'visitor_books.html', label: 'Visitor Books', icon: 'clipboard-list' },
-        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
-        { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'classes.html', label: 'Classes', icon: 'school' },
+        { page: 'students.html', label: 'Students', icon: 'users' },
+        { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
+        { page: 'families.html', label: 'Families', icon: 'home' },
+        { page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
+        { page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
+        { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
-        { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
-        { page: 'bills.html', label: 'Bills', icon: 'receipt' },
-        { page: 'quiz_uploading.html', label: 'Quiz Uploading', icon: 'circle-help' },
-        { page: 'lecture_uploading.html', label: 'Lecture Uploading', icon: 'presentation' },
-        { page: 'library.html', label: 'Library', icon: 'library' },
-        { page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
-        { page: 'transport.html', label: 'Transport', icon: 'bus' },
-        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
-        { page: 'exams.html', label: 'Exams', icon: 'clipboard-list' },
+        { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
+        { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
+        { page: 'exam_result_history.html', label: 'Result History', icon: 'history' },
+        { page: 'exams.html', label: 'Result Cards', icon: 'badge-check' },
         { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' },
+        { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+        { page: 'bills.html', label: 'Bills', icon: 'receipt' },
         { page: 'notifications.html', label: 'Notifications', icon: 'bell-ring' },
-        { page: 'special_notices.html', label: 'Special Notices', icon: 'megaphone' },
         { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
         { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' },
-        { page: 'aboutme.html', label: 'About Us', icon: 'info' }
+        { page: 'library.html', label: 'Library', icon: 'library' },
+        { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { page: 'visitor_books.html', label: 'Visitor Records', icon: 'clipboard-list' },
+        { page: 'certificate.html', label: 'Certificates', icon: 'award' },
+        { page: 'cafe.html', label: 'Cafe Records', icon: 'coffee' },
+        { page: 'transport.html', label: 'Transport', icon: 'bus' },
+        { page: 'aboutme.html', label: 'About', icon: 'info' }
     ];
 
     const existingPages = () => new Set(Array.from(navLinks.querySelectorAll('a[href]'))
@@ -2813,96 +2811,16 @@ function renderAdminSidebarSequence() {
     const navItems = [
         { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         { type: 'link', page: 'banners.html', label: 'Banners', icon: 'image' },
-        { type: 'link', page: 'revenue.html', label: 'Reveneue', icon: 'trending-up' },
-        { type: 'link', page: 'fees.html', label: 'Fees', icon: 'credit-card' },
-        {
-            type: 'dropdown',
-            label: 'Students',
-            icon: 'users',
-            children: [
-                { page: 'students.html', label: 'Students', icon: 'users' },
-                {
-                    type: 'dropdown',
-                    label: 'Students Scheduling',
-                    icon: 'calendar-clock',
-                    children: [
-                        { page: 'student_timetable.html', label: 'Class time table', icon: 'calendar-clock' },
-                        { page: 'student_leave_requests.html', label: 'Leave requeste', icon: 'calendar-check' },
-                        { page: 'student_diary.html', label: 'Diary', icon: 'book-open' },
-                        { page: 'assignments.html', label: 'Assignments', icon: 'upload' },
-                        { page: 'quiz_uploading.html', label: 'Quiz Class', icon: 'circle-help' }
-                    ]
-                }
-            ]
-        },
-        { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-        { type: 'link', page: 'stuck_off.html', label: 'Stuck of students', icon: 'user-x' },
         { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
-        {
-            type: 'dropdown',
-            label: 'Teachers',
-            icon: 'book-open',
-            children: [
-                { page: 'teachers.html', label: 'Teahers', icon: 'book-open' },
-                {
-                    type: 'dropdown',
-                    label: 'Teachers scheduling',
-                    icon: 'calendar-days',
-                    children: [
-                        { page: 'teacher_scheduling.html', label: 'Teacher time table', icon: 'calendar-days' },
-                        { page: 'teacher_leave_requests.html', label: 'Leave request', icon: 'calendar-check' }
-                    ]
-                }
-            ]
-        },
+        { type: 'link', page: 'students.html', label: 'Students', icon: 'users' },
+        { type: 'link', page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
         { type: 'link', page: 'families.html', label: 'Families', icon: 'home' },
-        {
-            type: 'dropdown',
-            label: 'Examination',
-            icon: 'clipboard-list',
-            children: [
-                { page: 'exam_schedule.html', label: 'Exam schedule', icon: 'calendar-days' },
-                { page: 'student_courses.html', label: 'sallabus', icon: 'library' },
-                { page: 'exam_result.html', label: 'Result', icon: 'file-badge' },
-                { page: 'exam_result_history.html', label: 'student result history', icon: 'history' }
-            ]
-        },
-        {
-            type: 'dropdown',
-            label: 'Notifications',
-            icon: 'bell-ring',
-            children: [
-                { page: 'notifications.html', label: 'Notifications', icon: 'bell' },
-                { page: 'special_notices.html', label: 'Special Notifications', icon: 'megaphone' }
-            ]
-        },
-        {
-            type: 'dropdown',
-            label: 'Finanace',
-            icon: 'landmark',
-            children: [
-                { page: 'bills.html', label: 'Bills', icon: 'receipt' },
-                { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
-                { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' }
-            ]
-        },
-        { type: 'link', page: 'cafe.html', label: 'Cafe', icon: 'coffee' },
-        { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
-        { type: 'link', page: 'library.html', label: 'Librart', icon: 'library' },
-        {
-            type: 'dropdown',
-            label: 'permissions',
-            icon: 'shield',
-            children: [
-                { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
-                { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
-            ]
-        },
+        { type: 'link', page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
+        { type: 'link', page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
-        { type: 'link', page: 'annual_charges.html', label: 'Annual charges', icon: 'receipt' },
         {
             type: 'dropdown',
-            label: 'Fee structure',
+            label: 'Fee Structure',
             icon: 'credit-card',
             children: [
                 { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
@@ -2912,17 +2830,41 @@ function renderAdminSidebarSequence() {
         },
         {
             type: 'dropdown',
-            label: 'complain box',
-            icon: 'message-square',
+            label: 'Examination',
+            icon: 'clipboard-list',
             children: [
-                { page: 'complain_box.html', label: 'Student complain', icon: 'graduation-cap', hash: '#student' },
-                { page: 'complain_box.html', label: 'Teachers complain', icon: 'book-open', hash: '#teacher' },
-                { page: 'complain_box.html', label: 'Parents Complain', icon: 'home', hash: '#parents' }
+                { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
+                { page: 'exam_result_history.html', label: 'Result History', icon: 'history' },
+                { page: 'exams.html', label: 'Result Cards', icon: 'badge-check' }
             ]
         },
-        { type: 'link', page: 'special_notices.html', label: 'notices', icon: 'megaphone' },
-        { type: 'link', page: 'visitor_books.html', label: 'visitors book', icon: 'clipboard-list' },
+        {
+            type: 'dropdown',
+            label: 'Finance',
+            icon: 'landmark',
+            children: [
+                { page: 'revenue.html', label: 'Revenue', icon: 'trending-up' },
+                { page: 'teacher_salaries.html', label: 'Salaries', icon: 'wallet' },
+                { page: 'bills.html', label: 'Bills', icon: 'receipt' }
+            ]
+        },
+        { type: 'link', page: 'notifications.html', label: 'Notifications', icon: 'bell-ring' },
+        {
+            type: 'dropdown',
+            label: 'Permissions',
+            icon: 'shield',
+            children: [
+                { page: 'permissions.html', label: 'Permissions', icon: 'shield' },
+                { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' }
+            ]
+        },
+        { type: 'link', page: 'library.html', label: 'Library', icon: 'library' },
+        { type: 'link', page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { type: 'link', page: 'visitor_books.html', label: 'Visitor Records', icon: 'clipboard-list' },
         { type: 'link', page: 'certificate.html', label: 'Certificates', icon: 'award' },
+        { type: 'link', page: 'cafe.html', label: 'Cafe Records', icon: 'coffee' },
+        { type: 'link', page: 'transport.html', label: 'Transport', icon: 'bus' },
+        { type: 'link', page: 'aboutme.html', label: 'About', icon: 'info' },
         { type: 'logout', label: 'Logout', icon: 'log-out' }
     ];
 
@@ -3143,6 +3085,10 @@ function getFamilyMatchKey(fatherName = '', phone = '') {
     return `${String(fatherName || '').trim().toLowerCase()}|${normalizeFamilyPhone(phone)}`;
 }
 
+function getFamilyGuardianMatchKey(guardianName = '', guardianContact = '') {
+    return `${String(guardianName || '').trim().toLowerCase()}|${normalizeFamilyPhone(guardianContact)}`;
+}
+
 function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', guardianContact = '', fatherName = '') {
     const cleanName = String(familyName || '').trim();
     if (!cleanName) return '';
@@ -3155,13 +3101,19 @@ function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', gua
     const guardianPhoneKey = normalizeFamilyPhone(cleanGuardianContact);
     const existing = families.find((family) => {
         const sameName = String(family.name || '').toLowerCase() === cleanName.toLowerCase();
-        const familyFatherName = String(family.fatherName || '').trim().toLowerCase();
         const familyPhoneKey = normalizeFamilyPhone(family.parentPhone || family.phone || '');
+        const familyGuardianContactKey = normalizeFamilyPhone(family.guardianContact || '');
         const sameFatherAndPhone = cleanFatherName &&
             parentPhoneKey &&
             getFamilyMatchKey(family.fatherName, family.parentPhone || family.phone) === getFamilyMatchKey(cleanFatherName, parentPhone) &&
             familyPhoneKey === parentPhoneKey;
-        return sameFatherAndPhone || (sameName && (!cleanFatherName || !parentPhoneKey));
+        const sameGuardianContact = cleanGuardianContact &&
+            guardianPhoneKey &&
+            familyGuardianContactKey === guardianPhoneKey;
+        const sameGuardianNameAndContact = cleanGuardianName &&
+            guardianPhoneKey &&
+            getFamilyGuardianMatchKey(family.guardianName, family.guardianContact) === getFamilyGuardianMatchKey(cleanGuardianName, cleanGuardianContact);
+        return sameFatherAndPhone || sameGuardianContact || sameGuardianNameAndContact || (sameName && (!cleanFatherName || !parentPhoneKey));
     });
     if (existing) {
         if (parentPhone) existing.phone = parentPhone;
@@ -3188,11 +3140,16 @@ function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', gua
     return family.id;
 }
 
-function syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherName, parentPhone) {
+function syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherName, parentPhone, guardianName = '', guardianContact = '') {
     const matchKey = getFamilyMatchKey(fatherName, parentPhone);
-    if (!familyId || !fatherName || !normalizeFamilyPhone(parentPhone)) return students;
+    const guardianKey = getFamilyGuardianMatchKey(guardianName, guardianContact);
+    const canMatchFatherPhone = fatherName && normalizeFamilyPhone(parentPhone);
+    const canMatchGuardian = guardianName && normalizeFamilyPhone(guardianContact);
+    if (!familyId || (!canMatchFatherPhone && !canMatchGuardian)) return students;
     return students.map((student) => {
-        if (getFamilyMatchKey(student.fatherName, student.parentPhone) !== matchKey) return student;
+        const matchesFatherPhone = canMatchFatherPhone && getFamilyMatchKey(student.fatherName, student.parentPhone) === matchKey;
+        const matchesGuardian = canMatchGuardian && getFamilyGuardianMatchKey(student.guardianName, student.guardianContact) === guardianKey;
+        if (!matchesFatherPhone && !matchesGuardian) return student;
         return {
             ...student,
             familyId,
@@ -4779,7 +4736,7 @@ async function handleStudentFormSubmit(e) {
     } else {
         students.push(newStudent);
     }
-    students = syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherNameInput, parentPhone);
+    students = syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherNameInput, parentPhone, guardianName, guardianContact);
 
     let localSaveResult;
     try {
