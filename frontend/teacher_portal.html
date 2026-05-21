@@ -1630,6 +1630,7 @@
                         <span>${escapeHtml(item.status || 'Pending')}</span>
                     </div>
                     <div>${escapeHtml(item.reason || '-')}</div>
+                    ${item.reviewReason ? `<div class="muted">Rejection reason: ${escapeHtml(item.reviewReason)}</div>` : ''}
                 </div>
             `);
         }

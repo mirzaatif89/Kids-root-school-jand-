@@ -96,6 +96,7 @@ async function createOwnLeaveRequest(db, user, body = {}) {
         toDate,
         reason,
         status: 'Pending',
+        reviewReason: null,
         reviewedAt: null,
         reviewEmailSentAt: null
     };

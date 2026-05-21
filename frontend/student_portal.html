@@ -3044,6 +3044,7 @@
                         <h4>${escapeHtml(item.fromDate || '-')} to ${escapeHtml(item.toDate || '-')}</h4>
                         <div class="portal-content-meta"><span class="leave-status ${status}">${escapeHtml(item.status || 'Pending')}</span></div>
                         <p>${escapeHtml(item.reason || '-')}</p>
+                        ${item.reviewReason ? `<p class="portal-content-meta">Rejection reason: ${escapeHtml(item.reviewReason)}</p>` : ''}
                         <div class="portal-action-row">
                             ${status === 'pending' ? `<button type="button" class="btn btn-secondary" onclick="editStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="edit-2" width="16"></i> Edit</button>
                             <button type="button" class="btn btn-secondary" onclick="deleteStudentLeaveRequest('${escapeHtml(item.id || '')}')"><i data-lucide="trash-2" width="16"></i> Delete</button>` : ''}

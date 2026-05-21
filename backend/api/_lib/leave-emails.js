@@ -35,7 +35,10 @@ function buildLeaveReviewEmail(leaveRequest = {}) {
             : [['Subject', leaveRequest.subject || '-']]),
         ['From Date', formatLeaveDate(leaveRequest.fromDate)],
         ['To Date', formatLeaveDate(leaveRequest.toDate)],
-        ['Status', status]
+        ['Status', status],
+        ...(status === 'Rejected' && normalizeText(leaveRequest.reviewReason)
+            ? [['Rejection Reason', leaveRequest.reviewReason]]
+            : [])
     ];
     const text = [
         `Dear ${applicantName},`,

@@ -19,12 +19,15 @@ module.exports = createHandler({
         if (!canReviewLeaves(user)) throwHttp(403, 'Admin or staff access required.');
         const status = readReviewStatus(body?.status);
         if (!status) throwHttp(400, 'Review status must be Approved or Rejected.');
+        const reviewReason = String(body?.reviewReason || '').trim();
+        if (status === 'Rejected' && !reviewReason) throwHttp(400, 'Rejection reason is required.');
 
         const record = await db.models.LeaveRequest.findByPk(routeId(req));
         if (!record) throwHttp(404, 'Leave request not found.');
 
         await record.update({
             status,
+            reviewReason: status === 'Rejected' ? reviewReason : '',
             reviewedAt: new Date().toISOString()
         });
         const leaveRequest = formatLeaveRequest(record);

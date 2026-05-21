@@ -141,9 +141,14 @@ function sendFrontendPage(res, fileName) {
 
         const sidebarOrderScript = '<script src="/sidebar-order.js?v=20260520-sidebar-force"></script>';
         const withScrollMemory = html.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`);
+        const injectBeforeLastClosingBody = (pageHtml, markup) => {
+            const closingBodyIndex = pageHtml.toLowerCase().lastIndexOf('</body>');
+            if (closingBodyIndex < 0) return `${pageHtml}\n${markup}`;
+            return `${pageHtml.slice(0, closingBodyIndex)}    ${markup}\n${pageHtml.slice(closingBodyIndex)}`;
+        };
         const withSidebarOrder = withScrollMemory.includes('sidebar-order.js')
             ? withScrollMemory
-            : withScrollMemory.replace('</body>', `    ${sidebarOrderScript}\n</body>`);
+            : injectBeforeLastClosingBody(withScrollMemory, sidebarOrderScript);
         res.type('html').send(withSidebarOrder);
     });
 }
@@ -1573,12 +1578,17 @@ app.post('/api/leave-requests/:id', authenticateToken, async (req, res) => {
         if (!canReviewLeaves(req.user)) return res.status(403).json({ success: false, message: 'Admin or staff access required.' });
         const status = readReviewStatus(req.body?.status);
         if (!status) return res.status(400).json({ success: false, message: 'Review status must be Approved or Rejected.' });
+        const reviewReason = String(req.body?.reviewReason || '').trim();
+        if (status === 'Rejected' && !reviewReason) {
+            return res.status(400).json({ success: false, message: 'Rejection reason is required.' });
+        }
 
         const record = await sequelize.models.LeaveRequest.findByPk(req.params.id);
         if (!record) return res.status(404).json({ success: false, message: 'Leave request not found.' });
 
         await record.update({
             status,
+            reviewReason: status === 'Rejected' ? reviewReason : '',
             reviewedAt: new Date().toISOString()
         });
         let emailResult = null;
@@ -4039,6 +4049,7 @@ function defineLeaveRequestModel(db) {
         toDate: { type: DataTypes.STRING, allowNull: false },
         reason: { type: DataTypes.TEXT, allowNull: false },
         status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        reviewReason: DataTypes.TEXT,
         reviewedAt: DataTypes.STRING,
         reviewEmailSentAt: DataTypes.STRING
     });
@@ -4509,6 +4520,10 @@ async function ensureLegacySchema() {
         fileData: { type: DataTypes.TEXT('long'), allowNull: true },
         submittedAt: { type: DataTypes.STRING, allowNull: true },
         status: { type: DataTypes.STRING, allowNull: true }
+    });
+
+    await ensureTableColumns('LeaveRequests', {
+        reviewReason: { type: DataTypes.TEXT, allowNull: true }
     });
 }
 

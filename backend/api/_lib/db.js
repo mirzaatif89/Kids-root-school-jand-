@@ -201,6 +201,7 @@ function defineLeaveRequestModel(db) {
         toDate: { type: DataTypes.STRING, allowNull: false },
         reason: { type: DataTypes.TEXT, allowNull: false },
         status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        reviewReason: DataTypes.TEXT,
         reviewedAt: DataTypes.STRING,
         reviewEmailSentAt: DataTypes.STRING
     });
@@ -455,6 +456,10 @@ async function ensureLegacySchema(db) {
         fileData: { type: DataTypes.TEXT('long'), allowNull: true },
         submittedAt: { type: DataTypes.STRING, allowNull: true },
         status: { type: DataTypes.STRING, allowNull: true }
+    });
+
+    await ensureTableColumns(db, 'LeaveRequests', {
+        reviewReason: { type: DataTypes.TEXT, allowNull: true }
     });
 }
 

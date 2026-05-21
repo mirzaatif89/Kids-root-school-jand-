@@ -13,6 +13,8 @@
         .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.85rem; text-align:left; vertical-align:top; }
         .schedule-table th { background:#f6fbfa; color:#475569; font-size:.78rem; text-transform:uppercase; }
         .schedule-table-wrap { overflow-x:auto; }
+        .panel-title { margin:0 0 1rem; color:#0f172a; font-size:1.08rem; }
+        .history-note { margin:.35rem 0 0; color:#64748b; font-size:.84rem; font-weight:700; }
         .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
         .schedule-actions { display:inline-flex; gap:.45rem; flex-wrap:wrap; }
         .schedule-action-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
@@ -44,7 +46,8 @@
         <main class="main-content">
             <a class="back-link" href="notifications.html"><i data-lucide="arrow-left"></i> Back to Notifications</a>
             <header class="header"><div><h1>Teacher Leave Requests</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Approve or reject leave applications submitted from teacher portal.</p></div></header>
-            <section class="schedule-panel"><div id="teacherLeaveRequestList"></div></section>
+            <section class="schedule-panel"><h2 class="panel-title">Pending Teacher Leaves</h2><div id="teacherLeaveRequestList"></div></section>
+            <section class="schedule-panel"><h2 class="panel-title">Teacher Leave History</h2><div id="teacherLeaveHistoryList"></div></section>
         </main>
     </div>
     <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
@@ -76,6 +79,26 @@
             const parsed = new Date(value);
             if (Number.isNaN(parsed.getTime())) return value;
             return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+        function formatLeaveDateTime(value) {
+            if (!value) return '-';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return value;
+            return parsed.toLocaleString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        function reviewActionButtons(item) {
+            const id = esc(item.id || '');
+            const status = String(item.status || 'Pending').toLowerCase();
+            return `<div class="schedule-actions">
+                ${status !== 'approved' ? `<button class="schedule-action-btn edit" onclick="updateStatus('${id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button>` : ''}
+                ${status !== 'rejected' ? `<button class="schedule-action-btn delete" onclick="updateStatus('${id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button>` : ''}
+            </div>`;
         }
         function buildLeavePdfHtml(item) {
             const status = esc(item.status || 'Pending');
@@ -151,13 +174,22 @@
             printable.setTimeout(() => printable.print(), 450);
         }
         function render() {
-            const requests = data().sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-            if (!requests.length) {
-                teacherLeaveRequestList.innerHTML = '<div class="empty-note">No teacher leave request received yet.</div>';
-                return;
+            const host = document.getElementById('teacherLeaveRequestList');
+            const historyHost = document.getElementById('teacherLeaveHistoryList');
+            if (!host || !historyHost) return;
+            const requests = [...data()].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+            const pending = requests.filter((item) => String(item.status || 'Pending').toLowerCase() === 'pending');
+            if (!pending.length) {
+                host.innerHTML = '<div class="empty-note">No pending teacher leave request.</div>';
+            } else {
+                host.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Subject</th><th>Leave Dates</th><th>Applied</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${pending.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.teacherName || '-')}</td><td>${esc(item.subject || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note"><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></div></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td>${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
             }
-            teacherLeaveRequestList.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Subject</th><th>Dates</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.teacherName || '-')}</td><td>${esc(item.subject || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="updateStatus('${item.id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button><button class="schedule-action-btn delete" onclick="updateStatus('${item.id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button><button class="schedule-action-btn delete" onclick="deleteLeaveRequest('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`; }).join('')}</tbody></table></div>`;
-            lucide.createIcons();
+            if (!requests.length) {
+                historyHost.innerHTML = '<div class="empty-note">No teacher leave history yet.</div>';
+            } else {
+                historyHost.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Teacher</th><th>Leave Dates</th><th>Applied At</th><th>Reason</th><th>Review</th><th>Update Status</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.teacherName || '-')}<div class="history-note">Subject: ${esc(item.subject || '-')}</div></td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}</td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span><div class="history-note">Reviewed: ${esc(formatLeaveDateTime(item.reviewedAt))}</div>${item.reviewReason ? `<div class="history-note" style="color:#991b1b;">Reject reason: ${esc(item.reviewReason)}</div>` : ''}</td><td>${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
+            }
+            if (window.lucide) window.lucide.createIcons();
         }
         async function loadLeaveRequests() {
             try {
@@ -200,13 +232,18 @@
         }
         async function updateStatus(id, status) {
             try {
+                const reviewReason = status === 'Rejected' ? String(window.prompt('Write rejection reason') || '').trim() : '';
+                if (status === 'Rejected' && !reviewReason) {
+                    showAppAlert('Rejection reason is required.', 'Reason Required');
+                    return;
+                }
                 const response = await fetch(`${LEAVE_API_BASE}/leave-requests/${encodeURIComponent(id)}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         Authorization: `Bearer ${LEAVE_AUTH_TOKEN}`
                     },
-                    body: JSON.stringify({ status })
+                    body: JSON.stringify({ status, reviewReason })
                 });
                 const result = await response.json().catch(() => ({}));
                 if (!response.ok || !result?.success) throw new Error(result?.message || 'Leave status could not be updated.');
@@ -218,7 +255,9 @@
                 showAppAlert(error.message || 'Leave status could not be updated.', 'Review Failed');
             }
         }
-        loadLeaveRequests(); lucide.createIcons();
+        render();
+        loadLeaveRequests();
+        if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
 
