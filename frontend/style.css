@@ -2741,9 +2741,9 @@ button {
 
 /* === SYSTEM-WIDE RESPONSIVE HARDENING === */
 :root {
-    --app-page-gutter: clamp(0.85rem, 2vw, 2rem);
-    --app-section-gap: clamp(0.9rem, 1.8vw, 1.5rem);
-    --app-control-height: clamp(2.35rem, 4.5vw, 2.75rem);
+    --app-page-gutter: clamp(0.75rem, 1.35vw, 1.3rem);
+    --app-section-gap: clamp(0.6rem, 1.15vw, 0.95rem);
+    --app-control-height: clamp(2.1rem, 3.3vw, 2.25rem);
 }
 
 html,
@@ -2828,7 +2828,7 @@ textarea {
 .stats-grid,
 .cards-grid,
 .dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
 }
 
 .form-container,
@@ -2953,7 +2953,7 @@ td {
     width: 100%;
     height: 100dvh;
     min-height: 0;
-    padding: clamp(1rem, 2vw, 2rem);
+    padding: var(--app-page-gutter);
 }
 
 .dashboard-container .header,
@@ -2969,7 +2969,7 @@ td {
 .dashboard-container .header,
 .dashboard-container .toolbar,
 .dashboard-container .table-header {
-    margin-bottom: clamp(1rem, 2vw, 2rem);
+    margin-bottom: clamp(0.85rem, 1.4vw, 1.25rem);
 }
 
 .dashboard-container .form-container,
@@ -2980,12 +2980,12 @@ td {
 }
 
 .dashboard-container .card {
-    min-height: clamp(108px, 14vw, 128px);
-    padding: clamp(0.85rem, 1.4vw, 1rem);
+    min-height: clamp(100px, 11vw, 116px);
+    padding: clamp(0.75rem, 1.1vw, 0.9rem);
 }
 
 .dashboard-container .card-value {
-    font-size: clamp(1.35rem, 2vw, 1.65rem);
+    font-size: clamp(1.25rem, 1.7vw, 1.45rem);
 }
 
 .dashboard-container .card-title,
@@ -2994,10 +2994,79 @@ td {
 }
 
 .dashboard-container .card-icon {
-    width: 38px;
-    height: 38px;
-    right: 0.85rem;
-    top: 0.85rem;
+    width: 34px;
+    height: 34px;
+    right: 0.75rem;
+    top: 0.75rem;
+}
+
+.dashboard-container .header h1 {
+    font-size: clamp(1.35rem, 1.9vw, 1.6rem);
+}
+
+.dashboard-container .search-bar {
+    min-height: var(--app-control-height);
+    padding: 0.34rem 0.68rem;
+    border-radius: 8px;
+}
+
+.dashboard-container .search-bar input {
+    font-size: 0.84rem;
+}
+
+.dashboard-container input,
+.dashboard-container select,
+.dashboard-container textarea {
+    min-height: var(--app-control-height);
+    border-radius: 8px;
+    font-size: 0.86rem;
+}
+
+.dashboard-container input,
+.dashboard-container select {
+    padding: 0.4rem 0.65rem;
+}
+
+.dashboard-container textarea {
+    min-height: 58px;
+    padding: 0.45rem 0.65rem;
+}
+
+.dashboard-container .btn,
+.dashboard-container button:not(.notification-bell):not(.session-modal-close) {
+    min-height: var(--app-control-height);
+    padding: 0.42rem 0.78rem;
+    border-radius: 8px;
+    font-size: 0.84rem;
+}
+
+.dashboard-container .form-grid,
+.dashboard-container .mini-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: 0.8rem 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.dashboard-container .form-container,
+.dashboard-container .panel-card {
+    padding: clamp(0.9rem, 1.35vw, 1.15rem);
+}
+
+.dashboard-container .input-group {
+    margin-bottom: 0.65rem;
+}
+
+.dashboard-container .input-group label {
+    margin-bottom: 0.32rem;
+    font-size: 0.78rem;
+    line-height: 1.25;
+}
+
+.dashboard-container thead th,
+.dashboard-container tbody td {
+    padding: 0.58rem 0.68rem;
+    font-size: 0.82rem;
+    line-height: 1.35;
 }
 
 @media (max-width: 1180px) {
@@ -3014,7 +3083,7 @@ td {
     .dashboard-container .main-content {
         height: auto;
         min-height: 100dvh;
-        padding: clamp(0.9rem, 2vw, 1.35rem) !important;
+        padding: var(--app-page-gutter) !important;
     }
 }
 

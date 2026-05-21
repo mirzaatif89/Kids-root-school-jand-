@@ -10,70 +10,123 @@
     <style>
         .revenue-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.25rem;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
         }
 
         .rev-card {
-            background: var(--surface-color);
-            min-height: 108px;
-            padding: 1rem;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--surface-color) 0%, rgba(255,255,255, 0.5) 100%);
+            min-height: 130px;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid rgba(32, 176, 164, 0.1);
             display: flex;
             align-items: center;
-            gap: 1rem;
-            box-shadow: var(--shadow-sm);
+            gap: 1.25rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rev-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-color), transparent);
+        }
+
+        .rev-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(32, 176, 164, 0.15);
+            border-color: rgba(32, 176, 164, 0.3);
         }
 
         .rev-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
+            font-size: 1.75rem;
+            flex-shrink: 0;
+        }
+
+        .rev-data {
+            flex: 1;
         }
 
         .rev-data h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
+            font-size: 1.5rem;
+            font-weight: 800;
             color: var(--text-primary);
+            margin: 0.25rem 0 0 0;
         }
 
         .rev-data p {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            font-weight: 500;
+            font-weight: 600;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .revenue-grid {
             display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 1.5rem;
+            grid-template-columns: 2.5fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
         }
 
         .chart-container {
             background: var(--surface-color);
-            padding: 1.5rem;
-            border-radius: 1rem;
+            padding: 2rem;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
         .class-revenue-list {
             background: var(--surface-color);
-            padding: 1.5rem;
-            border-radius: 1rem;
+            padding: 2rem;
+            border-radius: 12px;
             border: 1px solid var(--border-color);
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .class-revenue-list h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0 0 1.5rem 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .class-revenue-list h3::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--primary-color);
+            border-radius: 2px;
         }
 
         .bar-row {
-            margin-bottom: 1.5rem;
-            padding-bottom: 0.5rem;
+            margin-bottom: 1.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        .bar-row:last-child {
+            margin-bottom: 0;
         }
 
         .bar-label {
@@ -87,40 +140,54 @@
 
         .bar-label .class-name {
             color: var(--text-primary);
-            font-size: 1rem;
+            font-size: 0.98rem;
+            font-weight: 700;
         }
 
         .bar-label .amount-display {
             color: var(--primary-color);
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 700;
         }
 
         .bar-bg {
-            height: 6px;
+            height: 8px;
             background: #f1f5f9;
-            border-radius: 4px;
+            border-radius: 6px;
             overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
         }
 
         .bar-fill {
             height: 100%;
-            background: var(--primary-color);
-            border-radius: 4px;
+            background: linear-gradient(90deg, var(--primary-color), #10b981);
+            border-radius: 6px;
             transition: width 1s ease-in-out;
         }
 
         .month-selector {
-            padding: 0.65rem 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
+            padding: 0.8rem 1.25rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
             background: white;
-            font-weight: 600;
+            font-weight: 700;
             color: var(--text-primary);
             cursor: pointer;
             font-size: 0.95rem;
-            min-width: 180px;
-            min-height: 43px;
+            min-width: 200px;
+            min-height: 45px;
+            transition: all 0.3s ease;
+        }
+
+        .month-selector:hover {
+            border-color: var(--primary-color);
+            background: rgba(32, 176, 164, 0.02);
+        }
+
+        .month-selector:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.1);
         }
 
         .monthwise-table {
@@ -133,7 +200,7 @@
         .monthwise-table th,
         .monthwise-table td {
             text-align: left;
-            padding: 0.75rem 0.9rem;
+            padding: 1rem 0.9rem;
             border-bottom: 1px solid var(--border-color);
             vertical-align: middle;
             white-space: normal;
@@ -142,31 +209,38 @@
         }
 
         .monthwise-table th {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            font-weight: 700;
-            background: #f8fafc;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             position: sticky;
             top: 0;
             z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .monthwise-table tbody tr:hover {
-            background: rgba(32, 176, 164, 0.06);
+            background: rgba(32, 176, 164, 0.08);
+        }
+
+        .monthwise-table tbody tr:nth-child(even) {
+            background: rgba(0, 0, 0, 0.01);
         }
 
         .monthwise-wrap {
-            max-height: 500px;
+            max-height: 550px;
             overflow: auto;
             border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
+            border-radius: 8px;
             overflow-x: auto;
+            background: white;
         }
 
         .overall-metrics {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 0.75rem;
+            gap: 0.85rem;
         }
 
         .overall-metric {
@@ -174,29 +248,44 @@
             justify-content: space-between;
             align-items: baseline;
             gap: 1rem;
-            padding: 0.85rem 0.9rem;
+            padding: 1rem;
             border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            background: #ffffff;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255, 0.5) 100%);
+            transition: all 0.3s ease;
+        }
+
+        .overall-metric:hover {
+            border-color: rgba(32, 176, 164, 0.3);
+            background: rgba(32, 176, 164, 0.03);
         }
 
         .overall-metric .label {
             color: var(--text-secondary);
             font-weight: 700;
             font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .overall-metric .value {
             font-weight: 800;
             color: var(--text-primary);
+            font-size: 1.1rem;
         }
 
         .overall-metric.profit .value {
             color: #15803d;
+            background: rgba(21, 128, 61, 0.08);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
         }
 
         .overall-metric.pending .value {
             color: #dc2626;
+            background: rgba(220, 38, 38, 0.08);
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
         }
     </style>
 </head>
@@ -281,15 +370,15 @@
         <!-- Main Content -->
         <main class="main-content">
             <header class="header">
-                <div style="display:flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; width: 100%;">
-                    <div style="flex: 1; min-width: 250px;">
-                        <h1>Revenue Analytics</h1>
-                        <p style="color: var(--text-secondary); margin-top: 0.25rem; font-size: 0.9rem;">
-                            Real-time revenue tracking for <strong id="currentMonthDisplay"></strong>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; width: 100%;">
+                    <div style="flex: 1; min-width: 300px;">
+                        <h1 style="margin: 0 0 0.5rem 0; font-size: 2rem; font-weight: 800;">Revenue Analytics</h1>
+                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.95rem; font-weight: 500;">
+                            Real-time financial overview for <strong id="currentMonthDisplay" style="color: var(--primary-color); font-weight: 700;"></strong>
                         </p>
                     </div>
-                    <div style="display:flex; align-items:center; gap: 0.75rem; flex-wrap: wrap; justify-content: flex-end;">
-                        <label for="revenueMonthSelect" style="font-weight: 700; color: var(--text-secondary); font-size: 0.85rem; white-space: nowrap;">Select Month:</label>
+                    <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; justify-content: flex-end; min-width: 200px;">
+                        <label for="revenueMonthSelect" style="font-weight: 700; color: var(--text-secondary); font-size: 0.9rem; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;">📅 Period:</label>
                         <select id="revenueMonthSelect" class="month-selector" aria-label="Select revenue month"></select>
                     </div>
                 </div>
@@ -297,8 +386,8 @@
 
             <div class="revenue-stats">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(32, 176, 164, 0.1); color: var(--primary-color);">
-                        <i data-lucide="dollar-sign"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(32, 176, 164, 0.15), rgba(32, 176, 164, 0.05)); color: var(--primary-color);">
+                        <i data-lucide="trending-up"></i>
                     </div>
                     <div class="rev-data">
                         <p>Expected Revenue</p>
@@ -306,8 +395,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
-                        <i data-lucide="check-circle"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
+                        <i data-lucide="check-circle-2"></i>
                     </div>
                     <div class="rev-data">
                         <p>Collected Revenue</p>
@@ -315,8 +404,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
-                        <i data-lucide="clock"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05)); color: #dc2626;">
+                        <i data-lucide="alert-circle"></i>
                     </div>
                     <div class="rev-data">
                         <p>Pending Amount</p>
@@ -325,9 +414,9 @@
                 </div>
             </div>
 
-            <div class="revenue-stats" style="margin-top: 1.5rem;">
+            <div class="revenue-stats" style="margin-top: 2rem;">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(99, 102, 241, 0.1); color: #4f46e5;">
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(99, 102, 241, 0.05)); color: #4f46e5;">
                         <i data-lucide="wallet"></i>
                     </div>
                     <div class="rev-data">
@@ -336,8 +425,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(16, 185, 129, 0.1); color: #059669;">
-                        <i data-lucide="send"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
+                        <i data-lucide="arrow-up-right"></i>
                     </div>
                     <div class="rev-data">
                         <p>Transferred Salaries</p>
@@ -345,8 +434,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
-                        <i data-lucide="clock-3"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
+                        <i data-lucide="clock"></i>
                     </div>
                     <div class="rev-data">
                         <p>Pending Salaries</p>
@@ -355,9 +444,9 @@
                 </div>
             </div>
 
-            <div class="revenue-stats" style="margin-top: 1.5rem;">
+            <div class="revenue-stats" style="margin-top: 2rem;">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
                         <i data-lucide="receipt"></i>
                     </div>
                     <div class="rev-data">
@@ -366,8 +455,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(239, 68, 68, 0.1); color: #dc2626;">
-                        <i data-lucide="send"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05)); color: #059669;">
+                        <i data-lucide="check-square"></i>
                     </div>
                     <div class="rev-data">
                         <p>Paid Bills</p>
@@ -375,8 +464,8 @@
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
-                        <i data-lucide="clock-3"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05)); color: #dc2626;">
+                        <i data-lucide="alert-triangle"></i>
                     </div>
                     <div class="rev-data">
                         <p>Pending Bills</p>
@@ -385,28 +474,28 @@
                 </div>
             </div>
 
-            <div class="revenue-stats" style="margin-top: 1.5rem;">
+            <div class="revenue-stats" style="margin-top: 2rem;">
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(14, 165, 233, 0.12); color: #0284c7;">
-                        <i data-lucide="badge-dollar-sign"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(14, 165, 233, 0.05)); color: #0284c7;">
+                        <i data-lucide="zap"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Net Expected After Salaries & Bills</p>
+                        <p>Net Expected</p>
                         <h3 id="netExpectedRevenue">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(34, 197, 94, 0.12); color: #15803d;">
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.05)); color: #15803d;">
                         <i data-lucide="landmark"></i>
                     </div>
                     <div class="rev-data">
-                        <p>Net Collected After Transfers & Paid Bills</p>
+                        <p>Net Collected</p>
                         <h3 id="netCollectedRevenue">PKR 0</h3>
                     </div>
                 </div>
                 <div class="rev-card">
-                    <div class="rev-icon" style="background: rgba(245, 158, 11, 0.12); color: #b45309;">
-                        <i data-lucide="scale"></i>
+                    <div class="rev-icon" style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05)); color: #b45309;">
+                        <i data-lucide="balance-3"></i>
                     </div>
                     <div class="rev-data">
                         <p>Remaining Balance</p>
@@ -415,17 +504,17 @@
                 </div>
             </div>
 
-            <div class="revenue-grid" style="margin-top: 2rem;">
+            <div class="revenue-grid" style="margin-top: 3rem;">
                 <div>
                     <div class="class-revenue-list">
-                        <h3 style="margin-bottom: 1.5rem;">Collection by Class</h3>
+                        <h3>📊 Collection by Class</h3>
                         <div id="classBreakdownContainer">
                             <!-- Bars by JS -->
                         </div>
                     </div>
 
-                    <div class="class-revenue-list" style="margin-top: 1.5rem;">
-                        <h3 style="margin-bottom: 1rem;">Month-wise Summary</h3>
+                    <div class="class-revenue-list" style="margin-top: 2rem;">
+                        <h3>📅 Month-wise Summary</h3>
                         <div class="monthwise-wrap">
                             <table class="monthwise-table" aria-label="Monthly revenue summary table">
                                 <thead>
@@ -444,7 +533,7 @@
                                     </tr>
                                 </thead>
                                 <tbody id="monthWiseRevenueBody">
-                                    <tr><td colspan="11" style="color: var(--text-secondary); padding: 1.25rem;">Loading...</td></tr>
+                                    <tr><td colspan="11" style="color: var(--text-secondary); padding: 1.25rem; text-align: center;">Loading...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -452,50 +541,50 @@
                 </div>
 
                 <div class="class-revenue-list">
-                    <h3 style="margin-bottom: 1rem;">Overall (All Months)</h3>
+                    <h3>📈 Overall Summary (All Months)</h3>
                     <div class="overall-metrics">
                         <div class="overall-metric">
-                            <div class="label">Total Expected</div>
+                            <div class="label">💰 Total Expected</div>
                             <div class="value" id="overallExpectedRevenue">PKR 0</div>
                         </div>
                         <div class="overall-metric">
-                            <div class="label">Total Revenue</div>
+                            <div class="label">✅ Total Revenue</div>
                             <div class="value" id="overallCollectedRevenue">PKR 0</div>
                         </div>
                         <div class="overall-metric pending">
-                            <div class="label">Total Pending Fees</div>
+                            <div class="label">⏳ Total Pending Fees</div>
                             <div class="value" id="overallPendingRevenue">PKR 0</div>
                         </div>
                         <div class="overall-metric">
-                            <div class="label">Salary Budget</div>
+                            <div class="label">💼 Salary Budget</div>
                             <div class="value" id="overallSalaryBudget">PKR 0</div>
                         </div>
                         <div class="overall-metric">
-                            <div class="label">Salaries Transferred</div>
+                            <div class="label">📤 Salaries Transferred</div>
                             <div class="value" id="overallTransferredSalaries">PKR 0</div>
                         </div>
                         <div class="overall-metric pending">
-                            <div class="label">Pending Salaries</div>
+                            <div class="label">⏳ Pending Salaries</div>
                             <div class="value" id="overallPendingSalaries">PKR 0</div>
                         </div>
                         <div class="overall-metric">
-                            <div class="label">Total Bills</div>
+                            <div class="label">📋 Total Bills</div>
                             <div class="value" id="overallBillExpenses">PKR 0</div>
                         </div>
                         <div class="overall-metric">
-                            <div class="label">Paid Bills</div>
+                            <div class="label">✔️ Paid Bills</div>
                             <div class="value" id="overallPaidBills">PKR 0</div>
                         </div>
                         <div class="overall-metric pending">
-                            <div class="label">Pending Bills</div>
+                            <div class="label">⏳ Pending Bills</div>
                             <div class="value" id="overallPendingBills">PKR 0</div>
                         </div>
                         <div class="overall-metric profit">
-                            <div class="label">Profit (Collected - Transfers - Bills)</div>
+                            <div class="label">📊 Net Profit</div>
                             <div class="value" id="overallProfit">PKR 0</div>
                         </div>
                         <div class="overall-metric profit">
-                            <div class="label">Profit Margin</div>
+                            <div class="label">% Profit Margin</div>
                             <div class="value" id="overallMarginPct">0%</div>
                         </div>
                     </div>

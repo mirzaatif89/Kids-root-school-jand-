@@ -409,14 +409,14 @@
         }
 
         .fee-action-select {
-            width: 132px;
-            min-height: 38px;
-            padding: 0.45rem 0.7rem;
+            width: 142px;
+            min-height: 34px;
+            padding: 0.35rem 0.6rem;
             border: 1px solid var(--border-color);
-            border-radius: 0.65rem;
+            border-radius: 8px;
             background: #ffffff;
             color: var(--text-primary);
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             font-weight: 700;
             cursor: pointer;
             outline: none;
@@ -459,6 +459,12 @@
             border-color: rgba(16, 185, 129, 0.35);
             color: #047857;
             background: #ecfdf5;
+        }
+
+        .fee-action-btn.payment {
+            border-color: rgba(32, 176, 164, 0.35);
+            color: #0f766e;
+            background: #ecfeff;
         }
 
         .fee-action-btn.unpaid {
@@ -1277,20 +1283,35 @@
                 }
             }
 
-            async function fallbackFeeAction(studentId, action, select) {
+            async function fallbackFeeAction(studentId, action, control) {
                 const value = String(action || '').trim();
                 if (!value) return;
-                if (select) select.disabled = true;
+                const previousText = control?.tagName === 'BUTTON' ? control.textContent : '';
+                if (control) {
+                    control.disabled = true;
+                    if (control.tagName === 'BUTTON') control.textContent = 'Saving...';
+                }
                 try {
-                    if (value === 'paid') {
+                    if (value === 'add_payment') {
+                        const student = fallbackStudents.find((item) => String(item?.id || '') === String(studentId || ''));
+                        const currentMonth = months[new Date().getMonth()];
+                        if (typeof window.openManualPaymentModal === 'function') {
+                            if (control) control.disabled = false;
+                            if (control?.tagName === 'BUTTON' && previousText) control.textContent = previousText;
+                            window.openManualPaymentModal(String(studentId || ''), currentMonth, 'payment');
+                        } else if (student) {
+                            await fallbackMarkPaid(studentId, null);
+                        }
+                    } else if (value === 'paid') {
                         await fallbackMarkPaid(studentId, null);
                     } else if (value === 'unpaid') {
                         await fallbackMarkUnpaid(studentId, null);
                     }
                 } finally {
-                    if (select) {
-                        select.value = '';
-                        select.disabled = false;
+                    if (control) {
+                        if (control.tagName === 'SELECT') control.value = '';
+                        if (control.tagName === 'BUTTON' && previousText) control.textContent = previousText;
+                        control.disabled = false;
                     }
                 }
             }
@@ -1415,8 +1436,9 @@
                         <td><span class="${currentState.isPaid ? 'status-paid-badge' : 'status-pending-badge'}"><i data-lucide="${currentState.isPaid ? 'check-circle' : 'clock'}"></i>${currentState.isPaid ? 'Paid' : 'Pending'}</span></td>
                         <td>
                             <div class="fee-action-buttons" onclick="event.stopPropagation()">
-                                <button type="button" class="fee-action-btn paid" onclick="window.fallbackMarkPaid(${studentIdJson}, this)">Mark Paid</button>
-                                <button type="button" class="fee-action-btn unpaid" onclick="window.fallbackMarkUnpaid(${studentIdJson}, this)">Mark Unpaid</button>
+                                <button type="button" class="fee-action-btn payment" onclick="event.stopPropagation(); window.fallbackFeeAction(${studentIdJson}, 'add_payment', this)">Add Payment</button>
+                                <button type="button" class="fee-action-btn paid" onclick="event.stopPropagation(); window.fallbackFeeAction(${studentIdJson}, 'paid', this)">Mark Paid</button>
+                                <button type="button" class="fee-action-btn unpaid" onclick="event.stopPropagation(); window.fallbackFeeAction(${studentIdJson}, 'unpaid', this)">Mark Unpaid</button>
                             </div>
                         </td>
                     `;
@@ -2667,18 +2689,10 @@
                 return;
             }
 
-            const paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}');
-            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
-            const currentPaid = Number(paymentDetails?.[sid]?.[CURRENT_MONTH_NAME]?.amount || 0);
-            const currentMarkedPaid = monthlyFees?.[sid]?.[CURRENT_MONTH_NAME] === 'Paid';
-            const currentDue = currentMarkedPaid ? 0 : Math.max(monthlyFee - currentPaid, 0);
-            const pendingMonths = currentDue > 0 ? [{
-                month: CURRENT_MONTH_NAME,
-                dueAmount: currentDue,
-                fineAmount: 0
-            }] : [];
+            const pendingDetails = getStudentPendingFeeDetails(student);
+            const pendingMonths = pendingDetails.pendingMonths.length ? pendingDetails.pendingMonths : [];
             if (!pendingMonths.length) {
-                alert('Current month fee is already paid.');
+                alert('This student has no pending fee.');
                 return;
             }
 
@@ -2725,8 +2739,11 @@
                 }
 
                 await mergeFeePaymentsIntoMonthlyStore();
-                markFeeMonthPaidInLocalStore(sid, CURRENT_MONTH_NAME, monthlyFee);
+                if (pendingMonths.some((item) => item.month === CURRENT_MONTH_NAME)) {
+                    markFeeMonthPaidInLocalStore(sid, CURRENT_MONTH_NAME, monthlyFee + getFineAmountForMonth(sid, CURRENT_MONTH_NAME));
+                }
                 updateFeeRowStatus(button, true);
+                refreshFeesTableView();
                 alert(`Fee marked as paid.${emailMessages.length ? ` ${emailMessages.join(' ')}` : ''}`);
             } catch (error) {
                 alert(`Fee could not be marked paid: ${error.message || error}`);
@@ -2736,6 +2753,45 @@
                     button.innerHTML = oldHtml || 'Mark Paid';
                     if (window.lucide) lucide.createIcons();
                 }
+            }
+        }
+
+        function getFirstPendingFeeMonth(student) {
+            const details = getStudentPendingFeeDetails(student);
+            if (!details.pendingMonths.length) return '';
+            const current = details.pendingMonths.find((item) => item.month === CURRENT_MONTH_NAME);
+            return (current || details.pendingMonths[0]).month;
+        }
+
+        function openStudentAddPayment(studentId) {
+            const sid = String(studentId || '').trim();
+            const students = getData(STORAGE_KEY_STUDENTS) || [];
+            const student = students.find((item) => String(item?.id || '') === sid);
+            if (!student) {
+                alert('Student record was not found.');
+                return;
+            }
+            const month = getFirstPendingFeeMonth(student);
+            if (!month) {
+                alert('This student has no pending fee.');
+                return;
+            }
+            openManualPaymentModal(sid, month, 'payment');
+        }
+
+        function refreshFeesTableView() {
+            const tableView = document.getElementById('feesTableView');
+            if (tableView?.classList.contains('active')) {
+                const classId = tableView.dataset.classId || 'pending';
+                const term = classId === 'search_results'
+                    ? (document.getElementById('feeSearchInput')?.value || '').toLowerCase()
+                    : '';
+                renderClassStudentList(classId, term);
+            }
+            updateBulkFeeSummary();
+            renderFeesClassGrid();
+            if (tableView?.classList.contains('active')) {
+                document.getElementById('feesGridView').style.display = 'none';
             }
         }
 
@@ -2767,7 +2823,9 @@
             if (!value) return;
             if (select) select.disabled = true;
             try {
-                if (value === 'paid') {
+                if (value === 'add_payment') {
+                    openStudentAddPayment(studentId);
+                } else if (value === 'paid') {
                     await markStudentPendingFeePaid(studentId, null);
                 } else if (value === 'unpaid') {
                     await markStudentCurrentFeeUnpaid(studentId, null);
@@ -2831,8 +2889,9 @@
                     <td><span class="status-badge ${currentMonthStatus.className}"><i data-lucide="${currentMonthStatus.icon}" size="14"></i> ${currentMonthStatus.label}</span></td>
                     <td>
                         <div class="fee-action-buttons" onclick="event.stopPropagation()">
-                            <button type="button" class="fee-action-btn paid" onclick="markStudentPendingFeePaid(${studentIdJson}, this)">Mark Paid</button>
-                            <button type="button" class="fee-action-btn unpaid" onclick="markStudentCurrentFeeUnpaid(${studentIdJson}, this)">Mark Unpaid</button>
+                            <button type="button" class="fee-action-btn payment" onclick="event.stopPropagation(); openStudentAddPayment(${studentIdJson})">Add Payment</button>
+                            <button type="button" class="fee-action-btn paid" onclick="event.stopPropagation(); markStudentPendingFeePaid(${studentIdJson}, this)">Mark Paid</button>
+                            <button type="button" class="fee-action-btn unpaid" onclick="event.stopPropagation(); markStudentCurrentFeeUnpaid(${studentIdJson}, this)">Mark Unpaid</button>
                         </div>
                     </td>
                 `;
@@ -3145,12 +3204,15 @@
             pendingMonths.forEach(month => {
                 const paidForMonth = getPaidForMonth(month);
                 const fineForMonth = getFineAmountForMonth(studentId, month);
+                const monthTotalDue = monthlyFee + fineForMonth;
                 const baseDueForMonth = Math.max(monthlyFee - paidForMonth, 0);
                 const dueForMonth = Math.max(baseDueForMonth + fineForMonth, 0);
                 const option = document.createElement('option');
                 option.value = month;
                 option.dataset.dueAmount = String(dueForMonth);
                 option.dataset.baseDueAmount = String(baseDueForMonth);
+                option.dataset.monthTotalDue = String(monthTotalDue);
+                option.dataset.paidAmount = String(paidForMonth);
                 option.dataset.currentFineAmount = String(fineForMonth);
                 option.textContent = `${month} (Due: PKR ${dueForMonth.toLocaleString('en-PK')})`;
                 monthSelect.appendChild(option);
@@ -3223,6 +3285,15 @@
             const monthSelect = document.getElementById('paymentMonth');
             const selectedOption = monthSelect?.selectedOptions?.[0];
             return Number(selectedOption?.dataset?.baseDueAmount || selectedOption?.dataset?.dueAmount || 0) || 0;
+        }
+
+        function getManualPaymentMonthTotalDue() {
+            const monthSelect = document.getElementById('paymentMonth');
+            const selectedOption = monthSelect?.selectedOptions?.[0];
+            const totalDue = Number(selectedOption?.dataset?.monthTotalDue || 0) || 0;
+            if (totalDue > 0) return totalDue;
+            const paid = Number(selectedOption?.dataset?.paidAmount || 0) || 0;
+            return getManualPaymentDueAmount() + paid;
         }
 
         function calculateManualFineAmount() {
@@ -3338,7 +3409,7 @@
             const student = students.find((s) => String(s?.id || '') === studentId);
             const monthlyFee = getEffectiveMonthlyFee(student);
             const dueAmount = getManualPaymentDueAmount() || monthlyFee;
-            const fullAmount = dueAmount;
+            const fullAmount = getManualPaymentMonthTotalDue() || dueAmount;
             const fineAmount = paymentMode === 'fine_charge'
                 ? rawFineAmount
                 : Math.max(rawFineAmount, getFineAmountForMonth(studentId, month));
@@ -3384,7 +3455,11 @@
                 await mergeFeePaymentsIntoMonthlyStore();
 
                 closeManualPaymentModal();
-                renderMonthlyFeeRecord(studentId);
+                const recordView = document.getElementById('studentFeeRecordView');
+                if (recordView?.classList.contains('active')) {
+                    renderMonthlyFeeRecord(studentId);
+                }
+                refreshFeesTableView();
                 const emailStatus = getFeeEmailStatusMessage(syncResult);
                 alert(`${amount > 0 ? 'Payment recorded successfully!' : 'Fine saved successfully!'}${emailStatus}`);
             } catch (e) {
