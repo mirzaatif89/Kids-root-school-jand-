@@ -121,6 +121,10 @@
             margin-top: 1rem;
         }
 
+        .mobile-profile-line {
+            display: none;
+        }
+
         .meta-pill {
             display: inline-flex;
             align-items: center;
@@ -1615,12 +1619,17 @@
             }
 
             .profile-meta {
-                justify-content: flex-start;
-                flex-wrap: wrap;
-                gap: 4px;
-                width: 100%;
-                padding: 0;
-                flex-basis: 100%;
+                display: none;
+            }
+
+            .mobile-profile-line {
+                display: block;
+                margin: 0 0 0.35rem;
+                color: #64748b;
+                font-size: 0.82rem;
+                font-weight: 800;
+                line-height: 1.25;
+                text-align: left;
             }
 
             .meta-pill {
@@ -1821,6 +1830,8 @@
                 <div class="student-profile-copy">
                     <h2 id="studentName">Loading...</h2>
                     <p style="color: var(--text-secondary);" id="studentClass">Class: -</p>
+                    <p class="mobile-profile-line">Roll No: <span id="mobileRollNo">-</span></p>
+                    <p class="mobile-profile-line">Student Portal</p>
                     <div class="profile-meta">
                         <div class="meta-pill">
                             <i data-lucide="shield-check" width="16"></i>
@@ -4051,6 +4062,7 @@
             }
             document.getElementById('studentClass').innerText = `Class: ${student.classGrade || '-'}`;
             document.getElementById('rollNo').innerText = student.rollNo || '-';
+            document.getElementById('mobileRollNo').innerText = student.rollNo || '-';
             const campusName = student.campusName || student.branchName || '-';
             const setTextContent = (id, value) => {
                 const element = document.getElementById(id);
