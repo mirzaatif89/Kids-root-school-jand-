@@ -1157,7 +1157,11 @@ function mergeStudentRecords(incomingStudents) {
             profileImage: student.profileImage || localStudent.profileImage || '',
             admissionDate: student.admissionDate || localStudent.admissionDate || '',
             gender: student.gender || localStudent.gender || '',
-        campusName: student.campusName || localStudent.campusName || '',
+            campusName: student.campusName || localStudent.campusName || '',
+            familyId: student.familyId || localStudent.familyId || '',
+            familyName: student.familyName || localStudent.familyName || '',
+            familyNo: student.familyNo || localStudent.familyNo || '',
+            familyContact: student.familyContact || localStudent.familyContact || '',
             enrollmentStatus: student.enrollmentStatus || localStudent.enrollmentStatus || (student.isTerminated ? 'Terminated' : 'Active'),
             terminatedAt: student.terminatedAt || localStudent.terminatedAt || '',
             terminationNote: student.terminationNote || localStudent.terminationNote || '',
@@ -3101,6 +3105,45 @@ function normalizeFamilyPhone(value = '') {
     return String(value || '').replace(/\D/g, '');
 }
 
+function normalizeFamilyIdentityValue(value = '') {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getExplicitFamilyMatchKey(familyName = '', familyNo = '') {
+    const nameKey = normalizeFamilyIdentityValue(familyName);
+    const numberKey = normalizeFamilyIdentityValue(familyNo);
+    return nameKey && numberKey ? `${nameKey}|${numberKey}` : '';
+}
+
+function ensureExplicitFamilyRecord(familyName = '', familyNo = '', familyContact = '') {
+    const cleanName = String(familyName || '').trim();
+    const cleanNo = String(familyNo || '').trim();
+    const cleanContact = String(familyContact || '').trim();
+    const matchKey = getExplicitFamilyMatchKey(cleanName, cleanNo);
+    if (!matchKey) return '';
+
+    const families = getFamilies();
+    const existing = families.find((family) => getExplicitFamilyMatchKey(family.name, family.familyNo) === matchKey);
+    if (existing) {
+        existing.name = cleanName;
+        existing.familyNo = cleanNo;
+        if (cleanContact) existing.familyContact = cleanContact;
+        saveFamilies(families);
+        return existing.id;
+    }
+
+    const family = {
+        id: generateUniqueRecordId('FAM'),
+        name: cleanName,
+        familyNo: cleanNo,
+        familyContact: cleanContact,
+        createdAt: new Date().toISOString()
+    };
+    families.push(family);
+    saveFamilies(families);
+    return family.id;
+}
+
 function getFamilyMatchKey(fatherName = '', phone = '') {
     return `${String(fatherName || '').trim().toLowerCase()}|${normalizeFamilyPhone(phone)}`;
 }
@@ -3174,6 +3217,21 @@ function syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fat
             ...student,
             familyId,
             familyName
+        };
+    });
+}
+
+function syncStudentFamilyLinksByDetails(students, familyId, familyName, familyNo, familyContact = '') {
+    const matchKey = getExplicitFamilyMatchKey(familyName, familyNo);
+    if (!familyId || !matchKey) return students;
+    return students.map((student) => {
+        if (getExplicitFamilyMatchKey(student.familyName, student.familyNo) !== matchKey) return student;
+        return {
+            ...student,
+            familyId,
+            familyName,
+            familyNo,
+            familyContact: familyContact || student.familyContact || ''
         };
     });
 }
@@ -4660,11 +4718,11 @@ async function handleStudentFormSubmit(e) {
 
     const photoInput = document.getElementById('studentProfileImage');
     let profileImage = existingStudent?.profileImage || '';
-    const selectedFamilyId = document.getElementById('studentFamilyId')?.value || '';
-    const enteredFamilyName = document.getElementById('studentFamilyName')?.value.trim() || '';
-    const familyName = enteredFamilyName || getFamilies().find((family) => family.id === selectedFamilyId)?.name || buildFamilyNameFromStudentFields();
     const fatherNameInput = document.getElementById('fatherName').value.trim();
-    const familyId = selectedFamilyId || ensureFamilyRecord(familyName, parentPhone, guardianName, guardianContact, fatherNameInput);
+    const familyName = document.getElementById('studentFamilyName')?.value.trim() || '';
+    const familyNo = document.getElementById('studentFamilyNo')?.value.trim() || '';
+    const familyContact = document.getElementById('studentFamilyContact')?.value.trim() || '';
+    const familyId = ensureExplicitFamilyRecord(familyName, familyNo, familyContact);
 
     try {
         if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
@@ -4693,6 +4751,8 @@ async function handleStudentFormSubmit(e) {
         fingerprintData: document.getElementById('studentFingerprintData') ? document.getElementById('studentFingerprintData').value.trim() : (existingStudent?.fingerprintData || ''),
         familyId,
         familyName,
+        familyNo,
+        familyContact,
         feesStatus: currentStatus,
         enrollmentStatus,
         monthlyFee: monthlyFeeInput || '0',
@@ -4721,7 +4781,7 @@ async function handleStudentFormSubmit(e) {
     } else {
         students.push(newStudent);
     }
-    students = syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fatherNameInput, parentPhone, guardianName, guardianContact);
+    students = syncStudentFamilyLinksByDetails(students, familyId, familyName, familyNo, familyContact);
 
     let localSaveResult;
     try {
@@ -6247,8 +6307,9 @@ function editStudent(s) {
     document.getElementById('rollNo').value = s.rollNo;
     document.getElementById('formB').value = s.formB || '';
     if (document.getElementById('studentFingerprintData')) document.getElementById('studentFingerprintData').value = s.fingerprintData || '';
-    populateStudentFamilyOptions(s.familyId || '');
     if (document.getElementById('studentFamilyName')) document.getElementById('studentFamilyName').value = s.familyName || '';
+    if (document.getElementById('studentFamilyNo')) document.getElementById('studentFamilyNo').value = s.familyNo || '';
+    if (document.getElementById('studentFamilyContact')) document.getElementById('studentFamilyContact').value = s.familyContact || '';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').dataset.autoClassFee = '';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';

@@ -91,6 +91,31 @@
             height: 13px;
         }
 
+        #studentForm .student-family-section {
+            grid-column: 1 / -1;
+            margin-top: 0.15rem;
+            padding: 0.85rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+
+        #studentForm .student-family-section h4 {
+            margin: 0 0 0.75rem;
+            color: var(--text-primary);
+            font-size: 0.92rem;
+        }
+
+        #studentForm .student-family-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 0.85rem 1rem;
+        }
+
+        #studentForm .student-family-grid .input-group {
+            margin-bottom: 0;
+        }
+
         .student-toolbar .search-bar,
         .student-filter-group input,
         .student-filter-group select,
@@ -1258,17 +1283,23 @@
                             <label>Fingerprint</label>
                             <input type="text" id="studentFingerprintData" placeholder="Fingerprint">
                         </div>
-                        <div class="input-group">
-                            <label>Family</label>
-                            <select id="studentFamilyId"
-                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #f8fafc;">
-                                <option value="">Create new family from this student</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label>New Family Name</label>
-                            <input type="text" id="studentFamilyName" placeholder="e.g. Ahmed Family">
-                        </div>
+                        <section class="student-family-section" aria-label="Family details">
+                            <h4>Family</h4>
+                            <div class="student-family-grid">
+                                <div class="input-group">
+                                    <label>Family Name</label>
+                                    <input type="text" id="studentFamilyName" placeholder="e.g. Ahmed Family">
+                                </div>
+                                <div class="input-group">
+                                    <label>Family No.</label>
+                                    <input type="text" id="studentFamilyNo" placeholder="Family number">
+                                </div>
+                                <div class="input-group">
+                                    <label>Family Contact</label>
+                                    <input type="tel" id="studentFamilyContact" placeholder="e.g. 03001234567">
+                                </div>
+                            </div>
+                        </section>
 
                     </div>
 
