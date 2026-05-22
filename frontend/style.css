@@ -156,7 +156,7 @@ ul {
 }
 
 .login-icon-circle::after {
-    content: "Apexiums School\A System";
+    content: "Apexiums School\A Software";
     white-space: pre-line;
     color: #ffffff;
     font-size: 1.16rem;
@@ -441,7 +441,7 @@ ul {
 }
 
 .sidebar .logo-section::after {
-    content: "Apexiums School\A System";
+    content: "Apexiums School\A Software";
     color: #ffffff;
     font-size: 0.9rem;
     font-weight: 800;

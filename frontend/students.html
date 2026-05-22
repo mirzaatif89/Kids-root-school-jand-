@@ -102,23 +102,25 @@
         .student-filter-group input,
         .student-filter-group select,
         .admin-records-select {
-            min-height: 36px !important;
-            height: 36px !important;
-            padding-top: 0.35rem !important;
-            padding-bottom: 0.35rem !important;
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 0.58rem 0.85rem !important;
             border-radius: 8px !important;
             font-size: 0.86rem;
         }
 
         .action-btn {
-            padding: 0.4rem 0.8rem;
+            padding: 0.5rem 0.9rem;
             font-size: 0.85rem;
             border-radius: var(--radius-md);
             cursor: pointer;
             border: none;
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
+            justify-content: center;
+            gap: 0.4rem;
+            min-height: 34px;
+            height: auto;
             transition: var(--transition);
         }
 
@@ -166,7 +168,7 @@
         .student-toolbar {
             display: flex;
             justify-content: space-between;
-            align-items: end;
+            align-items: center;
             gap: 1rem;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
@@ -174,7 +176,7 @@
 
         .student-toolbar-left {
             display: flex;
-            align-items: end;
+            align-items: center;
             gap: 1rem;
             flex-wrap: wrap;
             flex: 1 1 auto;
@@ -184,7 +186,22 @@
             font-weight: 700;
             color: var(--text-secondary);
             min-width: 140px;
-            padding-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            height: 42px;
+        }
+
+        .student-toolbar .btn-primary {
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 0.58rem 1.5rem !important;
+            display: inline-flex;
+        }
+
+        .student-print-btn {
+            min-height: 42px !important;
+            height: 42px !important;
+            padding: 0.58rem 1.25rem !important;
         }
 
         .student-filter-group {
@@ -209,6 +226,7 @@
         .student-filter-group select {
             width: 100%;
             min-height: 42px;
+            height: 42px;
             padding: 0.58rem 0.85rem;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -218,6 +236,7 @@
 
         #studentPrintMode {
             min-height: 42px !important;
+            height: 42px !important;
             padding: 0.58rem 0.85rem !important;
             border-radius: var(--radius-md) !important;
         }
@@ -229,6 +248,7 @@
         .student-filter-group .student-multifilter-trigger {
             width: 100%;
             min-height: 42px;
+            height: 42px;
             padding: 0.58rem 0.85rem;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -709,6 +729,7 @@
             gap: 0.45rem;
             width: 100%;
             min-height: 42px;
+            height: 42px;
             padding: 0 0.75rem;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
@@ -725,8 +746,9 @@
         .student-filter-group .student-search-control input {
             border: 0;
             border-radius: 0;
-            padding: 0.55rem 0;
+            padding: 0.58rem 0;
             min-width: 0;
+            background: transparent;
         }
 
         .student-filter-group .student-search-control input:focus {
@@ -754,23 +776,46 @@
         .student-table-container {
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            width: 100%;
+            margin: 0;
+            padding: 0;
         }
 
         #studentsTable {
             width: 100% !important;
-            min-width: 980px !important;
-            table-layout: fixed !important;
+            table-layout: auto !important;
+            border-collapse: collapse;
+            margin: 0;
+            padding: 0;
         }
 
-        #studentsTable th,
+        #studentsTable th {
+            padding: 0.65rem 0.6rem !important;
+            vertical-align: middle;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            overflow-wrap: unset !important;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            background: #fcfdfe;
+            border-bottom: 1px solid var(--border-color);
+        }
+
         #studentsTable td {
-            padding: 0.68rem 0.55rem !important;
+            padding: 0.75rem 0.6rem !important;
             vertical-align: middle;
         }
 
         #studentsTable th:nth-child(1),
         #studentsTable td:nth-child(1) {
-            width: 9%;
+            width: 8%;
         }
 
         #studentsTable th:nth-child(2),
@@ -780,7 +825,7 @@
 
         #studentsTable th:nth-child(3),
         #studentsTable td:nth-child(3) {
-            width: 20%;
+            width: 18%;
         }
 
         #studentsTable th:nth-child(4),
@@ -795,7 +840,7 @@
 
         #studentsTable th:nth-child(6),
         #studentsTable td:nth-child(6) {
-            width: 8%;
+            width: 9%;
         }
 
         #studentsTable th:nth-child(7),
@@ -805,18 +850,18 @@
 
         #studentsTable th:nth-child(8),
         #studentsTable td:nth-child(8) {
-            width: 7%;
+            width: 8%;
         }
 
         #studentsTable th:nth-child(9),
         #studentsTable td:nth-child(9) {
-            width: 9%;
+            width: 8%;
             text-align: center;
         }
 
         #studentsTable th:nth-child(10),
         #studentsTable td:nth-child(10) {
-            width: 9%;
+            width: 11%;
             text-align: center;
         }
 
