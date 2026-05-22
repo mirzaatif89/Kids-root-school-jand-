@@ -1282,7 +1282,7 @@
                                     <div class="field-help" id="payNowStatusLine">Status: -</div>
                                 </div>
                                 <div class="field-block">
-                                    <label for="additionalCharges">Additional Charges</label>
+                                    <label for="additionalCharges">Additional Charges (PKR)</label>
                                     <input type="number" id="additionalCharges" min="0" value="0">
                                 </div>
                                 <div class="field-block">
@@ -1303,7 +1303,7 @@
                                     <input type="number" id="fineUnits" min="0" value="0" placeholder="Days / Weeks / Months">
                                 </div>
                                 <div class="field-block">
-                                    <label for="fineAmount">Fine Amount</label>
+                                    <label for="fineAmount">Fine Amount (PKR)</label>
                                     <input type="number" id="fineAmount" min="0" value="0" readonly>
                                 </div>
                                 <div class="field-block">
@@ -3415,36 +3415,36 @@
                             </tr>
                             <tr>
                                 <td colspan="3">${escapeHtml(data.particulars)}</td>
-                                <td colspan="3">${formatCurrency(terminated ? 0 : data.baseAmount)}</td>
+                                <td colspan="3">PKR ${formatCurrency(terminated ? 0 : data.baseAmount)}</td>
                             </tr>
                             ${!terminated && data.additionalCharges > 0 ? `
                             <tr>
                                 <td colspan="3">Additional Charges</td>
-                                <td colspan="3">${formatCurrency(data.additionalCharges)}</td>
+                                <td colspan="3">PKR ${formatCurrency(data.additionalCharges)}</td>
                             </tr>` : ''}
                             ${!terminated && data.fineAmount > 0 ? `
                             <tr>
                                 <td colspan="3">${escapeHtml(data.fineLabel || 'Late Fine')}</td>
-                                <td colspan="3">${formatCurrency(data.fineAmount)}</td>
+                                <td colspan="3">PKR ${formatCurrency(data.fineAmount)}</td>
                             </tr>` : ''}
                             ${!terminated && data.paidAmount > 0 ? `
                             <tr>
                                 <td colspan="3">Added Payment</td>
-                                <td colspan="3">-${formatCurrency(data.paidAmount)}</td>
+                                <td colspan="3">-PKR ${formatCurrency(data.paidAmount)}</td>
                             </tr>` : ''}
                             ${!terminated && data.discountAmount > 0 ? `
                             <tr>
                                 <td colspan="3">Discount</td>
-                                <td colspan="3">-${formatCurrency(data.discountAmount)}</td>
+                                <td colspan="3">-PKR ${formatCurrency(data.discountAmount)}</td>
                             </tr>` : ''}
                             <tr class="challan-total-row">
                                 <td colspan="3">${terminated ? 'Total' : (data.remainingDue > 0 ? 'Total Due' : 'Total')}</td>
-                                <td colspan="3">${formatCurrency(terminated ? 0 : data.totalDue)}</td>
+                                <td colspan="3">PKR ${formatCurrency(terminated ? 0 : data.totalDue)}</td>
                             </tr>
                             ${!terminated && data.remainingDue > 0 ? `
                             <tr class="challan-total-row">
                                 <td colspan="3">Remaining Due</td>
-                                <td colspan="3">${formatCurrency(data.remainingDue)}</td>
+                                <td colspan="3">PKR ${formatCurrency(data.remainingDue)}</td>
                             </tr>` : ''}
                             <tr>
                                 <td colspan="4" class="challan-qr-note">
