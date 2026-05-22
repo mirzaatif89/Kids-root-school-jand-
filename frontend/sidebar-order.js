@@ -7,9 +7,29 @@
     if (portalPages.has(currentPage)) return;
 
     const path = (page, hash = '') => `/${String(page || '').replace(/\.html$/i, '')}${hash || ''}`;
+    const schedulingNavPages = {
+        student_scheduling: new Set([
+            'student_scheduling',
+            'assignments',
+            'assignment_uploading',
+            'student_timetable',
+            'student_diary',
+            'student_leave_requests',
+            'student_courses',
+            'quiz_uploading',
+            'lecture_uploading'
+        ]),
+        teacher_scheduling: new Set([
+            'teacher_scheduling',
+            'teacher_timetable',
+            'teacher_leave_requests'
+        ])
+    };
     const isActive = (page, hash = '') => {
         const cleanPage = String(page || '').replace(/\.html$/i, '');
-        return cleanPage === currentPage && (!hash || window.location.hash === hash);
+        const activePages = schedulingNavPages[cleanPage];
+        return (activePages ? activePages.has(currentPage) : cleanPage === currentPage)
+            && (!hash || window.location.hash === hash);
     };
     const hasActiveChild = (children = []) => children.some((child) => (
         child.type === 'dropdown' ? hasActiveChild(child.children) : isActive(child.page, child.hash)

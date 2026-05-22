@@ -2802,8 +2802,28 @@ function renderAdminSidebarSequence() {
     if (navLinks.dataset.adminSidebarSequenced === 'true') return;
 
     const currentPage = getCurrentPageName();
+    const schedulingNavPages = {
+        'student_scheduling.html': new Set([
+            'student_scheduling.html',
+            'assignments.html',
+            'assignment_uploading.html',
+            'student_timetable.html',
+            'student_diary.html',
+            'student_leave_requests.html',
+            'student_courses.html',
+            'quiz_uploading.html',
+            'lecture_uploading.html'
+        ]),
+        'teacher_scheduling.html': new Set([
+            'teacher_scheduling.html',
+            'teacher_timetable.html',
+            'teacher_leave_requests.html'
+        ])
+    };
     const isActivePage = (page, hash = '') => {
-        if (normalizeClientPageName(page) !== currentPage) return false;
+        const normalizedPage = normalizeClientPageName(page);
+        const activePages = schedulingNavPages[normalizedPage];
+        if (activePages ? !activePages.has(currentPage) : normalizedPage !== currentPage) return false;
         return !hash || window.location.hash === hash;
     };
     const hasActiveChild = (children = []) => children.some((child) => (
@@ -2930,9 +2950,9 @@ function ensureSchedulingNav() {
     if (navLinks.querySelector('[data-scheduling-nav]')) return;
 
     const currentPage = getCurrentPageName();
-    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'assignment_uploading.html', 'quiz_uploading.html', 'lecture_uploading.html'];
+    const studentSchedulingPages = ['student_scheduling.html', 'assignments.html', 'assignment_uploading.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
-    const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_leave_requests.html'];
+    const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_timetable.html', 'teacher_leave_requests.html'];
     const isTeacherSchedulingPage = teacherSchedulingPages.includes(currentPage);
     const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
         .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');

@@ -567,8 +567,28 @@
             const navLinks = document.querySelector('.sidebar .nav-links');
             if (!navLinks || navLinks.dataset.requestedSidebarSequence === 'true') return;
 
+            const schedulingNavPages = {
+                'student_scheduling.html': new Set([
+                    'student_scheduling.html',
+                    'assignments.html',
+                    'assignment_uploading.html',
+                    'student_timetable.html',
+                    'student_diary.html',
+                    'student_leave_requests.html',
+                    'student_courses.html',
+                    'quiz_uploading.html',
+                    'lecture_uploading.html'
+                ]),
+                'teacher_scheduling.html': new Set([
+                    'teacher_scheduling.html',
+                    'teacher_timetable.html',
+                    'teacher_leave_requests.html'
+                ])
+            };
             const isActivePage = (pageName, hash = '') => {
-                if (normalizePageName(pageName) !== currentPage) return false;
+                const normalizedPage = normalizePageName(pageName);
+                const activePages = schedulingNavPages[normalizedPage];
+                if (activePages ? !activePages.has(currentPage) : normalizedPage !== currentPage) return false;
                 return !hash || window.location.hash === hash;
             };
             const canShowPage = (pageName) => pageRegistry[normalizePageName(pageName)] && canAccessPage(user, permissions, pageName);
