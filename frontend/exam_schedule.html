@@ -184,6 +184,19 @@
                                     <label>Notes / Instructions<textarea id="dateSheetInstructions" rows="4" placeholder="Students must arrive 30 minutes before the paper starts."></textarea></label>
                                 </div>
                             </div>
+
+                            <div class="result-form-section result-form-full">
+                                <h4>Upload Ready Date Sheet</h4>
+                                <div class="date-sheet-upload-row">
+                                    <label>Attach Date Sheet File
+                                        <input type="file" id="dateSheetUploadFile" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp">
+                                    </label>
+                                    <button type="button" class="btn btn-outline" id="clearDateSheetUploadBtn">
+                                        <i data-lucide="x" size="16"></i> Remove File
+                                    </button>
+                                </div>
+                                <p class="date-sheet-upload-note" id="dateSheetUploadNote">Optional: upload a ready PDF, Word file, or image instead of entering schedule rows.</p>
+                            </div>
                         </form>
                         <div class="date-sheet-record-card" id="dateSheetRecordCard">
                             <div>
@@ -870,6 +883,23 @@
             flex-wrap: wrap;
         }
 
+        .date-sheet-upload-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: end;
+            gap: 0.75rem;
+        }
+
+        .date-sheet-upload-row input[type="file"] {
+            padding: 0.55rem;
+        }
+
+        .date-sheet-upload-note {
+            margin: 0.55rem 0 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
         .result-card-sheet {
             display: flex;
             justify-content: center;
@@ -1118,6 +1148,7 @@
             }
 
             .date-sheet-meta,
+            .date-sheet-upload-row,
             .schedule-editor .dynamic-row {
                 grid-template-columns: 1fr;
             }
@@ -1185,9 +1216,11 @@
         const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
         const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
         const DATE_SHEET_DEFAULT_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
+        const DATE_SHEET_UPLOAD_LIMIT = 8 * 1024 * 1024;
         const defaultScheduleRows = [];
         const defaultSubjects = [];
         const defaultBehaviors = [];
+        let selectedDateSheetFile = null;
 
         function isLegacyDemoDateSheetState(saved = {}) {
             return saved.dateSheetSchoolName === 'My own Science school' &&
@@ -1324,8 +1357,8 @@
             })).filter((row) => row.subject || row.className || row.examDate || row.startTime || row.endTime);
         }
 
-        function saveDateSheetState() {
-            const state = {
+        function collectDateSheetState() {
+            return {
                 dateSheetSchoolName: document.getElementById('dateSheetSchoolName').value,
                 dateSheetExamTitle: document.getElementById('dateSheetExamTitle').value,
                 dateSheetSession: document.getElementById('dateSheetSession').value,
@@ -1333,9 +1366,85 @@
                 dateSheetCampus: document.getElementById('dateSheetCampus').value,
                 dateSheetDefaultStart: document.getElementById('dateSheetDefaultStart').value,
                 dateSheetInstructions: document.getElementById('dateSheetInstructions').value,
+                uploadedDateSheetFile: selectedDateSheetFile,
                 scheduleRows: readScheduleRows()
             };
-            localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function cacheDateSheetState(state) {
+            try {
+                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(state));
+            } catch (error) {
+                const cacheableState = {
+                    ...state,
+                    uploadedDateSheetFile: state.uploadedDateSheetFile
+                        ? { ...state.uploadedDateSheetFile, dataUrl: '' }
+                        : null
+                };
+                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(cacheableState));
+            }
+        }
+
+        function saveDateSheetState() {
+            cacheDateSheetState(collectDateSheetState());
+        }
+
+        function hasUploadedDateSheetFile(file = selectedDateSheetFile) {
+            return Boolean(file && file.name && file.dataUrl);
+        }
+
+        function updateDateSheetUploadNote() {
+            const note = document.getElementById('dateSheetUploadNote');
+            const clearButton = document.getElementById('clearDateSheetUploadBtn');
+            if (!note || !clearButton) return;
+
+            note.textContent = hasUploadedDateSheetFile()
+                ? `Selected file: ${selectedDateSheetFile.name}`
+                : 'Optional: upload a ready PDF, Word file, or image instead of entering schedule rows.';
+            clearButton.disabled = !hasUploadedDateSheetFile();
+        }
+
+        function readDateSheetUpload(file) {
+            return new Promise((resolve, reject) => {
+                if (!file) {
+                    resolve(null);
+                    return;
+                }
+                if (file.size > DATE_SHEET_UPLOAD_LIMIT) {
+                    reject(new Error('Upload a date sheet file up to 8 MB.'));
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = () => resolve({
+                    name: file.name,
+                    type: file.type || '',
+                    dataUrl: String(reader.result || '')
+                });
+                reader.onerror = () => reject(new Error('Date sheet file could not be read.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function selectDateSheetUpload(event) {
+            try {
+                const uploaded = await readDateSheetUpload(event.target.files?.[0]);
+                if (!uploaded) return;
+                selectedDateSheetFile = uploaded;
+                saveDateSheetState();
+                updateDateSheetUploadNote();
+            } catch (error) {
+                event.target.value = '';
+                await showAppAlert(error.message || 'Date sheet file could not be attached.', 'File Error');
+            }
+        }
+
+        function clearDateSheetUpload() {
+            selectedDateSheetFile = null;
+            const input = document.getElementById('dateSheetUploadFile');
+            if (input) input.value = '';
+            saveDateSheetState();
+            updateDateSheetUploadNote();
         }
 
         function getApiBaseUrl() {
@@ -1353,10 +1462,10 @@
 
         async function executeDateSheetForStudents() {
             refreshDateSheetPreview();
-            const state = loadDateSheetState();
+            const state = collectDateSheetState();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
-            if (!rows.length) {
-                await showAppAlert('Add at least one schedule row before executing the date sheet.', 'Date Sheet Required');
+            if (!rows.length && !hasUploadedDateSheetFile(state.uploadedDateSheetFile)) {
+                await showAppAlert('Add schedule rows or upload a ready date sheet file before executing.', 'Date Sheet Required');
                 return;
             }
 
@@ -1376,7 +1485,7 @@
                 if (!response.ok || result.success === false) {
                     throw new Error(result.message || 'Date sheet could not be executed.');
                 }
-                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                cacheDateSheetState(result.dateSheet);
                 renderDateSheetRecord(result.dateSheet);
                 await showAppAlert('Date sheet executed. Students can now see and download it from their portal.', 'Executed');
             } catch (error) {
@@ -1394,7 +1503,11 @@
                 if (!response.ok) throw new Error('Date sheet record unavailable.');
                 const result = await response.json();
                 if (result.dateSheet) {
-                    localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                    cacheDateSheetState(result.dateSheet);
+                    selectedDateSheetFile = hasUploadedDateSheetFile(result.dateSheet.uploadedDateSheetFile)
+                        ? result.dateSheet.uploadedDateSheetFile
+                        : selectedDateSheetFile;
+                    updateDateSheetUploadNote();
                 }
                 renderDateSheetRecord(result.dateSheet || null);
             } catch (error) {
@@ -1410,7 +1523,9 @@
             if (!summary || !status || !hideBtn || !showBtn) return;
 
             const rows = Array.isArray(record?.scheduleRows) ? record.scheduleRows : [];
-            if (!record || !rows.length || !record.status) {
+            const uploadedFile = record?.uploadedDateSheetFile;
+            const hasFile = hasUploadedDateSheetFile(uploadedFile);
+            if (!record || (!rows.length && !hasFile) || !record.status) {
                 summary.textContent = 'No date sheet has been executed yet.';
                 status.textContent = 'No Record';
                 status.className = 'status-badge status-pending';
@@ -1422,7 +1537,8 @@
             const visible = record.status === 'executed';
             const timestamp = record.executedAt || record.hiddenAt || record.updatedAt || '';
             const dateLabel = timestamp ? new Date(timestamp).toLocaleString('en-GB') : '-';
-            summary.textContent = `${record.dateSheetExamTitle || 'Date Sheet'} | ${record.dateSheetClassGroup || 'All Classes'} | ${rows.length} rows | Last update: ${dateLabel}`;
+            const sourceLabel = hasFile ? `${uploadedFile.name} uploaded` : `${rows.length} rows`;
+            summary.textContent = `${record.dateSheetExamTitle || 'Date Sheet'} | ${record.dateSheetClassGroup || 'All Classes'} | ${sourceLabel} | Last update: ${dateLabel}`;
             status.textContent = visible ? 'Visible on Student Portal' : 'Hidden from Student Portal';
             status.className = `status-badge ${visible ? 'status-paid' : 'status-failed'}`;
             hideBtn.disabled = !visible;
@@ -1430,9 +1546,9 @@
         }
 
         async function setDateSheetVisibility(nextStatus) {
-            const current = loadDateSheetState();
+            const current = { ...loadDateSheetState(), uploadedDateSheetFile: selectedDateSheetFile };
             const rows = Array.isArray(current.scheduleRows) ? current.scheduleRows : [];
-            if (!rows.length) {
+            if (!rows.length && !hasUploadedDateSheetFile(current.uploadedDateSheetFile)) {
                 await showAppAlert('No executed date sheet record is available.', 'No Record');
                 return;
             }
@@ -1454,7 +1570,7 @@
                 if (!response.ok || result.success === false) {
                     throw new Error(result.message || 'Date sheet visibility could not be updated.');
                 }
-                localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(result.dateSheet));
+                cacheDateSheetState(result.dateSheet);
                 renderDateSheetRecord(result.dateSheet);
                 await showAppAlert(nextStatus === 'hidden'
                     ? 'Date sheet has been hidden from student portals.'
@@ -1518,9 +1634,11 @@
 
         function resetDateSheet() {
             localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
+            selectedDateSheetFile = null;
             document.getElementById('dateSheetForm').reset();
             populateDateSheetCampusOptions('Main Campus');
             renderScheduleRows({});
+            updateDateSheetUploadNote();
             refreshDateSheetPreview();
         }
 
@@ -1699,9 +1817,13 @@
         document.addEventListener('DOMContentLoaded', () => {
             toggleExamSection('examSchedulingCard');
             const dateSheetState = loadDateSheetState();
+            selectedDateSheetFile = hasUploadedDateSheetFile(dateSheetState.uploadedDateSheetFile)
+                ? dateSheetState.uploadedDateSheetFile
+                : null;
             const savedState = loadResultCardState();
             renderScheduleRows(dateSheetState);
             fillDateSheetForm(dateSheetState);
+            updateDateSheetUploadNote();
             refreshDateSheetPreview();
             renderDynamicEditors(savedState);
             fillFormState(savedState);
@@ -1723,6 +1845,8 @@
                 printSection('print-schedule');
             });
             document.getElementById('executeDateSheetBtn').addEventListener('click', executeDateSheetForStudents);
+            document.getElementById('dateSheetUploadFile').addEventListener('change', selectDateSheetUpload);
+            document.getElementById('clearDateSheetUploadBtn').addEventListener('click', clearDateSheetUpload);
             document.getElementById('hideDateSheetBtn').addEventListener('click', () => setDateSheetVisibility('hidden'));
             document.getElementById('showDateSheetBtn').addEventListener('click', () => setDateSheetVisibility('executed'));
             document.getElementById('resetDateSheetBtn').addEventListener('click', resetDateSheet);

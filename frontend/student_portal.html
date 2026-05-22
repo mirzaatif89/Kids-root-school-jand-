@@ -1846,6 +1846,9 @@
             <button type="button" class="student-action-btn" data-student-action-target="studentTimeTableSection">
                 <i data-lucide="clock"></i> Time Table
             </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentDateSheetSection">
+                <i data-lucide="calendar-days"></i> Date Sheet
+            </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentPerformanceSection">
                 <i data-lucide="trending-up"></i> Performance
             </button>
@@ -2050,6 +2053,28 @@
             <div class="empty-note" id="studentCourseEmpty">No course has been added for your class yet.</div>
         </section>
 
+        <section class="panel-card student-portal-section" id="studentDateSheetSection" style="display:none; margin-bottom: 1.25rem;">
+            <div class="portal-action-row">
+                <h3 style="margin:0;">Date Sheet</h3>
+                <button type="button" class="btn btn-primary" id="downloadDateSheetBtn">
+                    <i data-lucide="download"></i> Download
+                </button>
+            </div>
+            <p class="portal-content-meta" id="studentDateSheetFileNote"></p>
+            <table class="panel-table" id="studentDateSheetTable">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Timing</th>
+                    </tr>
+                </thead>
+                <tbody id="studentDateSheetBody"></tbody>
+            </table>
+            <div class="empty-note" id="studentDateSheetEmpty">No date sheet has been published for your class yet.</div>
+        </section>
+
         <section class="panel-card student-portal-section" id="studentQuizSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Class Quiz</h3>
             <div class="portal-content-list" id="studentQuizList"></div>
@@ -2187,6 +2212,7 @@
         const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
+        let loadedDateSheetRecord = null;
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
         const STUDENT_PROFILE_CACHE_KEY = 'eduCore_student_profile';
         const STUDENT_RESULT_CACHE_KEY = 'eduCore_student_result_card';
@@ -3665,6 +3691,9 @@
         }
 
         function loadDateSheetState() {
+            if (loadedDateSheetRecord && typeof loadedDateSheetRecord === 'object') {
+                return loadedDateSheetRecord;
+            }
             try {
                 const saved = JSON.parse(localStorage.getItem(DATE_SHEET_KEY) || '{}');
                 return saved && typeof saved === 'object' ? saved : {};
@@ -3679,9 +3708,15 @@
                 if (!response.ok) throw new Error('Date sheet unavailable.');
                 const result = await response.json();
                 if (result.dateSheet && result.dateSheet.status === 'executed') {
-                    localStorage.setItem(DATE_SHEET_KEY, JSON.stringify(result.dateSheet));
+                    loadedDateSheetRecord = result.dateSheet;
+                    try {
+                        localStorage.setItem(DATE_SHEET_KEY, JSON.stringify(result.dateSheet));
+                    } catch (error) {
+                        localStorage.removeItem(DATE_SHEET_KEY);
+                    }
                     return result.dateSheet;
                 }
+                loadedDateSheetRecord = null;
                 localStorage.removeItem(DATE_SHEET_KEY);
                 return {};
             } catch (error) {
@@ -3823,32 +3858,45 @@
             const state = loadDateSheetState();
             const tbody = document.getElementById('studentDateSheetBody');
             const emptyState = document.getElementById('studentDateSheetEmpty');
+            const table = document.getElementById('studentDateSheetTable');
+            const fileNote = document.getElementById('studentDateSheetFileNote');
             const className = String(student.classGrade || '').trim().toLowerCase();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
+            const uploadedFile = state.uploadedDateSheetFile || {};
+            const hasUploadedFile = Boolean(state.status === 'executed' && uploadedFile.name && uploadedFile.dataUrl);
             const filteredRows = state.status === 'executed'
                 ? rows.filter((row) => !className || String(row.className || '').trim().toLowerCase().includes(className))
                 : [];
 
             if (!filteredRows.length) {
                 tbody.innerHTML = '';
-                emptyState.style.display = 'block';
-                return;
+                table.style.display = 'none';
+            } else {
+                tbody.innerHTML = filteredRows.map((row) => `
+                    <tr>
+                        <td>${row.subject || '-'}</td>
+                        <td>${row.className || '-'}</td>
+                        <td>${formatScheduleDate(row.examDate)}</td>
+                        <td>${formatScheduleTime(row.startTime)} - ${formatScheduleTime(row.endTime)}</td>
+                    </tr>
+                `).join('');
+                table.style.display = '';
             }
 
-            tbody.innerHTML = filteredRows.map((row) => `
-                <tr>
-                    <td>${row.subject || '-'}</td>
-                    <td>${row.className || '-'}</td>
-                    <td>${formatScheduleDate(row.examDate)}</td>
-                    <td>${formatScheduleTime(row.startTime)} - ${formatScheduleTime(row.endTime)}</td>
-                </tr>
-            `).join('');
-            emptyState.style.display = 'none';
+            fileNote.textContent = hasUploadedFile
+                ? `Published file: ${uploadedFile.name}`
+                : '';
+            emptyState.style.display = filteredRows.length || hasUploadedFile ? 'none' : 'block';
         }
 
         function downloadDateSheet() {
             const state = loadDateSheetState();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
+            const uploadedFile = state.uploadedDateSheetFile || {};
+            if (state.status === 'executed' && uploadedFile.dataUrl) {
+                downloadPortalDataUrl(uploadedFile.dataUrl, uploadedFile.name || 'date-sheet');
+                return;
+            }
             if (state.status !== 'executed' || !rows.length) {
                 alert('No date sheet is available to download yet.');
                 return;

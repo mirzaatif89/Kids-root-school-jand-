@@ -17,7 +17,9 @@
             'student_leave_requests',
             'student_courses',
             'quiz_uploading',
-            'lecture_uploading'
+            'lecture_uploading',
+            'exam_schedule',
+            'stuck_off'
         ]),
         teacher_scheduling: new Set([
             'teacher_scheduling',

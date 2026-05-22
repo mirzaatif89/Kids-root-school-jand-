@@ -1239,6 +1239,9 @@ app.post('/api/admin-password/forgot/reset', async (req, res) => {
 
 function normalizeDateSheetPayload(data = {}) {
     const raw = data && typeof data === 'object' ? data : {};
+    const uploadedFile = raw.uploadedDateSheetFile && typeof raw.uploadedDateSheetFile === 'object'
+        ? raw.uploadedDateSheetFile
+        : {};
     const scheduleRows = Array.isArray(raw.scheduleRows)
         ? raw.scheduleRows.map((row) => ({
             subject: String(row.subject || '').trim(),
@@ -1257,6 +1260,11 @@ function normalizeDateSheetPayload(data = {}) {
         dateSheetCampus: String(raw.dateSheetCampus || '').trim(),
         dateSheetDefaultStart: String(raw.dateSheetDefaultStart || '').trim(),
         dateSheetInstructions: String(raw.dateSheetInstructions || '').trim(),
+        uploadedDateSheetFile: {
+            name: String(uploadedFile.name || '').trim(),
+            type: String(uploadedFile.type || '').trim(),
+            dataUrl: String(uploadedFile.dataUrl || '').trim()
+        },
         scheduleRows,
         status: ['executed', 'hidden'].includes(raw.status) ? raw.status : 'draft',
         executedAt: raw.executedAt || (raw.status === 'executed' ? new Date().toISOString() : null),

@@ -577,7 +577,9 @@
                     'student_leave_requests.html',
                     'student_courses.html',
                     'quiz_uploading.html',
-                    'lecture_uploading.html'
+                    'lecture_uploading.html',
+                    'exam_schedule.html',
+                    'stuck_off.html'
                 ]),
                 'teacher_scheduling.html': new Set([
                     'teacher_scheduling.html',

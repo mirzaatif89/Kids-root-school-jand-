@@ -2936,7 +2936,9 @@ function renderAdminSidebarSequence() {
             'student_leave_requests.html',
             'student_courses.html',
             'quiz_uploading.html',
-            'lecture_uploading.html'
+            'lecture_uploading.html',
+            'exam_schedule.html',
+            'stuck_off.html'
         ]),
         'teacher_scheduling.html': new Set([
             'teacher_scheduling.html',
@@ -3074,7 +3076,7 @@ function ensureSchedulingNav() {
     if (navLinks.querySelector('[data-scheduling-nav]')) return;
 
     const currentPage = getCurrentPageName();
-    const studentSchedulingPages = ['student_scheduling.html', 'assignments.html', 'assignment_uploading.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html'];
+    const studentSchedulingPages = ['student_scheduling.html', 'assignments.html', 'assignment_uploading.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html', 'exam_schedule.html', 'stuck_off.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
     const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_timetable.html', 'teacher_leave_requests.html'];
     const isTeacherSchedulingPage = teacherSchedulingPages.includes(currentPage);
