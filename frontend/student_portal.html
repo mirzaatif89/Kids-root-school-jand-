@@ -2076,6 +2076,9 @@
 
         <section class="panel-card student-portal-section" id="studentSubmitAssignmentSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Submit Assignment</h3>
+            <h4>Assignments To Solve</h4>
+            <div class="portal-content-list" id="studentAssignedAssignmentList"></div>
+            <div class="empty-note" id="studentAssignedAssignmentEmpty">No assignment has been uploaded for your class yet.</div>
             <form id="studentAssignmentForm">
                 <div class="result-filter-grid complaint-form-grid">
                     <div class="portal-field">
@@ -2194,6 +2197,7 @@
         const STUDENT_QUIZ_KEY = 'eduCore_student_quizzes';
         const STUDENT_QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
         const STUDENT_UPLOADED_LECTURE_KEY = 'eduCore_uploaded_lectures';
+        const STUDENT_UPLOADED_ASSIGNMENT_KEY = 'eduCore_uploaded_assignments';
         const STUDENT_ASSIGNMENT_SUBMISSION_KEY = 'eduCore_student_assignment_submissions';
         const COMPLAINT_KEY = 'eduCore_complaints';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
@@ -2591,6 +2595,31 @@
                     </div>
                     <p>${escapeHtml(item.note || 'Submitted')}</p>
                     ${item.fileData ? `<a class="portal-download-btn" href="${escapeHtml(item.fileData)}" download="${escapeHtml(item.fileName || 'assignment')}"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.fileName || 'Assignment File')}</a>` : ''}
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function renderStudentUploadedAssignments(student = {}) {
+            const list = document.getElementById('studentAssignedAssignmentList');
+            const empty = document.getElementById('studentAssignedAssignmentEmpty');
+            if (!list || !empty) return;
+
+            const assignments = getClassWiseItems(STUDENT_UPLOADED_ASSIGNMENT_KEY, student);
+            if (!assignments.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = assignments.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.file?.name || 'Assignment File')}</h4>
+                    <div class="portal-content-meta">
+                        Start: ${escapeHtml(item.startDate || '-')} | Due: ${escapeHtml(item.dueDate || '-')}
+                    </div>
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${STUDENT_UPLOADED_ASSIGNMENT_KEY}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download Assignment</button>` : ''}
                 </article>
             `).join('');
             if (window.lucide) window.lucide.createIcons();
@@ -3927,6 +3956,7 @@
             applyStudentDiary(student);
             applyStudentCourse(student);
             renderStudentAssignmentSubmissions(student);
+            renderStudentUploadedAssignments(student);
             applyStudentQuizzes(student);
             applyStudentUploadedLectures(student);
             applyStudentLectures(student);

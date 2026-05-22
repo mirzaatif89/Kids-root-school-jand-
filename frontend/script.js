@@ -59,6 +59,7 @@ const FALLBACK_ROUTE_TO_PAGE = {
     families: 'families.html',
     student_scheduling: 'student_scheduling.html',
     assignments: 'assignments.html',
+    assignment_uploading: 'assignment_uploading.html',
     student_timetable: 'student_timetable.html',
     student_diary: 'student_diary.html',
     student_leave_requests: 'student_leave_requests.html',
@@ -2929,7 +2930,7 @@ function ensureSchedulingNav() {
     if (navLinks.querySelector('[data-scheduling-nav]')) return;
 
     const currentPage = getCurrentPageName();
-    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html'];
+    const studentSchedulingPages = ['student_scheduling.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'assignment_uploading.html', 'quiz_uploading.html', 'lecture_uploading.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
     const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_leave_requests.html'];
     const isTeacherSchedulingPage = teacherSchedulingPages.includes(currentPage);

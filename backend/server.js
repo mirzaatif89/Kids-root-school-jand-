@@ -251,6 +251,7 @@ const ALLOWED_HOME_PAGES = new Set([
     'families.html',
     'student_scheduling.html',
     'assignments.html',
+    'assignment_uploading.html',
     'student_timetable.html',
     'student_diary.html',
     'student_leave_requests.html',

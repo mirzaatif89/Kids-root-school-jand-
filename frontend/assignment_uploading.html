@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Assignments - My own Science school</title>
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <link rel="stylesheet" href="student_schedule_theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .back-link { display:inline-flex; align-items:center; gap:.45rem; margin-bottom:1rem; color:#0f766e; font-weight:800; text-decoration:none; }
+        .assignment-upload-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1rem; align-items:end; }
+        .assignment-upload-grid input,.assignment-upload-grid select { min-height:42px; }
+        .assignment-file-name { display:block; max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <a class="back-link" href="student_scheduling.html"><i data-lucide="arrow-left"></i> Back to Student Scheduling</a>
+            <header class="header"><div><h1>Upload Assignments</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Upload class assignments for students to download and solve.</p></div></header>
+            <section class="schedule-panel">
+                <form id="assignmentUploadForm">
+                    <div class="assignment-upload-grid">
+                        <div><label>Class</label><select id="assignmentUploadClass" required></select></div>
+                        <div><label>Start Date</label><input type="date" id="assignmentStartDate" required></div>
+                        <div><label>Due Date</label><input type="date" id="assignmentDueDate" required></div>
+                        <div><label>Assignment File</label><input type="file" id="assignmentUploadFile" required accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.webp,.txt"></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:1rem;"><i data-lucide="send"></i> Submit Assignment</button>
+                </form>
+            </section>
+            <section class="schedule-panel"><h3 style="margin-bottom:1rem;">Uploaded Assignments</h3><div id="assignmentUploadList"></div></section>
+        </main>
+    </div>
+    <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script>
+        const STUDENT_UPLOADED_ASSIGNMENT_KEY = 'eduCore_uploaded_assignments';
+        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_error) { return []; } }
+        function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        function save(items) {
+            try { localStorage.setItem(STUDENT_UPLOADED_ASSIGNMENT_KEY, JSON.stringify(items)); return true; }
+            catch (_error) { showAppAlert('Assignment file is too large to save.', 'Storage Full'); return false; }
+        }
+        function populateClasses() {
+            const students = data('eduCore_students');
+            const classes = data('eduCore_classes');
+            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+            assignmentUploadClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
+        function readFile(input) {
+            const file = input.files?.[0];
+            if (!file) return Promise.resolve(null);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve({ name: file.name, type: file.type || '', dataUrl: reader.result });
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+        function render() {
+            const items = data(STUDENT_UPLOADED_ASSIGNMENT_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            if (!items.length) { assignmentUploadList.innerHTML = '<div class="empty-note">No assignment uploaded yet.</div>'; return; }
+            assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            if (window.lucide) window.lucide.createIcons();
+        }
+        function deleteAssignment(id) {
+            save(data(STUDENT_UPLOADED_ASSIGNMENT_KEY).filter((item) => item.id !== id));
+            render();
+        }
+        assignmentUploadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            let file = null;
+            try { file = await readFile(assignmentUploadFile); } catch (_error) { showAppAlert('Assignment file could not be attached.', 'File Error'); return; }
+            const item = {
+                id: `UPLOADED-ASG-${Date.now()}`,
+                classGrade: assignmentUploadClass.value,
+                startDate: assignmentStartDate.value,
+                dueDate: assignmentDueDate.value,
+                file,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+            if (!item.classGrade || !item.startDate || !item.dueDate || !item.file?.dataUrl) { showAppAlert('Class, dates, and assignment file are required.', 'Missing Assignment'); return; }
+            if (item.dueDate < item.startDate) { showAppAlert('Due date cannot be before start date.', 'Date Error'); return; }
+            const items = data(STUDENT_UPLOADED_ASSIGNMENT_KEY);
+            items.unshift(item);
+            if (!save(items)) return;
+            event.target.reset();
+            render();
+            showSuccessModal('Assignment Submitted!', 'Students in the selected class can download this assignment in their portal.');
+        });
+        populateClasses(); render(); if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

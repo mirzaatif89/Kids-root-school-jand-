@@ -116,6 +116,7 @@
         'families.html': { moduleKey: 'families', defaultHome: 'dashboard.html', label: 'Families', icon: 'home' },
         'student_scheduling.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Student Scheduling', icon: 'calendar-clock' },
         'assignments.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Assignments', icon: 'upload' },
+        'assignment_uploading.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Upload Assignments', icon: 'file-up' },
         'student_timetable.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Timetable', icon: 'calendar-clock' },
         'student_diary.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Class Diary', icon: 'book-open' },
         'student_leave_requests.html': { moduleKey: 'student_scheduling', defaultHome: 'dashboard.html', label: 'Leave Requests', icon: 'calendar-check' },
