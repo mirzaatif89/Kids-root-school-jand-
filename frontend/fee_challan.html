@@ -1532,7 +1532,9 @@
         function saveChallanBrandingPatch(patch = {}) {
             const current = getStoredChallanBranding();
             const next = { ...current, ...patch };
+            if (typeof saveBrandingSettings === 'function') return saveBrandingSettings(next);
             localStorage.setItem('eduCore_settings', JSON.stringify(next));
+            if (typeof applyGlobalBranding === 'function') applyGlobalBranding(next);
             return next;
         }
 
@@ -4361,6 +4363,13 @@
             await Promise.all(workers);
             return results;
         }
+
+        // Listen for branding changes from other tabs/windows
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'eduCore_settings' || event.key === 'STORAGE_KEY_SETTINGS') {
+                triggerChallanRefresh();
+            }
+        });
     </script>
 </body>
 

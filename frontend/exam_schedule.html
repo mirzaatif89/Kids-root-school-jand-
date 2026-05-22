@@ -1222,6 +1222,80 @@
         const defaultBehaviors = [];
         let selectedDateSheetFile = null;
 
+        function getExamBrandingSettings() {
+            const fallback = { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+            try {
+                return { ...fallback, ...((typeof getBrandingSettings === 'function' ? getBrandingSettings() : {}) || {}) };
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function getExamLogoSrc() {
+            const branding = getExamBrandingSettings();
+            return branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
+        }
+
+        function getExamContactLine() {
+            const branding = getExamBrandingSettings();
+            const address = branding.address || branding.schoolAddress || '';
+            const parts = [];
+            if (address) parts.push(`Address: ${address}`);
+            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
+            return parts.join(' | ');
+        }
+
+        function applyExamBrandingDefaults(force = false) {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            const legacyNames = ['Apexiums School', 'My own Science school'];
+            const dateSheetSchool = document.getElementById('dateSheetSchoolName');
+            const resultSchool = document.getElementById('schoolName');
+            const contact = document.getElementById('schoolContact');
+            const leftLogo = document.getElementById('leftLogoUrl');
+            const rightLogo = document.getElementById('rightLogoUrl');
+
+            if (dateSheetSchool && (force || !dateSheetSchool.value || legacyNames.includes(dateSheetSchool.value))) dateSheetSchool.value = schoolName;
+            if (resultSchool && (force || !resultSchool.value || legacyNames.includes(resultSchool.value))) resultSchool.value = schoolName;
+            if (contact && contactLine && (force || !contact.value)) contact.value = contactLine;
+            if (leftLogo && (force || !leftLogo.value || leftLogo.value === 'images/logo.png')) leftLogo.value = logoSrc;
+            if (rightLogo && (force || !rightLogo.value || rightLogo.value === 'images/logo.png')) rightLogo.value = logoSrc;
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
+        }
+
+        function forceRefreshResultBrandingFromStorage() {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            
+            // Force update all branding fields
+            const schoolNameField = document.getElementById('schoolName');
+            if (schoolNameField) schoolNameField.value = schoolName;
+            
+            const contactField = document.getElementById('schoolContact');
+            if (contactField) contactField.value = contactLine;
+            
+            const leftLogoField = document.getElementById('leftLogoUrl');
+            if (leftLogoField) leftLogoField.value = logoSrc;
+            
+            const rightLogoField = document.getElementById('rightLogoUrl');
+            if (rightLogoField) rightLogoField.value = logoSrc;
+            
+            // Update preview immediately with new branding
+            document.getElementById('previewSchoolName').textContent = schoolName;
+            document.getElementById('previewSchoolContact').textContent = contactLine;
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+            document.getElementById('previewLeftLogo').src = logoSrc;
+            document.getElementById('previewRightLogo').src = logoSrc;
+            
+            refreshResultCardPreview();
+        }
+
         function isLegacyDemoDateSheetState(saved = {}) {
             return saved.dateSheetSchoolName === 'My own Science school' &&
                 saved.dateSheetExamTitle === 'Mid Term Examination 2026' &&
@@ -1345,6 +1419,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
+            applyExamBrandingDefaults(false);
         }
 
         function readScheduleRows() {
@@ -1599,7 +1674,10 @@
 
         function refreshDateSheetPreview() {
             const rows = readScheduleRows();
-            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'My own Science school';
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || branding.schoolName || 'My own Science school';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
@@ -1637,6 +1715,7 @@
             selectedDateSheetFile = null;
             document.getElementById('dateSheetForm').reset();
             populateDateSheetCampusOptions('Main Campus');
+            applyExamBrandingDefaults(true);
             renderScheduleRows({});
             updateDateSheetUploadNote();
             refreshDateSheetPreview();
@@ -1731,6 +1810,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
+            applyExamBrandingDefaults(false);
         }
 
         function updateLogo(logoId, value) {
@@ -1760,13 +1840,15 @@
         function refreshResultCardPreview() {
             const subjects = readSubjectRows();
             const behaviors = readBehaviorRows();
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
 
-            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'My own Science school';
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || branding.schoolName || 'My own Science school';
             document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
             document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
-            updateLogo('previewLeftLogo', document.getElementById('leftLogoUrl').value.trim());
-            updateLogo('previewRightLogo', document.getElementById('rightLogoUrl').value.trim());
+            updateLogo('previewLeftLogo', document.getElementById('leftLogoUrl').value.trim() || logoSrc);
+            updateLogo('previewRightLogo', document.getElementById('rightLogoUrl').value.trim() || logoSrc);
             document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
             document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
             document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';
@@ -1810,11 +1892,13 @@
         function resetResultCard() {
             localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
             document.getElementById('resultCardForm').reset();
+            applyExamBrandingDefaults(true);
             renderDynamicEditors({});
             refreshResultCardPreview();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            applyExamBrandingDefaults(false);
             toggleExamSection('examSchedulingCard');
             const dateSheetState = loadDateSheetState();
             selectedDateSheetFile = hasUploadedDateSheetFile(dateSheetState.uploadedDateSheetFile)
@@ -1866,6 +1950,13 @@
             });
             document.getElementById('resetResultCardBtn').addEventListener('click', resetResultCard);
             lucide.createIcons();
+        });
+
+        // Listen for branding changes from other tabs/windows
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'eduCore_settings') {
+                forceRefreshResultBrandingFromStorage();
+            }
         });
     </script>
 </body>

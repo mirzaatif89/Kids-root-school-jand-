@@ -37,10 +37,10 @@
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
                 <a href="set_fee.html" class="nav-item"><i data-lucide="badge-dollar-sign"></i><span>Set Fees</span></a>
+                <a href="fee_logos.html" class="nav-item active"><i data-lucide="image"></i><span>Logos</span></a>
                 <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
                 <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
                 <a href="annual_charges.html" class="nav-item"><i data-lucide="receipt"></i><span>Annual Charges</span></a>
-                <a href="fee_logos.html" class="nav-item active"><i data-lucide="image"></i><span>Logos</span></a>
             </nav>
             <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
         </aside>
@@ -120,7 +120,9 @@
 
         function saveFeeLogoSettings(patch = {}) {
             const next = { ...getFeeLogoSettings(), ...patch };
+            if (typeof saveBrandingSettings === 'function') return saveBrandingSettings(next);
             localStorage.setItem(FEE_LOGO_SETTINGS_KEY, JSON.stringify(next));
+            if (typeof applyGlobalBranding === 'function') applyGlobalBranding(next);
             return next;
         }
 
@@ -171,7 +173,7 @@
             event.preventDefault();
             const data = saveFeeLogoSettings(collectFeeLogoForm());
             updateFeeLogoPreview(data);
-            if (window.showAppAlert) await showAppAlert('Branding saved. Fee Challan and Annual Charges will update automatically.', 'Saved');
+            if (window.showAppAlert) await showAppAlert('Branding saved. Logo, school name, phone, and address will update across the system.', 'Saved');
             else alert('Branding saved.');
         });
 

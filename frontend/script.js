@@ -584,6 +584,7 @@ async function saveTeacherAttendanceToSQLRecord(teacherId, date, status) {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+    applyGlobalBranding();
     initializeDashboardHome();
 
     // Perform initial sync from SQL Server
@@ -609,8 +610,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     renderAdminSidebarSequence();
-    window.setTimeout(renderAdminSidebarSequence, 0);
-    window.setTimeout(renderAdminSidebarSequence, 250);
+    applyGlobalBranding();
+    window.setTimeout(() => {
+        renderAdminSidebarSequence();
+        applyGlobalBranding();
+    }, 0);
+    window.setTimeout(() => {
+        renderAdminSidebarSequence();
+        applyGlobalBranding();
+    }, 250);
     initializeSidebarScrollMemory();
     applyBranchScopedStudentsView();
     if (sessionStorage.getItem('eduCore_token')) {
@@ -1090,6 +1098,8 @@ function getBrandingSettings() {
         schoolTitle: 'Apexiums School System',
         session: '',
         phone: '',
+        address: '',
+        schoolAddress: '',
         logoDataUrl: ''
     };
     try {
@@ -1099,6 +1109,15 @@ function getBrandingSettings() {
     }
 }
 
+function saveBrandingSettings(patch = {}) {
+    const next = { ...getBrandingSettings(), ...patch };
+    if (next.address && !next.schoolAddress) next.schoolAddress = next.address;
+    if (next.schoolAddress && !next.address) next.address = next.schoolAddress;
+    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(next));
+    applyGlobalBranding(next);
+    return next;
+}
+
 function getBrandingLogoSrc() {
     const branding = getBrandingSettings();
     return branding.logoDataUrl || 'images/logo.png';
@@ -1106,6 +1125,27 @@ function getBrandingLogoSrc() {
 
 function getBrandingLogoMarkup(className = 'print-logo', alt = 'School logo') {
     return `<img class="${escapeHtml(className)}" src="${escapeHtml(getBrandingLogoSrc())}" alt="${escapeHtml(alt)}">`;
+}
+
+function applyGlobalBranding(branding = getBrandingSettings()) {
+    const logoSrc = branding.logoDataUrl || 'images/logo.png';
+    const schoolName = branding.schoolName || branding.schoolTitle || 'School';
+
+    document.querySelectorAll('.sidebar-logo-img, .portal-logo, img[data-branding-logo]').forEach((img) => {
+        if (!img || img.getAttribute('src') === logoSrc) return;
+        img.setAttribute('src', logoSrc);
+        img.setAttribute('alt', `${schoolName} logo`);
+    });
+
+    document.querySelectorAll('[data-branding-school-name]').forEach((node) => {
+        node.textContent = schoolName;
+    });
+    document.querySelectorAll('[data-branding-phone]').forEach((node) => {
+        node.textContent = branding.phone || '';
+    });
+    document.querySelectorAll('[data-branding-address]').forEach((node) => {
+        node.textContent = branding.address || branding.schoolAddress || '';
+    });
 }
 
 function isHashedPassword(value) {
@@ -2878,9 +2918,9 @@ function ensureAdminSidebarCompleteness() {
         { page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
-        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
         { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
         { page: 'exam_result_history.html', label: 'Result History', icon: 'history' },
@@ -2991,9 +3031,9 @@ function renderAdminSidebarSequence() {
             icon: 'credit-card',
             children: [
                 { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
+                { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                 { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                 { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
-                { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                 { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
             ]
         },
@@ -7710,18 +7750,14 @@ async function handleBrandingLogoSelection(event) {
     try {
         const dataUrl = await readFileAsDataUrl(file);
         updateBrandingLogoPreview(dataUrl);
-        const settings = getBrandingSettings();
-        settings.logoDataUrl = dataUrl;
-        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+        saveBrandingSettings({ logoDataUrl: dataUrl });
     } catch (error) {
         await showAppAlert(error.message || 'Logo could not be loaded.', 'Logo Upload Failed');
     }
 }
 
 function clearBrandingLogo() {
-    const settings = getBrandingSettings();
-    settings.logoDataUrl = '';
-    localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    saveBrandingSettings({ logoDataUrl: '' });
     const input = document.getElementById('sSchoolLogo');
     if (input) input.value = '';
     updateBrandingLogoPreview('');
@@ -7738,7 +7774,7 @@ async function handleSettingsSubmit(e) {
         if (document.getElementById('sSession')) settings.session = document.getElementById('sSession').value;
         if (document.getElementById('sPhone')) settings.phone = document.getElementById('sPhone').value;
 
-        localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+        saveBrandingSettings(settings);
         await saveAdminCredentialSettings();
 
         alert('Settings saved successfully!');

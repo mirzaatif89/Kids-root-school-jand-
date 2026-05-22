@@ -264,7 +264,7 @@
                                     <i data-lucide="shield-check" size="18"></i>
                                     <div>
                                         <strong>Fixed Result Card Logo</strong>
-                                        <span>The Apexiums logo at images/logo.png will print on every result card.</span>
+                                        <span>The saved school logo will print on every result card.</span>
                                     </div>
                                 </div>
                             </div>
@@ -1628,6 +1628,87 @@
         const defaultBehaviors = [];
         const STATIC_RESULT_LOGO = 'images/logo.png';
 
+        function getExamBrandingSettings() {
+            const fallback = { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+            try {
+                const globalBranding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+                return { ...fallback, ...(globalBranding || {}) };
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function getExamLogoSrc() {
+            const branding = getExamBrandingSettings();
+            return branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : STATIC_RESULT_LOGO);
+        }
+
+        function getExamContactLine() {
+            const branding = getExamBrandingSettings();
+            const address = branding.address || branding.schoolAddress || '';
+            const parts = [];
+            if (address) parts.push(`Address: ${address}`);
+            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
+            return parts.join(' | ');
+        }
+
+        function applyExamBrandingDefaults(force = false) {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            const legacyNames = ['Apexiums School', 'My own Science school'];
+
+            const dateSheetSchool = document.getElementById('dateSheetSchoolName');
+            if (dateSheetSchool && (force || !dateSheetSchool.value || legacyNames.includes(dateSheetSchool.value))) {
+                dateSheetSchool.value = schoolName;
+            }
+
+            const resultSchool = document.getElementById('schoolName');
+            if (resultSchool && (force || !resultSchool.value || legacyNames.includes(resultSchool.value))) {
+                resultSchool.value = schoolName;
+            }
+
+            const contact = document.getElementById('schoolContact');
+            if (contact && contactLine && (force || !contact.value || contact.value.includes('Dekhni Road') || contact.value.includes('Chapri Road') || contact.value.includes('Nai Abadi'))) {
+                contact.value = contactLine;
+            }
+
+            const leftLogo = document.getElementById('leftLogoUrl');
+            if (leftLogo) leftLogo.value = logoSrc;
+
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+        }
+
+        function forceRefreshResultBrandingFromStorage() {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            
+            // Force update all branding fields
+            const schoolNameField = document.getElementById('schoolName');
+            if (schoolNameField) schoolNameField.value = schoolName;
+            
+            const contactField = document.getElementById('schoolContact');
+            if (contactField) contactField.value = contactLine;
+            
+            const logoField = document.getElementById('leftLogoUrl');
+            if (logoField) logoField.value = logoSrc;
+            
+            // Update preview immediately with new branding
+            document.getElementById('previewSchoolName').textContent = schoolName;
+            document.getElementById('previewSchoolContact').textContent = contactLine;
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+            document.getElementById('previewLeftLogo').src = logoSrc;
+            
+            refreshResultCardPreview();
+        }
+
         function isLegacyDemoDateSheetState(saved = {}) {
             return (saved.dateSheetSchoolName === 'My own Science school' || saved.dateSheetSchoolName === 'Apexiums School') &&
                 saved.dateSheetExamTitle === 'Mid Term Examination 2026' &&
@@ -1727,6 +1808,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
+            applyExamBrandingDefaults(false);
         }
 
         function readScheduleRows() {
@@ -1772,7 +1854,12 @@
 
         function refreshDateSheetPreview() {
             const rows = readScheduleRows();
-            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'Apexiums School';
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || branding.schoolName || 'My own Science school';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
@@ -1898,7 +1985,7 @@
                 campusName: document.getElementById('campusName').value.trim(),
                 schoolContact: document.getElementById('schoolContact').value.trim(),
                 termTitle: document.getElementById('termTitle').value.trim(),
-                leftLogoUrl: STATIC_RESULT_LOGO,
+                leftLogoUrl: getExamLogoSrc(),
                 subjects: readSubjectRows(),
                 behaviors: readBehaviorRows(),
                 updatedAt: new Date().toISOString()
@@ -2056,6 +2143,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
+            applyExamBrandingDefaults(false);
         }
 
         const RESULT_BRANCH_CONTACTS = {
@@ -2082,8 +2170,9 @@
 
         function applyBranchDetailsToResultCard(campusName) {
             const branchDetails = getResultBranchContactDetails(campusName);
+            const globalContactLine = getExamContactLine();
             document.getElementById('campusName').value = branchDetails.campusLabel;
-            document.getElementById('schoolContact').value = branchDetails.contactLine;
+            document.getElementById('schoolContact').value = globalContactLine || branchDetails.contactLine;
         }
 
         function findStudentForResultCard(query) {
@@ -2157,12 +2246,14 @@
         function refreshResultCardPreview() {
             const subjects = readSubjectRows();
             const behaviors = readBehaviorRows();
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
 
-            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'Apexiums School';
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || branding.schoolName || 'My own Science school';
             document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
             document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
-            updateLogo('previewLeftLogo', STATIC_RESULT_LOGO);
+            updateLogo('previewLeftLogo', logoSrc);
             document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
             document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
             document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';
@@ -2207,12 +2298,14 @@
         function resetResultCard() {
             localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
             document.getElementById('resultCardForm').reset();
+            applyExamBrandingDefaults(true);
             renderDynamicEditors({});
             refreshResultCardPreview();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             clearLegacyResultArchive();
+            applyExamBrandingDefaults(false);
             toggleExamSection('resultBuilderCard');
             const dateSheetState = loadDateSheetState();
             const savedState = loadResultCardState();
@@ -2286,6 +2379,13 @@
             document.getElementById('resetResultCardBtn').addEventListener('click', resetResultCard);
             renderResultHistoryList();
             lucide.createIcons();
+        });
+
+        // Listen for branding changes from other tabs/windows
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'eduCore_settings') {
+                forceRefreshResultBrandingFromStorage();
+            }
         });
     </script>
 </body>

@@ -413,6 +413,14 @@
         updateAnnualSlip();
         Promise.all([loadAnnualClassFeeDefaults(), loadAnnualChargeStudents()]).then(updateAnnualBulkSummary);
         if (window.lucide) window.lucide.createIcons();
+
+        // Listen for branding changes from other tabs/windows
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'eduCore_settings') {
+                hydrateAnnualBrandingFields();
+                updateAnnualSlip();
+            }
+        });
     </script>
 </body>
 
