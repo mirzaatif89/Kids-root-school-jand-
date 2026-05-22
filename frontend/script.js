@@ -3185,12 +3185,11 @@ function renderBranchRows(branches = []) {
                 <td>${branch.profileId || '-'}</td>
                 <td>
                     <div class="branch-actions">
-                    <button class="action-btn btn-edit" onclick='editBranch(${JSON.stringify(branch)})' title="Edit">
-                        <i data-lucide="edit-2" width="14"></i> Edit
-                    </button>
-                    <button class="action-btn btn-delete" onclick="deleteBranch('${branch.id}')" title="Delete">
-                        <i data-lucide="trash-2" width="14"></i>
-                    </button>
+                        <select class="table-action-select" onchange="handleBranchActionSelect(this, '${branch.id}')">
+                            <option value="">Actions</option>
+                            <option value="edit">Edit</option>
+                            <option value="delete">Delete</option>
+                        </select>
                     </div>
                 </td>
             `;
@@ -3201,6 +3200,24 @@ function renderBranchRows(branches = []) {
         branchRecordsCache = [];
         updateBranchAccessSummary([]);
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be displayed.</td></tr>';
+    }
+}
+
+function handleBranchActionSelect(selectElement, branchId) {
+    const action = String(selectElement?.value || '').trim().toLowerCase();
+    if (!action) return;
+    if (selectElement) selectElement.value = '';
+
+    const branch = (Array.isArray(branchRecordsCache) ? branchRecordsCache : [])
+        .find((record) => String(record.id) === String(branchId));
+
+    if (action === 'edit' && branch) {
+        editBranch(branch);
+        return;
+    }
+
+    if (action === 'delete') {
+        deleteBranch(branchId);
     }
 }
 

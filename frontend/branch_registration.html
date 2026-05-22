@@ -116,60 +116,14 @@
         }
 
         .branch-actions {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.55rem;
-            padding: 0.2rem;
-            border-radius: 999px;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-        }
-
-        .branch-actions .action-btn {
-            min-width: 42px;
-            height: 38px;
-            border: none;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
+            display: flex;
             justify-content: center;
-            gap: 0.4rem;
-            padding: 0 0.85rem;
-            font-size: 0.82rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, color 0.18s ease;
-            box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+            width: 100%;
         }
 
-        .branch-actions .action-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .branch-actions .action-btn i {
-            width: 14px;
-            height: 14px;
-        }
-
-        .branch-actions .btn-edit {
-            background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
-            color: #0f766e;
-        }
-
-        .branch-actions .btn-edit:hover {
-            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-            box-shadow: 0 10px 20px rgba(8, 145, 178, 0.18);
-        }
-
-        .branch-actions .btn-delete {
-            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-            color: #be123c;
-            padding: 0 0.8rem;
-        }
-
-        .branch-actions .btn-delete:hover {
-            background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%);
-            box-shadow: 0 10px 20px rgba(225, 29, 72, 0.16);
+        .branch-actions .table-action-select {
+            min-height: 36px;
+            background: #ffffff;
         }
 
         @media (max-width: 1180px) {
@@ -198,16 +152,6 @@
                 width: 100%;
             }
 
-            .branch-actions {
-                gap: 0.4rem;
-                padding: 0.15rem;
-            }
-
-            .branch-actions .action-btn {
-                min-width: 36px;
-                height: 34px;
-                padding: 0 0.65rem;
-            }
         }
     </style>
 </head>
@@ -407,12 +351,11 @@
                         <td>${html(branch.profileId || '-')}</td>
                         <td>
                             <div class="branch-actions">
-                                <button class="action-btn btn-edit" type="button" onclick='editBranch(${JSON.stringify(branch).replace(/'/g, '&#039;')})' title="Edit">
-                                    <i data-lucide="edit-2" width="14"></i> Edit
-                                </button>
-                                <button class="action-btn btn-delete" type="button" onclick="deleteBranch('${html(branch.id)}')" title="Delete">
-                                    <i data-lucide="trash-2" width="14"></i>
-                                </button>
+                                <select class="table-action-select" onchange="handleBranchActionSelect(this, '${html(branch.id)}')">
+                                    <option value="">Actions</option>
+                                    <option value="edit">Edit</option>
+                                    <option value="delete">Delete</option>
+                                </select>
                             </div>
                         </td>
                     </tr>
@@ -498,6 +441,24 @@
 
             window.loadBranchRows = loadBranchRows;
             window.renderBranchTable = renderBranchTable;
+
+            window.handleBranchActionSelect = function handleBranchActionSelect(selectElement, branchId) {
+                const action = String(selectElement?.value || '').trim().toLowerCase();
+                if (!action) return;
+                if (selectElement) selectElement.value = '';
+
+                const branch = (window.branchRecordsCache || [])
+                    .find((record) => String(record.id) === String(branchId));
+
+                if (action === 'edit' && branch) {
+                    editBranch(branch);
+                    return;
+                }
+
+                if (action === 'delete') {
+                    deleteBranch(branchId);
+                }
+            };
 
             function bindBranchPage() {
                 const form = document.getElementById('branchRegistrationForm');
