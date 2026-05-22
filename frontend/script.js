@@ -3307,25 +3307,32 @@ function normalizeFamilyIdentityValue(value = '') {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-function getExplicitFamilyMatchKey(familyName = '', familyNo = '') {
+function normalizeFamilyContactValue(value = '') {
+    const digits = normalizeFamilyPhone(value);
+    return digits || normalizeFamilyIdentityValue(value);
+}
+
+function getExplicitFamilyMatchKey(familyName = '', familyNo = '', familyContact = '') {
     const nameKey = normalizeFamilyIdentityValue(familyName);
     const numberKey = normalizeFamilyIdentityValue(familyNo);
-    return nameKey && numberKey ? `${nameKey}|${numberKey}` : '';
+    const contactKey = normalizeFamilyContactValue(familyContact);
+    return nameKey && numberKey && contactKey ? `${nameKey}|${numberKey}|${contactKey}` : '';
 }
 
 function ensureExplicitFamilyRecord(familyName = '', familyNo = '', familyContact = '') {
     const cleanName = String(familyName || '').trim();
     const cleanNo = String(familyNo || '').trim();
     const cleanContact = String(familyContact || '').trim();
-    const matchKey = getExplicitFamilyMatchKey(cleanName, cleanNo);
+    const matchKey = getExplicitFamilyMatchKey(cleanName, cleanNo, cleanContact);
     if (!matchKey) return '';
 
     const families = getFamilies();
-    const existing = families.find((family) => getExplicitFamilyMatchKey(family.name, family.familyNo) === matchKey);
+    const existing = families.find((family) => getExplicitFamilyMatchKey(family.name, family.familyNo, family.familyContact) === matchKey);
     if (existing) {
         existing.name = cleanName;
         existing.familyNo = cleanNo;
-        if (cleanContact) existing.familyContact = cleanContact;
+        existing.familyContact = cleanContact;
+        existing.updatedAt = new Date().toISOString();
         saveFamilies(families);
         return existing.id;
     }
@@ -3420,10 +3427,10 @@ function syncStudentFamilyLinksByFatherPhone(students, familyId, familyName, fat
 }
 
 function syncStudentFamilyLinksByDetails(students, familyId, familyName, familyNo, familyContact = '') {
-    const matchKey = getExplicitFamilyMatchKey(familyName, familyNo);
+    const matchKey = getExplicitFamilyMatchKey(familyName, familyNo, familyContact);
     if (!familyId || !matchKey) return students;
     return students.map((student) => {
-        if (getExplicitFamilyMatchKey(student.familyName, student.familyNo) !== matchKey) return student;
+        if (getExplicitFamilyMatchKey(student.familyName, student.familyNo, student.familyContact) !== matchKey) return student;
         return {
             ...student,
             familyId,
@@ -4935,6 +4942,17 @@ async function handleStudentFormSubmit(e) {
     const familyName = document.getElementById('studentFamilyName')?.value.trim() || '';
     const familyNo = document.getElementById('studentFamilyNo')?.value.trim() || '';
     const familyContact = document.getElementById('studentFamilyContact')?.value.trim() || '';
+
+    if ((familyName || familyNo || familyContact) && (!familyName || !familyNo || !familyContact)) {
+        alert('Please enter Family Name, Family No., and Family Contact to link this student with a family.');
+        const missingFamilyField = !familyName
+            ? document.getElementById('studentFamilyName')
+            : (!familyNo ? document.getElementById('studentFamilyNo') : document.getElementById('studentFamilyContact'));
+        missingFamilyField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        missingFamilyField?.focus();
+        return;
+    }
+
     const familyId = ensureExplicitFamilyRecord(familyName, familyNo, familyContact);
 
     try {

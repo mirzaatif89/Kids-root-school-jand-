@@ -13,17 +13,23 @@
         .schedule-table { width:100%; border-collapse:collapse; }
         .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.55rem .7rem; text-align:left; vertical-align:middle; font-size:.86rem; line-height:1.25; }
         .schedule-table th { background:#f6fbfa; color:#475569; font-size:.74rem; text-transform:uppercase; }
+        .schedule-table th.status-col,
+        .schedule-table td.status-col { width:78px; white-space:nowrap; text-align:center; padding-left:.4rem; padding-right:.4rem; }
+        .schedule-table th.action-col,
+        .schedule-table td.action-col { width:112px; white-space:nowrap; text-align:right; padding-left:.4rem; padding-right:.45rem; }
         .schedule-table-wrap { overflow-x:auto; }
         .panel-title { margin:0 0 .8rem; color:#0f172a; font-size:1.02rem; }
         .history-note { margin:.25rem 0 0; color:#64748b; font-size:.78rem; font-weight:700; }
         .empty-note { padding:.8rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
-        .schedule-actions { display:inline-flex; gap:.35rem; flex-wrap:wrap; align-items:center; }
-        .schedule-action-btn { min-height:28px; border:0; border-radius:7px; padding:.28rem .5rem; font-size:.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.25rem; }
-        .schedule-action-btn i { width:13px; height:13px; }
+        .schedule-actions { display:inline-flex; gap:.3rem; flex-wrap:nowrap; align-items:center; justify-content:flex-end; }
+        .schedule-action-btn { min-height:24px; border:0; border-radius:6px; padding:.22rem .42rem; font-size:.72rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:.2rem; line-height:1; white-space:nowrap; }
+        .schedule-action-btn i { width:11px; height:11px; flex:0 0 11px; }
         .schedule-action-btn.edit { background:#dcfce7; color:#166534; }
         .schedule-action-btn.delete { background:#fee2e2; color:#b91c1c; }
         .schedule-action-btn.pdf { background:#e0f2fe; color:#0369a1; }
-        .status-pill { display:inline-flex; border-radius:999px; padding:.22rem .55rem; font-size:.74rem; font-weight:800; }
+        .schedule-action-select { width:100px; min-height:30px; border:1px solid #cfe8e5; border-radius:7px; background:#fff; color:#0f766e; font-size:.75rem; font-weight:800; padding:.28rem .45rem; cursor:pointer; outline:none; }
+        .schedule-action-select:focus { border-color:#0f766e; box-shadow:0 0 0 3px rgba(15,118,110,.12); }
+        .status-pill { display:inline-flex; align-items:center; justify-content:center; min-width:58px; border-radius:999px; padding:.16rem .42rem; font-size:.68rem; font-weight:800; line-height:1.1; white-space:nowrap; }
         .status-pill.pending { background:#fef3c7; color:#92400e; }
         .status-pill.approved { background:#dcfce7; color:#166534; }
         .status-pill.rejected { background:#fee2e2; color:#991b1b; }
@@ -94,12 +100,19 @@
             });
         }
         function reviewActionButtons(item) {
-            const id = esc(item.id || '');
+            const idArg = esc(JSON.stringify(String(item.id || '')));
             const status = String(item.status || 'Pending').toLowerCase();
-            return `<div class="schedule-actions">
-                ${status !== 'approved' ? `<button class="schedule-action-btn edit" onclick="updateStatus('${id}', 'Approved')"><i data-lucide="check" width="14"></i> Approve</button>` : ''}
-                ${status !== 'rejected' ? `<button class="schedule-action-btn delete" onclick="updateStatus('${id}', 'Rejected')"><i data-lucide="x" width="14"></i> Reject</button>` : ''}
-            </div>`;
+            return `<select class="schedule-action-select" onchange="handleReviewActionSelect(this, ${idArg})" aria-label="Update leave status">
+                <option value="">Action</option>
+                ${status !== 'approved' ? '<option value="Approved">Approve</option>' : ''}
+                ${status !== 'rejected' ? '<option value="Rejected">Reject</option>' : ''}
+            </select>`;
+        }
+        function handleReviewActionSelect(select, id) {
+            const nextStatus = select.value;
+            select.value = '';
+            if (!nextStatus) return;
+            updateStatus(id, nextStatus);
         }
         function buildLeavePdfHtml(item) {
             const status = esc(item.status || 'Pending');
@@ -184,12 +197,12 @@
             if (!pending.length) {
                 host.innerHTML = '<div class="empty-note">No pending student leave request.</div>';
             } else {
-                host.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Leave Dates</th><th>Applied</th><th>Reason</th><th>Status</th><th>Action</th></tr></thead><tbody>${pending.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.rollNo || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note"><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="14"></i> PDF</button></div></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td>${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
+                host.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Leave Dates</th><th>Applied</th><th>Reason</th><th class="status-col">Status</th><th class="action-col">Actions</th></tr></thead><tbody>${pending.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.rollNo || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note"><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="11"></i> PDF</button></div></td><td class="status-col"><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
             }
             if (!requests.length) {
                 historyHost.innerHTML = '<div class="empty-note">No student leave history yet.</div>';
             } else {
-                historyHost.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Leave Dates</th><th>Applied At</th><th>Reason</th><th>Review</th><th>Update Status</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}<div class="history-note">Class: ${esc(item.classGrade || '-')} | Roll: ${esc(item.rollNo || '-')}</div></td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}</td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span><div class="history-note">Reviewed: ${esc(formatLeaveDateTime(item.reviewedAt))}</div>${item.reviewReason ? `<div class="history-note" style="color:#991b1b;">Reject reason: ${esc(item.reviewReason)}</div>` : ''}</td><td>${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
+                historyHost.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Leave Dates</th><th>Applied At</th><th>Reason</th><th>Review</th><th class="action-col">Update Status</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}<div class="history-note">Class: ${esc(item.classGrade || '-')} | Roll: ${esc(item.rollNo || '-')}</div></td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}</td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span><div class="history-note">Reviewed: ${esc(formatLeaveDateTime(item.reviewedAt))}</div>${item.reviewReason ? `<div class="history-note" style="color:#991b1b;">Reject reason: ${esc(item.reviewReason)}</div>` : ''}</td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
             }
             if (window.lucide) window.lucide.createIcons();
         }
