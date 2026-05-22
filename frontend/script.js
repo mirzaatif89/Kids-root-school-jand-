@@ -1115,6 +1115,7 @@ function saveBrandingSettings(patch = {}) {
     if (next.schoolAddress && !next.address) next.address = next.schoolAddress;
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(next));
     applyGlobalBranding(next);
+    window.dispatchEvent(new CustomEvent('eduCoreBrandingUpdated', { detail: next }));
     return next;
 }
 
@@ -1130,11 +1131,16 @@ function getBrandingLogoMarkup(className = 'print-logo', alt = 'School logo') {
 function applyGlobalBranding(branding = getBrandingSettings()) {
     const logoSrc = branding.logoDataUrl || 'images/logo.png';
     const schoolName = branding.schoolName || branding.schoolTitle || 'School';
+    const schoolTitle = branding.schoolTitle || 'Software';
 
     document.querySelectorAll('.sidebar-logo-img, .portal-logo, img[data-branding-logo]').forEach((img) => {
         if (!img || img.getAttribute('src') === logoSrc) return;
         img.setAttribute('src', logoSrc);
         img.setAttribute('alt', `${schoolName} logo`);
+    });
+
+    document.querySelectorAll('.logo-section').forEach((section) => {
+        section.dataset.brandingTitle = `${schoolName}\n${schoolTitle}`;
     });
 
     document.querySelectorAll('[data-branding-school-name]').forEach((node) => {
@@ -2910,6 +2916,7 @@ function ensureAdminSidebarCompleteness() {
     const completeLinks = [
         { page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         { page: 'banners.html', label: 'Banners', icon: 'image' },
+        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { page: 'classes.html', label: 'Classes', icon: 'school' },
         { page: 'students.html', label: 'Students', icon: 'users' },
         { page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
@@ -2918,7 +2925,6 @@ function ensureAdminSidebarCompleteness() {
         { page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { page: 'staff.html', label: 'Staff', icon: 'briefcase' },
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
-        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
@@ -3008,6 +3014,7 @@ function renderAdminSidebarSequence() {
     const navItems = [
         { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
         { type: 'link', page: 'banners.html', label: 'Banners', icon: 'image' },
+        { type: 'link', page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
         { type: 'link', page: 'students.html', label: 'Students', icon: 'users' },
         { type: 'link', page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
@@ -3031,7 +3038,6 @@ function renderAdminSidebarSequence() {
             icon: 'credit-card',
             children: [
                 { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
-                { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                 { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                 { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
                 { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }

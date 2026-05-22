@@ -41,6 +41,7 @@
     const navItems = [
         { type: 'link', page: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard' },
         { type: 'link', page: 'banners', label: 'Banners', icon: 'image' },
+        { type: 'link', page: 'fee_logos', label: 'Logos', icon: 'image' },
         { type: 'link', page: 'classes', label: 'Classes', icon: 'school' },
         { type: 'link', page: 'students', label: 'Students', icon: 'users' },
         { type: 'link', page: 'student_scheduling', label: 'Students Scheduling', icon: 'calendar-clock' },
@@ -64,7 +65,6 @@
             icon: 'credit-card',
             children: [
                 { type: 'link', page: 'set_fee', label: 'Set Fees', icon: 'badge-dollar-sign' },
-                { type: 'link', page: 'fee_logos', label: 'Logos', icon: 'image' },
                 { type: 'link', page: 'fees', label: 'Fees', icon: 'credit-card' },
                 { type: 'link', page: 'fee_challan', label: 'Fee Challan', icon: 'file-text' },
                 { type: 'link', page: 'annual_charges', label: 'Annual Charges', icon: 'receipt' }

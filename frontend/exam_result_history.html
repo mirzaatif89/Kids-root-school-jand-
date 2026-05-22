@@ -194,6 +194,7 @@
                                         <div>
                                             <h2 id="previewDateSheetSchoolName">Apexiums School</h2>
                                             <p id="previewDateSheetCampus">Main Campus</p>
+                                            <p id="previewDateSheetContact"></p>
                                         </div>
                                         <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
                                     </div>
@@ -1642,6 +1643,9 @@
             // Force update all branding fields
             const schoolNameField = document.getElementById('schoolName');
             if (schoolNameField) schoolNameField.value = schoolName;
+
+            const dateSheetSchoolNameField = document.getElementById('dateSheetSchoolName');
+            if (dateSheetSchoolNameField) dateSheetSchoolNameField.value = schoolName;
             
             const contactField = document.getElementById('schoolContact');
             if (contactField) contactField.value = contactLine;
@@ -1655,12 +1659,17 @@
             // Update preview immediately with new branding
             document.getElementById('previewSchoolName').textContent = schoolName;
             document.getElementById('previewSchoolContact').textContent = contactLine;
+            const dateSheetPreviewName = document.getElementById('previewDateSheetSchoolName');
+            if (dateSheetPreviewName) dateSheetPreviewName.textContent = schoolName;
+            const dateSheetPreviewContact = document.getElementById('previewDateSheetContact');
+            if (dateSheetPreviewContact) dateSheetPreviewContact.textContent = contactLine;
             document.querySelectorAll('.date-sheet-logo').forEach((img) => {
                 img.src = logoSrc;
             });
             document.getElementById('previewLeftLogo').src = logoSrc;
             document.getElementById('previewRightLogo').src = logoSrc;
             
+            refreshDateSheetPreview();
             refreshResultCardPreview();
         }
 
@@ -1741,7 +1750,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
-            applyExamBrandingDefaults(false);
+            applyExamBrandingDefaults(true);
         }
 
         function readScheduleRows() {
@@ -1795,6 +1804,7 @@
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '-';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '-';
             document.getElementById('previewDateSheetCampus').textContent = document.getElementById('dateSheetCampus').value || '';
+            document.getElementById('previewDateSheetContact').textContent = getExamContactLine();
             document.getElementById('previewDateSheetInstructions').textContent = document.getElementById('dateSheetInstructions').value || 'No additional instructions.';
 
             const defaultStart = document.getElementById('dateSheetDefaultStart').value;
@@ -2076,7 +2086,7 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
-            applyExamBrandingDefaults(false);
+            applyExamBrandingDefaults(true);
         }
 
         const RESULT_BRANCH_CONTACTS = {
@@ -2238,7 +2248,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             clearLegacyResultArchive();
-            applyExamBrandingDefaults(false);
+            applyExamBrandingDefaults(true);
             toggleExamSection('resultHistoryCard');
             const dateSheetState = loadDateSheetState();
             const savedState = loadResultCardState();
@@ -2316,6 +2326,7 @@
                 forceRefreshResultBrandingFromStorage();
             }
         });
+        window.addEventListener('eduCoreBrandingUpdated', forceRefreshResultBrandingFromStorage);
     </script>
 </body>
 

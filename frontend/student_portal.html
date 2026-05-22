@@ -2314,16 +2314,36 @@
                     schoolName: 'My own Science school',
                     schoolTitle: 'Apexiums School System',
                     phone: '',
+                    address: '',
+                    schoolAddress: '',
                     logoDataUrl: '',
                     ...(JSON.parse(localStorage.getItem(STORAGE_KEY_SETTINGS) || '{}') || {})
                 };
             } catch (_error) {
-                return { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', logoDataUrl: '' };
+                return { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
             }
+        }
+
+        function getPortalBrandingContactLine(fallback = '') {
+            const branding = getPortalBrandingSettings();
+            const address = branding.address || branding.schoolAddress || '';
+            const parts = [];
+            if (address) parts.push(`Address: ${address}`);
+            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
+            return parts.join(' | ') || fallback;
         }
 
         function getPortalBrandingLogoSrc() {
             return getPortalBrandingSettings().logoDataUrl || 'images/logo.png';
+        }
+
+        function applyStudentPortalBranding() {
+            const branding = getPortalBrandingSettings();
+            const logoSrc = getPortalBrandingLogoSrc();
+            document.querySelectorAll('.portal-logo').forEach((img) => {
+                img.src = logoSrc;
+                img.alt = `${branding.schoolName || 'School'} logo`;
+            });
         }
 
         function sanitizePortalFileName(fileName) {
@@ -3678,9 +3698,9 @@
                             <div class="head">
                                 <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                                 <div>
-                                    <h1>${escapeHtml(cachedResult.schoolName || branding.schoolName || 'School Result Card')}</h1>
+                                    <h1>${escapeHtml(branding.schoolName || cachedResult.schoolName || 'School Result Card')}</h1>
                                     <p>${escapeHtml(branding.schoolTitle || branchDetails.campusLabel)}</p>
-                                    <p>${escapeHtml(branding.phone || branchDetails.contactLine)}</p>
+                                    <p>${escapeHtml(getPortalBrandingContactLine(branchDetails.contactLine))}</p>
                                 </div>
                                 <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                             </div>
@@ -4025,8 +4045,9 @@
                         <div class="print-header">
                             <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                             <div>
-                                <h2>${escapeHtml(state.dateSheetSchoolName || branding.schoolName || 'School Date Sheet')}</h2>
+                                <h2>${escapeHtml(branding.schoolName || state.dateSheetSchoolName || 'School Date Sheet')}</h2>
                                 <p>${escapeHtml(state.dateSheetExamTitle || branding.schoolTitle || 'Exam Schedule')}</p>
+                                <p>${escapeHtml(getPortalBrandingContactLine(''))}</p>
                             <\/div>
                             <img class="print-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                         <\/div>
@@ -4258,6 +4279,7 @@
         }
 
         window.onload = () => {
+            applyStudentPortalBranding();
             const todayLabel = document.getElementById('portalTodayLabel');
             if (todayLabel) {
                 todayLabel.innerText = new Date().toLocaleDateString(undefined, {

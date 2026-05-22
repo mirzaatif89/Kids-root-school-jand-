@@ -605,6 +605,7 @@
             const navItems = [
                 { type: 'link', page: 'dashboard.html', label: 'Dashboard', icon: 'layout-dashboard' },
                 { type: 'link', page: 'banners.html', label: 'Banners', icon: 'image' },
+                { type: 'link', page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                 { type: 'link', page: 'classes.html', label: 'Classes', icon: 'school' },
                 { type: 'link', page: 'students.html', label: 'Students', icon: 'users' },
                 { type: 'link', page: 'student_scheduling.html', label: 'Students Scheduling', icon: 'calendar-clock' },
@@ -628,7 +629,6 @@
                     icon: 'credit-card',
                     children: [
                         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
-                        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
                         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
