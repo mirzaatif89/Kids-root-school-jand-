@@ -6,28 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Teacher Leave Requests - My own Science school</title>
     <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <link rel="stylesheet" href="student_schedule_theme.css">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .schedule-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.35rem; margin-bottom:1.5rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
+        .schedule-panel { background:#fff; border:1px solid #cfe8e5; border-radius:16px; padding:1.1rem; margin-bottom:1.25rem; box-shadow:0 12px 30px rgba(15,23,42,.07); }
         .schedule-table { width:100%; border-collapse:collapse; min-width:760px; }
-        .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.85rem; text-align:left; vertical-align:top; }
-        .schedule-table th { background:#f6fbfa; color:#475569; font-size:.78rem; text-transform:uppercase; }
+        .schedule-table th,.schedule-table td { border-bottom:1px solid #dbecea; padding:.55rem .7rem; text-align:left; vertical-align:middle; font-size:.86rem; line-height:1.25; }
+        .schedule-table th { background:#f6fbfa; color:#475569; font-size:.74rem; text-transform:uppercase; }
         .schedule-table-wrap { overflow-x:auto; }
-        .panel-title { margin:0 0 1rem; color:#0f172a; font-size:1.08rem; }
-        .history-note { margin:.35rem 0 0; color:#64748b; font-size:.84rem; font-weight:700; }
-        .empty-note { padding:1rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
-        .schedule-actions { display:inline-flex; gap:.45rem; flex-wrap:wrap; }
-        .schedule-action-btn { min-height:34px; border:0; border-radius:8px; padding:.45rem .7rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.35rem; }
+        .panel-title { margin:0 0 .8rem; color:#0f172a; font-size:1.02rem; }
+        .history-note { margin:.25rem 0 0; color:#64748b; font-size:.78rem; font-weight:700; }
+        .empty-note { padding:.8rem; border:1px dashed #cbd5e1; border-radius:12px; color:var(--text-secondary); background:#f8fafc; }
+        .schedule-actions { display:inline-flex; gap:.35rem; flex-wrap:wrap; align-items:center; }
+        .schedule-action-btn { min-height:28px; border:0; border-radius:7px; padding:.28rem .5rem; font-size:.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.25rem; }
+        .schedule-action-btn i { width:13px; height:13px; }
         .schedule-action-btn.edit { background:#dcfce7; color:#166534; }
         .schedule-action-btn.delete { background:#fee2e2; color:#b91c1c; }
         .schedule-action-btn.pdf { background:#e0f2fe; color:#0369a1; }
-        .status-pill { display:inline-flex; border-radius:999px; padding:.3rem .65rem; font-size:.78rem; font-weight:800; }
+        .status-pill { display:inline-flex; border-radius:999px; padding:.22rem .55rem; font-size:.74rem; font-weight:800; }
         .status-pill.pending { background:#fef3c7; color:#92400e; }
         .status-pill.approved { background:#dcfce7; color:#166534; }
         .status-pill.rejected { background:#fee2e2; color:#991b1b; }
         .back-link { display:inline-flex; align-items:center; gap:.45rem; margin-bottom:1rem; color:#0f766e; font-weight:800; text-decoration:none; }
     </style>
-    <link rel="stylesheet" href="student_schedule_theme.css">
 </head>
 
 <body>
