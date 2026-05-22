@@ -316,11 +316,48 @@
             font-size: 12px;
         }
 
+        .challan-school-contact {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: #0f4f4a;
+        }
+
         .challan-urdu-note {
             text-align: center;
             font-size: 11px;
             color: #334155;
             min-height: 28px;
+        }
+
+        .challan-logo-field {
+            display: grid;
+            grid-template-columns: 58px 1fr;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .challan-logo-preview {
+            width: 58px;
+            height: 58px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            color: var(--text-secondary);
+            background: #f8fafc;
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .challan-logo-preview img {
+            width: 58px;
+            height: 58px;
+            object-fit: contain;
+            display: block;
         }
 
         .challan-terminated-banner {
@@ -1061,6 +1098,11 @@
                 line-height: 1.08;
             }
 
+            .challan-school-contact {
+                font-size: 6.4px;
+                line-height: 1.05;
+            }
+
             .challan-urdu-note {
                 font-size: 6.5px;
                 line-height: 1.08;
@@ -1314,14 +1356,6 @@
                                     <label for="particulars">Particulars</label>
                                     <input type="text" id="particulars" placeholder="Tuition Fee">
                                 </div>
-                                <div class="field-block">
-                                    <label for="schoolName">School Name</label>
-                                    <input type="text" id="schoolName" placeholder="My own Science school">
-                                </div>
-                                <div class="field-block full">
-                                    <label for="schoolAddress">Address / Campus</label>
-                                    <input type="text" id="schoolAddress" placeholder="Main branch - Address: Dekhni Road Jand. Phone: 03045259900">
-                                </div>
                                 <div class="field-block full">
                                     <label for="urduNote">Important Note</label>
                                     <input type="text" id="urduNote" placeholder="Note: Fees will not be accepted after the due date.">
@@ -1458,7 +1492,7 @@
                 addressLine: 'Address: Nai Abadi. Phone: 03085259900'
             }
         };
-        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'fineFrequency', 'fineRate', 'fineUnits', 'fineAmount', 'discountValue', 'particulars', 'schoolName', 'schoolAddress', 'urduNote', 'challanNotes'];
+        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'fineFrequency', 'fineRate', 'fineUnits', 'fineAmount', 'discountValue', 'particulars', 'urduNote', 'challanNotes'];
         const printCopies = ['Parents Copy', 'School Copy', 'Information Copy'];
         const CHALLAN_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
         const CHALLAN_PAYMENT_DETAILS_KEY = 'eduCore_payment_details';
@@ -1488,6 +1522,57 @@
             'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10',
             'Graduate'
         ];
+
+        function getStoredChallanBranding() {
+            return typeof getBrandingSettings === 'function'
+                ? getBrandingSettings()
+                : { schoolName: 'My own Science school', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+        }
+
+        function saveChallanBrandingPatch(patch = {}) {
+            const current = getStoredChallanBranding();
+            const next = { ...current, ...patch };
+            localStorage.setItem('eduCore_settings', JSON.stringify(next));
+            return next;
+        }
+
+        function updateChallanLogoPreview(dataUrl = '') {
+            const preview = document.getElementById('challanLogoPreview');
+            if (!preview) return;
+            const src = dataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
+            preview.innerHTML = `<img src="${escapeHtml(src)}" alt="School logo preview">`;
+        }
+
+        function handleChallanLogoUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const dataUrl = String(reader.result || '');
+                saveChallanBrandingPatch({ logoDataUrl: dataUrl });
+                updateChallanLogoPreview(dataUrl);
+                triggerChallanRefresh();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function extractChallanPhone(value = '') {
+            const match = String(value || '').match(/Phone:\s*([0-9+\-\s]+)/i);
+            return match ? match[1].trim() : '';
+        }
+
+        function stripChallanPhone(value = '') {
+            return String(value || '').replace(/\s*\.?\s*Phone:\s*[0-9+\-\s]+/i, '').trim();
+        }
+
+        function getChallanBrandingFromForm(fallbackAddress = '') {
+            const branding = getStoredChallanBranding();
+            const schoolName = branding.schoolName || 'My own Science school';
+            const schoolPhone = branding.phone || extractChallanPhone(fallbackAddress);
+            const schoolAddress = branding.address || branding.schoolAddress || stripChallanPhone(fallbackAddress) || 'School Address';
+            const schoolLogoSrc = branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
+            return { schoolName, schoolPhone, schoolAddress, schoolLogoSrc };
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             initializeChallanPage();
@@ -1528,6 +1613,10 @@
             const popupSearch = document.getElementById('classStudentsSearch');
             if (popupSearch) {
                 popupSearch.addEventListener('input', renderClassStudentsPopupList);
+            }
+            const logoInput = document.getElementById('schoolLogoInput');
+            if (logoInput) {
+                logoInput.addEventListener('change', handleChallanLogoUpload);
             }
             const statusFilter = document.getElementById('challanFeeStatusFilter');
             if (statusFilter) {
@@ -2216,7 +2305,7 @@
 
         function applyBranchDetailsToChallan(campusName) {
             const branchDetails = getChallanBranchContactDetails(campusName);
-            document.getElementById('schoolAddress').value = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
+            return `${branchDetails.campusLabel} - ${stripChallanPhone(branchDetails.addressLine)}`;
         }
 
         function setChallanDefaults() {
@@ -2228,8 +2317,6 @@
             document.getElementById('challanMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             document.getElementById('feeMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             document.getElementById('particulars').value = 'Tuition Fee';
-            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-            document.getElementById('schoolName').value = branding.schoolName || 'My own Science school';
             applyBranchDetailsToChallan('Main branch');
             document.getElementById('urduNote').value = 'Note: Fees will not be accepted after the due date.';
             document.getElementById('challanNotes').value = 'No additional instructions.';
@@ -2811,7 +2898,6 @@
                 pendingMonths.push(CHALLAN_MONTHS[currentMonthIndex]);
             }
 
-            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
             return {
                 monthlyFee,
                 admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
@@ -3278,7 +3364,7 @@
             if (payNowAmount > totalDue) payNowAmount = totalDue;
             const remainingDue = Math.max(totalDue - payNowAmount, 0);
 
-            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
             return {
                 studentId: selectedStudent ? selectedStudent.id : '',
                 challanNumber: document.getElementById('challanNumber').value.trim() || '-',
@@ -3303,8 +3389,10 @@
                 discountLabel: discountInput || '0',
                 discountAmount,
                 particulars: document.getElementById('particulars').value.trim() || 'Tuition Fee',
-                schoolName: document.getElementById('schoolName').value.trim() || branding.schoolName || 'My own Science school',
-                schoolAddress: document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`,
+                schoolName: branding.schoolName,
+                schoolPhone: branding.schoolPhone,
+                schoolAddress: branding.schoolAddress,
+                schoolLogoSrc: branding.schoolLogoSrc,
                 urduNote: document.getElementById('urduNote').value.trim() || '',
                 notes: document.getElementById('challanNotes').value.trim() || 'No additional instructions.',
                 grossTotal,
@@ -3344,7 +3432,7 @@
             const qrImageUrl = qrState?.qrImageUrl || challanQrState?.qrImageUrl || '';
             const qrFallbackLabel = qrState?.fallbackLabel || (qrStatus === 'Paid' ? 'Paid' : 'QR unavailable');
             const terminated = !!data?.isTerminated;
-            const logoSrc = typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png';
+            const logoSrc = data.schoolLogoSrc || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
             return `
                 <section class="preview-sheet">
                     <div class="challan-paper">
@@ -3369,6 +3457,10 @@
                             <tr>
                                 <td colspan="6" class="challan-school-subtitle">${escapeHtml(data.schoolAddress)}</td>
                             </tr>
+                            ${data.schoolPhone ? `
+                            <tr>
+                                <td colspan="6" class="challan-school-contact">Phone: ${escapeHtml(data.schoolPhone)}</td>
+                            </tr>` : ''}
                             <tr>
                                 <td colspan="6" class="challan-urdu-note">${escapeHtml(data.urduNote || data.notes)}</td>
                             </tr>
@@ -3567,9 +3659,7 @@
                 const numericDiscount = Number(discountInput);
                 const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
                 const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-                const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-                const schoolName = document.getElementById('schoolName').value.trim() || branding.schoolName || 'My own Science school';
-                const schoolAddress = document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`;
+                const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
                 const urduNote = document.getElementById('urduNote').value.trim() || '';
                 const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
 
@@ -3614,8 +3704,10 @@
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
-                        schoolName,
-                        schoolAddress,
+                        schoolName: branding.schoolName,
+                        schoolPhone: branding.schoolPhone,
+                        schoolAddress: branding.schoolAddress,
+                        schoolLogoSrc: branding.schoolLogoSrc,
                         urduNote,
                         notes,
                         grossTotal,
@@ -3788,9 +3880,7 @@
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
 
             const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-            const schoolName = document.getElementById('schoolName').value.trim() || branding.schoolName || 'My own Science school';
-            const schoolAddress = document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`;
+            const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
             const useFormAddressForBulk = !!selectedCampus;
             const urduNote = document.getElementById('urduNote').value.trim() || '';
             const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
@@ -3826,7 +3916,8 @@
                 const generatedStudentId = student?.studentCode || student?.id || student?.rollNo || '';
                 const branchDetails = getChallanBranchContactDetails(student?.campusName);
                 const defaultCampusAddress = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
-                const campusAwareAddress = useFormAddressForBulk ? schoolAddress : defaultCampusAddress;
+                const campusAwareAddress = useFormAddressForBulk ? branding.schoolAddress : stripChallanPhone(defaultCampusAddress);
+                const campusAwarePhone = useFormAddressForBulk ? branding.schoolPhone : (branding.schoolPhone || extractChallanPhone(defaultCampusAddress));
 
                 const feeMonthLabel = monthsUnique.join(', ');
                 const challanNumber = generateBulkChallanNumber(student, monthsUnique[0] || 'Dues');
@@ -3863,8 +3954,10 @@
                     discountLabel: discountInput || '0',
                     discountAmount,
                     particulars,
-                    schoolName,
+                    schoolName: branding.schoolName,
+                    schoolPhone: campusAwarePhone,
                     schoolAddress: campusAwareAddress,
+                    schoolLogoSrc: branding.schoolLogoSrc,
                     urduNote,
                     notes,
                     grossTotal,
@@ -4012,9 +4105,7 @@
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
             const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-            const schoolName = document.getElementById('schoolName').value.trim() || branding.schoolName || 'My own Science school';
-            const schoolAddress = document.getElementById('schoolAddress').value.trim() || 'School Address';
+            const branding = getChallanBrandingFromForm('School Address');
             const urduNote = document.getElementById('urduNote').value.trim() || '';
             const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
             
@@ -4110,8 +4201,10 @@
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
-                        schoolName,
-                        schoolAddress: defaultCampusAddress,
+                        schoolName: branding.schoolName,
+                        schoolPhone: branding.schoolPhone || extractChallanPhone(defaultCampusAddress),
+                        schoolAddress: stripChallanPhone(defaultCampusAddress),
+                        schoolLogoSrc: branding.schoolLogoSrc,
                         urduNote,
                         notes,
                         grossTotal,

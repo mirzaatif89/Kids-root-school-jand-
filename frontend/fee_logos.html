@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fee Logos - Apexiums School System</title>
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .fee-logo-layout { display:grid; grid-template-columns:minmax(300px,420px) minmax(0,1fr); gap:1rem; align-items:start; }
+        .fee-logo-panel { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
+        .fee-logo-form { display:grid; gap:1rem; }
+        .fee-logo-field label { display:block; margin-bottom:.45rem; color:var(--text-secondary); font-size:.85rem; font-weight:800; }
+        .fee-logo-field input, .fee-logo-field textarea { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .8rem; font:inherit; background:#fff; }
+        .fee-logo-field textarea { min-height:84px; resize:vertical; }
+        .fee-logo-upload { display:grid; grid-template-columns:96px 1fr; gap:1rem; align-items:center; }
+        .fee-logo-preview { width:96px; height:96px; border:1px solid var(--border-color); border-radius:8px; display:flex; align-items:center; justify-content:center; overflow:hidden; color:var(--text-secondary); background:#f8fafc; font-size:.76rem; font-weight:800; text-align:center; }
+        .fee-logo-preview img { width:96px; height:96px; object-fit:contain; display:block; }
+        .fee-logo-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+        .fee-logo-slip { border:1px solid #0f766e; background:#fff; color:#111827; }
+        .fee-logo-slip-head { display:grid; grid-template-columns:70px 1fr 120px; gap:.75rem; align-items:center; padding:1rem; border-bottom:2px solid #0f766e; }
+        .fee-logo-slip-logo { width:58px; height:58px; border-radius:8px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; overflow:hidden; color:#0f766e; font-size:1.4rem; }
+        .fee-logo-slip-logo img { width:58px; height:58px; object-fit:contain; display:block; }
+        .fee-logo-slip-head h2 { margin:0; text-align:center; color:#0f4f4a; font-size:1.25rem; }
+        .fee-logo-slip-head p { margin:.2rem 0 0; text-align:center; color:#475569; }
+        .fee-logo-slip-phone { margin:.2rem 0 0; text-align:center; color:#0f4f4a; font-size:.82rem; font-weight:800; }
+        .fee-logo-note { margin-top:.8rem; color:var(--text-secondary); font-size:.85rem; line-height:1.45; }
+        @media (max-width:900px){ .fee-logo-layout{ grid-template-columns:1fr; } }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section"><img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo"></div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="set_fee.html" class="nav-item"><i data-lucide="badge-dollar-sign"></i><span>Set Fees</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="annual_charges.html" class="nav-item"><i data-lucide="receipt"></i><span>Annual Charges</span></a>
+                <a href="fee_logos.html" class="nav-item active"><i data-lucide="image"></i><span>Logos</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Fee Logos</h1>
+                    <p style="color:var(--text-secondary); margin-top:.3rem;">Set challan and annual charges branding once.</p>
+                </div>
+            </header>
+
+            <section class="fee-logo-layout">
+                <div class="fee-logo-panel">
+                    <form class="fee-logo-form" id="feeLogoForm">
+                        <div class="fee-logo-field">
+                            <label for="feeLogoSchoolName">School Name</label>
+                            <input id="feeLogoSchoolName" placeholder="My own Science school">
+                        </div>
+                        <div class="fee-logo-field">
+                            <label for="feeLogoPhone">Contact Number</label>
+                            <input id="feeLogoPhone" placeholder="0300-0000000">
+                        </div>
+                        <div class="fee-logo-field">
+                            <label for="feeLogoAddress">Address</label>
+                            <textarea id="feeLogoAddress" placeholder="School address"></textarea>
+                        </div>
+                        <div class="fee-logo-field">
+                            <label for="feeLogoFile">Logo</label>
+                            <div class="fee-logo-upload">
+                                <div class="fee-logo-preview" id="feeLogoPreview">96 x 96<br>Logo</div>
+                                <input type="file" id="feeLogoFile" accept="image/*">
+                            </div>
+                            <p class="fee-logo-note">The logo will fit inside a fixed 58 x 58 print box, so it will not resize unevenly.</p>
+                        </div>
+                        <div class="fee-logo-actions">
+                            <button class="btn btn-primary" type="submit"><i data-lucide="save"></i> Save Branding</button>
+                            <button class="btn btn-outline" type="button" id="clearFeeLogoBtn"><i data-lucide="trash-2"></i> Remove Logo</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="fee-logo-panel">
+                    <h2 style="margin:0 0 1rem;">Print Preview</h2>
+                    <div class="fee-logo-slip">
+                        <div class="fee-logo-slip-head">
+                            <div class="fee-logo-slip-logo" id="feeLogoSlipLogo"><i data-lucide="school"></i></div>
+                            <div>
+                                <h2 id="feeLogoPreviewName">My own Science school</h2>
+                                <p id="feeLogoPreviewAddress">School address</p>
+                                <div class="fee-logo-slip-phone" id="feeLogoPreviewPhone"></div>
+                            </div>
+                            <div style="text-align:right;font-weight:800;">Office Copy</div>
+                        </div>
+                        <div style="padding:1rem; color:var(--text-secondary);">This branding will be used automatically on Fee Challan and Annual Charges slips.</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script>
+        const FEE_LOGO_SETTINGS_KEY = 'eduCore_settings';
+
+        function getFeeLogoSettings() {
+            const fallback = { schoolName: 'My own Science school', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+            try {
+                const globalBranding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+                const saved = JSON.parse(localStorage.getItem(FEE_LOGO_SETTINGS_KEY) || '{}') || {};
+                return { ...fallback, ...globalBranding, ...saved };
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function saveFeeLogoSettings(patch = {}) {
+            const next = { ...getFeeLogoSettings(), ...patch };
+            localStorage.setItem(FEE_LOGO_SETTINGS_KEY, JSON.stringify(next));
+            return next;
+        }
+
+        function escapeFeeLogo(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function setLogoNode(node, src, sizeLabel) {
+            if (!node) return;
+            node.innerHTML = src ? `<img src="${escapeFeeLogo(src)}" alt="School logo">` : (sizeLabel ? `${sizeLabel}<br>Logo` : '<i data-lucide="school"></i>');
+        }
+
+        function renderFeeLogoPage() {
+            const data = getFeeLogoSettings();
+            document.getElementById('feeLogoSchoolName').value = data.schoolName || '';
+            document.getElementById('feeLogoPhone').value = data.phone || '';
+            document.getElementById('feeLogoAddress').value = data.address || data.schoolAddress || '';
+            updateFeeLogoPreview(data);
+        }
+
+        function updateFeeLogoPreview(data = getFeeLogoSettings()) {
+            const logoSrc = data.logoDataUrl || '';
+            setLogoNode(document.getElementById('feeLogoPreview'), logoSrc, '96 x 96');
+            setLogoNode(document.getElementById('feeLogoSlipLogo'), logoSrc, '');
+            document.getElementById('feeLogoPreviewName').textContent = data.schoolName || 'My own Science school';
+            document.getElementById('feeLogoPreviewAddress').textContent = data.address || data.schoolAddress || 'School address';
+            document.getElementById('feeLogoPreviewPhone').textContent = data.phone ? `Phone: ${data.phone}` : '';
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function collectFeeLogoForm() {
+            const address = document.getElementById('feeLogoAddress').value.trim();
+            return {
+                schoolName: document.getElementById('feeLogoSchoolName').value.trim() || 'My own Science school',
+                phone: document.getElementById('feeLogoPhone').value.trim(),
+                address,
+                schoolAddress: address
+            };
+        }
+
+        document.getElementById('feeLogoForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const data = saveFeeLogoSettings(collectFeeLogoForm());
+            updateFeeLogoPreview(data);
+            if (window.showAppAlert) await showAppAlert('Branding saved. Fee Challan and Annual Charges will update automatically.', 'Saved');
+            else alert('Branding saved.');
+        });
+
+        ['feeLogoSchoolName', 'feeLogoPhone', 'feeLogoAddress'].forEach((id) => {
+            document.getElementById(id).addEventListener('input', () => {
+                updateFeeLogoPreview({ ...getFeeLogoSettings(), ...collectFeeLogoForm() });
+            });
+        });
+
+        document.getElementById('feeLogoFile').addEventListener('change', (event) => {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                const data = saveFeeLogoSettings({ ...collectFeeLogoForm(), logoDataUrl: String(reader.result || '') });
+                updateFeeLogoPreview(data);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('clearFeeLogoBtn').addEventListener('click', () => {
+            const data = saveFeeLogoSettings({ ...collectFeeLogoForm(), logoDataUrl: '' });
+            document.getElementById('feeLogoFile').value = '';
+            updateFeeLogoPreview(data);
+        });
+
+        renderFeeLogoPage();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

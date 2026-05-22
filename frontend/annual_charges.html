@@ -15,9 +15,11 @@
         .charges-form input, .charges-form select { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .8rem; font:inherit; }
         .slip-preview { width:min(760px,100%); margin:0 auto; border:1px solid #0f766e; background:#fff; color:#111827; }
         .slip-head { display:grid; grid-template-columns:70px 1fr 120px; gap:.75rem; align-items:center; padding:1rem; border-bottom:2px solid #0f766e; }
-        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; }
+        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; overflow:hidden; flex:0 0 58px; }
+        .slip-logo img { width:58px; height:58px; object-fit:contain; display:block; }
         .slip-head h2 { margin:0; color:#0f4f4a; font-size:1.35rem; text-align:center; }
         .slip-head p { margin:.2rem 0 0; text-align:center; color:#475569; }
+        .slip-contact { margin:.2rem 0 0; text-align:center; color:#0f4f4a; font-size:.82rem; font-weight:800; }
         .slip-copy { border:1px solid #94a3b8; margin:1rem; }
         .slip-copy-title { background:#0f766e; color:#fff; padding:.45rem .75rem; font-weight:800; display:flex; justify-content:space-between; }
         .slip-grid { display:grid; grid-template-columns:repeat(2,1fr); border-bottom:1px solid #94a3b8; }
@@ -30,6 +32,10 @@
         .print-actions { display:flex; gap:.75rem; flex-wrap:wrap; margin-top:1rem; }
         .bulk-print-box { margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border-color); display:grid; gap:.85rem; }
         .bulk-summary { color:var(--text-secondary); font-size:.88rem; line-height:1.45; }
+        .annual-branding-box { margin-top:1rem; padding-top:1rem; border-top:1px dashed var(--border-color); display:grid; gap:.85rem; }
+        .annual-logo-field { display:grid; grid-template-columns:58px 1fr; gap:.75rem; align-items:center; }
+        .annual-logo-preview { width:58px; height:58px; border:1px solid var(--border-color); border-radius:8px; background:#f8fafc; display:flex; align-items:center; justify-content:center; overflow:hidden; color:var(--text-secondary); font-size:.72rem; font-weight:800; text-align:center; }
+        .annual-logo-preview img { width:58px; height:58px; object-fit:contain; display:block; }
         @media (max-width:980px){ .charges-layout{ grid-template-columns:1fr; } }
         @media print { .sidebar,.header,.charges-panel:first-child,.print-actions{ display:none!important; } .main-content{ margin:0!important; padding:0!important; } .charges-layout{ display:block; } .charges-panel{ border:0; box-shadow:none; } }
     </style>
@@ -82,8 +88,12 @@
                 <div class="charges-panel">
                     <div class="slip-preview">
                         <div class="slip-head">
-                            <div class="slip-logo"><i data-lucide="school"></i></div>
-                            <div><h2>Apexiums School System</h2><p>Annual Charges Slip</p></div>
+                            <div class="slip-logo" id="annualPreviewLogo"><i data-lucide="school"></i></div>
+                            <div>
+                                <h2 id="annualPreviewSchoolName">Apexiums School System</h2>
+                                <p id="annualPreviewSchoolAddress">Annual Charges Slip</p>
+                                <div class="slip-contact" id="annualPreviewSchoolPhone"></div>
+                            </div>
                             <div style="text-align:right;font-weight:800;">Office Copy</div>
                         </div>
                         <div class="slip-copy">
@@ -110,6 +120,7 @@
     <script>
         let annualChargeStudents = [];
         let annualClassFeeDefaults = {};
+        const ANNUAL_SETTINGS_KEY = 'eduCore_settings';
 
         function escAnnual(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -124,6 +135,60 @@
         function annualApiBaseUrl() {
             const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.startsWith('192.168.');
             return `${isLocal || window.location.protocol === 'file:' ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin) : window.location.origin}/api`;
+        }
+
+        function getAnnualBrandingSettings() {
+            const fallback = {
+                schoolName: 'My own Science school',
+                phone: '',
+                address: '',
+                logoDataUrl: ''
+            };
+            try {
+                const globalBranding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+                const saved = JSON.parse(localStorage.getItem(ANNUAL_SETTINGS_KEY) || '{}') || {};
+                return { ...fallback, ...globalBranding, ...saved };
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function saveAnnualBrandingPatch(patch = {}) {
+            const next = { ...getAnnualBrandingSettings(), ...patch };
+            localStorage.setItem(ANNUAL_SETTINGS_KEY, JSON.stringify(next));
+            return next;
+        }
+
+        function getAnnualLogoSrc() {
+            const branding = getAnnualBrandingSettings();
+            return branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
+        }
+
+        function setAnnualLogoNode(node, logoSrc) {
+            if (!node) return;
+            node.innerHTML = logoSrc
+                ? `<img src="${escAnnual(logoSrc)}" alt="School logo">`
+                : '<i data-lucide="school"></i>';
+        }
+
+        function updateAnnualLogoPreview(logoSrc = getAnnualLogoSrc()) {
+            setAnnualLogoNode(document.getElementById('annualPreviewLogo'), logoSrc);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function hydrateAnnualBrandingFields() {
+            const branding = getAnnualBrandingSettings();
+            updateAnnualLogoPreview(branding.logoDataUrl || getAnnualLogoSrc());
+        }
+
+        function getAnnualBrandingFromForm() {
+            const branding = getAnnualBrandingSettings();
+            return {
+                schoolName: branding.schoolName || 'My own Science school',
+                phone: branding.phone || '',
+                address: branding.address || branding.schoolAddress || '',
+                logoSrc: getAnnualLogoSrc()
+            };
         }
 
         function normalizeAnnualStudents(input) {
@@ -226,6 +291,11 @@
 
         function updateAnnualSlip() {
             const amount = Number(document.getElementById('annualAmount').value || 0);
+            const branding = getAnnualBrandingFromForm();
+            document.getElementById('annualPreviewSchoolName').textContent = branding.schoolName;
+            document.getElementById('annualPreviewSchoolAddress').textContent = branding.address || 'Annual Charges Slip';
+            document.getElementById('annualPreviewSchoolPhone').textContent = branding.phone ? `Phone: ${branding.phone}` : '';
+            updateAnnualLogoPreview(branding.logoSrc);
             document.getElementById('slipStudent').textContent = document.getElementById('annualStudentName').value || '-';
             document.getElementById('slipClass').textContent = document.getElementById('annualClass').value || '-';
             document.getElementById('slipRoll').textContent = document.getElementById('annualRoll').value || '-';
@@ -241,8 +311,12 @@
                 <section class="print-slip">
                     <div class="slip-preview">
                         <div class="slip-head">
-                            <div class="slip-logo">SCH</div>
-                            <div><h2>Apexiums School System</h2><p>Annual Charges Slip</p></div>
+                            <div class="slip-logo">${options.logoSrc ? `<img src="${escAnnual(options.logoSrc)}" alt="School logo">` : 'SCH'}</div>
+                            <div>
+                                <h2>${escAnnual(options.schoolName || 'My own Science school')}</h2>
+                                <p>${escAnnual(options.address || 'Annual Charges Slip')}</p>
+                                ${options.phone ? `<div class="slip-contact">Phone: ${escAnnual(options.phone)}</div>` : ''}
+                            </div>
                             <div class="office-copy">Office Copy</div>
                         </div>
                         <div class="slip-copy">
@@ -270,6 +344,7 @@
             const amount = Number(document.getElementById('annualAmount').value || 0);
             const session = document.getElementById('annualSession').value || '-';
             const dueDate = document.getElementById('annualDueDate').value || '-';
+            const branding = getAnnualBrandingFromForm();
 
             if (!selectedClass) {
                 alert('Please select a class first.');
@@ -301,9 +376,11 @@
                         .print-slip:last-child { page-break-after: auto; }
                         .slip-preview { width: 100%; border: 1px solid #0f766e; background: #fff; color: #111827; }
                         .slip-head { display:grid; grid-template-columns:70px 1fr 120px; gap:.75rem; align-items:center; padding:1rem; border-bottom:2px solid #0f766e; }
-                        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; font-size:24px; }
+                        .slip-logo { width:58px; height:58px; border-radius:12px; background:#e0f2f1; display:flex; align-items:center; justify-content:center; color:#0f766e; font-size:24px; overflow:hidden; flex:0 0 58px; }
+                        .slip-logo img { width:58px; height:58px; object-fit:contain; display:block; }
                         .slip-head h2 { margin:0; color:#0f4f4a; font-size:1.35rem; text-align:center; }
                         .slip-head p { margin:.2rem 0 0; text-align:center; color:#475569; }
+                        .slip-contact { margin:.2rem 0 0; text-align:center; color:#0f4f4a; font-size:12px; font-weight:800; }
                         .office-copy { text-align:right; font-weight:800; }
                         .slip-copy { border:1px solid #94a3b8; margin:1rem; }
                         .slip-copy-title { background:#0f766e; color:#fff; padding:.45rem .75rem; font-weight:800; display:flex; justify-content:space-between; }
@@ -318,7 +395,7 @@
                     </style>
                 </head>
                 <body>
-                    ${students.map((student) => annualSlipHtml(student, { amount, session, dueDate })).join('')}
+                    ${students.map((student) => annualSlipHtml(student, { amount, session, dueDate, ...branding })).join('')}
                     <script>
                         window.onload = function(){ window.print(); };
                     <\/script>
@@ -328,8 +405,11 @@
             printWindow.document.close();
         }
 
-        document.querySelectorAll('#annualChargesForm input').forEach((input) => input.addEventListener('input', updateAnnualSlip));
+        document.querySelectorAll('#annualChargesForm input').forEach((input) => input.addEventListener('input', () => {
+            updateAnnualSlip();
+        }));
         document.getElementById('annualBulkClass')?.addEventListener('change', updateAnnualBulkSummary);
+        hydrateAnnualBrandingFields();
         updateAnnualSlip();
         Promise.all([loadAnnualClassFeeDefaults(), loadAnnualChargeStudents()]).then(updateAnnualBulkSummary);
         if (window.lucide) window.lucide.createIcons();

@@ -4,9 +4,9 @@ Recommended file name:
 
 logo.jpeg
 
-Alternative names agar code mein update karna ho:
+Alternative names if the code needs to be updated:
 
 logo.png
 logo.webp
 
-Current project mein logo path `images/logo.png` use ho raha hai. Apna logo `images` folder mein `logo.png` ke naam se save kar dein.
+The current project uses the logo path `images/logo.png`. Save your logo in the `images` folder with the file name `logo.png`.

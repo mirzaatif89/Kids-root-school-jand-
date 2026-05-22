@@ -135,6 +135,7 @@
         'set_fee.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         'fees.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Fees', icon: 'credit-card' },
         'fee_challan.html': { moduleKey: 'fee_challan', defaultHome: 'dashboard.html', label: 'Fee Challan', icon: 'file-text' },
+        'fee_logos.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Logos', icon: 'image' },
         'bills.html': { moduleKey: 'bills', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
         'library.html': { moduleKey: 'library', defaultHome: 'dashboard.html', label: 'Library', icon: 'library' },
         'cafe.html': { moduleKey: 'cafe', defaultHome: 'dashboard.html', label: 'Cafe', icon: 'coffee' },
@@ -629,6 +630,7 @@
                         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
                         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
                     ]
                 },

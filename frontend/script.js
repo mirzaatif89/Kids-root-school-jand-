@@ -78,6 +78,7 @@ const FALLBACK_ROUTE_TO_PAGE = {
     set_fee: 'set_fee.html',
     fees: 'fees.html',
     fee_challan: 'fee_challan.html',
+    fee_logos: 'fee_logos.html',
     bills: 'bills.html',
     certificate: 'certificate.html',
     complain_box: 'complain_box.html',
@@ -2879,6 +2880,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+        { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' },
         { page: 'exam_result.html', label: 'Results', icon: 'file-badge' },
         { page: 'exam_result_history.html', label: 'Result History', icon: 'history' },
@@ -2991,6 +2993,7 @@ function renderAdminSidebarSequence() {
                 { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
                 { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                 { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                { page: 'fee_logos.html', label: 'Logos', icon: 'image' },
                 { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
             ]
         },
@@ -7968,8 +7971,8 @@ async function saveVerifiedAdminPassword() {
     try {
         if (!otp) throw new Error('Pehle email OTP verify karein.');
         if (!password) throw new Error('New password required hai.');
-        if (password.length < 6) throw new Error('New password kam az kam 6 characters ka hona chahiye.');
-        if (password !== confirmPassword) throw new Error('New password aur confirm password match nahi kar rahe.');
+        if (password.length < 6) throw new Error('New password must be at least 6 characters.');
+        if (password !== confirmPassword) throw new Error('New password and confirm password do not match.');
         if (saveBtn) {
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
