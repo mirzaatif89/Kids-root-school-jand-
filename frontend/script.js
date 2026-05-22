@@ -941,7 +941,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (branchRegistrationForm) {
         renderBranches();
         branchRegistrationForm.addEventListener('submit', handleBranchRegistrationSubmit);
-        document.getElementById('branchCampusName')?.addEventListener('input', handleBranchCampusInput);
     }
 
     const stuckOffTable = document.getElementById('stuckOffRecordsBody');
@@ -2761,6 +2760,7 @@ function ensureAdminSidebarCompleteness() {
         { page: 'designation-permissions.html', label: 'Designation Permissions', icon: 'shield-check' },
         { page: 'library.html', label: 'Library', icon: 'library' },
         { page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
         { page: 'visitor_books.html', label: 'Visitor Records', icon: 'clipboard-list' },
         { page: 'certificate.html', label: 'Certificates', icon: 'award' },
         { page: 'cafe.html', label: 'Cafe Records', icon: 'coffee' },
@@ -2862,6 +2862,7 @@ function renderAdminSidebarSequence() {
         },
         { type: 'link', page: 'library.html', label: 'Library', icon: 'library' },
         { type: 'link', page: 'complain_box.html', label: 'Complain Box', icon: 'message-square' },
+        { type: 'link', page: 'branch_registration.html', label: 'Branch Registration', icon: 'building-2' },
         { type: 'link', page: 'visitor_books.html', label: 'Visitor Records', icon: 'clipboard-list' },
         { type: 'link', page: 'certificate.html', label: 'Certificates', icon: 'award' },
         { type: 'link', page: 'cafe.html', label: 'Cafe Records', icon: 'coffee' },
@@ -3011,7 +3012,6 @@ async function renderBranches() {
     } catch (error) {
         branchRecordsCache = [];
         updateBranchAccessSummary([]);
-        setDefaultNewBranchFields();
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be loaded. Please refresh and try again.</td></tr>';
     }
 }
@@ -3024,9 +3024,6 @@ function renderBranchRows(branches = []) {
         branchRecordsCache = Array.isArray(branches) ? branches : [];
         updateBranchAccessSummary(branches);
         tbody.innerHTML = '';
-        if (!document.getElementById('branchRecordId')?.value) {
-            setDefaultNewBranchFields();
-        }
         if (!Array.isArray(branches) || branches.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: var(--text-secondary);">No branches registered yet.</td></tr>';
             return;
@@ -3058,7 +3055,6 @@ function renderBranchRows(branches = []) {
     } catch (error) {
         branchRecordsCache = [];
         updateBranchAccessSummary([]);
-        setDefaultNewBranchFields();
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 1rem; color: #dc2626;">Branches could not be displayed.</td></tr>';
     }
 }
@@ -3171,52 +3167,6 @@ function populateStudentFamilyOptions(selectedId = '') {
     select.value = selectedId || '';
 }
 
-function getNextBranchNumber() {
-    const usedNumbers = branchRecordsCache
-        .map((branch) => String(branch?.campusName || '').match(/campus\s*(\d+)/i)?.[1])
-        .map((value) => Number.parseInt(value, 10))
-        .filter((value) => Number.isFinite(value) && value > 0);
-
-    let nextNumber = 1;
-    while (usedNumbers.includes(nextNumber)) nextNumber += 1;
-    return nextNumber;
-}
-
-function formatBranchUsername(campusName) {
-    return String(campusName || 'Campus 1')
-        .trim()
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '') + '_admin';
-}
-
-function setDefaultNewBranchFields() {
-    const recordId = document.getElementById('branchRecordId');
-    const campusInput = document.getElementById('branchCampusName');
-    const displayInput = document.getElementById('branchDisplayName');
-    const usernameInput = document.getElementById('branchUsername');
-    if (!campusInput || recordId?.value) return;
-
-    const campusName = `Campus ${getNextBranchNumber()}`;
-    campusInput.value = campusName;
-    if (displayInput) displayInput.value = `${campusName} Office`;
-    if (usernameInput) usernameInput.value = formatBranchUsername(campusName);
-}
-
-function handleBranchCampusInput() {
-    const recordId = document.getElementById('branchRecordId');
-    if (recordId?.value) return;
-
-    const campusInput = document.getElementById('branchCampusName');
-    const displayInput = document.getElementById('branchDisplayName');
-    const usernameInput = document.getElementById('branchUsername');
-    const campusName = campusInput?.value.trim();
-    if (!campusName) return;
-
-    if (displayInput) displayInput.value = `${campusName} Office`;
-    if (usernameInput) usernameInput.value = formatBranchUsername(campusName);
-}
-
 function updateBranchAccessSummary(branches = []) {
     const countEl = document.getElementById('branchAccessCount');
     const detailEl = document.getElementById('branchAccessDetail');
@@ -3272,9 +3222,8 @@ async function handleBranchRegistrationSubmit(event) {
         }
 
         pushNotification('Branch Registered', `${campusName} branch login has been created.`, 'user');
-        const savedBranches = Array.isArray(result.branches) ? result.branches : [];
         resetBranchRegistrationForm();
-        renderBranchRows(savedBranches);
+        await renderBranches();
         populateCampusDropdowns();
         showSuccessModal(recordId ? 'Branch Updated!' : 'Branch Registered!', recordId
             ? `${campusName} branch login details have been updated.`
@@ -3312,7 +3261,6 @@ function resetBranchRegistrationForm() {
 
     form.reset();
     document.getElementById('branchRecordId').value = '';
-    setDefaultNewBranchFields();
 
     const submitButton = document.querySelector('#branchRegistrationForm button[type="submit"]');
     if (submitButton) {
