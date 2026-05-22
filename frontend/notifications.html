@@ -12,18 +12,26 @@
         .notification-layout {
             display: grid;
             gap: 1.25rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .notification-hub-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
             gap: 0.9rem;
             margin-bottom: 1rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .notification-hub-card {
             display: grid;
-            grid-template-columns: auto 1fr auto;
+            grid-template-columns: auto minmax(0, 1fr) auto;
             align-items: center;
             gap: 0.75rem;
             min-height: 88px;
@@ -33,6 +41,9 @@
             background: #ffffff;
             box-shadow: var(--shadow-sm);
             color: var(--text-primary);
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
         }
 
         .notification-hub-card:hover {
@@ -66,8 +77,12 @@
 
         .birthday-summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
             gap: 1rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .birthday-stat {
@@ -76,6 +91,8 @@
             border-radius: 8px;
             padding: 1rem;
             box-shadow: var(--shadow-sm);
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .birthday-stat span {
@@ -96,12 +113,19 @@
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            padding: 0.9rem 1rem 0;
         }
 
         .notification-tabs {
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
+            min-width: 0;
+            align-items: center;
         }
 
         .notification-tab {
@@ -109,9 +133,13 @@
             background: #fff;
             color: var(--text-primary);
             border-radius: 8px;
-            padding: 0.65rem 0.9rem;
+            min-height: 38px;
+            padding: 0 0.9rem;
             cursor: pointer;
             font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .notification-tab.active {
@@ -121,11 +149,15 @@
         }
 
         .notification-search {
-            min-width: min(100%, 320px);
+            width: min(100%, 320px);
+            max-width: 100%;
+            min-width: 0;
             border: 1px solid var(--border-color);
             border-radius: 8px;
-            padding: 0.75rem 0.9rem;
+            min-height: 38px;
+            padding: 0 0.9rem;
             font: inherit;
+            box-sizing: border-box;
         }
 
         .notification-actions {
@@ -133,16 +165,22 @@
             align-items: center;
             gap: 0.75rem;
             flex-wrap: wrap;
+            max-width: 100%;
+            min-width: 0;
+            justify-content: flex-end;
         }
 
         .birthday-list {
             display: grid;
             gap: 0.8rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .birthday-card {
             display: grid;
-            grid-template-columns: 58px 1fr auto;
+            grid-template-columns: 58px minmax(0, 1fr) minmax(120px, auto);
             gap: 0.9rem;
             align-items: center;
             background: #fff;
@@ -150,6 +188,10 @@
             border-radius: 8px;
             padding: 0.9rem;
             box-shadow: var(--shadow-sm);
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .birthday-avatar {
@@ -174,12 +216,14 @@
         .birthday-main h3 {
             margin: 0 0 0.25rem;
             font-size: 1rem;
+            overflow-wrap: anywhere;
         }
 
         .birthday-main p {
             margin: 0;
             color: var(--text-secondary);
             font-size: 0.9rem;
+            overflow-wrap: anywhere;
         }
 
         .birthday-date-pill {
@@ -200,11 +244,14 @@
         .fee-alert-list {
             display: grid;
             gap: 0.8rem;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .fee-alert-card {
             display: grid;
-            grid-template-columns: 58px 1fr auto;
+            grid-template-columns: 58px minmax(0, 1fr) minmax(150px, auto);
             gap: 0.9rem;
             align-items: center;
             background: #fff;
@@ -212,6 +259,10 @@
             border-radius: 8px;
             padding: 0.9rem;
             box-shadow: var(--shadow-sm);
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .fee-alert-icon {
@@ -228,12 +279,14 @@
         .fee-alert-main h3 {
             margin: 0 0 0.25rem;
             font-size: 1rem;
+            overflow-wrap: anywhere;
         }
 
         .fee-alert-main p {
             margin: 0;
             color: var(--text-secondary);
             font-size: 0.9rem;
+            overflow-wrap: anywhere;
         }
 
         .fee-alert-amount {
@@ -255,12 +308,54 @@
             background: #fff;
             border: 1px dashed var(--border-color);
             border-radius: 8px;
-            padding: 2rem;
+            min-height: 90px;
+            padding: 1rem;
             text-align: center;
             color: var(--text-secondary);
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .notification-layout > .table-container {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            overflow: hidden;
+            padding: 0 1rem 1rem;
+        }
+
+        .notification-section-title {
+            display: grid;
+            gap: 0.25rem;
+            align-content: center;
+            min-height: 52px;
+        }
+
+        .notification-section-title h3,
+        .notification-section-title p {
+            margin: 0;
         }
 
         @media (max-width: 640px) {
+            .notification-actions,
+            .notification-search {
+                width: 100%;
+                justify-content: stretch;
+            }
+
+            .notification-toolbar {
+                padding: 0.75rem 0.75rem 0;
+            }
+
+            .notification-layout > .table-container {
+                padding: 0 0.75rem 0.75rem;
+            }
+
             .birthday-card {
                 grid-template-columns: 48px 1fr;
             }
@@ -442,9 +537,9 @@
 
                 <section class="table-container">
                     <div class="notification-toolbar">
-                        <div>
-                            <h3 style="margin: 0;">Pending Fee Notifications</h3>
-                            <p style="color: var(--text-secondary); margin-top: 0.25rem;">Students with unpaid monthly fee records.</p>
+                        <div class="notification-section-title">
+                            <h3>Pending Fee Notifications</h3>
+                            <p style="color: var(--text-secondary);">Students with unpaid monthly fee records.</p>
                         </div>
                         <div class="notification-actions">
                             <input class="notification-search" id="feeSearchInput" type="search" placeholder="Search pending fee student...">
