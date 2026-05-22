@@ -1495,6 +1495,9 @@
         });
 
         async function initializeChallanPage() {
+            if (typeof loadClassFeeDefaults === 'function') {
+                await loadClassFeeDefaults();
+            }
             await loadChallanStudents();
             bindChallanFilterDropdown();
             bindChallanActionsDropdown();
@@ -1572,6 +1575,13 @@
                 challanStudents = [...getData(STORAGE_KEY_STUDENTS)].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
             }
             await mergeChallanFeePaymentsIntoMonthlyStore();
+        }
+
+        function getChallanStudentMonthlyFee(student = {}) {
+            if (typeof getDashboardStudentFee === 'function') {
+                return getDashboardStudentFee(student);
+            }
+            return Number(student?.monthlyFee || student?.fee || 0) || 0;
         }
 
         function bindChallanFilterDropdown() {
@@ -1917,7 +1927,7 @@
                     };
 
                     const student = studentsById.get(sid);
-                    const monthlyFee = Number(student?.monthlyFee || 0);
+                    const monthlyFee = getChallanStudentMonthlyFee(student);
                     if (monthlyFee > 0 && nextAmount >= monthlyFee) {
                         monthlyFees[sid][key] = 'Paid';
                     } else {
@@ -2542,7 +2552,7 @@
 
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
-            const monthlyFee = Number(student?.monthlyFee || 0);
+            const monthlyFee = getChallanStudentMonthlyFee(student);
             const allPaid = months.every((m) => Number(studentPayments[String(m || '').trim()]?.amount || 0) >= monthlyFee && monthlyFee > 0);
             const baseLabel = allPaid ? 'Paid' : 'Pending';
             const tail = data.remainingDue > 0 ? ` (Remaining: PKR ${formatCurrency(data.remainingDue)})` : '';
@@ -2623,7 +2633,7 @@
                         challanNumbers: Array.from(new Set([...(paymentDetails[data.studentId][key]?.challanNumbers || []), data.challanNumber || ''].filter(Boolean)))
                     };
 
-                    const monthlyFee = Number(selectedStudent?.monthlyFee || 0);
+                    const monthlyFee = getChallanStudentMonthlyFee(selectedStudent);
                     monthlyFees[data.studentId][key] = (monthlyFee > 0 && nextAmount >= monthlyFee) ? 'Paid' : 'Pending';
                 });
                 localStorage.setItem(CHALLAN_MONTHLY_FEES_KEY, JSON.stringify(monthlyFees));
@@ -2781,7 +2791,7 @@
                 }
             }
 
-            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getChallanStudentMonthlyFee(student);
             const paidMonths = [];
             const pendingMonths = [];
             let pendingAmount = 0;
@@ -3493,7 +3503,7 @@
             if (!months.length) return false;
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student?.id] || {};
-            const monthlyFee = Number(student?.monthlyFee || 0);
+            const monthlyFee = getChallanStudentMonthlyFee(student);
             if (!(monthlyFee > 0)) return false;
             return months.every((month) => Number(studentPayments[month]?.amount || 0) >= monthlyFee);
         }
@@ -3563,7 +3573,7 @@
                 const urduNote = document.getElementById('urduNote').value.trim() || '';
                 const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
 
-                const monthlyFee = parseInt(selectedStudent?.monthlyFee || 0, 10) || 0;
+                const monthlyFee = getChallanStudentMonthlyFee(selectedStudent);
                 const baseAmountFallback = Number(document.getElementById('baseAmount').value || 0);
                 const challans = [];
                 const items = [];
@@ -3791,7 +3801,7 @@
             for (const student of targetStudents) {
                 if (isStudentTerminated(student)) continue;
 
-                const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+                const monthlyFee = getChallanStudentMonthlyFee(student);
                 
                 // Get all pending months for this student
                 const summary = getChallanStudentFeeSummary(student);
@@ -4018,7 +4028,7 @@
             // Filter students with pending fees (ANY pending month)
             const dueStudents = allStudents.filter(student => {
                 const summary = getChallanStudentFeeSummary(student);
-                const monthlyFee = Number(student?.monthlyFee || 0);
+                const monthlyFee = getChallanStudentMonthlyFee(student);
                 // Student must have pending amount (not fully paid)
                 return monthlyFee > 0 && summary.pendingAmount > 0;
             });
@@ -4056,7 +4066,7 @@
 
                 // Prepare challan data for all due students - ONE CHALLAN PER STUDENT (all pending months)
                 for (const student of dueStudents) {
-                    const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+                    const monthlyFee = getChallanStudentMonthlyFee(student);
                     
                     // Get all pending months for this student
                     const summary = getChallanStudentFeeSummary(student);

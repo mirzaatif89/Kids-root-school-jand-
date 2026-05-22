@@ -1162,6 +1162,7 @@
                 <h3 style="margin-bottom: 1.5rem;" id="formTitle">Add New Student</h3>
                 <form id="studentForm" onsubmit="handleStudentFormSubmit(event); return false;">
                     <input type="hidden" id="studentId"> <!-- Hidden ID for Editing -->
+                    <input type="hidden" id="feeFrequency" value="Monthly">
 
                     <div class="form-grid">
                         <div class="input-group">
@@ -1206,6 +1207,11 @@
                                 style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #f8fafc;">
                                 <option value="">Select Class</option>
                             </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Monthly Fee</label>
+                            <input type="text" id="monthlyFee" placeholder="Select class to load fee" readonly
+                                style="background-color: #f8fafc; color: var(--text-secondary); cursor: not-allowed;">
                         </div>
                         <div class="input-group">
                             <label>Campus Name</label>
@@ -1267,10 +1273,6 @@
                     </div>
 
                     <div class="action-steps">
-                        <div class="action-step-btn" id="btnSetFee" onclick="toggleStepPanel('feePanel')">
-                            <i data-lucide="credit-card"></i>
-                            <span>Set Fee</span>
-                        </div>
                         <div class="action-step-btn" id="btnCreateCreds" onclick="toggleStepPanel('credPanel')">
                             <i data-lucide="key"></i>
                             <span>Create Username & Password</span>
@@ -1279,25 +1281,6 @@
                             <i data-lucide="check-circle"></i>
                             <span>Save & Activate Student</span>
                         </button>
-                    </div>
-
-                    <!-- Fee Panel -->
-                    <div id="feePanel" class="step-panel">
-                        <h4 style="margin-bottom: 1rem; color: var(--primary-color);">Set Student Fee</h4>
-                        <div class="form-grid">
-                            <div class="input-group">
-                                <label>Monthly Fee (PKR)</label>
-                                <input type="number" id="monthlyFee" placeholder="e.g. 5000">
-                            </div>
-                            <div class="input-group">
-                                <label>Fee Frequency</label>
-                                <select id="feeFrequency"
-                                    style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: white;">
-                                    <option value="Monthly">Monthly</option>
-                                    <option value="Yearly">Yearly</option>
-                                </select>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Credentials Panel -->

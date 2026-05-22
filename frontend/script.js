@@ -811,6 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadStudentQuickFilterBranchCampuses();
         loadClassFeeDefaults().then(() => {
             bindStudentClassFeeAutoFill();
+            applyClassFeeDefaultToStudentForm();
         }).catch(() => {
             bindStudentClassFeeAutoFill();
         });
@@ -4299,7 +4300,12 @@ function bindStudentClassFeeAutoFill() {
     const classSelect = document.getElementById('classGrade');
     if (!classSelect || classSelect.dataset.classFeeBound === '1') return;
     classSelect.dataset.classFeeBound = '1';
-    classSelect.addEventListener('change', () => applyClassFeeDefaultToStudentForm(true));
+    classSelect.addEventListener('change', refreshStudentClassFeeAutoFill);
+}
+
+async function refreshStudentClassFeeAutoFill() {
+    await loadClassFeeDefaults();
+    applyClassFeeDefaultToStudentForm(true);
 }
 
 function applyClassFeeDefaultToStudentForm(force = false) {
@@ -4309,7 +4315,14 @@ function applyClassFeeDefaultToStudentForm(force = false) {
     if (!classSelect || !monthlyFeeInput) return;
 
     const feeDefault = getClassFeeDefault(classSelect.value);
-    if (!feeDefault) return;
+    if (!feeDefault) {
+        if (force) {
+            monthlyFeeInput.value = '';
+            monthlyFeeInput.dataset.autoClassFee = '';
+            if (feeFrequencyInput) feeFrequencyInput.value = 'Monthly';
+        }
+        return;
+    }
 
     const currentFee = String(monthlyFeeInput.value || '').trim();
     if (force || !currentFee || currentFee === '0' || monthlyFeeInput.dataset.autoClassFee === '1') {
@@ -4594,6 +4607,7 @@ async function handleStudentFormSubmit(e) {
     const parentPhone = document.getElementById('parentPhone').value.trim();
     let usernameInput = document.getElementById('username').value.trim();
     let studentPasswordInput = document.getElementById('studentPassword').value;
+    applyClassFeeDefaultToStudentForm();
     const monthlyFeeInput = document.getElementById('monthlyFee') ? document.getElementById('monthlyFee').value : '';
     const studentEmailInput = document.getElementById('studentEmail') ? document.getElementById('studentEmail').value.trim().toLowerCase() : '';
     const guardianName = document.getElementById('guardianName')?.value.trim() || '';
@@ -6238,6 +6252,7 @@ function editStudent(s) {
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').dataset.autoClassFee = '';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';
+    applyClassFeeDefaultToStudentForm();
     if (document.getElementById('username')) document.getElementById('username').value = s.username || '';
     if (document.getElementById('studentPassword')) document.getElementById('studentPassword').value = getVisibleStudentPassword(s);
     if (document.getElementById('studentProfileImage')) document.getElementById('studentProfileImage').value = '';

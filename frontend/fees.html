@@ -638,6 +638,13 @@
         const CURRENT_MONTH_NAME = monthsList[new Date().getMonth()];
         let feeFineSyncInFlight = false;
 
+        function getFeeStudentMonthlyAmount(student = {}) {
+            if (typeof getDashboardStudentFee === 'function') {
+                return getDashboardStudentFee(student);
+            }
+            return parseInt(student?.monthlyFee || student?.fee || 0, 10) || 0;
+        }
+
         function readFeeFineRule() {
             try {
                 const saved = JSON.parse(localStorage.getItem(STORAGE_KEY_FEE_FINE_RULE) || '{}');
@@ -755,7 +762,7 @@
             const rule = readFeeFineRule();
             if (!student || !rule.amount || !rule.targetDay || status === 'Paid') return 0;
             if (!isStudentFeeMonthApplicable(student, month)) return 0;
-            if (!(parseInt(student.monthlyFee || 0, 10) > 0)) return 0;
+            if (!(getFeeStudentMonthlyAmount(student) > 0)) return 0;
             return getFeeFineLateUnits(month, rule) * rule.amount;
         }
 
@@ -857,7 +864,7 @@
             const applicableMonths = getApplicableStudentFeeMonths(student);
             const paidMonths = applicableMonths.filter(month => studentMonthly[month] === 'Paid');
             const pendingMonths = applicableMonths.filter(month => studentMonthly[month] !== 'Paid');
-            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getFeeStudentMonthlyAmount(student);
             const fineAmount = pendingMonths.reduce((sum, month) => sum + getStudentMonthFineAmount(student, month, studentMonthly[month]), 0);
             return {
                 paidCount: paidMonths.length,
@@ -928,6 +935,9 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             await loadFeesStudents();
+            if (typeof loadClassFeeDefaults === 'function') {
+                await loadClassFeeDefaults();
+            }
             initFeeFineDropdown();
             renderFeesClassGrid();
             syncAutomaticFineCharges();
@@ -1107,7 +1117,7 @@
                         </div>
                     </td>
                     <td>${s.fatherName || '-'}</td>
-                    <td><strong>PKR ${(parseInt(s.monthlyFee || 0, 10) || 0).toLocaleString('en-PK')}</strong></td>
+                    <td><strong>PKR ${getFeeStudentMonthlyAmount(s).toLocaleString('en-PK')}</strong></td>
                     <td>
                         <div style="font-size:0.85rem;line-height:1.5;">
                             <div><strong>${feeSummary.paidCount}</strong> paid / <strong>${feeSummary.pendingCount}</strong> pending</div>
@@ -1156,7 +1166,7 @@
             applicableMonths.forEach(month => {
                 const isPaid = studentRecord[month] === 'Paid';
                 const isCurrentMonth = month === CURRENT_MONTH_NAME;
-                const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
+                const monthlyFee = getFeeStudentMonthlyAmount(student);
                 const fineAmount = getStudentMonthFineAmount(student, month, studentRecord[month]);
                 const dueAmount = monthlyFee + fineAmount;
                 const paidAmount = getFeeMonthPaymentAmount(studentId, month);
@@ -1218,7 +1228,7 @@
 
             const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const studentRecord = monthlyFees[studentId] || {};
-            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const monthlyFee = getFeeStudentMonthlyAmount(student);
             const fineAmount = getStudentMonthFineAmount(student, month, studentRecord[month]);
             const totalFee = monthlyFee + fineAmount;
             const paidAmount = getFeeMonthPaymentAmount(studentId, month);
