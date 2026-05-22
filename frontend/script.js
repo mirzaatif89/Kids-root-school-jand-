@@ -6930,15 +6930,13 @@ function renderTeachers(term = '') {
     const noData = document.getElementById('noTeacherDataMessage');
 
     const getBankDetailsMarkup = (record) => {
-        const hasBankData = record.bankName || record.bankAccountNumber || record.bankAccountTitle || record.bankBranch;
+        const hasBankData = record.bankName || record.bankAccountNumber;
         if (!hasBankData) return '<span style="color: var(--text-secondary);">-</span>';
 
         return `
             <div class="table-detail-stack">
                 <div><strong>Bank:</strong> ${record.bankName || '-'}</div>
                 <div><strong>Account:</strong> ${record.bankAccountNumber || '-'}</div>
-                <div><strong>Holder:</strong> ${record.bankAccountTitle || '-'}</div>
-                <div><strong>Branch:</strong> ${record.bankBranch || '-'}</div>
             </div>
         `;
     };
