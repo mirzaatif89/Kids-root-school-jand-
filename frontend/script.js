@@ -1784,6 +1784,29 @@ function triggerDownloadFromDataUrl(dataUrl, fileName) {
     link.remove();
 }
 
+function triggerDownloadFromBlob(blob, fileName) {
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = sanitizeDownloadFileName(fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
+function dataUrlToBytes(dataUrl) {
+    const encodedData = String(dataUrl || '').split(',')[1] || '';
+    const binaryData = atob(encodedData);
+    const bytes = new Uint8Array(binaryData.length);
+
+    for (let index = 0; index < binaryData.length; index += 1) {
+        bytes[index] = binaryData.charCodeAt(index);
+    }
+
+    return bytes;
+}
+
 function loadImageFromDataUrl(dataUrl) {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -1846,6 +1869,102 @@ async function downloadStoredDocumentAsPdf(entityType, recordId, fieldName, fall
         pdf.save(`${baseName}.pdf`);
     } catch (error) {
         alert('The document could not be converted to PDF.');
+    }
+}
+
+async function getPdfCompatibleImageData(payload) {
+    const fileType = String(payload.type || '').toLowerCase();
+
+    if (fileType.includes('png')) {
+        return { bytes: dataUrlToBytes(payload.dataUrl), format: 'png' };
+    }
+
+    if (fileType.includes('jpg') || fileType.includes('jpeg')) {
+        return { bytes: dataUrlToBytes(payload.dataUrl), format: 'jpg' };
+    }
+
+    const image = await loadImageFromDataUrl(payload.dataUrl);
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return { bytes: dataUrlToBytes(canvas.toDataURL('image/png')), format: 'png' };
+}
+
+async function addImagePayloadToPdf(pdfDocument, payload) {
+    const imageData = await getPdfCompatibleImageData(payload);
+    const pdfImage = imageData.format === 'png'
+        ? await pdfDocument.embedPng(imageData.bytes)
+        : await pdfDocument.embedJpg(imageData.bytes);
+    const page = pdfDocument.addPage([595.28, 841.89]);
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
+    const margin = 28;
+    const scale = Math.min(
+        (pageWidth - margin * 2) / pdfImage.width,
+        (pageHeight - margin * 2) / pdfImage.height,
+        1
+    );
+    const renderWidth = pdfImage.width * scale;
+    const renderHeight = pdfImage.height * scale;
+
+    page.drawImage(pdfImage, {
+        x: (pageWidth - renderWidth) / 2,
+        y: (pageHeight - renderHeight) / 2,
+        width: renderWidth,
+        height: renderHeight
+    });
+}
+
+async function addStoredPayloadToPdf(pdfDocument, payload) {
+    const fileType = String(payload.type || '').toLowerCase();
+    const originalName = String(payload.name || '').toLowerCase();
+
+    if (fileType.includes('pdf') || originalName.endsWith('.pdf')) {
+        const sourcePdf = await window.PDFLib.PDFDocument.load(dataUrlToBytes(payload.dataUrl));
+        const pages = await pdfDocument.copyPages(sourcePdf, sourcePdf.getPageIndices());
+        pages.forEach((page) => pdfDocument.addPage(page));
+        return;
+    }
+
+    if (fileType.startsWith('image/')) {
+        await addImagePayloadToPdf(pdfDocument, payload);
+        return;
+    }
+
+    throw new Error('Only PDF and image files can be combined.');
+}
+
+async function downloadTeacherDocumentsAsPdf(recordId) {
+    const teacher = getData(STORAGE_KEY_TEACHERS)
+        .find((item) => String(item.id) === String(recordId));
+    const documents = ['idCardFront', 'idCardBack', 'cvFile']
+        .map((fieldName) => parseStoredFilePayload(teacher?.[fieldName]))
+        .filter((payload) => payload?.dataUrl);
+
+    if (!documents.length) {
+        alert('No teacher documents found for download.');
+        return;
+    }
+
+    if (!window.PDFLib?.PDFDocument) {
+        alert('PDF combiner is still loading. Try Download PDFs again.');
+        return;
+    }
+
+    try {
+        const combinedPdf = await window.PDFLib.PDFDocument.create();
+
+        for (const payload of documents) {
+            await addStoredPayloadToPdf(combinedPdf, payload);
+        }
+
+        const fileName = `teacher-documents-${teacher?.employeeCode || teacher?.fullName || recordId}.pdf`;
+        const pdfBytes = await combinedPdf.save();
+        triggerDownloadFromBlob(new Blob([pdfBytes], { type: 'application/pdf' }), fileName);
+    } catch (error) {
+        alert('Combined PDF could not be created. Upload CV as PDF or image to include it with the ID documents.');
     }
 }
 
@@ -6805,14 +6924,16 @@ function renderTeachers(term = '') {
         `;
     };
 
-    const getDocumentBadgesMarkup = (record, isTeacher = false) => {
-        const badges = [];
-        if (record.idCardFront) badges.push(`<button type="button" class="doc-download-btn" onclick="downloadStoredDocumentAsPdf('teacher', '${record.id}', 'idCardFront', 'teacher-id-front')">ID Front PDF</button>`);
-        if (record.idCardBack) badges.push(`<button type="button" class="doc-download-btn" onclick="downloadStoredDocumentAsPdf('teacher', '${record.id}', 'idCardBack', 'teacher-id-back')">ID Back PDF</button>`);
-        if (isTeacher && record.cvFile) badges.push(`<button type="button" class="doc-download-btn" onclick="downloadStoredDocumentAsPdf('teacher', '${record.id}', 'cvFile', 'teacher-cv')">CV PDF</button>`);
+    const getDocumentBadgesMarkup = (record) => {
+        const hasDocuments = ['idCardFront', 'idCardBack', 'cvFile']
+            .some((fieldName) => parseStoredFilePayload(record[fieldName])?.dataUrl);
 
-        if (!badges.length) return '<span class="doc-badge muted">No Files</span>';
-        return `<div class="doc-badge-wrap">${badges.join('')}</div>`;
+        if (!hasDocuments) return '<span class="doc-badge muted">No Files</span>';
+        return `
+            <button type="button" class="doc-download-btn" onclick="downloadTeacherDocumentsAsPdf('${record.id}')">
+                Download PDF
+            </button>
+        `;
     };
 
     if (filtered.length === 0) {
@@ -6840,7 +6961,7 @@ function renderTeachers(term = '') {
                     ${getTeacherScheduleSummary(t)}
                 </td>
                 <td>${getBankDetailsMarkup(t)}</td>
-                <td>${getDocumentBadgesMarkup(t, true)}</td>
+                <td>${getDocumentBadgesMarkup(t)}</td>
                 <td class="teacher-login-details">
                     <div>
                         <div><strong>User:</strong> ${t.username || '-'}</div>
