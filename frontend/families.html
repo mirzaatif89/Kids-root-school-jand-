@@ -15,7 +15,6 @@
         .guardian-line { background:#f8fafc; border:1px solid var(--border-color); border-radius:8px; padding:.65rem; margin:.65rem 0; }
         .student-chip-row { display:flex; gap:.4rem; flex-wrap:wrap; margin-top:.75rem; }
         .student-chip { background:rgba(32,176,164,.1); color:var(--primary-color); border-radius:999px; padding:.25rem .55rem; font-size:.78rem; font-weight:800; }
-        .empty-family { background:#fff; border:1px dashed var(--border-color); border-radius:8px; padding:1.25rem; color:var(--text-secondary); }
         .family-header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1.25rem; }
     </style>
 </head>
@@ -35,7 +34,7 @@
         </aside>
         <main class="main-content">
             <header class="header family-header">
-                <div><h1>Families</h1><p style="color:var(--text-secondary); margin-top:.3rem;">Families auto-create when students share the same father or guardian contact.</p></div>
+                <div><h1>Families</h1></div>
             </header>
             <section id="familiesList" class="family-grid"></section>
         </main>
@@ -105,7 +104,7 @@
             const list = document.getElementById('familiesList');
             const groups = buildFamilyGroups(families, students);
             if (!groups.length) {
-                list.innerHTML = '<div class="empty-family">No linked families yet. Add another student with the same father name, phone, or guardian contact and the family will appear automatically.</div>';
+                list.innerHTML = '';
                 return;
             }
             list.innerHTML = groups.map((family) => {
