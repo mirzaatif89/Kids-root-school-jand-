@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assigned Classes - My own Science school</title>
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <link rel="stylesheet" href="student_schedule_theme.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .class-assignment-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 0.85rem;
+            align-items: end;
+        }
+
+        .class-assignment-grid label {
+            display: block;
+            color: #334155;
+            font-size: 0.8rem;
+            font-weight: 800;
+            margin-bottom: 0.35rem;
+        }
+
+        .class-assignment-grid input,
+        .class-assignment-grid select {
+            width: 100%;
+            min-height: 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #fff;
+            color: #0f172a;
+            padding: 0.42rem 0.62rem;
+            font: inherit;
+        }
+
+        .assignment-table {
+            width: 100%;
+            min-width: 720px;
+            border-collapse: collapse;
+        }
+
+        .assignment-table th,
+        .assignment-table td {
+            padding: 0.68rem;
+            border-bottom: 1px solid #dbecea;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .assignment-table th {
+            background: #f6fbfa;
+            color: #475569;
+            font-size: 0.76rem;
+            text-transform: uppercase;
+        }
+
+        .assignment-actions {
+            display: inline-flex;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+            </div>
+            <nav class="nav-links"></nav>
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info"><h4>Admin User</h4><p>Principal</p></div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Assigned Classes</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Assign a teacher as class incharge.</p>
+                </div>
+            </header>
+
+            <section class="schedule-panel">
+                <div class="schedule-section-title">
+                    <h3>Class Incharge Assignment</h3>
+                    <a class="schedule-back-link" href="teacher_scheduling.html"><i data-lucide="arrow-left"></i> Back</a>
+                </div>
+                <form id="classAssignmentForm">
+                    <input type="hidden" id="classAssignmentEditId">
+                    <div class="class-assignment-grid">
+                        <div>
+                            <label for="classAssignmentTeacher">Teacher</label>
+                            <select id="classAssignmentTeacher" required></select>
+                        </div>
+                        <div>
+                            <label for="classAssignmentClass">Class</label>
+                            <select id="classAssignmentClass" required></select>
+                        </div>
+                        <div>
+                            <label for="classAssignmentCampus">Campus</label>
+                            <input type="text" id="classAssignmentCampus" placeholder="Main Campus">
+                        </div>
+                        <div>
+                            <label for="classAssignmentNote">Note</label>
+                            <input type="text" id="classAssignmentNote" placeholder="Optional note">
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="saveClassAssignmentBtn"><i data-lucide="save"></i> Save Assignment</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="schedule-panel">
+                <h3 style="margin-bottom: 1rem;">Class Incharges</h3>
+                <div class="schedule-table-wrap" id="classAssignmentList"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script>
+        const CLASS_ASSIGNMENT_KEY = 'eduCore_teacher_class_assignments';
+        const DEFAULT_ASSIGNMENT_CLASSES = [
+            'Play Group', 'KG1', 'KG2',
+            'Class One', 'Class Two', 'Class Three', 'Class Four', 'Class Five',
+            'Class Six', 'Class Seven', 'Class Eight', 'Class Nine', 'Class Ten',
+            'Graduate'
+        ];
+
+        function assignmentData(key) {
+            try {
+                const stored = JSON.parse(localStorage.getItem(key) || '[]');
+                return Array.isArray(stored) ? stored : [];
+            } catch (_error) {
+                return [];
+            }
+        }
+
+        function saveAssignments(assignments) {
+            localStorage.setItem(CLASS_ASSIGNMENT_KEY, JSON.stringify(assignments));
+        }
+
+        function escapeAssignmentText(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function collectClassNames() {
+            const classes = assignmentData('eduCore_classes');
+            const students = assignmentData('eduCore_students');
+            return [...new Set([
+                ...DEFAULT_ASSIGNMENT_CLASSES,
+                ...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                ...students.map((student) => student?.classGrade)
+            ].map((value) => String(value || '').trim()).filter(Boolean))]
+                .sort(typeof compareStudentClassNames === 'function'
+                    ? compareStudentClassNames
+                    : ((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+        }
+
+        function populateClassAssignmentOptions() {
+            const teachers = assignmentData('eduCore_teachers');
+            const classes = collectClassNames();
+            classAssignmentTeacher.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => (
+                `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName || 'Teacher')}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}</option>`
+            )).join('');
+            classAssignmentClass.innerHTML = '<option value="">Select Class</option>' + classes.map((className) => (
+                `<option value="${escapeAssignmentText(className)}">${escapeAssignmentText(className)}</option>`
+            )).join('');
+        }
+
+        function assignmentTeacherName(teacherId) {
+            return assignmentData('eduCore_teachers').find((teacher) => String(teacher.id) === String(teacherId))?.fullName || 'Teacher';
+        }
+
+        function renderClassAssignments() {
+            const list = document.getElementById('classAssignmentList');
+            const assignments = assignmentData(CLASS_ASSIGNMENT_KEY)
+                .sort((a, b) => `${a.classGrade || ''}${a.teacherName || ''}`.localeCompare(`${b.classGrade || ''}${b.teacherName || ''}`));
+            if (!assignments.length) {
+                list.innerHTML = '<div class="empty-note">No class incharge assignment has been added yet.</div>';
+                return;
+            }
+
+            list.innerHTML = `
+                <table class="assignment-table">
+                    <thead><tr><th>Class</th><th>Class Incharge</th><th>Campus</th><th>Note</th><th>Action</th></tr></thead>
+                    <tbody>
+                        ${assignments.map((assignment) => `
+                            <tr>
+                                <td>${escapeAssignmentText(assignment.classGrade || '-')}</td>
+                                <td>${escapeAssignmentText(assignment.teacherName || assignmentTeacherName(assignment.teacherId))}</td>
+                                <td>${escapeAssignmentText(assignment.campusName || 'Main Campus')}</td>
+                                <td>${escapeAssignmentText(assignment.note || '-')}</td>
+                                <td>
+                                    <div class="assignment-actions">
+                                        <button type="button" class="schedule-action-btn edit" onclick="editClassAssignment('${escapeAssignmentText(assignment.id)}')"><i data-lucide="edit-2"></i> Edit</button>
+                                        <button type="button" class="schedule-action-btn delete" onclick="deleteClassAssignment('${escapeAssignmentText(assignment.id)}')"><i data-lucide="trash-2"></i> Delete</button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function resetClassAssignmentForm() {
+            classAssignmentForm.reset();
+            classAssignmentEditId.value = '';
+            saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Save Assignment';
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function editClassAssignment(id) {
+            const assignment = assignmentData(CLASS_ASSIGNMENT_KEY).find((item) => String(item.id) === String(id));
+            if (!assignment) return;
+            classAssignmentEditId.value = assignment.id;
+            classAssignmentTeacher.value = assignment.teacherId || '';
+            classAssignmentClass.value = assignment.classGrade || '';
+            classAssignmentCampus.value = assignment.campusName || '';
+            classAssignmentNote.value = assignment.note || '';
+            saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Update Assignment';
+            classAssignmentForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function deleteClassAssignment(id) {
+            saveAssignments(assignmentData(CLASS_ASSIGNMENT_KEY).filter((item) => String(item.id) !== String(id)));
+            renderClassAssignments();
+        }
+
+        classAssignmentForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const teachers = assignmentData('eduCore_teachers');
+            const teacher = teachers.find((item) => String(item.id) === String(classAssignmentTeacher.value));
+            const classGrade = classAssignmentClass.value;
+            if (!teacher || !classGrade) {
+                showAppAlert('Select a teacher and class first.', 'Missing Assignment');
+                return;
+            }
+
+            const assignments = assignmentData(CLASS_ASSIGNMENT_KEY);
+            const editId = classAssignmentEditId.value;
+            const assignment = {
+                id: editId || `CLASS-ASG-${Date.now()}`,
+                teacherId: teacher.id,
+                teacherName: teacher.fullName || 'Teacher',
+                classGrade,
+                campusName: classAssignmentCampus.value.trim() || teacher.campusName || 'Main Campus',
+                note: classAssignmentNote.value.trim(),
+                updatedAt: new Date().toISOString()
+            };
+            const duplicateIndex = assignments.findIndex((item) => String(item.classGrade || '').toLowerCase() === classGrade.toLowerCase() && String(item.id) !== String(editId));
+            if (duplicateIndex >= 0) {
+                assignments[duplicateIndex] = { ...assignments[duplicateIndex], ...assignment, id: assignments[duplicateIndex].id };
+            } else {
+                const editIndex = assignments.findIndex((item) => String(item.id) === String(editId));
+                if (editIndex >= 0) assignments[editIndex] = assignment;
+                else assignments.push(assignment);
+            }
+            saveAssignments(assignments);
+            resetClassAssignmentForm();
+            renderClassAssignments();
+            showSuccessModal('Class Assigned!', `${assignment.teacherName} is assigned as class incharge for ${assignment.classGrade}.`);
+        });
+
+        populateClassAssignmentOptions();
+        renderClassAssignments();
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+
+</html>

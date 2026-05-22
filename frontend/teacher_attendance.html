@@ -14,8 +14,14 @@
         .chip-late { background: #fef3c7; color: #92400e; }
         .chip-leave { background: #dbeafe; color: #1d4ed8; }
         .chip-empty { background: #e2e8f0; color: #475569; }
-        .attendance-actions { display: flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap; }
-        .attendance-actions .btn { padding: 0.45rem 0.8rem; font-size: 0.82rem; }
+        .attendance-actions { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: nowrap; }
+        .dashboard-container .attendance-actions .btn {
+            min-height: 32px;
+            padding: 0.28rem 0.58rem;
+            font-size: 0.78rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
         .input-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1rem; box-shadow: var(--shadow-sm); }
     </style>
 </head>
@@ -45,14 +51,14 @@
         <main class="main-content">
             <header class="header">
                 <div>
-                    <h1>Teacher And Staff Attendance</h1>
-                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Select a date and mark attendance for teachers and staff.</p>
+                    <h1 id="employeeAttendanceTitle">Teacher Attendance</h1>
+                    <p id="employeeAttendanceDescription" style="color: var(--text-secondary); margin-top: 0.25rem;">Select a date and mark attendance for teachers.</p>
                 </div>
             </header>
             <div class="attendance-toolbar">
                 <div class="search-bar">
                     <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
-                    <input type="text" id="teacherAttendanceSearch" placeholder="Search teachers or staff...">
+                    <input type="text" id="teacherAttendanceSearch" placeholder="Search teachers...">
                 </div>
                 <div class="input-card">
                     <label for="teacherAttendanceDate" style="display:block; margin-bottom:0.45rem; font-size:0.85rem; font-weight:600; color:var(--text-secondary);">Attendance Date</label>
@@ -74,6 +80,7 @@
 
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('teacherAttendanceDate').value = new Date().toISOString().slice(0, 10);
+            applyEmployeeAttendanceMode();
             await loadTeacherAttendanceFromSQL();
             renderTeacherAttendancePage();
             document.getElementById('teacherAttendanceSearch').addEventListener('input', renderTeacherAttendancePage);
@@ -83,6 +90,24 @@
             });
             if (window.lucide) window.lucide.createIcons();
         });
+
+        window.addEventListener('hashchange', () => {
+            applyEmployeeAttendanceMode();
+            renderTeacherAttendancePage();
+        });
+
+        function isStaffAttendanceMode() {
+            return window.location.hash === '#staff';
+        }
+
+        function applyEmployeeAttendanceMode() {
+            const staffMode = isStaffAttendanceMode();
+            document.getElementById('employeeAttendanceTitle').textContent = staffMode ? 'Staff Attendance' : 'Teacher Attendance';
+            document.getElementById('employeeAttendanceDescription').textContent = staffMode
+                ? 'Select a date and mark attendance for staff.'
+                : 'Select a date and mark attendance for teachers.';
+            document.getElementById('teacherAttendanceSearch').placeholder = staffMode ? 'Search staff...' : 'Search teachers...';
+        }
 
         function getTeacherAttendanceStore() {
             return JSON.parse(localStorage.getItem(TEACHER_ATTENDANCE_KEY) || '{}');
@@ -158,7 +183,8 @@
                 roleLabel: member.designation || 'Staff',
                 campusName: member.campusName || 'Main Campus'
             }));
-            const employees = [...teachers, ...staffMembers].filter((employee) => (`${employee.fullName || ''} ${employee.roleLabel || ''} ${employee.campusName || ''}`).toLowerCase().includes(term));
+            const employees = (isStaffAttendanceMode() ? staffMembers : teachers)
+                .filter((employee) => (`${employee.fullName || ''} ${employee.roleLabel || ''} ${employee.campusName || ''}`).toLowerCase().includes(term));
 
             tbody.innerHTML = '';
 

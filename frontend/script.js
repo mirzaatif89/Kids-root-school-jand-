@@ -70,6 +70,8 @@ const FALLBACK_ROUTE_TO_PAGE = {
     teachers: 'teachers.html',
     stuck_off: 'stuck_off.html',
     teacher_scheduling: 'teacher_scheduling.html',
+    teacher_timetable: 'teacher_timetable.html',
+    teacher_assigned_classes: 'teacher_assigned_classes.html',
     teacher_leave_requests: 'teacher_leave_requests.html',
     staff: 'staff.html',
     classes: 'classes.html',
@@ -2479,9 +2481,13 @@ function ensureAttendanceNav() {
             <i data-lucide="users"></i>
             <span>Student Attendance</span>
         </a>
-        <a href="${toRoutePath('teacher_attendance.html')}" class="nav-subitem${currentPage === 'teacher_attendance.html' ? ' active' : ''}">
+        <a href="${toRoutePath('teacher_attendance.html')}#teacher" class="nav-subitem${currentPage === 'teacher_attendance.html' && window.location.hash !== '#staff' ? ' active' : ''}">
             <i data-lucide="user-check"></i>
             <span>Teacher Attendance</span>
+        </a>
+        <a href="${toRoutePath('teacher_attendance.html')}#staff" class="nav-subitem${currentPage === 'teacher_attendance.html' && window.location.hash === '#staff' ? ' active' : ''}">
+            <i data-lucide="briefcase-business"></i>
+            <span>Staff Attendance</span>
         </a>
         <a href="${toRoutePath('student_attendance_report.html')}" class="nav-subitem${currentPage === 'student_attendance_report.html' ? ' active' : ''}">
             <i data-lucide="file-bar-chart-2"></i>
@@ -2943,6 +2949,7 @@ function renderAdminSidebarSequence() {
         'teacher_scheduling.html': new Set([
             'teacher_scheduling.html',
             'teacher_timetable.html',
+            'teacher_assigned_classes.html',
             'teacher_leave_requests.html'
         ])
     };
@@ -2966,6 +2973,16 @@ function renderAdminSidebarSequence() {
         { type: 'link', page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
         { type: 'link', page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+        {
+            type: 'dropdown',
+            label: 'Attendance',
+            icon: 'clipboard-check',
+            children: [
+                { page: 'student_attendance.html', label: 'Student Attendance', icon: 'users' },
+                { page: 'teacher_attendance.html', hash: '#teacher', label: 'Teacher Attendance', icon: 'user-check' },
+                { page: 'teacher_attendance.html', hash: '#staff', label: 'Staff Attendance', icon: 'briefcase-business' }
+            ]
+        },
         {
             type: 'dropdown',
             label: 'Fee Structure',
@@ -3078,7 +3095,7 @@ function ensureSchedulingNav() {
     const currentPage = getCurrentPageName();
     const studentSchedulingPages = ['student_scheduling.html', 'assignments.html', 'assignment_uploading.html', 'student_timetable.html', 'student_diary.html', 'student_leave_requests.html', 'student_courses.html', 'quiz_uploading.html', 'lecture_uploading.html', 'exam_schedule.html', 'stuck_off.html'];
     const isStudentSchedulingPage = studentSchedulingPages.includes(currentPage);
-    const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_timetable.html', 'teacher_leave_requests.html'];
+    const teacherSchedulingPages = ['teacher_scheduling.html', 'teacher_timetable.html', 'teacher_assigned_classes.html', 'teacher_leave_requests.html'];
     const isTeacherSchedulingPage = teacherSchedulingPages.includes(currentPage);
     const insertAfter = Array.from(navLinks.querySelectorAll('a[href]'))
         .find((link) => normalizeClientPageName(link.getAttribute('href') || '') === 'students.html');
@@ -4726,6 +4743,18 @@ async function deleteClassFeeHistory(historyId) {
     }
 }
 
+function handleClassFeeHistoryAction(selectElement, historyId) {
+    const action = String(selectElement?.value || '').trim().toLowerCase();
+    if (!action) return;
+    selectElement.value = '';
+    if (action === 'edit') {
+        editClassFeeHistory(historyId);
+    }
+    if (action === 'delete') {
+        deleteClassFeeHistory(historyId);
+    }
+}
+
 function renderClassFeeHistory() {
     const wrap = document.getElementById('classFeeHistoryWrap');
     if (!wrap) return;
@@ -4770,8 +4799,11 @@ function renderClassFeeHistory() {
                             <td>${escapeHtml(updatedText)}</td>
                             <td>
                                 <div class="history-actions">
-                                    <button type="button" class="history-action-btn edit" onclick="editClassFeeHistory('${historyId}')">Edit</button>
-                                    <button type="button" class="history-action-btn delete" onclick="deleteClassFeeHistory('${historyId}')">Delete</button>
+                                    <select class="table-action-select" onchange="handleClassFeeHistoryAction(this, '${historyId}')">
+                                        <option value="">Actions</option>
+                                        <option value="edit">Edit</option>
+                                        <option value="delete">Delete</option>
+                                    </select>
                                 </div>
                             </td>
                         </tr>

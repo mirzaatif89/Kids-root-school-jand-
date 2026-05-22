@@ -13,8 +13,14 @@
         .chip-absent { background: #fee2e2; color: #991b1b; }
         .chip-late { background: #fef3c7; color: #92400e; }
         .chip-empty { background: #e2e8f0; color: #475569; }
-        .attendance-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
-        .attendance-actions .btn { padding: 0.45rem 0.8rem; font-size: 0.82rem; }
+        .attendance-actions { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: nowrap; }
+        .dashboard-container .attendance-actions .btn {
+            min-height: 32px;
+            padding: 0.28rem 0.58rem;
+            font-size: 0.78rem;
+            line-height: 1;
+            white-space: nowrap;
+        }
         .input-card { background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1rem; box-shadow: var(--shadow-sm); }
     </style>
 </head>

@@ -24,6 +24,7 @@
         teacher_scheduling: new Set([
             'teacher_scheduling',
             'teacher_timetable',
+            'teacher_assigned_classes',
             'teacher_leave_requests'
         ])
     };
@@ -47,6 +48,16 @@
         { type: 'link', page: 'teachers', label: 'Teachers', icon: 'book-open' },
         { type: 'link', page: 'teacher_scheduling', label: 'Teachers Scheduling', icon: 'calendar-days' },
         { type: 'link', page: 'staff', label: 'Staff', icon: 'briefcase' },
+        {
+            type: 'dropdown',
+            label: 'Attendance',
+            icon: 'clipboard-check',
+            children: [
+                { type: 'link', page: 'student_attendance', label: 'Student Attendance', icon: 'users' },
+                { type: 'link', page: 'teacher_attendance', hash: '#teacher', label: 'Teacher Attendance', icon: 'user-check' },
+                { type: 'link', page: 'teacher_attendance', hash: '#staff', label: 'Staff Attendance', icon: 'briefcase-business' }
+            ]
+        },
         {
             type: 'dropdown',
             label: 'Fee Structure',

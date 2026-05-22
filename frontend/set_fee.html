@@ -9,22 +9,30 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .set-fee-layout { display:grid; grid-template-columns:minmax(300px,420px) minmax(0,1fr); gap:1rem; align-items:start; }
+        .set-fee-layout { display:grid; grid-template-columns:minmax(280px,360px) minmax(0,1fr); gap:1rem; align-items:start; }
         .set-fee-panel { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
         .set-fee-panel h2 { margin:0 0 1rem; color:var(--text-primary); font-size:1.15rem; }
         .set-fee-form { display:grid; gap:1rem; }
         .set-fee-field label { display:block; margin-bottom:.45rem; color:var(--text-secondary); font-size:.85rem; font-weight:800; }
-        .set-fee-field input, .set-fee-field select { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .8rem; font:inherit; background:#fff; }
+        .set-fee-field input, .set-fee-field select { width:100%; min-height:42px; border:1px solid var(--border-color); border-radius:8px; padding:.55rem .7rem; font:inherit; background:#fff; }
         .set-fee-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
         .set-fee-pills { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem; }
         .set-fee-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.36rem .7rem; background:#ecfeff; color:#155e75; font-size:.82rem; font-weight:800; }
-        .history-table { width:100%; border-collapse:collapse; }
-        .history-table th, .history-table td { padding:.75rem; border-bottom:1px solid var(--border-color); text-align:left; }
-        .history-table th { background:#f8fafc; color:var(--text-secondary); font-size:.78rem; text-transform:uppercase; letter-spacing:.03em; }
-        .history-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
-        .history-action-btn { border:0; border-radius:6px; padding:.42rem .65rem; font-size:.78rem; font-weight:800; cursor:pointer; }
-        .history-action-btn.edit { background:#e0f2fe; color:#075985; }
-        .history-action-btn.delete { background:#fee2e2; color:#991b1b; }
+        #classFeeHistoryWrap { min-width:0; overflow-x:hidden; }
+        .history-table { width:100%; min-width:0; border-collapse:collapse; table-layout:fixed; }
+        .history-table th, .history-table td { padding:.5rem .45rem; border-bottom:1px solid var(--border-color); text-align:left; vertical-align:middle; line-height:1.2; word-break:normal; overflow-wrap:break-word; }
+        .history-table th { background:#f8fafc; color:var(--text-secondary); font-size:.7rem; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
+        .history-table td { font-size:.78rem; }
+        .history-table th:nth-child(1), .history-table td:nth-child(1) { width:8%; white-space:nowrap; }
+        .history-table th:nth-child(2), .history-table td:nth-child(2) { width:10%; white-space:nowrap; }
+        .history-table th:nth-child(3), .history-table td:nth-child(3) { width:13%; }
+        .history-table th:nth-child(4), .history-table td:nth-child(4) { width:11%; }
+        .history-table th:nth-child(5), .history-table td:nth-child(5) { width:13%; }
+        .history-table th:nth-child(6), .history-table td:nth-child(6) { width:16%; }
+        .history-table th:nth-child(7), .history-table td:nth-child(7) { width:17%; white-space:nowrap; }
+        .history-table th:nth-child(8), .history-table td:nth-child(8) { width:12%; min-width:90px; text-align:right; white-space:nowrap; }
+        .history-actions { display:flex; justify-content:flex-end; }
+        .history-actions .table-action-select { width:82px; min-width:82px; min-height:32px; padding:.34rem .35rem; }
         .empty-history { padding:1rem; border:1px dashed var(--border-color); border-radius:8px; color:var(--text-secondary); background:#f8fafc; }
         @media (max-width:900px){ .set-fee-layout{ grid-template-columns:1fr; } }
     </style>

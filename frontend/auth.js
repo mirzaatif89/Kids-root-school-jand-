@@ -128,6 +128,7 @@
         'stuck_off.html': { moduleKey: 'students', defaultHome: 'dashboard.html', label: 'Stuck Off', icon: 'user-x' },
         'teacher_scheduling.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Scheduling', icon: 'calendar-days' },
         'teacher_timetable.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Timetable', icon: 'calendar-days' },
+        'teacher_assigned_classes.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Assigned Classes', icon: 'school' },
         'teacher_leave_requests.html': { moduleKey: 'teacher_scheduling', defaultHome: 'dashboard.html', label: 'Teacher Leave Requests', icon: 'calendar-check' },
         'staff.html': { moduleKey: 'staff', defaultHome: 'dashboard.html', label: 'Staff', icon: 'briefcase' },
         'classes.html': { moduleKey: 'classes', defaultHome: 'dashboard.html', label: 'Classes', icon: 'school' },
@@ -584,6 +585,7 @@
                 'teacher_scheduling.html': new Set([
                     'teacher_scheduling.html',
                     'teacher_timetable.html',
+                    'teacher_assigned_classes.html',
                     'teacher_leave_requests.html'
                 ])
             };
@@ -609,6 +611,16 @@
                 { type: 'link', page: 'teachers.html', label: 'Teachers', icon: 'book-open' },
                 { type: 'link', page: 'teacher_scheduling.html', label: 'Teachers Scheduling', icon: 'calendar-days' },
                 { type: 'link', page: 'staff.html', label: 'Staff', icon: 'briefcase' },
+                {
+                    type: 'dropdown',
+                    label: 'Attendance',
+                    icon: 'clipboard-check',
+                    children: [
+                        { page: 'student_attendance.html', label: 'Student Attendance', icon: 'users' },
+                        { page: 'teacher_attendance.html', hash: '#teacher', label: 'Teacher Attendance', icon: 'user-check' },
+                        { page: 'teacher_attendance.html', hash: '#staff', label: 'Staff Attendance', icon: 'briefcase-business' }
+                    ]
+                },
                 {
                     type: 'dropdown',
                     label: 'Fee Structure',

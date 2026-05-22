@@ -262,6 +262,8 @@ const ALLOWED_HOME_PAGES = new Set([
     'teachers.html',
     'stuck_off.html',
     'teacher_scheduling.html',
+    'teacher_timetable.html',
+    'teacher_assigned_classes.html',
     'teacher_leave_requests.html',
     'staff.html',
     'classes.html',

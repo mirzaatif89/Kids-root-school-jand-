@@ -165,8 +165,8 @@
         <main class="main-content">
             <header class="header">
                 <div>
-                    <h1>Teacher Scheduling</h1>
-                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Assign each teacher lecture, class, day, and time.</p>
+                    <h1 id="teacherScheduleHeading">Teacher Scheduling</h1>
+                    <p id="teacherScheduleDescription" style="color: var(--text-secondary); margin-top: 0.3rem;">Assign each teacher lecture, class, day, and time.</p>
                 </div>
             </header>
 
@@ -244,6 +244,14 @@
 
         function setScheduleData(key, data) {
             localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        function applyTeacherScheduleMode() {
+            const assignedLectureMode = window.location.hash === '#assigned-lectures';
+            document.getElementById('teacherScheduleHeading').textContent = assignedLectureMode ? 'Assigned Lectures' : 'Teacher Scheduling';
+            document.getElementById('teacherScheduleDescription').textContent = assignedLectureMode
+                ? 'Assign an additional lecture to a teacher by class, day, subject, and time.'
+                : 'Assign each teacher lecture, class, day, and time.';
         }
 
         function parseSchedule(rawSchedule) {
@@ -398,7 +406,9 @@
         });
 
         populateTeacherSchedulingOptions();
+        applyTeacherScheduleMode();
         renderTeacherSchedules();
+        window.addEventListener('hashchange', applyTeacherScheduleMode);
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
