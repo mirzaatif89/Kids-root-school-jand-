@@ -1211,6 +1211,7 @@ function mergeStudentRecords(incomingStudents) {
             familyName: student.familyName || localStudent.familyName || '',
             familyNo: student.familyNo || localStudent.familyNo || '',
             familyContact: student.familyContact || localStudent.familyContact || '',
+            familyAddedAt: student.familyAddedAt || localStudent.familyAddedAt || '',
             enrollmentStatus: student.enrollmentStatus || localStudent.enrollmentStatus || (student.isTerminated ? 'Terminated' : 'Active'),
             terminatedAt: student.terminatedAt || localStudent.terminatedAt || '',
             terminationNote: student.terminationNote || localStudent.terminationNote || '',
@@ -3334,11 +3335,11 @@ function ensureExplicitFamilyRecord(familyName = '', familyNo = '', familyContac
 
     const families = getFamilies();
     const existing = families.find((family) => getExplicitFamilyMatchKey(family.name, family.familyNo, family.familyContact) === matchKey);
-    if (existing) {
-        existing.name = cleanName;
-        existing.familyNo = cleanNo;
-        existing.familyContact = cleanContact;
-        existing.updatedAt = new Date().toISOString();
+        if (existing) {
+            existing.name = cleanName;
+            existing.familyNo = cleanNo;
+            existing.familyContact = cleanContact;
+            existing.updatedAt = new Date().toISOString();
         saveFamilies(families);
         return existing.id;
     }
@@ -3355,12 +3356,106 @@ function ensureExplicitFamilyRecord(familyName = '', familyNo = '', familyContac
     return family.id;
 }
 
+function updateExplicitFamilyRelationDetails(familyId, fatherName = '', parentPhone = '', guardianName = '', guardianContact = '') {
+    if (!familyId) return;
+    const families = getFamilies();
+    const family = families.find((item) => String(item.id || '') === String(familyId));
+    if (!family) return;
+    if (fatherName) family.fatherName = String(fatherName || '').trim();
+    if (parentPhone) {
+        family.parentPhone = String(parentPhone || '').trim();
+        family.phone = String(parentPhone || '').trim();
+    }
+    if (guardianName) family.guardianName = String(guardianName || '').trim();
+    if (guardianContact) family.guardianContact = String(guardianContact || '').trim();
+    family.updatedAt = new Date().toISOString();
+    saveFamilies(families);
+}
+
 function getFamilyMatchKey(fatherName = '', phone = '') {
     return `${String(fatherName || '').trim().toLowerCase()}|${normalizeFamilyPhone(phone)}`;
 }
 
 function getFamilyGuardianMatchKey(guardianName = '', guardianContact = '') {
     return `${String(guardianName || '').trim().toLowerCase()}|${normalizeFamilyPhone(guardianContact)}`;
+}
+
+function getStudentFamilyRelationKey(fatherName = '', parentPhone = '', guardianName = '') {
+    const fatherKey = normalizeFamilyIdentityValue(fatherName);
+    const phoneKey = normalizeFamilyPhone(parentPhone);
+    const guardianKey = normalizeFamilyIdentityValue(guardianName);
+    return fatherKey && phoneKey && guardianKey ? `${fatherKey}|${phoneKey}|${guardianKey}` : '';
+}
+
+function findFamilyByStudentRelation(fatherName = '', parentPhone = '', guardianName = '', excludeStudentId = '') {
+    const relationKey = getStudentFamilyRelationKey(fatherName, parentPhone, guardianName);
+    if (!relationKey) return null;
+
+    const students = getData(STORAGE_KEY_STUDENTS);
+    const matchedStudent = students.find((student) => (
+        String(student.id || '') !== String(excludeStudentId || '') &&
+        getStudentFamilyRelationKey(student.fatherName, student.parentPhone, student.guardianName) === relationKey &&
+        student.familyName &&
+        student.familyNo &&
+        student.familyContact
+    ));
+
+    if (matchedStudent) {
+        return {
+            id: matchedStudent.familyId || '',
+            name: matchedStudent.familyName || '',
+            familyNo: matchedStudent.familyNo || '',
+            familyContact: matchedStudent.familyContact || '',
+            createdAt: matchedStudent.familyAddedAt || ''
+        };
+    }
+
+    return getFamilies().find((family) => (
+        getStudentFamilyRelationKey(family.fatherName, family.parentPhone || family.phone, family.guardianName) === relationKey &&
+        family.name &&
+        family.familyNo &&
+        family.familyContact
+    )) || null;
+}
+
+function setStudentFamilyFieldsFromFamily(family) {
+    if (!family) return false;
+    const familyNameField = document.getElementById('studentFamilyName');
+    const familyNoField = document.getElementById('studentFamilyNo');
+    const familyContactField = document.getElementById('studentFamilyContact');
+    const familyAddedField = document.getElementById('studentFamilyAddedTime');
+    if (!familyNameField || !familyNoField || !familyContactField) return false;
+
+    familyNameField.value = family.name || '';
+    familyNoField.value = family.familyNo || '';
+    familyContactField.value = family.familyContact || '';
+    if (familyAddedField) {
+        const addedAt = family.createdAt || new Date().toISOString();
+        const parsed = new Date(addedAt);
+        familyAddedField.value = Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 16);
+    }
+    return true;
+}
+
+function autoFillStudentFamilyFromRelation(force = false) {
+    const familyNameField = document.getElementById('studentFamilyName');
+    const familyNoField = document.getElementById('studentFamilyNo');
+    const familyContactField = document.getElementById('studentFamilyContact');
+    if (!familyNameField || !familyNoField || !familyContactField) return null;
+
+    const hasManualFamilyValue = familyNameField.value.trim() || familyNoField.value.trim() || familyContactField.value.trim();
+    if (hasManualFamilyValue && !force) return null;
+
+    const match = findFamilyByStudentRelation(
+        document.getElementById('fatherName')?.value || '',
+        document.getElementById('parentPhone')?.value || '',
+        document.getElementById('guardianName')?.value || '',
+        document.getElementById('studentId')?.value || ''
+    );
+    if (!match) return null;
+
+    setStudentFamilyFieldsFromFamily(match);
+    return match;
 }
 
 function ensureFamilyRecord(familyName, parentPhone = '', guardianName = '', guardianContact = '', fatherName = '') {
@@ -4945,6 +5040,7 @@ async function handleStudentFormSubmit(e) {
     const photoInput = document.getElementById('studentProfileImage');
     let profileImage = existingStudent?.profileImage || '';
     const fatherNameInput = document.getElementById('fatherName').value.trim();
+    const relationFamilyMatch = autoFillStudentFamilyFromRelation(false);
     const familyName = document.getElementById('studentFamilyName')?.value.trim() || '';
     const familyNo = document.getElementById('studentFamilyNo')?.value.trim() || '';
     const familyContact = document.getElementById('studentFamilyContact')?.value.trim() || '';
@@ -4960,6 +5056,8 @@ async function handleStudentFormSubmit(e) {
     }
 
     const familyId = ensureExplicitFamilyRecord(familyName, familyNo, familyContact);
+    updateExplicitFamilyRelationDetails(familyId, fatherNameInput, parentPhone, guardianName, guardianContact);
+    const matchedFamilyAddedAt = relationFamilyMatch?.createdAt || getFamilies().find((family) => String(family.id || '') === String(familyId || ''))?.createdAt || '';
 
     try {
         if (photoInput?.files?.[0]) profileImage = await readFileAsDataUrl(photoInput.files[0]);
@@ -4990,6 +5088,11 @@ async function handleStudentFormSubmit(e) {
         familyName,
         familyNo,
         familyContact,
+        familyAddedAt: (familyName && familyNo && familyContact) ? (
+            isEdit && existingStudent && existingStudent.familyContact === familyContact && existingStudent.familyName === familyName && existingStudent.familyNo === familyNo
+                ? existingStudent.familyAddedAt || new Date().toISOString()
+                : matchedFamilyAddedAt || new Date().toISOString()
+        ) : '',
         feesStatus: currentStatus,
         enrollmentStatus,
         monthlyFee: monthlyFeeInput || '0',
@@ -5065,6 +5168,20 @@ function bindStudentFormSubmit() {
 }
 
 bindStudentFormSubmit();
+
+function bindStudentFamilyAutoFill() {
+    const form = document.getElementById('studentForm');
+    if (!form || form.dataset.familyAutofillBound === '1') return;
+    form.dataset.familyAutofillBound = '1';
+
+    ['fatherName', 'parentPhone', 'guardianName'].forEach((fieldId) => {
+        document.getElementById(fieldId)?.addEventListener('input', () => {
+            autoFillStudentFamilyFromRelation(false);
+        });
+    });
+}
+
+bindStudentFamilyAutoFill();
 
 function decodeRowPayload(encodedPayload) {
     try {
@@ -6547,6 +6664,7 @@ function editStudent(s) {
     if (document.getElementById('studentFamilyName')) document.getElementById('studentFamilyName').value = s.familyName || '';
     if (document.getElementById('studentFamilyNo')) document.getElementById('studentFamilyNo').value = s.familyNo || '';
     if (document.getElementById('studentFamilyContact')) document.getElementById('studentFamilyContact').value = s.familyContact || '';
+    if (document.getElementById('studentFamilyAddedTime')) document.getElementById('studentFamilyAddedTime').value = (s.familyAddedAt ? new Date(s.familyAddedAt).toISOString().slice(0, 16) : '');
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').value = s.monthlyFee || '0';
     if (document.getElementById('monthlyFee')) document.getElementById('monthlyFee').dataset.autoClassFee = '';
     if (document.getElementById('feeFrequency')) document.getElementById('feeFrequency').value = s.feeFrequency || 'Monthly';

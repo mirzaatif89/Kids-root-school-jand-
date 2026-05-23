@@ -125,12 +125,17 @@
             }
             list.innerHTML = groups.map((family) => {
                 const members = family.members || [];
+                const memberTimes = members.filter(m => m.familyAddedAt).map(m => new Date(m.familyAddedAt).getTime()).sort((a, b) => a - b);
+                const firstAddedTime = memberTimes.length ? new Date(memberTimes[0]).toLocaleString() : '-';
+                const lastAddedTime = memberTimes.length ? new Date(memberTimes[memberTimes.length - 1]).toLocaleString() : '-';
                 return `<article class="family-card">
                     <h3>${esc(family.name || 'Family')}</h3>
                     <div class="family-details">
                         <p><strong>Family Name:</strong> ${esc(family.name || '-')}</p>
                         <p><strong>Family No.:</strong> ${esc(family.familyNo || '-')}</p>
                         <p><strong>Family Contact:</strong> ${esc(family.familyContact || '-')}</p>
+                        ${memberTimes.length ? `<p><strong>First Student Added:</strong> ${esc(firstAddedTime)}</p>` : ''}
+                        ${memberTimes.length ? `<p><strong>Latest Student Added:</strong> ${esc(lastAddedTime)}</p>` : ''}
                     </div>
                     <div class="family-card-footer">
                         <p><strong>Total Students:</strong> ${members.length}</p>
@@ -142,15 +147,19 @@
         function renderFamilyStudentTable(members) {
             if (!members.length) return '<div class="family-student-empty">No students linked with this family.</div>';
             return `<table class="family-student-table">
-                <thead><tr><th>#</th><th>Student</th><th>Class</th><th>Roll</th><th>Contact</th><th>Father</th></tr></thead>
-                <tbody>${members.map((student, index) => `<tr>
+                <thead><tr><th>#</th><th>Student</th><th>Class</th><th>Roll</th><th>Contact</th><th>Father</th><th>Family Added Time</th></tr></thead>
+                <tbody>${members.map((student, index) => {
+                    const familyAddedTime = student.familyAddedAt ? new Date(student.familyAddedAt).toLocaleString() : '-';
+                    return `<tr>
                     <td>${index + 1}</td>
                     <td>${esc(student.fullName || 'Student')}</td>
                     <td>${esc(student.classGrade || '-')}</td>
                     <td>${esc(student.rollNo || '-')}</td>
                     <td>${esc(student.parentPhone || '-')}</td>
                     <td>${esc(student.fatherName || '-')}</td>
-                </tr>`).join('')}</tbody>
+                    <td>${esc(familyAddedTime)}</td>
+                </tr>`;
+                }).join('')}</tbody>
             </table>`;
         }
         function openFamilyScreen(familyId) {
