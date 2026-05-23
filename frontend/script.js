@@ -571,6 +571,63 @@ async function saveTeacherAttendanceToSQLRecord(teacherId, date, status) {
     return result;
 }
 
+function isDateInLeaveRange(dateKey = '', fromDate = '', toDate = '') {
+    if (!dateKey || !fromDate) return false;
+    const target = new Date(`${dateKey}T00:00:00`);
+    const start = new Date(`${fromDate}T00:00:00`);
+    const end = new Date(`${toDate || fromDate}T00:00:00`);
+    if (Number.isNaN(target.getTime()) || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+    return target >= start && target <= end;
+}
+
+async function approveMatchingLeaveRequestFromAttendance(applicantRole, applicantId, dateKey) {
+    const role = String(applicantRole || '').trim();
+    const id = String(applicantId || '').trim();
+    if (!role || !id || !dateKey || !['Student', 'Teacher'].includes(role)) return null;
+
+    const token = sessionStorage.getItem('eduCore_token') || '';
+    try {
+        const response = await fetch(`${API_BASE_URL}/leave-requests?role=${encodeURIComponent(role)}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const result = await parseJsonResponse(response, 'Leave requests could not be loaded.');
+        if (!response.ok || !result?.success || !Array.isArray(result.leaveRequests)) {
+            throw new Error(result?.message || 'Leave requests could not be loaded.');
+        }
+
+        const request = result.leaveRequests.find((item) => (
+            String(item.applicantId || '') === id &&
+            String(item.status || 'Pending').toLowerCase() === 'pending' &&
+            isDateInLeaveRange(dateKey, item.fromDate, item.toDate)
+        ));
+        if (!request?.id) return null;
+
+        const reviewResponse = await fetch(`${API_BASE_URL}/leave-requests/${encodeURIComponent(request.id)}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ status: 'Approved', reviewReason: '' })
+        });
+        const reviewResult = await parseJsonResponse(reviewResponse, 'Leave status could not be updated.');
+        if (!reviewResponse.ok || !reviewResult?.success) {
+            throw new Error(reviewResult?.message || 'Leave status could not be updated.');
+        }
+
+        const cacheKey = role === 'Student' ? 'eduCore_student_leave_requests' : 'eduCore_teacher_leave_requests';
+        const cached = getArrayData(cacheKey);
+        if (cached.length) {
+            const updated = cached.map((item) => String(item.id) === String(request.id) ? reviewResult.leaveRequest : item);
+            localStorage.setItem(cacheKey, JSON.stringify(updated));
+        }
+        return reviewResult.leaveRequest || request;
+    } catch (error) {
+        console.warn(`Matching ${role.toLowerCase()} leave approval failed: ${error.message}`);
+        return null;
+    }
+}
+
 // === LEGACY LOCAL AUTH CLEANUP ===
 (function forceResetAuth() {
     let existing = {};
@@ -1131,16 +1188,10 @@ function getBrandingLogoMarkup(className = 'print-logo', alt = 'School logo') {
 function applyGlobalBranding(branding = getBrandingSettings()) {
     const logoSrc = branding.logoDataUrl || 'images/logo.png';
     const schoolName = branding.schoolName || branding.schoolTitle || 'School';
-    const schoolTitle = branding.schoolTitle || 'Software';
-
-    document.querySelectorAll('.sidebar-logo-img, .portal-logo, img[data-branding-logo]').forEach((img) => {
+    document.querySelectorAll('.portal-logo, img[data-branding-logo]').forEach((img) => {
         if (!img || img.getAttribute('src') === logoSrc) return;
         img.setAttribute('src', logoSrc);
         img.setAttribute('alt', `${schoolName} logo`);
-    });
-
-    document.querySelectorAll('.logo-section').forEach((section) => {
-        section.dataset.brandingTitle = `${schoolName}\n${schoolTitle}`;
     });
 
     document.querySelectorAll('[data-branding-school-name]').forEach((node) => {
@@ -5209,15 +5260,25 @@ function viewStudentFromEncoded(encodedPayload) {
     viewStudent(payload);
 }
 
-async function sendStudentCustomEmailFromEncoded(encodedPayload) {
-    const student = decodeRowPayload(encodedPayload);
-    const to = String(student?.email || '').trim();
-    if (!student || !to) {
-        showAppAlert('This student does not have an email address saved.', 'Email Missing');
+function getEmailSchoolName() {
+    try {
+        const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+        return String(branding.schoolName || branding.schoolTitle || 'Apexiums School').trim() || 'Apexiums School';
+    } catch (_error) {
+        return 'Apexiums School';
+    }
+}
+
+async function sendCustomEmailToRecord(record = {}, roleLabel = 'Recipient') {
+    const to = String(record?.email || '').trim();
+    const displayName = String(record?.fullName || record?.name || roleLabel || 'Recipient').trim();
+    const schoolName = getEmailSchoolName();
+    if (!record || !to) {
+        showAppAlert(`This ${String(roleLabel || 'record').toLowerCase()} does not have an email address saved.`, 'Email Missing');
         return;
     }
 
-    const subject = window.prompt('Email subject', 'Message from Apexiums School');
+    const subject = window.prompt('Email subject', `Message from ${schoolName}`);
     if (!subject) return;
     const message = window.prompt('Email message');
     if (!message) return;
@@ -5233,7 +5294,7 @@ async function sendStudentCustomEmailFromEncoded(encodedPayload) {
             body: JSON.stringify({
                 to,
                 subject,
-                text: `Dear ${student.fullName || 'Student'},\n\n${message}\n\nApexiums School`,
+                text: `Dear ${displayName},\n\n${message}\n\n${schoolName}`,
                 html: `
                     <div style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#111827">
                         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eef2f7;padding:28px 12px">
@@ -5244,17 +5305,17 @@ async function sendStudentCustomEmailFromEncoded(encodedPayload) {
                                             <td style="background:#0f766e;padding:24px 28px;color:#ffffff">
                                                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                                     <tr>
-                                                        <td width="74"><img src="cid:school-logo" width="62" height="62" alt="Apexiums School" style="display:block;border-radius:14px;background:#ffffff;padding:6px;object-fit:contain"></td>
-                                                        <td style="padding-left:14px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Apexiums School</div><h1 style="margin:6px 0 0;font-size:24px;line-height:1.25;color:#ffffff">${escapeHtml(subject)}</h1></td>
+                                                        <td width="74"><img src="cid:school-logo" width="62" height="62" alt="${escapeHtml(schoolName)}" style="display:block;border-radius:14px;background:#ffffff;padding:6px;object-fit:contain"></td>
+                                                        <td style="padding-left:14px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">${escapeHtml(schoolName)}</div><h1 style="margin:6px 0 0;font-size:24px;line-height:1.25;color:#ffffff">${escapeHtml(subject)}</h1></td>
                                                     </tr>
                                                 </table>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td style="padding:28px">
-                                                <p style="margin:0 0 12px;color:#111827;font-size:15px">Dear ${escapeHtml(student.fullName || 'Student')},</p>
+                                                <p style="margin:0 0 12px;color:#111827;font-size:15px">Dear ${escapeHtml(displayName)},</p>
                                                 <div style="margin-top:18px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;color:#1f2937;font-size:15px;line-height:1.8;white-space:pre-line">${escapeHtml(message)}</div>
-                                                <p style="margin:22px 0 0;color:#111827;font-size:14px;font-weight:700">Apexiums School</p>
+                                                <p style="margin:22px 0 0;color:#111827;font-size:14px;font-weight:700">${escapeHtml(schoolName)}</p>
                                             </td>
                                         </tr>
                                     </table>
@@ -5271,6 +5332,21 @@ async function sendStudentCustomEmailFromEncoded(encodedPayload) {
     } catch (error) {
         showAppAlert(error.message || String(error), 'Email Failed');
     }
+}
+
+async function sendStudentCustomEmailFromEncoded(encodedPayload) {
+    const student = decodeRowPayload(encodedPayload);
+    return sendCustomEmailToRecord(student, 'Student');
+}
+
+async function sendTeacherCustomEmailFromEncoded(encodedPayload) {
+    const teacher = decodeRowPayload(encodedPayload);
+    return sendCustomEmailToRecord(teacher, 'Teacher');
+}
+
+async function sendStaffCustomEmailFromEncoded(encodedPayload) {
+    const staffMember = decodeRowPayload(encodedPayload);
+    return sendCustomEmailToRecord(staffMember, 'Staff member');
 }
 
 function handleStudentActionSelect(selectElement, encodedPayload, studentId, isBranchUser = 0) {
@@ -5342,6 +5418,11 @@ function handleTeacherActionSelect(selectElement, encodedPayload, teacherId) {
 
     if (action === 'schedule') {
         openTeacherSchedule(teacherId);
+        return;
+    }
+
+    if (action === 'email') {
+        sendTeacherCustomEmailFromEncoded(encodedPayload);
         return;
     }
 
@@ -7210,6 +7291,7 @@ function renderTeachers(term = '') {
                             <option value="">Actions</option>
                             <option value="attendance">Attendance</option>
                             <option value="schedule">Schedule</option>
+                            ${t.email ? '<option value="email">Send Email</option>' : ''}
                             <option value="edit">Edit</option>
                             <option value="stuckoff">Stuck-Off</option>
                             <option value="delete">Delete</option>
@@ -7596,6 +7678,7 @@ function renderStaff(term = '') {
     } else {
         noData.style.display = 'none';
         filtered.forEach(s => {
+            const encodedStaff = encodeURIComponent(JSON.stringify(s));
             const tr = document.createElement('tr');
             const staffAvatar = s.profileImage
                 ? `<img src="${s.profileImage}" alt="${s.fullName || 'Staff'}">`
@@ -7623,6 +7706,7 @@ function renderStaff(term = '') {
                 </td>
                 <td>PKR ${s.salary}</td>
                 <td>
+                    ${s.email ? `<button class="action-btn btn-view" onclick="sendStaffCustomEmailFromEncoded('${encodedStaff}')"><i data-lucide="mail" width="14"></i> Email</button>` : ''}
                     <button class="action-btn btn-edit" onclick='editStaff(${JSON.stringify(s)})'><i data-lucide="edit-2" width="14"></i> Edit</button>
                     <button class="action-btn btn-delete" onclick="deleteStaff('${s.id}')"><i data-lucide="trash-2" width="14"></i></button>
                 </td>

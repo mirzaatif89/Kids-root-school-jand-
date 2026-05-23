@@ -1,5 +1,5 @@
 const { sendSmtpEmail } = require('./mailer');
-const { renderSchoolEmail } = require('./email-template');
+const { getSchoolEmailBranding, renderSchoolEmail } = require('./email-template');
 
 function normalizeText(value) {
     return String(value || '').trim();
@@ -22,6 +22,7 @@ function formatLeaveDate(value) {
 }
 
 function buildLeaveReviewEmail(leaveRequest = {}) {
+    const { schoolName } = getSchoolEmailBranding();
     const applicantRole = normalizeText(leaveRequest.applicantRole) || 'Student';
     const applicantName = normalizeText(leaveRequest.applicantName) || applicantRole;
     const status = normalizeText(leaveRequest.status) || 'Reviewed';
@@ -47,7 +48,7 @@ function buildLeaveReviewEmail(leaveRequest = {}) {
         '',
         ...rows.map(([label, value]) => `${label}: ${value}`),
         '',
-        'Apexiums School'
+        schoolName
     ].join('\n');
     const html = renderSchoolEmail({
         title: `Leave ${status}`,

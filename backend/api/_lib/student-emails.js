@@ -1,6 +1,6 @@
 const { Op } = require('sequelize');
 const { sendSmtpEmail } = require('./mailer');
-const { renderSchoolEmail } = require('./email-template');
+const { getSchoolEmailBranding, renderSchoolEmail } = require('./email-template');
 
 const BIRTHDAY_LOG_KEY = 'student_birthday_email_log';
 const NOTICE_LOG_KEY = 'student_notice_email_log';
@@ -85,21 +85,22 @@ function isBirthdayToday(student, date = new Date()) {
 
 function buildBirthdayEmail(student) {
     const name = student.fullName || 'Student';
+    const { schoolName } = getSchoolEmailBranding();
     const text = [
         `Dear ${name},`,
         '',
-        'Happy Birthday from Apexiums School.',
+        `Happy Birthday from ${schoolName}.`,
         'We wish you a successful and happy year ahead.',
         '',
-        'Apexiums School'
+        schoolName
     ].join('\n');
 
     const html = renderSchoolEmail({
         title: 'Happy Birthday',
-        badge: 'Apexiums School',
-        preheader: 'Happy Birthday from Apexiums School.',
+        badge: schoolName,
+        preheader: `Happy Birthday from ${schoolName}.`,
         greeting: name,
-        intro: 'Happy Birthday from Apexiums School. We wish you a successful and happy year ahead.',
+        intro: `Happy Birthday from ${schoolName}. We wish you a successful and happy year ahead.`,
         accentColor: '#7c3aed',
         rows: [
             ['Student Name', name],
@@ -121,6 +122,7 @@ function buildNoticeEmail(student, notice) {
     const title = String(notice?.title || 'School Notice').trim();
     const message = String(notice?.message || '').trim();
     const name = student.fullName || 'Student';
+    const { schoolName } = getSchoolEmailBranding();
 
     const text = [
         `Dear ${name},`,
@@ -129,7 +131,7 @@ function buildNoticeEmail(student, notice) {
         '',
         message,
         '',
-        'Apexiums School'
+        schoolName
     ].join('\n');
 
     const html = renderSchoolEmail({
@@ -158,6 +160,7 @@ function buildNoticeEmail(student, notice) {
 
 function buildFineEmail(student, payload = {}) {
     const name = student.fullName || payload.studentName || 'Student';
+    const { schoolName } = getSchoolEmailBranding();
     const fineAmount = Number(payload.fineAmount || 0);
     const totalDue = Number(payload.fullAmount || payload.totalDue || 0);
     const feeMonth = payload.feeMonth || 'Fee';
@@ -181,7 +184,7 @@ function buildFineEmail(student, payload = {}) {
         '',
         'Please clear the pending amount at the earliest.',
         '',
-        'Apexiums School'
+        schoolName
     ].join('\n');
 
     const html = renderSchoolEmail({

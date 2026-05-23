@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sendSmtpEmail } = require('./mailer');
-const { renderSchoolEmail } = require('./email-template');
+const { getSchoolEmailBranding, renderSchoolEmail } = require('./email-template');
 
 const REMINDER_LOG_KEY = 'pending_fee_email_log';
 const MONTHS_LIST = [
@@ -176,6 +176,7 @@ function calculateStudentPendingFee(student, paidAmountMap, fineChargeMap, dueBa
 
 function buildPendingFeeEmail(student, dueBalance = 0) {
     const name = student.fullName || 'Student';
+    const { schoolName } = getSchoolEmailBranding();
     const amount = Number(dueBalance || student.monthlyFee || 0);
     const amountLine = amount > 0
         ? `Pending amount: PKR ${amount.toLocaleString('en-PK')}`
@@ -191,7 +192,7 @@ function buildPendingFeeEmail(student, dueBalance = 0) {
         '',
         'Please clear the pending fee at the earliest.',
         '',
-        'Apexiums School'
+        schoolName
     ].filter(Boolean).join('\n');
 
     const html = renderSchoolEmail({
@@ -221,6 +222,7 @@ function buildPendingFeeEmail(student, dueBalance = 0) {
 
 function buildFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 0) {
     const name = student.fullName || payment.studentName || 'Student';
+    const { schoolName } = getSchoolEmailBranding();
     const amount = Number(payment.amount || 0);
     const status = String(payment.status || 'Paid').trim() || 'Paid';
     const isPaid = status.toLowerCase() === 'paid';
@@ -252,7 +254,7 @@ function buildFeePaymentConfirmationEmail(student, payment = {}, remainingDue = 
         ...rows.map(([label, value]) => `${label}: ${value}`),
         '',
         'Thank you.',
-        'Apexiums School'
+        schoolName
     ].join('\n');
 
     const html = renderSchoolEmail({

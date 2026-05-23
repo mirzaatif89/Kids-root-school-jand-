@@ -20,6 +20,7 @@
         .chip-present { background: #dcfce7; color: #166534; }
         .chip-absent { background: #fee2e2; color: #991b1b; }
         .chip-late { background: #fef3c7; color: #92400e; }
+        .chip-leave { background: #dbeafe; color: #1d4ed8; }
         .chip-empty { background: #e2e8f0; color: #475569; }
         .attendance-actions { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: nowrap; }
         .dashboard-container .attendance-actions .btn {
@@ -206,6 +207,9 @@
             if (!syncResult.success) {
                 alert(syncResult.error || 'Student attendance could not be saved to the database.');
             }
+            if (status === 'Leave' && typeof approveMatchingLeaveRequestFromAttendance === 'function') {
+                await approveMatchingLeaveRequestFromAttendance('Student', studentId, dateKey);
+            }
             renderStudentAttendancePage();
         }
         function renderStudentAttendancePage() {
@@ -235,7 +239,7 @@
 
             students.forEach(student => {
                 const status = getStudentStatusForDate(student.id, dateKey);
-                const statusClass = status === 'Present' ? 'chip-present' : status === 'Absent' ? 'chip-absent' : status === 'Late' ? 'chip-late' : 'chip-empty';
+                const statusClass = status === 'Present' ? 'chip-present' : status === 'Absent' ? 'chip-absent' : status === 'Late' ? 'chip-late' : status === 'Leave' ? 'chip-leave' : 'chip-empty';
                 const studentIdArg = escapeHtml(JSON.stringify(String(student.id || '')));
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -246,6 +250,7 @@
                     <td><div class="attendance-actions">
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Present')">Present</button>
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Late')">Late</button>
+                        <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Leave')">Leave</button>
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Absent')">Absent</button>
                     </div></td>`;
                 tbody.appendChild(tr);

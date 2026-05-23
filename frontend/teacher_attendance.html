@@ -26,6 +26,8 @@
             line-height: 1;
             white-space: nowrap;
         }
+        .attendance-update-select { min-height: 32px; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; color: var(--primary-color); padding: 0.35rem 0.55rem; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+        .attendance-update-select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12); }
         .input-card { width: 100%; max-width: 320px; justify-self: end; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 0.8rem; box-shadow: var(--shadow-sm); }
         .input-card input[type="date"] { min-height: 38px; }
         @media (max-width: 720px) {
@@ -174,7 +176,37 @@
             if (!syncResult.success) {
                 alert(syncResult.error || 'Teacher attendance could not be saved to the database.');
             }
+            if (status === 'Leave' && !isStaffAttendanceMode() && typeof approveMatchingLeaveRequestFromAttendance === 'function') {
+                await approveMatchingLeaveRequestFromAttendance('Teacher', teacherId, dateKey);
+            }
             renderTeacherAttendancePage();
+        }
+
+        function handleTeacherAttendanceUpdate(select, teacherId) {
+            const status = select.value;
+            select.value = '';
+            if (!status) return;
+            setTeacherAttendance(teacherId, status);
+        }
+
+        function buildTeacherAttendanceActions(employeeId, status) {
+            const employeeIdArg = escapeHtml(JSON.stringify(String(employeeId || '')));
+            if (status && status !== 'Not Marked') {
+                return `<select class="attendance-update-select" onchange="handleTeacherAttendanceUpdate(this, ${employeeIdArg})" aria-label="Update attendance status">
+                    <option value="">Update Status</option>
+                    <option value="Present">Present</option>
+                    <option value="Late">Late</option>
+                    <option value="Leave">Leave</option>
+                    <option value="Absent">Absent</option>
+                </select>`;
+            }
+
+            return `
+                <button class="btn btn-outline" onclick="setTeacherAttendance(${employeeIdArg}, 'Present')">Present</button>
+                <button class="btn btn-outline" onclick="setTeacherAttendance(${employeeIdArg}, 'Late')">Late</button>
+                <button class="btn btn-outline" onclick="setTeacherAttendance(${employeeIdArg}, 'Leave')">Leave</button>
+                <button class="btn btn-outline" onclick="setTeacherAttendance(${employeeIdArg}, 'Absent')">Absent</button>
+            `;
         }
 
         function renderTeacherAttendancePage() {
@@ -211,15 +243,12 @@
                                 : 'chip-empty';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${employee.fullName || '-'}</td>
-                    <td>${employee.roleLabel || '-'}</td>
-                    <td>${employee.campusName || 'Main Campus'}</td>
+                    <td>${escapeHtml(employee.fullName || '-')}</td>
+                    <td>${escapeHtml(employee.roleLabel || '-')}</td>
+                    <td>${escapeHtml(employee.campusName || 'Main Campus')}</td>
                     <td><span class="attendance-chip ${statusClass}">${status}</span></td>
                     <td><div class="attendance-actions">
-                        <button class="btn btn-outline" onclick="setTeacherAttendance('${employee.id}', 'Present')">Present</button>
-                        <button class="btn btn-outline" onclick="setTeacherAttendance('${employee.id}', 'Late')">Late</button>
-                        <button class="btn btn-outline" onclick="setTeacherAttendance('${employee.id}', 'Leave')">Leave</button>
-                        <button class="btn btn-outline" onclick="setTeacherAttendance('${employee.id}', 'Absent')">Absent</button>
+                        ${buildTeacherAttendanceActions(employee.id, status)}
                     </div></td>`;
                 tbody.appendChild(tr);
             });

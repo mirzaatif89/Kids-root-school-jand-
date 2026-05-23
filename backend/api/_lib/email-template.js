@@ -1,6 +1,7 @@
 const path = require('path');
 
 const SCHOOL_LOGO_CID = 'school-logo';
+const DEFAULT_SCHOOL_NAME = 'Apexiums School';
 
 function escapeHtml(value) {
     return String(value ?? '')
@@ -19,6 +20,11 @@ function getSchoolLogoAttachment() {
     };
 }
 
+function getSchoolEmailBranding() {
+    const schoolName = String(process.env.SMTP_FROM_NAME || process.env.SCHOOL_NAME || DEFAULT_SCHOOL_NAME).trim() || DEFAULT_SCHOOL_NAME;
+    return { schoolName };
+}
+
 function renderDetailRows(rows = []) {
     return rows
         .filter(([label]) => label)
@@ -30,17 +36,21 @@ function renderDetailRows(rows = []) {
         `).join('');
 }
 
-function renderSchoolEmail({
-    title = 'School Notice',
-    badge = 'Apexiums School',
-    preheader = '',
-    greeting = '',
-    intro = '',
-    rows = [],
-    bodyHtml = '',
-    accentColor = '#0f766e',
-    footerNote = 'This is an official email from Apexiums School.'
-} = {}) {
+function renderSchoolEmail(options = {}) {
+    const branding = getSchoolEmailBranding();
+    const {
+        title = 'School Notice',
+        badge = branding.schoolName,
+        preheader = '',
+        greeting = '',
+        intro = '',
+        rows = [],
+        bodyHtml = '',
+        accentColor = '#0f766e',
+        footerNote = `This is an official email from ${branding.schoolName}.`,
+        schoolName = branding.schoolName
+    } = options;
+    const displaySchoolName = String(schoolName || branding.schoolName || DEFAULT_SCHOOL_NAME).trim() || DEFAULT_SCHOOL_NAME;
     const preheaderHtml = preheader
         ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(preheader)}</div>`
         : '';
@@ -66,7 +76,7 @@ function renderSchoolEmail({
                                     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse">
                                         <tr>
                                             <td width="74" valign="middle">
-                                                <img src="cid:${SCHOOL_LOGO_CID}" width="62" height="62" alt="Apexiums School" style="display:block;border-radius:14px;background:#ffffff;padding:6px;object-fit:contain">
+                                                <img src="cid:${SCHOOL_LOGO_CID}" width="62" height="62" alt="${escapeHtml(displaySchoolName)}" style="display:block;border-radius:14px;background:#ffffff;padding:6px;object-fit:contain">
                                             </td>
                                             <td valign="middle" style="padding-left:14px">
                                                 <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;opacity:.9">${escapeHtml(badge)}</div>
@@ -85,7 +95,7 @@ function renderSchoolEmail({
                                     <div style="margin-top:24px;padding:16px 18px;border-left:4px solid ${accentColor};background:#f8fafc;border-radius:10px;color:#475569;font-size:13px;line-height:1.6">
                                         ${escapeHtml(footerNote)}
                                     </div>
-                                    <p style="margin:22px 0 0;color:#111827;font-size:14px;font-weight:700">Apexiums School</p>
+                                    <p style="margin:22px 0 0;color:#111827;font-size:14px;font-weight:700">${escapeHtml(displaySchoolName)}</p>
                                 </td>
                             </tr>
                             <tr>
@@ -105,6 +115,7 @@ function renderSchoolEmail({
 module.exports = {
     SCHOOL_LOGO_CID,
     escapeHtml,
+    getSchoolEmailBranding,
     getSchoolLogoAttachment,
     renderSchoolEmail
 };

@@ -1013,6 +1013,7 @@ async function sendAdminOtpEmail(purpose) {
     await saveAdminOtp(purpose, otp);
     const to = getAdminRecoveryEmail();
     const purposeLabel = purpose === 'forgot-password' ? 'admin password reset' : 'admin password change';
+    const schoolName = getSmtpConfig().fromName || 'Apexiums School';
 
     await sendSmtpEmail({
         to,
@@ -1022,14 +1023,14 @@ async function sendAdminOtpEmail(purpose) {
             '',
             'This OTP will expire in 10 minutes.',
             '',
-            'Apexiums School'
+            schoolName
         ].join('\n'),
         html: `
             <div style="font-family:Arial,sans-serif;line-height:1.55;color:#111827">
                 <p>Your OTP for ${purposeLabel} is:</p>
                 <div style="font-size:28px;font-weight:700;letter-spacing:4px;margin:16px 0">${otp}</div>
                 <p>This OTP will expire in 10 minutes.</p>
-                <p>Apexiums School</p>
+                <p>${schoolName}</p>
             </div>
         `
     });
