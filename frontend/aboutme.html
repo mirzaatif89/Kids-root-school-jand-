@@ -7,6 +7,18 @@
     <title>About Us - Apexium School System</title>
     <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        (function () {
+            try {
+                const user = JSON.parse(sessionStorage.getItem('loggedInUser') || 'null');
+                if (user && (user.role === 'Student' || user.role === 'Teacher')) {
+                    window.location.replace('portal_about.html');
+                }
+            } catch (_error) {
+                // Continue loading the normal About page if session data is unreadable.
+            }
+        })();
+    </script>
     <style>
         .about-card {
             background: var(--surface-color);
