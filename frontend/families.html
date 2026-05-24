@@ -14,7 +14,11 @@
         .family-card p { margin:.25rem 0; color:var(--text-secondary); }
         .family-details { background:#f8fafc; border:1px solid var(--border-color); border-radius:8px; padding:.65rem; margin:.65rem 0; }
         .family-card-footer { display:flex; align-items:center; justify-content:space-between; gap:.75rem; margin-top:.8rem; }
+        .family-card-actions { display:flex; align-items:center; gap:.5rem; }
         .family-open-btn { border:1px solid #0f766e; background:#0f766e; color:#fff; border-radius:7px; padding:.45rem .7rem; font-size:.8rem; font-weight:800; cursor:pointer; }
+        .family-delete-btn { border:1px solid #dc2626; background:#fff; color:#dc2626; border-radius:7px; padding:.45rem .7rem; font-size:.8rem; font-weight:800; cursor:pointer; }
+        .family-delete-btn:hover { background:#fee2e2; }
+        .family-badge { display:inline-flex; align-items:center; gap:.25rem; border-radius:999px; background:#ecfeff; color:#0f766e; font-size:.72rem; font-weight:800; padding:.22rem .55rem; margin:.35rem 0 .15rem; }
         .family-list-screen { display:none; }
         .family-list-screen.active { display:block; }
         .families-overview.hidden { display:none; }
@@ -60,11 +64,15 @@
         function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
         function saveLocalArray(key, value) { localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : [])); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        const DELETED_FAMILY_CARDS_KEY = 'eduCore_deleted_family_cards';
         function normalizePhone(value = '') { return String(value || '').replace(/\D/g, ''); }
         function normalizeFamilyText(value = '') { return String(value || '').trim().toLowerCase().replace(/\s+/g, ' '); }
         function normalizeFamilyContact(value = '') {
             const digits = normalizePhone(value);
             return digits || normalizeFamilyText(value);
+        }
+        function stableFamilyId(value = '') {
+            return String(value || '').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
         }
         function familyMatchKey(familyName = '', familyNo = '', familyContact = '') {
             const nameKey = String(familyName || '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -75,6 +83,36 @@
         function getStudentFamilyGroupKey(student) {
             const key = familyMatchKey(student.familyName, student.familyNo, student.familyContact);
             return key ? `family-${key}` : '';
+        }
+        function getSiblingRelationKey(student) {
+            const fatherName = normalizeFamilyText(student.fatherName);
+            const parentPhone = normalizePhone(student.parentPhone);
+            if (fatherName && parentPhone) return `father|${fatherName}|${parentPhone}`;
+
+            const guardianName = normalizeFamilyText(student.guardianName);
+            const guardianContact = normalizePhone(student.guardianContact);
+            if (guardianName && guardianContact) return `guardian|${guardianName}|${guardianContact}`;
+
+            return '';
+        }
+        function buildAutoFamilyFromSiblings(relationKey, members) {
+            const first = members[0] || {};
+            const fatherName = String(first.fatherName || '').trim();
+            const guardianName = String(first.guardianName || '').trim();
+            const parentPhone = String(first.parentPhone || first.guardianContact || '').trim();
+            const familyName = fatherName
+                ? `${fatherName} Family`
+                : (guardianName ? `${guardianName} Family` : 'Student Family');
+
+            return {
+                id: `auto-${stableFamilyId(relationKey)}`,
+                name: familyName,
+                familyNo: `Auto-${String(stableFamilyId(relationKey)).slice(-6).toUpperCase()}`,
+                familyContact: parentPhone,
+                relationLabel: relationKey.startsWith('father|') ? 'Father + Parent Phone' : 'Guardian + Guardian Contact',
+                autoDetected: true,
+                members
+            };
         }
 
         function buildFamilyGroups(families, students) {
@@ -111,7 +149,34 @@
                 group.members.push(student);
             });
 
+            const siblingBuckets = new Map();
+            students.forEach((student) => {
+                const relationKey = getSiblingRelationKey(student);
+                if (!relationKey) return;
+                if (!siblingBuckets.has(relationKey)) siblingBuckets.set(relationKey, []);
+                siblingBuckets.get(relationKey).push(student);
+            });
+
+            siblingBuckets.forEach((members, relationKey) => {
+                if (members.length < 2) return;
+                const memberIds = new Set(members.map((student) => String(student.id || student.studentCode || student.rollNo || '')).filter(Boolean));
+                const alreadyCovered = Array.from(groups.values()).some((group) => {
+                    const matchedCount = (group.members || []).filter((student) => memberIds.has(String(student.id || student.studentCode || student.rollNo || ''))).length;
+                    return matchedCount >= 2;
+                });
+                if (alreadyCovered) return;
+
+                const family = buildAutoFamilyFromSiblings(relationKey, members);
+                groups.set(family.id, family);
+            });
+
             return Array.from(groups.values())
+                .filter((family) => (family.members || []).length >= 2)
+                .filter((family) => !readLocalArray(DELETED_FAMILY_CARDS_KEY).includes(String(family.id || '')))
+                .map((family) => ({
+                    ...family,
+                    members: (family.members || []).slice().sort((a, b) => String(a.fullName || '').localeCompare(String(b.fullName || '')))
+                }))
                 .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
         }
         function renderFamiliesPage() {
@@ -120,7 +185,7 @@
             const list = document.getElementById('familiesList');
             const groups = buildFamilyGroups(families, students);
             if (!groups.length) {
-                list.innerHTML = '<div class="family-empty">No family added yet.</div>';
+                list.innerHTML = '<div class="family-empty">No sibling families found yet. A family appears here when two or more students share the same father and parent phone, or the same guardian and guardian contact.</div>';
                 return;
             }
             list.innerHTML = groups.map((family) => {
@@ -130,16 +195,21 @@
                 const lastAddedTime = memberTimes.length ? new Date(memberTimes[memberTimes.length - 1]).toLocaleString() : '-';
                 return `<article class="family-card">
                     <h3>${esc(family.name || 'Family')}</h3>
+                    ${family.autoDetected ? '<div class="family-badge"><i data-lucide="users" width="13"></i> Auto Detected</div>' : ''}
                     <div class="family-details">
                         <p><strong>Family Name:</strong> ${esc(family.name || '-')}</p>
                         <p><strong>Family No.:</strong> ${esc(family.familyNo || '-')}</p>
                         <p><strong>Family Contact:</strong> ${esc(family.familyContact || '-')}</p>
+                        ${family.relationLabel ? `<p><strong>Matched By:</strong> ${esc(family.relationLabel)}</p>` : ''}
                         ${memberTimes.length ? `<p><strong>First Student Added:</strong> ${esc(firstAddedTime)}</p>` : ''}
                         ${memberTimes.length ? `<p><strong>Latest Student Added:</strong> ${esc(lastAddedTime)}</p>` : ''}
                     </div>
                     <div class="family-card-footer">
                         <p><strong>Total Students:</strong> ${members.length}</p>
-                        <button class="family-open-btn" type="button" onclick="openFamilyScreen('${esc(family.id)}')">Open</button>
+                        <div class="family-card-actions">
+                            <button class="family-delete-btn" type="button" onclick="deleteFamilyCard('${esc(family.id)}')">Delete</button>
+                            <button class="family-open-btn" type="button" onclick="openFamilyScreen('${esc(family.id)}')">Open</button>
+                        </div>
                     </div>
                 </article>`;
             }).join('');
@@ -184,6 +254,7 @@
                             <p><strong>Family Name:</strong> ${esc(family.name || '-')}</p>
                             <p><strong>Family No.:</strong> ${esc(family.familyNo || '-')}</p>
                             <p><strong>Family Contact:</strong> ${esc(family.familyContact || '-')}</p>
+                            ${family.relationLabel ? `<p><strong>Matched By:</strong> ${esc(family.relationLabel)}</p>` : ''}
                         </div>
                     </div>
                     <h3 style="margin:0 0 .75rem;color:var(--text-primary);">Family Students</h3>
@@ -192,6 +263,28 @@
             `;
             if (window.lucide) window.lucide.createIcons();
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        async function deleteFamilyCard(familyId) {
+            const id = String(familyId || '');
+            if (!id) return;
+
+            const confirmMessage = 'Delete this family card from the Families list?';
+            const confirmed = window.showAppConfirm
+                ? await window.showAppConfirm(confirmMessage, 'Delete Family')
+                : window.confirm(confirmMessage);
+            if (!confirmed) return;
+
+            const deletedCards = readLocalArray(DELETED_FAMILY_CARDS_KEY).map(String);
+            if (!deletedCards.includes(id)) {
+                deletedCards.push(id);
+                saveLocalArray(DELETED_FAMILY_CARDS_KEY, deletedCards);
+            }
+
+            const families = readLocalArray('eduCore_families').filter((family) => String(family.id || '') !== id);
+            saveLocalArray('eduCore_families', families);
+            closeFamilyScreen();
+            renderFamiliesPage();
+            if (window.lucide) window.lucide.createIcons();
         }
         function closeFamilyScreen() {
             document.getElementById('familyListScreen').classList.remove('active');
