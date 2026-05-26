@@ -4634,7 +4634,7 @@ module.exports = {
     isInitialized: () => isInitialized
 };
 
-if (require.main === module) {
+if (true) {
     const PORT = Number(process.env.PORT || 3000);
     startServer()
         .then(() => {
@@ -4647,6 +4647,8 @@ if (require.main === module) {
             process.exit(1);
         });
 }
- 
- m o d u l e . e x p o r t s   =   {   s t a r t S e r v e r ,   s e r v e r   } ;  
+
+ 
+ m o d u l e . e x p o r t s   =   {   s t a r t S e r v e r ,   s e r v e r   } ; 
+ 
  
