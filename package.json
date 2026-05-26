@@ -2,9 +2,9 @@
   "name": "educore-backend",
   "version": "1.0.0",
   "description": "Real-time SQL Backend for School Management System",
-  "main": "app.js",
+  "main": "backend/server.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "node backend/server.js",
     "dev": "nodemon app.js",
     "validate": "node scripts/validate-startup.js",
     "validate:start": "npm run validate && npm start",
