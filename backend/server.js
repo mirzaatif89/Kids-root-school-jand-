@@ -143,51 +143,10 @@ const CLEAN_ROUTE_BOOTSTRAP = `
         return '/' + routeName;
     }
 
-    function cleanHref(rawHref) {
-        if (!rawHref || rawHref === '#' || /^javascript:/i.test(rawHref)) return '';
-        var url;
-        try {
-            url = new URL(rawHref, location.href);
-        } catch (error) {
-            return '';
-        }
-        if (url.origin !== location.origin) return '';
-
-        var nextPath = cleanPath(url.pathname);
-        if (!nextPath) return '';
-        return nextPath + url.search + url.hash;
-    }
-
-    function rewriteLinks(root) {
-        var scope = root && root.querySelectorAll ? root : document;
-        scope.querySelectorAll('a[href]').forEach(function (link) {
-            if (link.target && link.target !== '_self') return;
-            var clean = cleanHref(link.getAttribute('href') || '');
-            if (clean) link.setAttribute('href', clean);
-        });
-    }
-
     var cleanCurrentPath = cleanPath(location.pathname);
     if (cleanCurrentPath) {
         history.replaceState(history.state, document.title, cleanCurrentPath + location.search + location.hash);
     }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        rewriteLinks(document);
-        var observer = new MutationObserver(function (mutations) {
-            mutations.forEach(function (mutation) {
-                mutation.addedNodes.forEach(function (node) {
-                    if (node.nodeType !== 1) return;
-                    if (node.matches && node.matches('a[href]')) {
-                        var clean = cleanHref(node.getAttribute('href') || '');
-                        if (clean) node.setAttribute('href', clean);
-                    }
-                    rewriteLinks(node);
-                });
-            });
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-    });
 })();
 </script>`;
 
@@ -241,8 +200,7 @@ app.get('/:pageName([a-zA-Z0-9_-]+).html', (req, res, next) => {
     const targetFile = resolvePageFileByRoute(targetRoute);
     if (!targetFile) return next();
 
-    if (targetRoute === 'index') return res.redirect(302, '/');
-    return res.redirect(302, `/${targetRoute}`);
+    return sendFrontendPage(res, targetFile);
 });
 
 app.get('/:routeName([a-zA-Z0-9_-]+)', (req, res, next) => {

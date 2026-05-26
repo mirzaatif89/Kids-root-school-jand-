@@ -199,10 +199,9 @@
 
     function toRoutePath(pageName = '') {
         const normalizedPage = normalizePageName(pageName);
-        if (normalizedPage === 'login.html') return '/login';
         if (normalizedPage === 'index.html') return '/';
-        if (pageRegistry[normalizedPage]) return `/${normalizedPage.replace(/\.html$/i, '')}`;
-        return `/${String(pageName || '').replace(/^\/+/, '') || 'login'}`;
+        if (normalizedPage.endsWith('.html')) return normalizedPage;
+        return String(pageName || 'login.html').replace(/^\/+/, '');
     }
 
     const currentPage = normalizePageName(window.location.pathname);

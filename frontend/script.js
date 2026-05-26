@@ -139,9 +139,8 @@ function toRoutePath(pageName = '') {
         return window.eduCoreAuth.toRoutePath(pageName);
     }
     const normalizedPage = normalizeClientPageName(pageName);
-    if (normalizedPage === 'login.html') return '/login';
     if (normalizedPage === 'index.html') return '/';
-    return `/${normalizedPage.replace(/\.html$/i, '')}`;
+    return normalizedPage;
 }
 
 (function installAppPopups() {
