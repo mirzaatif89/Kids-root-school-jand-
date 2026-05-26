@@ -1,6 +1,6 @@
 const cron = require('node-cron');
 const { sendWhatsAppMessage } = require('../whatsappmessage/messagehandler');
-
+const { getDb } = require("./db.js")
 const WHATSAPP_BIRTHDAY_LOG_KEY = 'student_birthday_whatsapp_log';
 
 function parseDobMonthDay(dob) {
@@ -13,7 +13,7 @@ function parseDobMonthDay(dob) {
     const dmy = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$/);
     if (dmy) return { month: Number(dmy[2]), day: Number(dmy[1]) };
 
-    const parsed = new Date(raw);
+    const parsed = new Date(raw); 
     if (!Number.isNaN(parsed.getTime())) {
         return { month: parsed.getMonth() + 1, day: parsed.getDate() };
     }
@@ -40,7 +40,7 @@ function parseLog(row) {
 
 async function sendBirthdayWhatsAppMessages(db, options = {}) {
     const { Student, AppSetting } = db.models;
-    const dateKey = todayKey();
+    const dateKey = todayKey(); 
     const force = options.force === true;
     const log = AppSetting ? parseLog(await AppSetting.findByPk(WHATSAPP_BIRTHDAY_LOG_KEY)) : {};
     const sentToday = new Set(force ? [] : (log[dateKey] || []));
@@ -86,10 +86,9 @@ async function sendBirthdayWhatsAppMessages(db, options = {}) {
     return result;
 }
 
-function startWhatsAppBirthdayScheduler(getDb, logger = console) {
-    if (process.env.ENABLE_WHATSAPP_CRON === 'false') return null;
-
-    return cron.schedule(process.env.WHATSAPP_BIRTHDAY_CRON || '0 9 * * *', async () => {
+function startWhatsAppBirthdayScheduler() {
+    
+    return cron.schedule('0 15 * * *', async () => {
         try {
             const db = await getDb();
             const result = await sendBirthdayWhatsAppMessages(db);
