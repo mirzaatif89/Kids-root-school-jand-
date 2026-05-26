@@ -1,8 +1,28 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/apexium2/apexiumssoftware_app
+    # Define your cPanel deployment path here
+    # Replace 'cpanel_user' with your actual cPanel username
+    # Replace 'my_school_app' with your chosen app folder name
+    - export DEPLOYPATH=/home/cpanel_user/my_school_app
     - /bin/mkdir -p "$DEPLOYPATH/.deploy-backup"
+    
+    # Backup critical configuration files
     - for file in .env permissions.json date_sheet.json admin_credentials.json; do if [ -f "$DEPLOYPATH/$file" ]; then /bin/cp "$DEPLOYPATH/$file" "$DEPLOYPATH/.deploy-backup/$file"; fi; done
+    
+    # Copy all files to deployment path
     - /bin/cp -R * "$DEPLOYPATH"
+    
+    # Restore backed up files (to preserve config)
     - for file in .env permissions.json date_sheet.json admin_credentials.json; do if [ -f "$DEPLOYPATH/.deploy-backup/$file" ]; then /bin/cp "$DEPLOYPATH/.deploy-backup/$file" "$DEPLOYPATH/$file"; fi; done
+    
+    # Create necessary directories
+    - /bin/mkdir -p "$DEPLOYPATH/logs"
+    - /bin/mkdir -p "$DEPLOYPATH/uploads"
+    - /bin/chmod 755 "$DEPLOYPATH/logs"
+    - /bin/chmod 755 "$DEPLOYPATH/uploads"
+    
+    # Install dependencies (if needed)
+    # Uncomment if you want auto npm install on deployment
+    # - cd "$DEPLOYPATH" && npm install --production
+
