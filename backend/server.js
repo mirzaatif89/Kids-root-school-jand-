@@ -130,6 +130,66 @@ const SIDEBAR_SCROLL_BOOTSTRAP = `
     });
 })();
 </script>`;
+const CLEAN_ROUTE_BOOTSTRAP = `
+<script>
+(function () {
+    if (!/^https?:$/.test(location.protocol)) return;
+
+    function cleanPath(pathname) {
+        var match = String(pathname || '').match(/^\\/(.+)\\.html$/i);
+        if (!match) return '';
+        var routeName = match[1].toLowerCase();
+        if (routeName === 'index' || routeName === 'website') return '/';
+        return '/' + routeName;
+    }
+
+    function cleanHref(rawHref) {
+        if (!rawHref || rawHref === '#' || /^javascript:/i.test(rawHref)) return '';
+        var url;
+        try {
+            url = new URL(rawHref, location.href);
+        } catch (error) {
+            return '';
+        }
+        if (url.origin !== location.origin) return '';
+
+        var nextPath = cleanPath(url.pathname);
+        if (!nextPath) return '';
+        return nextPath + url.search + url.hash;
+    }
+
+    function rewriteLinks(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        scope.querySelectorAll('a[href]').forEach(function (link) {
+            if (link.target && link.target !== '_self') return;
+            var clean = cleanHref(link.getAttribute('href') || '');
+            if (clean) link.setAttribute('href', clean);
+        });
+    }
+
+    var cleanCurrentPath = cleanPath(location.pathname);
+    if (cleanCurrentPath) {
+        history.replaceState(history.state, document.title, cleanCurrentPath + location.search + location.hash);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        rewriteLinks(document);
+        var observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                mutation.addedNodes.forEach(function (node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.matches && node.matches('a[href]')) {
+                        var clean = cleanHref(node.getAttribute('href') || '');
+                        if (clean) node.setAttribute('href', clean);
+                    }
+                    rewriteLinks(node);
+                });
+            });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+})();
+</script>`;
 
 function sendFrontendPage(res, fileName) {
     const filePath = path.join(FRONTEND_DIR, fileName);
@@ -140,7 +200,8 @@ function sendFrontendPage(res, fileName) {
         }
 
         const sidebarOrderScript = '<script src="/sidebar-order.js?v=20260520-sidebar-force"></script>';
-        const withScrollMemory = html.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`);
+        const withRouteCleanup = html.replace('</head>', `${CLEAN_ROUTE_BOOTSTRAP}\n</head>`);
+        const withScrollMemory = withRouteCleanup.replace('</head>', `${SIDEBAR_SCROLL_BOOTSTRAP}\n</head>`);
         const injectBeforeLastClosingBody = (pageHtml, markup) => {
             const closingBodyIndex = pageHtml.toLowerCase().lastIndexOf('</body>');
             if (closingBodyIndex < 0) return `${pageHtml}\n${markup}`;
