@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Result - Kids Roots Jand</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="fee_challan.html" class="nav-item">
+                    <i data-lucide="file-text"></i>
+                    <span>Fee Challan</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="finance.html" class="nav-item" style="display: none;">
+                    <i data-lucide="receipt"></i>
+                    <span>Bills</span>
+                </a>
+                <a href="exams.html" class="nav-item active">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Exams</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="permissions.html" class="nav-item">
+                    <i data-lucide="shield"></i>
+                    <span>Permissions</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Exam Result</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Generate and print result cards from a dedicated page.</p>
+                </div>
+            </header>
+
+            <section class="exam-module-list">
+                <button type="button" class="exam-module-card" data-target="examSchedulingCard">
+                    <div class="exam-module-icon schedule">
+                        <i data-lucide="calendar-days"></i>
+                    </div>
+                    <div class="exam-module-copy">
+                        <h3>Exams Scheduling</h3>
+                        <p>Create exam plans, assign dates, and organize class-wise assessment timelines.</p>
+                    </div>
+                    <span class="exam-module-link">Open Section</span>
+                </button>
+
+                <button type="button" class="exam-module-card" data-target="resultBuilderCard">
+                    <div class="exam-module-icon result">
+                        <i data-lucide="file-badge"></i>
+                    </div>
+                    <div class="exam-module-copy">
+                        <h3>Result</h3>
+                        <p>Generate printable result cards with live preview, marks, remarks, and signatures.</p>
+                    </div>
+                    <span class="exam-module-link">Open Section</span>
+                </button>
+
+                <button type="button" class="exam-module-card" data-target="resultHistoryCard">
+                    <div class="exam-module-icon history">
+                        <i data-lucide="history"></i>
+                    </div>
+                    <div class="exam-module-copy">
+                        <h3>Students Result History</h3>
+                        <p>Review previous results, compare performance, and maintain each student's academic record.</p>
+                    </div>
+                    <span class="exam-module-link">Open Section</span>
+                </button>
+            </section>
+
+            <section class="exam-content-section" id="examSchedulingCard">
+                <div class="exam-builder-layout">
+                    <section class="table-container exam-builder-panel">
+                        <div class="exam-builder-header">
+                            <div>
+                                <h3>Create Date Sheet</h3>
+                                <p>Add classes, subjects, dates, and exam timing. The preview is printable.</p>
+                            </div>
+                            <div class="exam-builder-actions">
+                                <button type="button" class="btn btn-outline" id="resetDateSheetBtn">
+                                    <i data-lucide="rotate-ccw" size="16"></i> Reset
+                                </button>
+                                <button type="button" class="btn btn-primary" id="printDateSheetBtn">
+                                    <i data-lucide="printer" size="16"></i> Print Date Sheet
+                                </button>
+                            </div>
+                        </div>
+
+                        <form id="dateSheetForm" class="result-form-grid">
+                            <div class="result-form-section">
+                                <h4>Date Sheet Header</h4>
+                                <div class="result-form-fields">
+                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
+                                    <label>Exam Title<input type="text" id="dateSheetExamTitle" placeholder="Enter exam title"></label>
+                                    <label>Session<input type="text" id="dateSheetSession" placeholder="Enter session"></label>
+                                    <label>Target Class / Group<input type="text" id="dateSheetClassGroup" placeholder="Enter class / group"></label>
+                                    <label>Campus / Branch<input type="text" id="dateSheetCampus" placeholder="Enter campus / branch"></label>
+                                    <label>General Start Time<input type="time" id="dateSheetDefaultStart"></label>
+                                </div>
+                            </div>
+
+                            <div class="result-form-section result-form-full">
+                                <div class="section-head-inline">
+                                    <h4>Schedule Rows</h4>
+                                    <button type="button" class="btn btn-outline" id="addScheduleRowBtn">
+                                        <i data-lucide="plus" size="16"></i> Add Subject Row
+                                    </button>
+                                </div>
+                                <div class="dynamic-table schedule-editor" id="scheduleRowsEditor"></div>
+                            </div>
+
+                            <div class="result-form-section result-form-full">
+                                <h4>Instructions</h4>
+                                <div class="result-form-fields single-column-fields">
+                                    <label>Notes / Instructions<textarea id="dateSheetInstructions" rows="4" placeholder="Students must arrive 30 minutes before the paper starts."></textarea></label>
+                                </div>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section class="table-container result-preview-panel">
+                        <div class="preview-head">
+                            <div>
+                                <h3>Date Sheet Preview</h3>
+                                <p>This layout will be used for printing the class date sheet.</p>
+                            </div>
+                        </div>
+
+                        <div class="date-sheet-preview" id="dateSheetPreview">
+                            <div class="date-sheet-frame">
+                                <div class="date-sheet-header">
+                                    <div class="date-sheet-header-top">
+                                        <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
+                                        <div>
+                                            <h2 id="previewDateSheetSchoolName">Kids Roots Jand</h2>
+                                            <p id="previewDateSheetCampus"></p>
+                                        </div>
+                                        <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
+                                    </div>
+                                    <h3 id="previewDateSheetExamTitle"></h3>
+                                    <div class="date-sheet-meta">
+                                        <span>Session: <strong id="previewDateSheetSession"></strong></span>
+                                        <span>Class: <strong id="previewDateSheetClassGroup"></strong></span>
+                                    </div>
+                                </div>
+
+                                <table class="date-sheet-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Subject</th>
+                                            <th>Class</th>
+                                            <th>Date</th>
+                                            <th>Start Time</th>
+                                            <th>End Time</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewDateSheetBody"></tbody>
+                                </table>
+
+                                <div class="date-sheet-instructions">
+                                    <h4>Instructions</h4>
+                                    <p id="previewDateSheetInstructions"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="exam-content-section" id="resultBuilderCard">
+                <div class="exam-builder-layout">
+                    <section class="table-container exam-builder-panel">
+                    <div class="exam-builder-header">
+                        <div>
+                            <h3>Result Card Details</h3>
+                            <p>Fill out the form, review the preview, then print the card.</p>
+                        </div>
+                        <div class="exam-builder-actions">
+                            <button type="button" class="btn btn-outline" id="saveResultCardBtn">
+                                <i data-lucide="save" size="16"></i> Save Result
+                            </button>
+                            <button type="button" class="btn btn-outline" id="resetResultCardBtn">
+                                <i data-lucide="rotate-ccw" size="16"></i> Reset
+                            </button>
+                            <button type="button" class="btn btn-primary" id="printResultCardBtn">
+                                <i data-lucide="printer" size="16"></i> Print Color
+                            </button>
+                            <button type="button" class="btn btn-outline" id="printResultBwBtn">
+                                <i data-lucide="printer-check" size="16"></i> Print B/W
+                            </button>
+                        </div>
+                    </div>
+
+                    <form id="resultCardForm" class="result-form-grid">
+                        <div class="result-form-section">
+                            <h4>School Header</h4>
+                            <div class="result-form-fields">
+                                <label>School Name<input type="text" id="schoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
+                                <label>Campus / Branch<input type="text" id="campusName" placeholder="Enter campus / branch"></label>
+                                <label>Contact Line<input type="text" id="schoolContact" placeholder="Enter contact line"></label>
+                                <label>Term Title<input type="text" id="termTitle" placeholder="Enter term title"></label>
+                                <input type="hidden" id="leftLogoUrl">
+                                <div class="static-logo-note">
+                                    <i data-lucide="shield-check" size="18"></i>
+                                    <div>
+                                        <strong>Fixed Result Card Logo</strong>
+                                        <span>The saved school logo will print on every result card.</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="result-form-section">
+                            <h4>Student Info</h4>
+                            <div class="result-form-fields">
+                                <label>Student ID / Code
+                                    <div class="inline-field-action">
+                                        <input type="text" id="studentLookupId" placeholder="Enter student ID, student code, or roll number">
+                                        <button type="button" class="btn btn-outline" id="loadStudentResultBtn">Load Student</button>
+                                    </div>
+                                </label>
+                                <label>Student Name<input type="text" id="studentName" placeholder="Enter student name"></label>
+                                <label>Father's Name<input type="text" id="fatherName" placeholder="Enter father's name"></label>
+                                <label>Grade / Class<input type="text" id="studentGrade" placeholder="Enter grade / class"></label>
+                                <label>Position / Grade<input type="text" id="positionGrade" placeholder="Enter position / grade"></label>
+                                <label>Teacher's Remarks<input type="text" id="teacherRemarks" placeholder="Enter teacher remarks"></label>
+                                <label>Teacher Signature Name<input type="text" id="teacherSignature" placeholder="Enter teacher signature name"></label>
+                                <label>Principal Signature Name<input type="text" id="principalSignature" placeholder="Enter principal signature name"></label>
+                                <label>Parent Signature Name<input type="text" id="parentSignature" placeholder="Enter parent signature name"></label>
+                            </div>
+                        </div>
+
+                        <div class="result-form-section result-form-full">
+                            <div class="section-head-inline">
+                                <h4>Subjects & Marks</h4>
+                                <button type="button" class="btn btn-outline" id="addSubjectBtn">
+                                    <i data-lucide="plus" size="16"></i> Add Subject
+                                </button>
+                            </div>
+                            <div class="dynamic-table" id="subjectsEditor"></div>
+                        </div>
+
+                        <div class="result-form-section result-form-full">
+                            <div class="section-head-inline">
+                                <h4>Performance Section</h4>
+                                <button type="button" class="btn btn-outline" id="addBehaviorBtn">
+                                    <i data-lucide="plus" size="16"></i> Add Behavior
+                                </button>
+                            </div>
+                            <div class="dynamic-table behavior-editor" id="behaviorEditor"></div>
+                        </div>
+                    </form>
+                    </section>
+
+                    <section class="table-container result-preview-panel">
+                    <div class="exam-info-card history-card">
+                        <div class="exam-info-copy">
+                            <span class="exam-info-tag">Result</span>
+                            <h3>Live preview for the selected result card</h3>
+                            <p>Review the exact print layout before sending the result card to print.</p>
+                        </div>
+                        <div class="exam-info-icon">
+                            <i data-lucide="file-text"></i>
+                        </div>
+                    </div>
+
+                    <div class="preview-head">
+                        <div>
+                            <h3>Print Preview</h3>
+                            <p>This is the exact card that will be printed.</p>
+                        </div>
+                    </div>
+
+                    <div class="result-card-sheet" id="resultCardSheet">
+                        <div class="result-card-frame">
+                            <div class="result-card-watermark">KIDS ROOTS JAND</div>
+                            <div class="result-card-topbar">
+                                <div class="result-logo-box"><img id="previewLeftLogo" src="images/logo.png" alt="School logo"></div>
+                                <div class="result-school-center">
+                                    <h2 id="previewSchoolName">Kids Roots Jand</h2>
+                                    <p id="previewCampusName"></p>
+                                    <p id="previewSchoolContact"></p>
+                                </div>
+                            </div>
+
+                            <div class="result-term-title" id="previewTermTitle"></div>
+
+                            <div class="student-meta-row">
+                                <div class="meta-field">
+                                    <span>Student's Name:</span>
+                                    <strong id="previewStudentName"></strong>
+                                </div>
+                                <div class="meta-field">
+                                    <span>Father's Name:</span>
+                                    <strong id="previewFatherName"></strong>
+                                </div>
+                            </div>
+
+                            <div class="grade-chip">GRADE: <span id="previewStudentGrade"></span></div>
+
+                            <table class="result-marks-table">
+                                <thead>
+                                    <tr>
+                                        <th>SUBJECT</th>
+                                        <th>MAX MARKS</th>
+                                        <th>MARKS OBTAINED</th>
+                                        <th>BEST SCORE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewSubjectsBody"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>Total Marks</td>
+                                        <td id="previewTotalMax">0</td>
+                                        <td id="previewTotalObtained">0</td>
+                                        <td id="previewTotalBest">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Percentage</td>
+                                        <td>0%</td>
+                                        <td id="previewPercentage">0%</td>
+                                        <td id="previewBestPercentage">0%</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <div class="position-row">
+                                <div class="position-label">Position / Grade</div>
+                                <div class="position-value" id="previewPositionGrade"></div>
+                            </div>
+
+                            <div class="remarks-signatures">
+                                <div class="remarks-block">
+                                    <span>Class Teacher's Remarks:</span>
+                                    <strong id="previewTeacherRemarks"></strong>
+                                </div>
+                                <div class="signature-block">
+                                    <span>Teacher's Signature:</span>
+                                    <strong id="previewTeacherSignature"></strong>
+                                </div>
+                            </div>
+
+                            <div class="performance-title">PERFORMANCE</div>
+
+                            <div class="performance-grid">
+                                <table class="behavior-table">
+                                    <thead>
+                                        <tr>
+                                            <th>General Behavior</th>
+                                            <th>Grading</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="previewBehaviorBody"></tbody>
+                                </table>
+
+                                <table class="grading-table">
+                                    <tbody>
+                                        <tr><td>A+</td><td>Excellent</td><td>90% & above</td></tr>
+                                        <tr><td>A</td><td>Very Good</td><td>80% & above</td></tr>
+                                        <tr><td>B</td><td>Good</td><td>60% & above</td></tr>
+                                        <tr><td>C</td><td>Fair</td><td>50% & above</td></tr>
+                                        <tr><td>D</td><td>Satisfactory</td><td>40% & above</td></tr>
+                                        <tr><td>E</td><td>Unsatisfactory</td><td>Below 40%</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="bottom-signatures">
+                                <div class="signature-line">
+                                    <strong id="previewPrincipalSignature"></strong>
+                                    <span>Principal's Signature</span>
+                                </div>
+                                <div class="signature-line">
+                                    <strong id="previewParentSignature"></strong>
+                                    <span>Parent's Signature</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    </section>
+                </div>
+            </section>
+
+            <section class="exam-content-section" id="resultHistoryCard">
+                <section class="table-container exam-builder-panel">
+                    <div class="exam-info-card">
+                        <div class="exam-info-copy">
+                            <span class="exam-info-tag">Students Result History</span>
+                            <h3>Track student performance across terms</h3>
+                            <p>View all saved result cards, reload them into the builder, and manage the result archive for every student.</p>
+                        </div>
+                        <div class="exam-info-icon">
+                            <i data-lucide="folders"></i>
+                        </div>
+                    </div>
+
+                    <div class="result-history-toolbar">
+                        <input type="text" id="resultHistorySearch" placeholder="Search by student name, ID, class, or term">
+                    </div>
+
+                    <div class="table-container result-history-table-wrap">
+                        <table class="result-history-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Student ID / Code</th>
+                                    <th>Class</th>
+                                    <th>Term</th>
+                                    <th>Total Marks</th>
+                                    <th>Obtained</th>
+                                    <th>Percentage</th>
+                                    <th>Position / Grade</th>
+                                    <th>Status</th>
+                                    <th>Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultHistoryTableBody"></tbody>
+                        </table>
+                        <div class="empty-state-note" id="resultHistoryEmptyState">No saved result cards yet.</div>
+                    </div>
+                </section>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
+    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body,
+        .main-content {
+            overflow-x: hidden;
+        }
+
+        .exam-module-list {
+            display: grid;
+            gap: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .exam-module-list {
+            display: none;
+        }
+
+        .exam-module-card {
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            width: 100%;
+            gap: 1rem;
+            padding: 1.25rem;
+            border-radius: 22px;
+            border: 1px solid rgba(53, 126, 120, 0.16);
+            background:
+                radial-gradient(circle at top right, rgba(72, 187, 169, 0.18), transparent 38%),
+                linear-gradient(145deg, #ffffff 0%, #f4fbfa 100%);
+            box-shadow: 0 18px 35px rgba(15, 23, 42, 0.08);
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .exam-module-card.active {
+            border-color: rgba(15, 118, 110, 0.45);
+            box-shadow: 0 22px 45px rgba(15, 118, 110, 0.16);
+        }
+
+        .exam-module-icon {
+            width: 54px;
+            height: 54px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            color: #fff;
+        }
+
+        .exam-module-icon.schedule {
+            background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%);
+        }
+
+        .exam-module-icon.result {
+            background: linear-gradient(135deg, #1d4ed8 0%, #60a5fa 100%);
+        }
+
+        .exam-module-icon.history {
+            background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+        }
+
+        .exam-module-copy h3 {
+            margin: 0 0 0.35rem;
+            font-size: 1.15rem;
+        }
+
+        .exam-module-copy p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .exam-module-link {
+            width: fit-content;
+            font-weight: 700;
+            color: #0f766e;
+            border-bottom: 1px solid rgba(15, 118, 110, 0.2);
+            padding-bottom: 0.15rem;
+        }
+
+        .exam-content-section {
+            display: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .exam-content-section.active {
+            display: block;
+        }
+
+        .exam-builder-layout {
+            display: grid;
+            grid-template-columns: minmax(340px, 1.08fr) minmax(360px, 0.92fr);
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .exam-builder-panel,
+        .result-preview-panel {
+            padding: 1.5rem;
+            min-width: 0;
+        }
+
+        .exam-builder-header,
+        .preview-head,
+        .section-head-inline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .exam-builder-header p,
+        .preview-head p {
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+
+        .exam-builder-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .inline-field-action {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .inline-field-action input {
+            flex: 1;
+        }
+
+        .result-history-toolbar {
+            margin-top: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .result-history-toolbar input {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.85rem 0.95rem;
+            font: inherit;
+            background: #fff;
+        }
+
+        .result-history-table-wrap {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .result-history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .result-history-table th,
+        .result-history-table td {
+            padding: 0.95rem 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .result-history-table th {
+            background: #f8fafc;
+            font-size: 0.84rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--text-secondary);
+        }
+
+        .result-history-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .empty-state-note {
+            padding: 1.2rem 1rem;
+            color: var(--text-secondary);
+        }
+
+        .exam-info-card {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            border-radius: 20px;
+            border: 1px solid rgba(15, 118, 110, 0.16);
+            background: linear-gradient(145deg, #ffffff 0%, #f5fbff 100%);
+            padding: 1.25rem;
+            min-height: 220px;
+        }
+
+        .history-card {
+            min-height: auto;
+            margin-bottom: 1.2rem;
+        }
+
+        .exam-info-copy h3 {
+            margin: 0.35rem 0 0.55rem;
+            font-size: 1.2rem;
+        }
+
+        .exam-info-copy p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .exam-info-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.4rem 0.7rem;
+            border-radius: 999px;
+            background: rgba(15, 118, 110, 0.1);
+            color: #0f766e;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .exam-info-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #e0f2fe 0%, #ccfbf1 100%);
+            color: #0f766e;
+        }
+
+        .result-form-grid {
+            display: grid;
+            gap: 1.25rem;
+            margin-top: 1.5rem;
+        }
+
+        .result-form-section {
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 1rem;
+            background: #fafafa;
+        }
+
+        .result-form-section h4 {
+            margin: 0;
+        }
+
+        .result-form-fields {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.9rem;
+            margin-top: 0.9rem;
+        }
+
+        .result-form-fields label,
+        .dynamic-row label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 0;
+        }
+
+        .result-form-fields input,
+        .result-form-fields textarea,
+        .dynamic-row input {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.8rem 0.9rem;
+            font: inherit;
+            background: #fff;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .result-form-fields textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .single-column-fields {
+            grid-template-columns: 1fr;
+        }
+
+        .result-form-full {
+            grid-column: 1 / -1;
+        }
+
+        .dynamic-table {
+            display: grid;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .dynamic-row {
+            display: grid;
+            grid-template-columns: 2.1fr repeat(3, minmax(80px, 1fr)) auto;
+            gap: 0.75rem;
+            align-items: end;
+            min-width: 0;
+        }
+
+        .behavior-editor .dynamic-row {
+            grid-template-columns: 1.5fr 1fr auto;
+        }
+
+        .schedule-editor .dynamic-row {
+            grid-template-columns: 1.3fr 1fr 1fr 0.9fr 0.9fr auto;
+        }
+
+        .remove-row-btn {
+            height: 46px;
+        }
+
+        .date-sheet-preview {
+            margin-top: 1.2rem;
+            border-radius: 20px;
+            background: linear-gradient(180deg, #f7f7f7 0%, #efefef 100%);
+            padding: 1.25rem;
+        }
+
+        .date-sheet-frame {
+            width: 100%;
+            max-width: 100%;
+            background: #fff;
+            border: 2px solid #2a2a2a;
+            padding: 1.5rem;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+        }
+
+        .date-sheet-header {
+            text-align: center;
+            border-bottom: 2px solid #2a2a2a;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .date-sheet-header-top {
+            display: grid;
+            grid-template-columns: 82px 1fr 82px;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .date-sheet-logo {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            margin: 0 auto;
+        }
+
+        .date-sheet-header h2,
+        .date-sheet-header h3,
+        .date-sheet-header p {
+            margin: 0;
+        }
+
+        .date-sheet-header h2 {
+            font-size: 1.7rem;
+        }
+
+        .date-sheet-header h3 {
+            margin-top: 0.4rem;
+            font-size: 1.2rem;
+        }
+
+        .date-sheet-header p {
+            margin-top: 0.35rem;
+            color: var(--text-secondary);
+        }
+
+        .date-sheet-meta {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            font-weight: 600;
+        }
+
+        .date-sheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .date-sheet-table th,
+        .date-sheet-table td {
+            border: 1px solid #303030;
+            padding: 0.75rem 0.65rem;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .date-sheet-table th {
+            background: #f1f5f9;
+            font-weight: 700;
+        }
+
+        .date-sheet-table td:first-child,
+        .date-sheet-table td:nth-child(2) {
+            text-align: left;
+        }
+
+        .date-sheet-instructions {
+            margin-top: 1rem;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 1rem;
+        }
+
+        .date-sheet-instructions h4 {
+            margin: 0 0 0.4rem;
+        }
+
+        .date-sheet-instructions p {
+            margin: 0;
+            line-height: 1.7;
+            color: #334155;
+            white-space: pre-line;
+        }
+
+        .result-card-sheet {
+            display: flex;
+            justify-content: center;
+            margin-top: 1.2rem;
+            overflow: hidden;
+            background: linear-gradient(180deg, #f7f7f7 0%, #efefef 100%);
+            border-radius: 20px;
+            padding: 1.25rem;
+        }
+
+        .result-card-frame {
+            width: min(210mm, 100%);
+            max-width: 100%;
+            min-height: 297mm;
+            padding: 12mm 10mm 10mm;
+            background: #fff;
+            color: #202020;
+            border: 2px solid #363636;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+            position: relative;
+            font-family: "Times New Roman", serif;
+        }
+
+        .result-card-watermark {
+            position: absolute;
+            inset: 50% auto auto 50%;
+            transform: translate(-50%, -50%) rotate(-17deg);
+            font-size: 68px;
+            letter-spacing: 10px;
+            color: rgba(0, 0, 0, 0.06);
+            font-weight: 700;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+
+        .result-card-topbar {
+            display: grid;
+            grid-template-columns: 66px 1fr;
+            gap: 12px;
+            align-items: center;
+            border: 1px solid #555;
+            padding: 10px 12px 8px;
+        }
+
+        .result-logo-box {
+            border: 1px solid #777;
+            height: 58px;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .result-logo-box::before {
+            content: "LOGO";
+            color: #666;
+        }
+
+        .result-logo-box.has-logo::before {
+            display: none;
+        }
+
+        .result-logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .static-logo-note {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.85rem 0.95rem;
+            border: 1px solid #c7d2fe;
+            border-radius: 12px;
+            background: #eef2ff;
+            color: #1e1b4b;
+        }
+
+        .static-logo-note strong,
+        .static-logo-note span {
+            display: block;
+        }
+
+        .static-logo-note span {
+            margin-top: 0.15rem;
+            color: #475569;
+            font-size: 0.85rem;
+        }
+
+        .result-school-center {
+            text-align: center;
+        }
+
+        .result-school-center h2 {
+            font-size: 21px;
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .result-school-center p {
+            margin: 2px 0 0;
+            font-size: 11px;
+        }
+
+        .result-term-title {
+            margin: 16px auto 12px;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        .student-meta-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            margin-bottom: 10px;
+        }
+
+        .meta-field,
+        .remarks-block,
+        .signature-block {
+            border-bottom: 1px solid #444;
+            padding-bottom: 4px;
+            min-height: 28px;
+            font-size: 14px;
+        }
+
+        .meta-field {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .meta-field span,
+        .remarks-block span,
+        .signature-block span {
+            font-weight: 700;
+        }
+
+        .grade-chip {
+            width: min(180px, 100%);
+            border: 1px solid #444;
+            padding: 6px 10px;
+            font-weight: 700;
+            background: #f7f7f7;
+        }
+
+        .result-marks-table,
+        .behavior-table,
+        .grading-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        .result-marks-table {
+            margin-top: -1px;
+        }
+
+        .result-marks-table th,
+        .result-marks-table td,
+        .behavior-table th,
+        .behavior-table td,
+        .grading-table td {
+            border: 1px solid #444;
+            padding: 6px 8px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .result-marks-table th,
+        .behavior-table th {
+            background: #f2f2f2;
+            font-weight: 700;
+        }
+
+        .result-marks-table td:first-child,
+        .behavior-table td:first-child,
+        .behavior-table th:first-child {
+            text-align: left;
+            padding-left: 12px;
+        }
+
+        .result-marks-table tfoot td {
+            font-weight: 700;
+        }
+
+        .position-row {
+            display: grid;
+            grid-template-columns: 190px 1fr;
+            margin-top: 10px;
+        }
+
+        .position-label,
+        .position-value {
+            border: 1px solid #444;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            padding: 6px 10px;
+            font-weight: 700;
+        }
+
+        .remarks-signatures {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 20px;
+            margin: 18px 0 10px;
+        }
+
+        .performance-title {
+            text-align: center;
+            font-size: 19px;
+            font-weight: 700;
+            margin: 16px 0 12px;
+        }
+
+        .performance-grid {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 14px;
+        }
+
+        .bottom-signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 42px;
+            margin-top: 26px;
+        }
+
+        .signature-line {
+            text-align: center;
+            padding-top: 20px;
+        }
+
+        .signature-line strong {
+            display: block;
+            border-top: 1px solid #444;
+            padding-top: 6px;
+            margin-bottom: 4px;
+        }
+
+        .signature-line span {
+            font-weight: 700;
+        }
+
+        @media (max-width: 1400px) {
+            .exam-builder-layout,
+            .result-form-fields,
+            .dynamic-row,
+            .behavior-editor .dynamic-row,
+            .student-meta-row,
+            .remarks-signatures,
+            .performance-grid,
+            .bottom-signatures,
+            .position-row {
+                grid-template-columns: 1fr;
+            }
+
+            .exam-info-card {
+                min-height: auto;
+            }
+
+            .date-sheet-meta,
+            .schedule-editor .dynamic-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+
+            body {
+                background: #fff;
+                margin: 0 !important;
+            }
+
+            .sidebar,
+            .header,
+            .exam-module-list,
+            .exam-info-card,
+            .preview-head,
+            .exam-builder-actions {
+                display: none !important;
+            }
+
+            .dashboard-container,
+            .main-content,
+            .exam-content-section.active,
+            .exam-builder-layout,
+            .result-preview-panel,
+            .result-card-sheet,
+            .date-sheet-preview {
+                display: block !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #fff !important;
+                box-shadow: none !important;
+            }
+
+            .result-preview-panel {
+                border: none !important;
+            }
+
+            body.print-schedule .exam-content-section,
+            body.print-result .exam-content-section {
+                display: none !important;
+            }
+
+            body.print-schedule #examSchedulingCard,
+            body.print-result #resultBuilderCard {
+                display: block !important;
+            }
+
+            body.print-schedule .exam-builder-panel {
+                display: none !important;
+            }
+
+            body.print-result .exam-builder-panel {
+                display: none !important;
+            }
+
+            body.print-result .result-preview-panel {
+                padding: 0 !important;
+            }
+
+            body.print-schedule .date-sheet-frame,
+            body.print-result .result-card-frame {
+                box-shadow: none;
+                margin: 0 auto !important;
+            }
+
+            body.print-result .result-card-sheet {
+                margin-top: 0 !important;
+                overflow: visible !important;
+                background: #fff !important;
+                border-radius: 0 !important;
+                padding: 0 !important;
+                min-height: 297mm !important;
+                break-inside: avoid-page !important;
+                page-break-inside: avoid !important;
+            }
+
+            body.print-result .result-card-frame {
+                width: 210mm !important;
+                max-width: 210mm !important;
+                min-height: 297mm !important;
+                height: 297mm !important;
+                padding: 8mm 7mm 6mm !important;
+                border: 1px solid #363636 !important;
+                box-sizing: border-box !important;
+                display: flex !important;
+                flex-direction: column !important;
+                break-inside: avoid-page !important;
+                page-break-inside: avoid !important;
+                page-break-after: avoid !important;
+                overflow: hidden !important;
+            }
+
+            body.print-result .result-card-watermark {
+                font-size: 54px !important;
+                letter-spacing: 7px !important;
+            }
+
+            body.print-result .result-card-topbar {
+                grid-template-columns: 56px 1fr !important;
+                gap: 8px !important;
+                padding: 7px 9px !important;
+            }
+
+            body.print-result .result-logo-box {
+                height: 48px !important;
+                font-size: 10px !important;
+            }
+
+            body.print-result .result-school-center h2 {
+                font-size: 17px !important;
+            }
+
+            body.print-result .result-school-center p,
+            body.print-result .result-marks-table th,
+            body.print-result .result-marks-table td,
+            body.print-result .behavior-table th,
+            body.print-result .behavior-table td,
+            body.print-result .grading-table td,
+            body.print-result .meta-field,
+            body.print-result .remarks-block,
+            body.print-result .signature-block,
+            body.print-result .position-label,
+            body.print-result .position-value,
+            body.print-result .signature-line span,
+            body.print-result .signature-line strong {
+                font-size: 11px !important;
+                line-height: 1.2 !important;
+            }
+
+            body.print-result .result-term-title {
+                margin: 8px auto 7px !important;
+                font-size: 14px !important;
+            }
+
+            body.print-result .student-meta-row {
+                gap: 8px !important;
+                margin-bottom: 6px !important;
+            }
+
+            body.print-result .meta-field,
+            body.print-result .remarks-block,
+            body.print-result .signature-block {
+                min-height: 22px !important;
+                padding-bottom: 2px !important;
+            }
+
+            body.print-result .grade-chip {
+                width: 145px !important;
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+            }
+
+            body.print-result .result-marks-table td,
+            body.print-result .result-marks-table th,
+            body.print-result .behavior-table td,
+            body.print-result .behavior-table th,
+            body.print-result .grading-table td {
+                padding: 4px 5px !important;
+            }
+
+            body.print-result .position-row {
+                margin-top: 8px !important;
+            }
+
+            body.print-result .position-label,
+            body.print-result .position-value {
+                min-height: 34px !important;
+                padding: 5px 8px !important;
+            }
+
+            body.print-result .remarks-signatures {
+                gap: 12px !important;
+                margin: 12px 0 10px !important;
+            }
+
+            body.print-result .performance-title {
+                font-size: 14px !important;
+                margin: 10px 0 8px !important;
+            }
+
+            body.print-result .performance-grid {
+                gap: 8px !important;
+            }
+
+            body.print-result .bottom-signatures {
+                gap: 12px !important;
+                margin-top: auto !important;
+                padding-top: 14mm !important;
+                page-break-inside: avoid !important;
+            }
+
+            body.print-result .signature-line {
+                padding-top: 10px !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            body.print-result .signature-line strong {
+                padding-top: 4px !important;
+                margin-bottom: 2px !important;
+            }
+
+            body.print-result .signature-line span {
+                font-size: 10px !important;
+            }
+
+            body.print-result .result-card-sheet + .result-card-sheet {
+                break-before: page !important;
+                page-break-before: always !important;
+            }
+
+            body.print-result.result-print-compact .result-card-frame {
+                padding: 7mm 6mm 5mm !important;
+            }
+
+            body.print-result.result-print-compact .result-school-center h2 {
+                font-size: 16px !important;
+            }
+
+            body.print-result.result-print-compact .result-school-center p,
+            body.print-result.result-print-compact .result-marks-table th,
+            body.print-result.result-print-compact .result-marks-table td,
+            body.print-result.result-print-compact .behavior-table th,
+            body.print-result.result-print-compact .behavior-table td,
+            body.print-result.result-print-compact .grading-table td,
+            body.print-result.result-print-compact .meta-field,
+            body.print-result.result-print-compact .remarks-block,
+            body.print-result.result-print-compact .signature-block,
+            body.print-result.result-print-compact .position-label,
+            body.print-result.result-print-compact .position-value,
+            body.print-result.result-print-compact .signature-line span,
+            body.print-result.result-print-compact .signature-line strong {
+                font-size: 10px !important;
+                line-height: 1.12 !important;
+            }
+
+            body.print-result.result-print-compact .result-marks-table td,
+            body.print-result.result-print-compact .result-marks-table th,
+            body.print-result.result-print-compact .behavior-table td,
+            body.print-result.result-print-compact .behavior-table th,
+            body.print-result.result-print-compact .grading-table td {
+                padding: 2.5px 4px !important;
+            }
+
+            body.print-result.result-print-compact .bottom-signatures {
+                padding-top: 8mm !important;
+            }
+
+            body.print-result.result-print-dense .result-card-frame,
+            body.print-result.result-print-ultra .result-card-frame {
+                padding: 5mm 5mm 4mm !important;
+            }
+
+            body.print-result.result-print-dense .result-card-topbar,
+            body.print-result.result-print-ultra .result-card-topbar {
+                grid-template-columns: 48px 1fr !important;
+                gap: 6px !important;
+                padding: 5px 7px !important;
+            }
+
+            body.print-result.result-print-dense .result-logo-box,
+            body.print-result.result-print-ultra .result-logo-box {
+                height: 40px !important;
+            }
+
+            body.print-result.result-print-dense .result-school-center h2,
+            body.print-result.result-print-ultra .result-school-center h2 {
+                font-size: 14px !important;
+            }
+
+            body.print-result.result-print-dense .result-school-center p,
+            body.print-result.result-print-dense .result-marks-table th,
+            body.print-result.result-print-dense .result-marks-table td,
+            body.print-result.result-print-dense .behavior-table th,
+            body.print-result.result-print-dense .behavior-table td,
+            body.print-result.result-print-dense .grading-table td,
+            body.print-result.result-print-dense .meta-field,
+            body.print-result.result-print-dense .remarks-block,
+            body.print-result.result-print-dense .signature-block,
+            body.print-result.result-print-dense .position-label,
+            body.print-result.result-print-dense .position-value,
+            body.print-result.result-print-dense .signature-line span,
+            body.print-result.result-print-dense .signature-line strong,
+            body.print-result.result-print-ultra .result-school-center p,
+            body.print-result.result-print-ultra .result-marks-table th,
+            body.print-result.result-print-ultra .result-marks-table td,
+            body.print-result.result-print-ultra .behavior-table th,
+            body.print-result.result-print-ultra .behavior-table td,
+            body.print-result.result-print-ultra .grading-table td,
+            body.print-result.result-print-ultra .meta-field,
+            body.print-result.result-print-ultra .remarks-block,
+            body.print-result.result-print-ultra .signature-block,
+            body.print-result.result-print-ultra .position-label,
+            body.print-result.result-print-ultra .position-value,
+            body.print-result.result-print-ultra .signature-line span,
+            body.print-result.result-print-ultra .signature-line strong {
+                font-size: 9px !important;
+                line-height: 1.05 !important;
+            }
+
+            body.print-result.result-print-dense .result-term-title,
+            body.print-result.result-print-ultra .result-term-title {
+                margin: 5px auto 4px !important;
+                font-size: 12px !important;
+            }
+
+            body.print-result.result-print-dense .meta-field,
+            body.print-result.result-print-dense .remarks-block,
+            body.print-result.result-print-dense .signature-block,
+            body.print-result.result-print-ultra .meta-field,
+            body.print-result.result-print-ultra .remarks-block,
+            body.print-result.result-print-ultra .signature-block {
+                min-height: 16px !important;
+                padding-bottom: 1px !important;
+            }
+
+            body.print-result.result-print-dense .grade-chip,
+            body.print-result.result-print-ultra .grade-chip {
+                width: 115px !important;
+                padding: 2px 6px !important;
+                font-size: 9px !important;
+            }
+
+            body.print-result.result-print-dense .result-marks-table td,
+            body.print-result.result-print-dense .result-marks-table th,
+            body.print-result.result-print-dense .behavior-table td,
+            body.print-result.result-print-dense .behavior-table th,
+            body.print-result.result-print-dense .grading-table td,
+            body.print-result.result-print-ultra .result-marks-table td,
+            body.print-result.result-print-ultra .result-marks-table th,
+            body.print-result.result-print-ultra .behavior-table td,
+            body.print-result.result-print-ultra .behavior-table th,
+            body.print-result.result-print-ultra .grading-table td {
+                padding: 1.5px 3px !important;
+            }
+
+            body.print-result.result-print-dense .position-row,
+            body.print-result.result-print-ultra .position-row {
+                margin-top: 4px !important;
+            }
+
+            body.print-result.result-print-dense .position-label,
+            body.print-result.result-print-dense .position-value,
+            body.print-result.result-print-ultra .position-label,
+            body.print-result.result-print-ultra .position-value {
+                min-height: 22px !important;
+                padding: 2px 6px !important;
+            }
+
+            body.print-result.result-print-dense .remarks-signatures,
+            body.print-result.result-print-ultra .remarks-signatures {
+                gap: 8px !important;
+                margin: 6px 0 4px !important;
+            }
+
+            body.print-result.result-print-dense .performance-title,
+            body.print-result.result-print-ultra .performance-title {
+                font-size: 11px !important;
+                margin: 5px 0 4px !important;
+            }
+
+            body.print-result.result-print-dense .performance-grid,
+            body.print-result.result-print-ultra .performance-grid {
+                gap: 5px !important;
+            }
+
+            body.print-result.result-print-dense .bottom-signatures,
+            body.print-result.result-print-ultra .bottom-signatures {
+                padding-top: 3mm !important;
+            }
+
+            body.print-result.result-print-ultra .result-card-frame {
+                padding: 4mm !important;
+            }
+
+            body.print-result.result-print-ultra .result-card-topbar {
+                grid-template-columns: 42px 1fr !important;
+                padding: 4px 6px !important;
+            }
+
+            body.print-result.result-print-ultra .result-logo-box {
+                height: 34px !important;
+            }
+
+            body.print-result.result-print-ultra .result-marks-table td,
+            body.print-result.result-print-ultra .result-marks-table th,
+            body.print-result.result-print-ultra .behavior-table td,
+            body.print-result.result-print-ultra .behavior-table th,
+            body.print-result.result-print-ultra .grading-table td {
+                padding: 1px 2px !important;
+            }
+
+            body.print-schedule .date-sheet-frame {
+                border: none;
+                padding: 0;
+            }
+
+            body.print-result.result-print-color .result-card-frame {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+
+            body.print-result.result-print-bw .result-card-frame,
+            body.print-result.result-print-bw .result-card-frame * {
+                background: #fff !important;
+                color: #111 !important;
+                border-color: #111 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                -webkit-print-color-adjust: economy;
+                print-color-adjust: economy;
+            }
+
+            body.print-result.result-print-bw .result-card-watermark {
+                color: rgba(0, 0, 0, 0.08) !important;
+            }
+
+            body.print-result.result-print-bw .result-logo-box img {
+                filter: grayscale(1) contrast(1.15);
+            }
+        }
+    </style>
+    <script>
+        const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
+        const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
+        const RESULT_CARD_ARCHIVE_LEGACY_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V1';
+        const RESULT_CARD_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
+        const RESULT_CARD_STUDENT_KEY = 'eduCore_students';
+        const defaultScheduleRows = [];
+        const defaultSubjects = [];
+        const defaultBehaviors = [];
+        const STATIC_RESULT_LOGO = 'images/logo.png';
+
+        function getExamBrandingSettings() {
+            const fallback = { schoolName: 'Kids Roots Jand', schoolTitle: 'Kids Roots Jand', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+            try {
+                const globalBranding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+                return { ...fallback, ...(globalBranding || {}) };
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function getExamLogoSrc() {
+            const branding = getExamBrandingSettings();
+            return branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : STATIC_RESULT_LOGO);
+        }
+
+        function getExamContactLine() {
+            const branding = getExamBrandingSettings();
+            const address = branding.address || branding.schoolAddress || '';
+            const parts = [];
+            if (address) parts.push(`Address: ${address}`);
+            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
+            return parts.join(' | ');
+        }
+
+        function applyExamBrandingDefaults(force = false) {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            const legacyNames = ['Kids Roots Jand', 'Kids Roots Jand'];
+
+            const dateSheetSchool = document.getElementById('dateSheetSchoolName');
+            if (dateSheetSchool && (force || !dateSheetSchool.value || legacyNames.includes(dateSheetSchool.value))) {
+                dateSheetSchool.value = schoolName;
+            }
+
+            const resultSchool = document.getElementById('schoolName');
+            if (resultSchool && (force || !resultSchool.value || legacyNames.includes(resultSchool.value))) {
+                resultSchool.value = schoolName;
+            }
+
+            const contact = document.getElementById('schoolContact');
+            if (contact && contactLine && (force || !contact.value || contact.value.includes('Dekhni Road') || contact.value.includes('Chapri Road') || contact.value.includes('Nai Abadi'))) {
+                contact.value = contactLine;
+            }
+
+            const leftLogo = document.getElementById('leftLogoUrl');
+            if (leftLogo) leftLogo.value = logoSrc;
+
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+        }
+
+        function forceRefreshResultBrandingFromStorage() {
+            const branding = getExamBrandingSettings();
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const contactLine = getExamContactLine();
+            const logoSrc = getExamLogoSrc();
+            
+            // Force update all branding fields
+            const schoolNameField = document.getElementById('schoolName');
+            if (schoolNameField) schoolNameField.value = schoolName;
+            
+            const contactField = document.getElementById('schoolContact');
+            if (contactField) contactField.value = contactLine;
+            
+            const logoField = document.getElementById('leftLogoUrl');
+            if (logoField) logoField.value = logoSrc;
+            
+            // Update preview immediately with new branding
+            document.getElementById('previewSchoolName').textContent = schoolName;
+            document.getElementById('previewSchoolContact').textContent = contactLine;
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+            document.getElementById('previewLeftLogo').src = logoSrc;
+            
+            refreshResultCardPreview();
+        }
+
+        function isLegacyDemoDateSheetState(saved = {}) {
+            return (saved.dateSheetSchoolName === 'Kids Roots Jand' || saved.dateSheetSchoolName === 'Kids Roots Jand') &&
+                saved.dateSheetExamTitle === 'Mid Term Examination 2026' &&
+                saved.dateSheetSession === '2025-26' &&
+                saved.dateSheetClassGroup === 'Grade 5 / Section A';
+        }
+
+        function isLegacyDemoResultState(saved = {}) {
+            return (saved.schoolName === 'Kids Roots Jand' || saved.schoolName === 'Kids Roots Jand') &&
+                saved.studentName === 'Muhammad Ali' &&
+                saved.fatherName === 'Ahmed Ali' &&
+                saved.termTitle === '3rd Term 2025-26';
+        }
+
+        function loadDateSheetState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(DATE_SHEET_STORAGE_KEY) || '{}');
+                if (saved && typeof saved === 'object' && isLegacyDemoDateSheetState(saved)) {
+                    localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
+                    return {};
+                }
+                return saved && typeof saved === 'object' ? saved : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function loadResultCardState() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(RESULT_CARD_STORAGE_KEY) || '{}');
+                if (saved && typeof saved === 'object' && isLegacyDemoResultState(saved)) {
+                    localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
+                    return {};
+                }
+                return saved && typeof saved === 'object' ? saved : {};
+            } catch (error) {
+                return {};
+            }
+        }
+
+        function loadResultArchive() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(RESULT_CARD_ARCHIVE_KEY) || '[]');
+                return Array.isArray(saved) ? saved : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveResultArchive(records) {
+            localStorage.setItem(RESULT_CARD_ARCHIVE_KEY, JSON.stringify(records));
+        }
+
+        function clearLegacyResultArchive() {
+            localStorage.removeItem(RESULT_CARD_ARCHIVE_LEGACY_KEY);
+        }
+
+        function toggleExamSection(targetId) {
+            document.querySelectorAll('.exam-content-section').forEach((section) => {
+                section.classList.toggle('active', section.id === targetId);
+            });
+            document.querySelectorAll('.exam-module-card').forEach((card) => {
+                card.classList.toggle('active', card.dataset.target === targetId);
+            });
+        }
+
+        function createScheduleRow(row = {}) {
+            return `
+                <div class="dynamic-row schedule-row">
+                    <label>Subject<input type="text" class="schedule-subject" value="${row.subject || ''}"></label>
+                    <label>Class<input type="text" class="schedule-class" value="${row.className || ''}"></label>
+                    <label>Date<input type="date" class="schedule-date" value="${row.examDate || ''}"></label>
+                    <label>Start<input type="time" class="schedule-start" value="${row.startTime || ''}"></label>
+                    <label>End<input type="time" class="schedule-end" value="${row.endTime || ''}"></label>
+                    <button type="button" class="btn btn-outline remove-row-btn" onclick="removeScheduleRow(this)">
+                        <i data-lucide="trash-2" size="16"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderScheduleRows(savedState = {}) {
+            const rows = savedState.scheduleRows && savedState.scheduleRows.length ? savedState.scheduleRows : defaultScheduleRows;
+            document.getElementById('scheduleRowsEditor').innerHTML = rows.map(createScheduleRow).join('');
+            lucide.createIcons();
+        }
+
+        function fillDateSheetForm(savedState = {}) {
+            [
+                'dateSheetSchoolName',
+                'dateSheetExamTitle',
+                'dateSheetSession',
+                'dateSheetClassGroup',
+                'dateSheetCampus',
+                'dateSheetDefaultStart',
+                'dateSheetInstructions'
+            ].forEach((id) => {
+                if (savedState[id]) document.getElementById(id).value = savedState[id];
+            });
+            applyExamBrandingDefaults(false);
+        }
+
+        function readScheduleRows() {
+            return [...document.querySelectorAll('.schedule-row')].map((row) => ({
+                subject: row.querySelector('.schedule-subject').value.trim(),
+                className: row.querySelector('.schedule-class').value.trim(),
+                examDate: row.querySelector('.schedule-date').value,
+                startTime: row.querySelector('.schedule-start').value,
+                endTime: row.querySelector('.schedule-end').value
+            })).filter((row) => row.subject || row.className || row.examDate || row.startTime || row.endTime);
+        }
+
+        function saveDateSheetState() {
+            const state = {
+                dateSheetSchoolName: document.getElementById('dateSheetSchoolName').value,
+                dateSheetExamTitle: document.getElementById('dateSheetExamTitle').value,
+                dateSheetSession: document.getElementById('dateSheetSession').value,
+                dateSheetClassGroup: document.getElementById('dateSheetClassGroup').value,
+                dateSheetCampus: document.getElementById('dateSheetCampus').value,
+                dateSheetDefaultStart: document.getElementById('dateSheetDefaultStart').value,
+                dateSheetInstructions: document.getElementById('dateSheetInstructions').value,
+                scheduleRows: readScheduleRows()
+            };
+            localStorage.setItem(DATE_SHEET_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function formatScheduleDate(value) {
+            if (!value) return '-';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return value;
+            return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function formatScheduleTime(value, fallback = '-') {
+            if (!value) return fallback;
+            const [hours, minutes] = value.split(':');
+            if (hours === undefined || minutes === undefined) return value;
+            const numericHours = Number(hours);
+            const suffix = numericHours >= 12 ? 'PM' : 'AM';
+            const normalizedHour = ((numericHours + 11) % 12) + 1;
+            return `${normalizedHour}:${minutes} ${suffix}`;
+        }
+
+        function refreshDateSheetPreview() {
+            const rows = readScheduleRows();
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
+            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
+                img.src = logoSrc;
+            });
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || branding.schoolName || 'Kids Roots Jand';
+            document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
+            document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
+            document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
+            document.getElementById('previewDateSheetCampus').textContent = document.getElementById('dateSheetCampus').value || '';
+            document.getElementById('previewDateSheetInstructions').textContent = document.getElementById('dateSheetInstructions').value || '';
+
+            const defaultStart = document.getElementById('dateSheetDefaultStart').value;
+            document.getElementById('previewDateSheetBody').innerHTML = rows.length ? rows.map((row) => `
+                <tr>
+                    <td>${row.subject || '-'}</td>
+                    <td>${row.className || document.getElementById('dateSheetClassGroup').value || '-'}</td>
+                    <td>${formatScheduleDate(row.examDate)}</td>
+                    <td>${formatScheduleTime(row.startTime || defaultStart, '-')}</td>
+                    <td>${formatScheduleTime(row.endTime, '-')}</td>
+                </tr>
+            `).join('') : `
+                <tr>
+                    <td colspan="5">No schedule rows added yet.</td>
+                </tr>
+            `;
+
+            saveDateSheetState();
+        }
+
+        function removeScheduleRow(button) {
+            const row = button.closest('.schedule-row');
+            if (row) {
+                row.remove();
+                refreshDateSheetPreview();
+            }
+        }
+
+        function resetDateSheet() {
+            localStorage.removeItem(DATE_SHEET_STORAGE_KEY);
+            document.getElementById('dateSheetForm').reset();
+            renderScheduleRows({});
+            refreshDateSheetPreview();
+        }
+
+        function applyResultPrintDensity() {
+            const subjectCount = document.querySelectorAll('#previewSubjectsBody tr').length;
+            const behaviorCount = document.querySelectorAll('#previewBehaviorBody tr').length;
+            document.body.classList.remove('result-print-compact', 'result-print-dense', 'result-print-ultra');
+
+            if (subjectCount > 16 || behaviorCount > 10) {
+                document.body.classList.add('result-print-ultra');
+                return;
+            }
+
+            if (subjectCount > 12 || behaviorCount > 8) {
+                document.body.classList.add('result-print-dense');
+                return;
+            }
+
+            if (subjectCount > 8 || behaviorCount > 7) {
+                document.body.classList.add('result-print-compact');
+            }
+        }
+
+        function printSection(mode, colorMode = 'color') {
+            document.body.classList.remove('print-schedule', 'print-result', 'result-print-color', 'result-print-bw', 'result-print-compact', 'result-print-dense', 'result-print-ultra');
+            document.body.classList.add(mode);
+            if (mode === 'print-result') {
+                document.body.classList.add(colorMode === 'bw' ? 'result-print-bw' : 'result-print-color');
+                applyResultPrintDensity();
+            }
+            window.print();
+            window.setTimeout(() => {
+                document.body.classList.remove('print-schedule', 'print-result', 'result-print-color', 'result-print-bw', 'result-print-compact', 'result-print-dense', 'result-print-ultra');
+            }, 300);
+        }
+
+        function readSubjectRows() {
+            return [...document.querySelectorAll('.subject-row')].map((row) => ({
+                subject: row.querySelector('.subject-name').value.trim(),
+                max: row.querySelector('.subject-max').value.trim(),
+                obtained: row.querySelector('.subject-obtained').value.trim(),
+                best: row.querySelector('.subject-best').value.trim()
+            })).filter((row) => row.subject || row.max || row.obtained || row.best);
+        }
+
+        function readBehaviorRows() {
+            return [...document.querySelectorAll('.behavior-row')].map((row) => ({
+                title: row.querySelector('.behavior-title').value.trim(),
+                grade: row.querySelector('.behavior-grade').value.trim()
+            })).filter((row) => row.title || row.grade);
+        }
+
+        function saveResultCardState() {
+            const state = {
+                schoolName: document.getElementById('schoolName').value,
+                campusName: document.getElementById('campusName').value,
+                schoolContact: document.getElementById('schoolContact').value,
+                termTitle: document.getElementById('termTitle').value,
+                studentLookupId: document.getElementById('studentLookupId').value,
+                studentName: document.getElementById('studentName').value,
+                fatherName: document.getElementById('fatherName').value,
+                studentGrade: document.getElementById('studentGrade').value,
+                positionGrade: document.getElementById('positionGrade').value,
+                teacherRemarks: document.getElementById('teacherRemarks').value,
+                teacherSignature: document.getElementById('teacherSignature').value,
+                principalSignature: document.getElementById('principalSignature').value,
+                parentSignature: document.getElementById('parentSignature').value,
+                subjects: readSubjectRows(),
+                behaviors: readBehaviorRows()
+            };
+            localStorage.setItem(RESULT_CARD_STORAGE_KEY, JSON.stringify(state));
+        }
+
+        function getCurrentResultRecord() {
+            return {
+                id: document.getElementById('studentLookupId').value.trim() || `result-${Date.now()}`,
+                studentLookupId: document.getElementById('studentLookupId').value.trim(),
+                studentName: document.getElementById('studentName').value.trim(),
+                fatherName: document.getElementById('fatherName').value.trim(),
+                studentGrade: document.getElementById('studentGrade').value.trim(),
+                positionGrade: document.getElementById('positionGrade').value.trim(),
+                teacherRemarks: document.getElementById('teacherRemarks').value.trim(),
+                teacherSignature: document.getElementById('teacherSignature').value.trim(),
+                principalSignature: document.getElementById('principalSignature').value.trim(),
+                parentSignature: document.getElementById('parentSignature').value.trim(),
+                schoolName: document.getElementById('schoolName').value.trim(),
+                campusName: document.getElementById('campusName').value.trim(),
+                schoolContact: document.getElementById('schoolContact').value.trim(),
+                termTitle: document.getElementById('termTitle').value.trim(),
+                leftLogoUrl: getExamLogoSrc(),
+                subjects: readSubjectRows(),
+                behaviors: readBehaviorRows(),
+                updatedAt: new Date().toISOString()
+            };
+        }
+
+        function applyResultRecord(record = {}) {
+            fillFormState(record);
+            renderDynamicEditors(record);
+            refreshResultCardPreview();
+        }
+
+        function saveCurrentResultToArchive() {
+            const record = getCurrentResultRecord();
+            if (!record.studentName) {
+                alert('Enter or load a student before saving the result card.');
+                return;
+            }
+
+            const archive = loadResultArchive();
+            const uniqueKey = `${record.studentLookupId || record.studentName}__${record.termTitle || ''}`;
+            const existingIndex = archive.findIndex((item) => `${item.studentLookupId || item.studentName}__${item.termTitle || ''}` === uniqueKey);
+
+            if (existingIndex >= 0) {
+                archive[existingIndex] = { ...archive[existingIndex], ...record };
+            } else {
+                archive.unshift(record);
+            }
+
+            saveResultArchive(archive);
+            renderResultHistoryList();
+            alert('Result card saved successfully.');
+        }
+
+        function loadResultFromArchive(recordId, termTitle) {
+            const archive = loadResultArchive();
+            const record = archive.find((item) => String(item.id) === String(recordId) && String(item.termTitle || '') === String(termTitle || ''));
+            if (!record) return;
+
+            toggleExamSection('resultBuilderCard');
+            applyResultRecord(record);
+        }
+
+        function deleteResultFromArchive(recordId, termTitle) {
+            const archive = loadResultArchive().filter((item) => !(String(item.id) === String(recordId) && String(item.termTitle || '') === String(termTitle || '')));
+            saveResultArchive(archive);
+            renderResultHistoryList();
+        }
+
+        function formatArchiveDate(value) {
+            if (!value) return '-';
+            const parsed = new Date(value);
+            return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString('en-GB');
+        }
+
+        function getResultSummary(record = {}) {
+            const subjects = Array.isArray(record.subjects) ? record.subjects : [];
+            const totalMarks = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
+            const obtainedMarks = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);
+            const percentage = totalMarks ? (obtainedMarks / totalMarks) * 100 : 0;
+            const passStatus = percentage >= 40 ? 'Pass' : 'Fail';
+
+            return {
+                totalMarks: formatMark(totalMarks),
+                obtainedMarks: formatMark(obtainedMarks),
+                percentage: `${formatMark(percentage)}%`,
+                positionGrade: record.positionGrade || '-',
+                passStatus
+            };
+        }
+
+        function renderResultHistoryList(searchTerm = '') {
+            const body = document.getElementById('resultHistoryTableBody');
+            const emptyState = document.getElementById('resultHistoryEmptyState');
+            if (!body || !emptyState) return;
+
+            const normalizedTerm = String(searchTerm || '').trim().toLowerCase();
+            const rows = loadResultArchive().filter((item) => {
+                const haystack = [
+                    item.studentName,
+                    item.studentLookupId,
+                    item.studentGrade,
+                    item.termTitle
+                ].join(' ').toLowerCase();
+
+                return !normalizedTerm || haystack.includes(normalizedTerm);
+            });
+
+            body.innerHTML = rows.map((item) => {
+                const summary = getResultSummary(item);
+                return `
+                    <tr>
+                        <td>${item.studentName || '-'}</td>
+                        <td>${item.studentLookupId || '-'}</td>
+                        <td>${item.studentGrade || '-'}</td>
+                        <td>${item.termTitle || '-'}</td>
+                        <td>${summary.totalMarks}</td>
+                        <td>${summary.obtainedMarks}</td>
+                        <td>${summary.percentage}</td>
+                        <td>${summary.positionGrade}</td>
+                        <td>${summary.passStatus}</td>
+                        <td>${formatArchiveDate(item.updatedAt)}</td>
+                        <td>
+                            <div class="result-history-actions">
+                                <button type="button" class="btn btn-outline result-history-btn" data-action="load" data-result-id="${String(item.id).replace(/"/g, '&quot;')}" data-term-title="${String(item.termTitle || '').replace(/"/g, '&quot;')}">Load</button>
+                                <button type="button" class="btn btn-outline result-history-btn" data-action="delete" data-result-id="${String(item.id).replace(/"/g, '&quot;')}" data-term-title="${String(item.termTitle || '').replace(/"/g, '&quot;')}">Delete</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            emptyState.style.display = rows.length ? 'none' : 'block';
+        }
+
+        function createSubjectRow(row = {}) {
+            return `
+                <div class="dynamic-row subject-row">
+                    <label>Subject<input type="text" class="subject-name" value="${row.subject || ''}"></label>
+                    <label>Max<input type="number" class="subject-max" value="${row.max || ''}"></label>
+                    <label>Obtained<input type="number" step="0.1" class="subject-obtained" value="${row.obtained || ''}"></label>
+                    <label>Best<input type="number" step="0.1" class="subject-best" value="${row.best || ''}"></label>
+                    <button type="button" class="btn btn-outline remove-row-btn" onclick="removeDynamicRow(this)">
+                        <i data-lucide="trash-2" size="16"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function createBehaviorRow(row = {}) {
+            return `
+                <div class="dynamic-row behavior-row">
+                    <label>Behavior<input type="text" class="behavior-title" value="${row.title || ''}"></label>
+                    <label>Grade<input type="text" class="behavior-grade" value="${row.grade || ''}"></label>
+                    <button type="button" class="btn btn-outline remove-row-btn" onclick="removeDynamicRow(this)">
+                        <i data-lucide="trash-2" size="16"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderDynamicEditors(savedState = {}) {
+            const subjects = savedState.subjects && savedState.subjects.length ? savedState.subjects : defaultSubjects;
+            const behaviors = savedState.behaviors && savedState.behaviors.length ? savedState.behaviors : defaultBehaviors;
+            document.getElementById('subjectsEditor').innerHTML = subjects.map(createSubjectRow).join('');
+            document.getElementById('behaviorEditor').innerHTML = behaviors.map(createBehaviorRow).join('');
+            lucide.createIcons();
+        }
+
+        function fillFormState(savedState = {}) {
+            [
+                'schoolName', 'campusName', 'schoolContact', 'termTitle',
+                'studentLookupId', 'studentName', 'fatherName', 'studentGrade', 'positionGrade',
+                'teacherRemarks', 'teacherSignature', 'principalSignature', 'parentSignature'
+            ].forEach((id) => {
+                if (savedState[id]) document.getElementById(id).value = savedState[id];
+            });
+            applyExamBrandingDefaults(false);
+        }
+
+        const RESULT_BRANCH_CONTACTS = {
+            main: {
+                campusLabel: 'Main branch',
+                contactLine: 'Address: Dekhni Road Jand | Phone: 03045259900'
+            },
+            ali: {
+                campusLabel: 'Ali campus',
+                contactLine: 'Address: Chapri Road Jand | Phone: 03085259900'
+            },
+            fatima: {
+                campusLabel: 'Fatima campus',
+                contactLine: 'Address: Nai Abadi | Phone: 03085259900'
+            }
+        };
+
+        function getResultBranchContactDetails(campusName) {
+            const normalizedCampus = String(campusName || '').trim().toLowerCase();
+            if (normalizedCampus.includes('ali')) return RESULT_BRANCH_CONTACTS.ali;
+            if (normalizedCampus.includes('fatima')) return RESULT_BRANCH_CONTACTS.fatima;
+            return RESULT_BRANCH_CONTACTS.main;
+        }
+
+        function applyBranchDetailsToResultCard(campusName) {
+            const branchDetails = getResultBranchContactDetails(campusName);
+            const globalContactLine = getExamContactLine();
+            document.getElementById('campusName').value = branchDetails.campusLabel;
+            document.getElementById('schoolContact').value = globalContactLine || branchDetails.contactLine;
+        }
+
+        function findStudentForResultCard(query) {
+            const normalizedQuery = String(query || '').trim().toLowerCase();
+            if (!normalizedQuery) return null;
+
+            const students = JSON.parse(localStorage.getItem(RESULT_CARD_STUDENT_KEY) || '[]');
+            return students.find((student) => {
+                const candidates = [
+                    student.id,
+                    student.studentCode,
+                    student.rollNo
+                ].map((value) => String(value || '').trim().toLowerCase());
+
+                return candidates.includes(normalizedQuery);
+            }) || null;
+        }
+
+        function loadStudentIntoResultCard() {
+            const lookupValue = document.getElementById('studentLookupId').value.trim();
+            const student = findStudentForResultCard(lookupValue);
+
+            if (!student) {
+                alert('Student not found for the entered ID or code.');
+                return;
+            }
+
+            document.getElementById('studentLookupId').value = student.id || student.studentCode || student.rollNo || lookupValue;
+            document.getElementById('studentName').value = student.fullName || '';
+            document.getElementById('fatherName').value = student.fatherName || '';
+            document.getElementById('studentGrade').value = student.classGrade || '';
+            applyBranchDetailsToResultCard(student.campusName);
+            refreshResultCardPreview();
+        }
+
+        function updateLogo(logoId, value) {
+            const img = document.getElementById(logoId);
+            if (!img) return;
+            const box = img.closest('.result-logo-box');
+            img.onerror = () => {
+                img.removeAttribute('src');
+                box.classList.remove('has-logo');
+            };
+            img.src = value || '';
+            box.classList.toggle('has-logo', Boolean(value));
+        }
+
+        function removeDynamicRow(button) {
+            const row = button.closest('.dynamic-row');
+            if (row) {
+                row.remove();
+                refreshResultCardPreview();
+            }
+        }
+
+        function toNumber(value) {
+            const parsed = parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        function formatMark(value) {
+            return Number.isInteger(value) ? String(value) : value.toFixed(1);
+        }
+
+        function removeStudentIdFieldsFromResultCard() {
+            document.querySelectorAll('#previewStudentId, #previewStudentCode, #previewRollNo, .result-student-id, .result-student-code, .result-roll-no').forEach((element) => {
+                element.remove();
+            });
+        }
+
+        function refreshResultCardPreview() {
+            const subjects = readSubjectRows();
+            const behaviors = readBehaviorRows();
+            const branding = getExamBrandingSettings();
+            const logoSrc = getExamLogoSrc();
+
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || branding.schoolName || 'Kids Roots Jand';
+            document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
+            document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
+            document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
+            updateLogo('previewLeftLogo', logoSrc);
+            document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
+            document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
+            document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';
+            document.getElementById('previewPositionGrade').textContent = document.getElementById('positionGrade').value || '';
+            document.getElementById('previewTeacherRemarks').textContent = document.getElementById('teacherRemarks').value || '';
+            document.getElementById('previewTeacherSignature').textContent = document.getElementById('teacherSignature').value || '';
+            document.getElementById('previewPrincipalSignature').textContent = document.getElementById('principalSignature').value || '';
+            document.getElementById('previewParentSignature').textContent = document.getElementById('parentSignature').value || '';
+
+            const totalMax = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
+            const totalObtained = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);
+            const totalBest = subjects.reduce((sum, item) => sum + toNumber(item.best), 0);
+            const percentage = totalMax ? (totalObtained / totalMax) * 100 : 0;
+            const bestPercentage = totalMax ? (totalBest / totalMax) * 100 : 0;
+
+            document.getElementById('previewSubjectsBody').innerHTML = subjects.map((item) => `
+                <tr>
+                    <td>${item.subject || '-'}</td>
+                    <td>${item.max || '0'}</td>
+                    <td>${item.obtained || '0'}</td>
+                    <td>${item.best || '0'}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('previewBehaviorBody').innerHTML = behaviors.map((item) => `
+                <tr>
+                    <td>${item.title || '-'}</td>
+                    <td>${item.grade || '-'}</td>
+                </tr>
+            `).join('');
+
+            document.getElementById('previewTotalMax').textContent = formatMark(totalMax);
+            document.getElementById('previewTotalObtained').textContent = formatMark(totalObtained);
+            document.getElementById('previewTotalBest').textContent = formatMark(totalBest);
+            document.getElementById('previewPercentage').textContent = `${formatMark(percentage)}%`;
+            document.getElementById('previewBestPercentage').textContent = `${formatMark(bestPercentage)}%`;
+            removeStudentIdFieldsFromResultCard();
+
+            saveResultCardState();
+        }
+
+        function resetResultCard() {
+            localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
+            document.getElementById('resultCardForm').reset();
+            applyExamBrandingDefaults(true);
+            renderDynamicEditors({});
+            refreshResultCardPreview();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            clearLegacyResultArchive();
+            applyExamBrandingDefaults(false);
+            toggleExamSection('resultBuilderCard');
+            const dateSheetState = loadDateSheetState();
+            const savedState = loadResultCardState();
+            renderScheduleRows(dateSheetState);
+            fillDateSheetForm(dateSheetState);
+            refreshDateSheetPreview();
+            renderDynamicEditors(savedState);
+            fillFormState(savedState);
+            refreshResultCardPreview();
+            document.querySelectorAll('.exam-module-card').forEach((card) => {
+                card.addEventListener('click', () => toggleExamSection(card.dataset.target));
+            });
+
+            document.getElementById('dateSheetForm').addEventListener('input', refreshDateSheetPreview);
+            document.getElementById('addScheduleRowBtn').addEventListener('click', () => {
+                document.getElementById('scheduleRowsEditor').insertAdjacentHTML('beforeend', createScheduleRow({
+                    className: document.getElementById('dateSheetClassGroup').value,
+                    startTime: document.getElementById('dateSheetDefaultStart').value
+                }));
+                lucide.createIcons();
+            });
+            document.getElementById('printDateSheetBtn').addEventListener('click', () => {
+                refreshDateSheetPreview();
+                printSection('print-schedule');
+            });
+            document.getElementById('resetDateSheetBtn').addEventListener('click', resetDateSheet);
+            document.getElementById('resultCardForm').addEventListener('input', refreshResultCardPreview);
+            document.getElementById('loadStudentResultBtn').addEventListener('click', loadStudentIntoResultCard);
+            document.getElementById('studentLookupId').addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    loadStudentIntoResultCard();
+                }
+            });
+            document.getElementById('saveResultCardBtn').addEventListener('click', saveCurrentResultToArchive);
+            document.getElementById('resultHistorySearch').addEventListener('input', (event) => {
+                renderResultHistoryList(event.target.value);
+            });
+            document.getElementById('resultHistoryTableBody').addEventListener('click', (event) => {
+                const button = event.target.closest('.result-history-btn');
+                if (!button) return;
+
+                const recordId = button.dataset.resultId || '';
+                const termTitle = button.dataset.termTitle || '';
+
+                if (button.dataset.action === 'load') {
+                    loadResultFromArchive(recordId, termTitle);
+                    return;
+                }
+
+                if (button.dataset.action === 'delete') {
+                    deleteResultFromArchive(recordId, termTitle);
+                }
+            });
+            document.getElementById('addSubjectBtn').addEventListener('click', () => {
+                document.getElementById('subjectsEditor').insertAdjacentHTML('beforeend', createSubjectRow());
+                lucide.createIcons();
+            });
+            document.getElementById('addBehaviorBtn').addEventListener('click', () => {
+                document.getElementById('behaviorEditor').insertAdjacentHTML('beforeend', createBehaviorRow());
+                lucide.createIcons();
+            });
+            document.getElementById('printResultCardBtn').addEventListener('click', () => {
+                refreshResultCardPreview();
+                printSection('print-result', 'color');
+            });
+            document.getElementById('printResultBwBtn').addEventListener('click', () => {
+                refreshResultCardPreview();
+                printSection('print-result', 'bw');
+            });
+            document.getElementById('resetResultCardBtn').addEventListener('click', resetResultCard);
+            renderResultHistoryList();
+            lucide.createIcons();
+        });
+
+        // Listen for branding changes from other tabs/windows
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'eduCore_settings') {
+                forceRefreshResultBrandingFromStorage();
+            }
+        });
+    </script>
+</body>
+
+</html>

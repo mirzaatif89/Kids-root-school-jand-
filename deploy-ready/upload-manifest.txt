@@ -1,0 +1,22 @@
+# Upload these from project root to live server
+app.js
+package.json
+package-lock.json
+backend/
+frontend/
+config/
+permissions.json
+permissions-detailed.json
+date_sheet.json
+.htaccess
+ecosystem.config.js
+
+# Do not upload
+node_modules/
+.git/
+.env
+logs/
+.whatsapp-session/
+*.log
+.codex-*
+

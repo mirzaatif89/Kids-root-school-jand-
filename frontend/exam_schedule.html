@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exam Schedule - My own Science school</title>
-    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
+    <title>Exam Schedule - Kids Roots Jand</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -14,7 +15,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <img class="sidebar-logo-img" src="images/logo.png" alt="Apexiums School System logo">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
             </div>
 
             <nav class="nav-links">
@@ -153,7 +154,7 @@
                             <div class="result-form-section">
                                 <h4>Date Sheet Header</h4>
                                 <div class="result-form-fields">
-                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="My own Science school" placeholder="Enter school name"></label>
+                                    <label>School Name<input type="text" id="dateSheetSchoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
                                     <label>Exam Title<input type="text" id="dateSheetExamTitle" placeholder="Enter exam title"></label>
                                     <label>Session<input type="text" id="dateSheetSession" placeholder="Enter session"></label>
                                     <label>Target Class / Group<input type="text" id="dateSheetClassGroup" placeholder="Enter class / group"></label>
@@ -229,7 +230,7 @@
                                     <div class="date-sheet-header-top">
                                         <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
                                         <div class="date-sheet-header-text">
-                                            <h2 id="previewDateSheetSchoolName">My own Science school</h2>
+                                            <h2 id="previewDateSheetSchoolName">Kids Roots Jand</h2>
                                             <p id="previewDateSheetCampus"></p>
                                         </div>
                                     </div>
@@ -285,12 +286,12 @@
                         <div class="result-form-section">
                             <h4>School Header</h4>
                             <div class="result-form-fields">
-                                <label>School Name<input type="text" id="schoolName" value="My own Science school" placeholder="Enter school name"></label>
+                                <label>School Name<input type="text" id="schoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
                                 <label>Campus / Branch<input type="text" id="campusName" placeholder="Enter campus / branch"></label>
                                 <label>Contact Line<input type="text" id="schoolContact" placeholder="Enter contact line"></label>
                                 <label>Term Title<input type="text" id="termTitle" placeholder="Enter term title"></label>
-                                <label>Left Logo URL<input type="text" id="leftLogoUrl" placeholder="https://... or assets/logo-left.png"></label>
-                                <label>Right Logo URL<input type="text" id="rightLogoUrl" placeholder="https://... or assets/logo-right.png"></label>
+                                <label>Left Logo URL<input type="text" id="leftLogoUrl" value="images/logo.png" placeholder="images/logo.png"></label>
+                                <label>Right Logo URL<input type="text" id="rightLogoUrl" value="images/logo.png" placeholder="images/logo.png"></label>
                             </div>
                         </div>
 
@@ -351,11 +352,11 @@
 
                     <div class="result-card-sheet" id="resultCardSheet">
                         <div class="result-card-frame">
-                            <div class="result-card-watermark">MY OWN</div>
+                            <div class="result-card-watermark">KIDS ROOTS JAND</div>
                             <div class="result-card-topbar">
                                 <div class="result-logo-box"><img id="previewLeftLogo" alt="Left school logo"></div>
                                 <div class="result-school-center">
-                                    <h2 id="previewSchoolName">My own Science school</h2>
+                                    <h2 id="previewSchoolName">Kids Roots Jand</h2>
                                     <p id="previewCampusName"></p>
                                     <p id="previewSchoolContact"></p>
                                 </div>
@@ -1213,8 +1214,8 @@
         }
     </style>
     <script>
-        const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
-        const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
+        const DATE_SHEET_STORAGE_KEY = 'KIDS_ROOTS_JAND_DATE_SHEET_V1';
+        const RESULT_CARD_STORAGE_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_V1';
         const DATE_SHEET_DEFAULT_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
         const DATE_SHEET_UPLOAD_LIMIT = 8 * 1024 * 1024;
         const defaultScheduleRows = [];
@@ -1223,7 +1224,7 @@
         let selectedDateSheetFile = null;
 
         function getExamBrandingSettings() {
-            const fallback = { schoolName: 'My own Science school', schoolTitle: 'Apexiums School System', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
+            const fallback = { schoolName: 'Kids Roots Jand', schoolTitle: 'Kids Roots Jand', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
             try {
                 return { ...fallback, ...((typeof getBrandingSettings === 'function' ? getBrandingSettings() : {}) || {}) };
             } catch (_error) {
@@ -1233,7 +1234,7 @@
 
         function getExamLogoSrc() {
             const branding = getExamBrandingSettings();
-            return branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
+            return 'images/logo.png';
         }
 
         function getExamContactLine() {
@@ -1247,10 +1248,10 @@
 
         function applyExamBrandingDefaults(force = false) {
             const branding = getExamBrandingSettings();
-            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const schoolName = 'Kids Roots Jand';
             const contactLine = getExamContactLine();
             const logoSrc = getExamLogoSrc();
-            const legacyNames = ['Apexiums School', 'My own Science school'];
+            const legacyNames = ['Kids Roots Jand', 'Kids Roots Jand'];
             const dateSheetSchool = document.getElementById('dateSheetSchoolName');
             const resultSchool = document.getElementById('schoolName');
             const contact = document.getElementById('schoolContact');
@@ -1267,7 +1268,7 @@
 
         function forceRefreshResultBrandingFromStorage() {
             const branding = getExamBrandingSettings();
-            const schoolName = branding.schoolName || branding.schoolTitle || 'My own Science school';
+            const schoolName = 'Kids Roots Jand';
             const contactLine = getExamContactLine();
             const logoSrc = getExamLogoSrc();
             
@@ -1297,14 +1298,14 @@
         }
 
         function isLegacyDemoDateSheetState(saved = {}) {
-            return saved.dateSheetSchoolName === 'My own Science school' &&
+            return saved.dateSheetSchoolName === 'Kids Roots Jand' &&
                 saved.dateSheetExamTitle === 'Mid Term Examination 2026' &&
                 saved.dateSheetSession === '2025-26' &&
                 saved.dateSheetClassGroup === 'Grade 5 / Section A';
         }
 
         function isLegacyDemoResultState(saved = {}) {
-            return saved.schoolName === 'My own Science school' &&
+            return saved.schoolName === 'Kids Roots Jand' &&
                 saved.studentName === 'Muhammad Ali' &&
                 saved.fatherName === 'Ahmed Ali' &&
                 saved.termTitle === '3rd Term 2025-26';
@@ -1677,7 +1678,7 @@
             const branding = getExamBrandingSettings();
             const logoSrc = getExamLogoSrc();
             document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
-            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || branding.schoolName || 'My own Science school';
+            document.getElementById('previewDateSheetSchoolName').textContent = 'Kids Roots Jand';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
@@ -1843,12 +1844,12 @@
             const branding = getExamBrandingSettings();
             const logoSrc = getExamLogoSrc();
 
-            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || branding.schoolName || 'My own Science school';
+            document.getElementById('previewSchoolName').textContent = 'Kids Roots Jand';
             document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
             document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
-            updateLogo('previewLeftLogo', document.getElementById('leftLogoUrl').value.trim() || logoSrc);
-            updateLogo('previewRightLogo', document.getElementById('rightLogoUrl').value.trim() || logoSrc);
+            updateLogo('previewLeftLogo', logoSrc);
+            updateLogo('previewRightLogo', logoSrc);
             document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
             document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
             document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';

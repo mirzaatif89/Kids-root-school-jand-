@@ -65,7 +65,7 @@ SMTP_SECURE=false
 SMTP_USER=softwaredemo17@gmail.com
 SMTP_PASS=melqyptsoeabtnlk
 SMTP_FROM_EMAIL=softwaredemo17@gmail.com
-SMTP_FROM_NAME=Apexiums School
+SMTP_FROM_NAME=Kids Roots Jand
 
 PENDING_FEE_REMINDER_ENABLED=true
 PENDING_FEE_REMINDER_TIME=09:00

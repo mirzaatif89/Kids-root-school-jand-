@@ -1,0 +1,111 @@
+# =============================================================================
+# .htaccess for School CRM - cPanel Hosting Configuration
+# 
+# This file is optional but improves performance and security
+# Place in your app root directory (/home/cpanel_user/my_school_app/.htaccess)
+# =============================================================================
+
+# Enable mod_rewrite
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Remove www if present (optional, adjust to your preference)
+    # RewriteCond %{HTTP_HOST} ^www\.(.*)$ [NC]
+    # RewriteRule ^(.*)$ http://%1/$1 [R=301,L]
+    
+    # Redirect HTTP to HTTPS (important for security)
+    RewriteCond %{HTTPS} off
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+    
+    # Don't rewrite if the file exists
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Don't rewrite specific paths handled by Node.js
+    RewriteCond %{REQUEST_URI} !^/app\.js$
+    RewriteCond %{REQUEST_URI} !^/health$
+    RewriteCond %{REQUEST_URI} !^/socket\.io/
+    
+    # Pass everything else to Node.js app
+    # Note: cPanel will handle this with the Node.js app setup
+</IfModule>
+
+# =============================================================================
+# Performance & Caching Headers
+# =============================================================================
+
+# Enable Gzip compression
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Set cache headers for static files
+<FilesMatch "\.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "max-age=31536000, public"
+</FilesMatch>
+
+# Cache HTML for shorter period
+<FilesMatch "\.(html|htm)$">
+    Header set Cache-Control "max-age=3600, public"
+</FilesMatch>
+
+# Don't cache JSON/API responses
+<FilesMatch "\.(json|xml)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+</FilesMatch>
+
+# =============================================================================
+# Security Headers
+# =============================================================================
+
+# HTTP Security Headers (some may be set in Node.js app)
+<IfModule mod_headers.c>
+    # Prevent directory listing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # Click-jacking protection
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # XSS protection
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# =============================================================================
+# Prevent Access to Sensitive Files
+# =============================================================================
+
+<FilesMatch "^(\.|\.env|package\.json|ecosystem\.config|README|LICENSE)">
+    Deny from all
+</FilesMatch>
+
+# Block access to sensitive directories
+<DirectoryMatch "^/(\.git|\.vscode|node_modules|config|scripts|docs)">
+    Deny from all
+</DirectoryMatch>
+
+# =============================================================================
+# MIME Type Configuration
+# =============================================================================
+
+<IfModule mod_mime.c>
+    AddType application/json .json
+    AddType application/xml .xml
+    AddType image/svg+xml .svg
+    AddType font/ttf .ttf
+    AddType font/eot .eot
+    AddType font/woff .woff
+    AddType font/woff2 .woff2
+</IfModule>
+
+# =============================================================================
+# Error Handling
+# =============================================================================
+
+# Custom error pages (if you have them in frontend/)
+ErrorDocument 404 /404.shtml
+ErrorDocument 403 /403.shtml
+ErrorDocument 503 /503.shtml

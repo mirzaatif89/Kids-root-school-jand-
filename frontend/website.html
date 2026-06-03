@@ -4,71 +4,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apexiums School System</title>
-    <link rel="stylesheet" href="website.css">
+    <title>Kids Roots Jand School</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="website.css?v=20260529-2">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
     <header class="site-header">
         <div class="top-strip">
-            <a href="mailto:info@apexiums.edu.pk">info@apexiums.edu.pk</a>
-            <span>Apexiums School System</span>
-            <span id="headerAddress">Main Campus</span>
+            <a href="tel:+923482772446"><i data-lucide="phone"></i><span>Main Campus: Jand School Official 03482772446</span></a>
+            <a href="mailto:rootsjand@gmail.com"><i data-lucide="mail"></i><span>rootsjand@gmail.com</span></a>
+            <div class="social-links" aria-label="Social media">
+                <a href="#" aria-label="Facebook"><i data-lucide="message-circle"></i></a>
+                <a href="#" aria-label="Instagram"><i data-lucide="camera"></i></a>
+                <a href="#" aria-label="Youtube"><i data-lucide="play-circle"></i></a>
+            </div>
         </div>
+
         <nav class="main-nav">
             <a class="brand" href="/">
-                <img src="images/logo.png" alt="Apexiums School System logo">
+                <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
+                <span>Kids Roots Jand</span>
             </a>
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
                 <i data-lucide="menu"></i>
             </button>
             <div class="nav-links" id="siteNavLinks">
                 <a href="#home">Home</a>
-                <a href="#about">About</a>
+                <a href="#about">About Us</a>
+                <a href="#events">Events</a>
                 <a href="#academics">Academics</a>
-                <a href="#admissions">Admissions</a>
-                <a href="#portal">Portal</a>
                 <a href="#contact">Contact</a>
-                <a class="nav-login" href="login.html">Login</a>
+                <a class="nav-login" href="/login">Login</a>
             </div>
         </nav>
     </header>
 
     <main>
-        <section class="website-banner-section" id="websiteBannerSection" hidden>
-            <div class="website-banner-track" id="websiteBannerTrack"></div>
-            <div class="website-banner-dots" id="websiteBannerDots" aria-label="Website banners"></div>
+        <section class="home-banner" id="home">
+            <div class="home-banner-inner">
+                <p class="eyebrow">Kids Roots School System</p>
+                <h1>Quality learning for confident young minds.</h1>
+                <p>Kids Roots Jand and Langar campuses provide a focused school environment for academics, character building, events, and parent communication.</p>
+                <div class="hero-actions">
+                    <a class="primary-action" href="#contact">Contact School</a>
+                    <a class="secondary-action" href="/login">Portal Login</a>
+                </div>
+            </div>
+            <div class="banner-card">
+                <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
+                <strong>Jand School Official</strong>
+                <span>03482772446</span>
+            </div>
         </section>
 
         <section class="content-section" id="about">
             <div class="section-heading">
-                <p class="eyebrow">About</p>
-                <h2>Built for school operations and public communication.</h2>
+                <p class="eyebrow">About Us</p>
+                <h2>All details for parents, students, and school visitors in one place.</h2>
+                <p>Kids Roots Jand School keeps academic records, notices, events, admissions, and communication connected with the school management system.</p>
             </div>
             <div class="about-grid">
                 <article>
                     <i data-lucide="school"></i>
-                    <h3>Connected Campus</h3>
-                    <p>Campus information, registrations, and public school identity stay connected with the management backend.</p>
+                    <h3>Main Campus</h3>
+                    <p>Jand School Official</p>
+                    <a href="tel:+923482772446">03482772446</a>
                 </article>
                 <article>
-                    <i data-lucide="users"></i>
-                    <h3>Student & Teacher Records</h3>
-                    <p>Website sections read live counts and selected academic information from the existing system APIs.</p>
+                    <i data-lucide="map-pin"></i>
+                    <h3>Campus 1</h3>
+                    <p>Langar School Official</p>
+                    <a href="tel:+923115815280">03115815280</a>
                 </article>
                 <article>
-                    <i data-lucide="bell"></i>
-                    <h3>Notices & Updates</h3>
-                    <p>Special notices created in the backend can be shown publicly without rebuilding the website.</p>
+                    <i data-lucide="mail"></i>
+                    <h3>Email</h3>
+                    <p>Official school email</p>
+                    <a href="mailto:rootsjand@gmail.com">rootsjand@gmail.com</a>
                 </article>
             </div>
         </section>
 
-        <section class="content-section muted-section" id="academics">
+        <section class="content-section muted-section" id="events">
+            <div class="section-heading">
+                <p class="eyebrow">Events</p>
+                <h2>School events, notices, and updates.</h2>
+            </div>
+            <div class="data-layout">
+                <div class="data-panel wide-panel">
+                    <div class="panel-title">
+                        <h3>Latest Events & Notices</h3>
+                        <span id="noticeUpdated">Live</span>
+                    </div>
+                    <div class="notice-list" id="noticeList">
+                        <p class="empty-state">Loading events...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="content-section" id="academics">
             <div class="section-heading">
                 <p class="eyebrow">Academics</p>
-                <h2>Classes, subjects, faculty, and exam updates from backend data.</h2>
+                <h2>Classes and faculty details from the school system.</h2>
             </div>
             <div class="data-layout">
                 <div class="data-panel">
@@ -89,72 +129,38 @@
                         <p class="empty-state">Loading teachers...</p>
                     </div>
                 </div>
-                <div class="data-panel wide-panel">
-                    <div class="panel-title">
-                        <h3>Latest Notices</h3>
-                        <span id="noticeUpdated">Live</span>
-                    </div>
-                    <div class="notice-list" id="noticeList">
-                        <p class="empty-state">Loading notices...</p>
-                    </div>
-                </div>
             </div>
         </section>
 
-        <section class="content-section" id="admissions">
-            <div class="section-heading">
-                <p class="eyebrow">Admissions</p>
-                <h2>Admissions inquiry connected to school contact channels.</h2>
-            </div>
-            <div class="admission-layout">
-                <div>
-                    <h3>Admission Process</h3>
-                    <ol class="process-list">
-                        <li>Submit inquiry through contact details or campus office.</li>
-                        <li>School team verifies student information and class availability.</li>
-                        <li>Student profile is created in the backend after approval.</li>
-                        <li>Portal login is issued for student or parent access.</li>
-                    </ol>
-                </div>
-                <form class="inquiry-form" id="inquiryForm">
-                    <label>Name<input type="text" id="inquiryName" placeholder="Student / parent name" required></label>
-                    <label>Class<input type="text" id="inquiryClass" placeholder="Required class" required></label>
-                    <label>Phone<input type="tel" id="inquiryPhone" placeholder="Contact number" required></label>
-                    <label>Message<textarea id="inquiryMessage" placeholder="Write your admission inquiry"></textarea></label>
-                    <button type="submit">Prepare Inquiry Email</button>
-                </form>
-            </div>
-        </section>
-
-        <section class="portal-section" id="portal">
+        <section class="portal-section">
             <div>
                 <p class="eyebrow">Portal</p>
-                <h2>Login access for admins, students, teachers, and staff.</h2>
-                <p>Use the existing school management login to access dashboards, attendance, fees, results, notices, and portal records.</p>
+                <h2>Login access for administration, teachers, students, and staff.</h2>
+                <p>Use the school portal for attendance, fees, notices, academic records, and operational dashboards.</p>
             </div>
             <div class="portal-actions">
-                <a href="login.html">Admin / Staff Login</a>
-                <a href="student_portal.html">Student Portal</a>
-                <a href="teacher_portal.html">Teacher Portal</a>
+                <a href="/login">Admin / Staff Login</a>
+                <a href="/student_portal">Student Portal</a>
+                <a href="/teacher_portal">Teacher Portal</a>
             </div>
         </section>
 
         <section class="content-section contact-section" id="contact">
             <div class="section-heading">
                 <p class="eyebrow">Contact</p>
-                <h2>Reach the school office.</h2>
+                <h2>Reach Kids Roots Jand School.</h2>
             </div>
             <div class="contact-grid">
-                <a href="mailto:info@apexiums.edu.pk"><i data-lucide="mail"></i><span>info@apexiums.edu.pk</span></a>
-                <a href="tel:+920000000000"><i data-lucide="phone"></i><span>+92 000 0000000</span></a>
-                <span><i data-lucide="map-pin"></i><span id="contactAddress">Main Campus</span></span>
+                <a href="tel:+923482772446"><i data-lucide="phone"></i><span>Main Campus: 03482772446</span></a>
+                <a href="tel:+923115815280"><i data-lucide="phone-call"></i><span>Campus 1: 03115815280</span></a>
+                <a href="mailto:rootsjand@gmail.com"><i data-lucide="mail"></i><span>rootsjand@gmail.com</span></a>
             </div>
         </section>
     </main>
 
     <footer class="site-footer">
-        <img src="images/logo.png" alt="Apexiums School System logo">
-        <span>Apexiums School System</span>
+        <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
+        <span>Kids Roots Jand School</span>
     </footer>
 
     <script src="website.js"></script>
