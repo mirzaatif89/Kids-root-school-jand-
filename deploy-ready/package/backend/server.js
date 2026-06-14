@@ -1944,11 +1944,22 @@ async function writeClassFeeState(classFees, classFeeHistory) {
     });
 }
 
-async function applyClassFeeToStudents(className, monthlyFee, feeFrequency) {
+async function applyClassFeeToStudents(className, monthlyFee, feeFrequency, previousMonthlyFee = '') {
     if (!sequelize.models.Student || !className) return;
     const studentUpdate = { feeFrequency };
     if (monthlyFee) studentUpdate.monthlyFee = monthlyFee;
-    await sequelize.models.Student.update(studentUpdate, { where: { classGrade: className } });
+    const feeWhere = [
+        { monthlyFee: null },
+        { monthlyFee: '' },
+        { monthlyFee: '0' }
+    ];
+    if (previousMonthlyFee) feeWhere.push({ monthlyFee: String(previousMonthlyFee) });
+    await sequelize.models.Student.update(studentUpdate, {
+        where: {
+            classGrade: className,
+            [Op.or]: feeWhere
+        }
+    });
 }
 
 app.get('/api/class-fees', async (_req, res) => {
@@ -1980,6 +1991,7 @@ app.post('/api/class-fees', authenticateToken, async (req, res) => {
         }
 
         const classFees = await readClassFeeConfig();
+        const previousMonthlyFee = String(classFees[className]?.monthlyFee || '').trim();
         classFees[className] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
         const classFeeHistory = await readClassFeeHistory();
         const historyEntry = {
@@ -1996,7 +2008,7 @@ app.post('/api/class-fees', authenticateToken, async (req, res) => {
         classFeeHistory.unshift(historyEntry);
 
         await writeClassFeeState(classFees, classFeeHistory);
-        await applyClassFeeToStudents(className, monthlyFee, feeFrequency);
+        await applyClassFeeToStudents(className, monthlyFee, feeFrequency, previousMonthlyFee);
 
         res.json({ success: true, classFees, classFeeHistory });
     } catch (err) {
@@ -2031,6 +2043,7 @@ app.put('/api/class-fees/history/:id', authenticateToken, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Fee history record not found.' });
         }
 
+        const previousMonthlyFee = String(classFees[className]?.monthlyFee || '').trim();
         classFees[className] = { monthlyFee, annualCharges, feeFrequency, feeMonth, feeYear };
         classFeeHistory[index] = {
             ...classFeeHistory[index],
@@ -2045,7 +2058,7 @@ app.put('/api/class-fees/history/:id', authenticateToken, async (req, res) => {
         };
 
         await writeClassFeeState(classFees, classFeeHistory);
-        await applyClassFeeToStudents(className, monthlyFee, feeFrequency);
+        await applyClassFeeToStudents(className, monthlyFee, feeFrequency, previousMonthlyFee);
 
         res.json({ success: true, classFees, classFeeHistory });
     } catch (err) {

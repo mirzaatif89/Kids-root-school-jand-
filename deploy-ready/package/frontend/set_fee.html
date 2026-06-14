@@ -10,9 +10,9 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        .set-fee-layout { display:grid; grid-template-columns:minmax(280px,360px) minmax(620px,1fr); gap:1rem; align-items:start; }
+        .set-fee-layout { display:grid; grid-template-columns:minmax(280px,340px) minmax(760px,1fr); gap:1rem; align-items:start; }
         .set-fee-panel { background:#fff; border:1px solid var(--border-color); border-radius:var(--radius-lg); padding:1.25rem; box-shadow:var(--shadow-sm); }
-        .fee-history-panel { width:100%; max-width:696px; min-height:168px; padding:1rem .95rem 100px; }
+        .fee-history-panel { width:100%; min-height:168px; padding:1rem .95rem 100px; }
         .set-fee-panel h2 { margin:0 0 1rem; color:var(--text-primary); font-size:1.15rem; }
         .set-fee-form { display:grid; gap:1rem; }
         .set-fee-field label { display:block; margin-bottom:.45rem; color:var(--text-secondary); font-size:.85rem; font-weight:800; }
@@ -20,30 +20,28 @@
         .set-fee-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
         .set-fee-pills { display:flex; gap:.5rem; flex-wrap:wrap; margin-top:1rem; }
         .set-fee-pill { display:inline-flex; align-items:center; border-radius:999px; padding:.36rem .7rem; background:#ecfeff; color:#155e75; font-size:.82rem; font-weight:800; }
-        #classFeeHistoryWrap { min-width:0; overflow-x:hidden; width:100%; }
-        .history-table { width:100%; min-width:0; border-collapse:collapse; table-layout:fixed; }
-        .history-table th, .history-table td { padding:.62rem .42rem; border-bottom:1px solid var(--border-color); text-align:left; vertical-align:middle; line-height:1.25; word-break:normal; overflow-wrap:break-word; }
+        #classFeeHistoryWrap { min-width:0; overflow-x:auto; width:100%; padding-bottom:.35rem; }
+        .history-table { width:100%; min-width:780px; border-collapse:collapse; table-layout:fixed; }
+        .history-table th, .history-table td { padding:.7rem .65rem; border-bottom:1px solid var(--border-color); text-align:left; vertical-align:middle; line-height:1.25; word-break:normal; overflow-wrap:break-word; }
         .history-table th { background:#f8fafc; color:var(--text-secondary); font-size:.7rem; text-transform:uppercase; letter-spacing:.02em; white-space:nowrap; }
         .history-table td { font-size:.78rem; }
-        .history-table th:nth-child(1), .history-table td:nth-child(1) { width:8%; white-space:nowrap; }
-        .history-table th:nth-child(2), .history-table td:nth-child(2) { width:10%; white-space:nowrap; }
-        .history-table th:nth-child(3), .history-table td:nth-child(3) { width:13%; }
-        .history-table th:nth-child(4), .history-table td:nth-child(4) { width:11%; }
-        .history-table th:nth-child(5), .history-table td:nth-child(5) { width:13%; }
-        .history-table th:nth-child(6), .history-table td:nth-child(6) { width:16%; }
-        .history-table th:nth-child(7), .history-table td:nth-child(7) { width:17%; white-space:nowrap; }
-        .history-table th:nth-child(8), .history-table td:nth-child(8) { width:14%; min-width:94px; text-align:right; white-space:nowrap; }
+        .history-table th:nth-child(1), .history-table td:nth-child(1) { width:74px; white-space:nowrap; }
+        .history-table th:nth-child(2), .history-table td:nth-child(2) { width:88px; white-space:nowrap; }
+        .history-table th:nth-child(3), .history-table td:nth-child(3) { width:104px; white-space:nowrap; }
+        .history-table th:nth-child(4), .history-table td:nth-child(4) { width:92px; }
+        .history-table th:nth-child(5), .history-table td:nth-child(5) { width:104px; }
+        .history-table th:nth-child(6), .history-table td:nth-child(6) { width:112px; white-space:nowrap; }
+        .history-table th:nth-child(7), .history-table td:nth-child(7) { width:122px; white-space:nowrap; }
+        .history-table th:nth-child(8), .history-table td:nth-child(8) { width:118px; text-align:right; white-space:nowrap; }
         .history-actions { display:flex; justify-content:flex-end; }
-        .history-actions .table-action-select { width:88px; min-width:88px; min-height:32px; padding:.34rem .35rem; }
+        .history-actions .table-action-select { width:102px; min-width:102px; min-height:36px; padding:.42rem .45rem; }
         .empty-history { padding:1rem; border:1px dashed var(--border-color); border-radius:8px; color:var(--text-secondary); background:#f8fafc; }
         @media (max-width:1100px){
             .set-fee-layout{ grid-template-columns:1fr; }
-            .fee-history-panel { max-width:100%; }
         }
         @media (max-width:720px){
             .fee-history-panel { padding:1rem .8rem 100px; }
-            #classFeeHistoryWrap { overflow-x:auto; }
-            .history-table { min-width:660px; }
+            .history-table { min-width:780px; }
         }
     </style>
 </head>

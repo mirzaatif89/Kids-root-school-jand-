@@ -1,5 +1,20 @@
 const path = require('path');
 const fs = require('fs');
+const Module = require('module');
+
+const nodevenvCandidates = [
+    path.join(__dirname, '..', 'nodevenv', path.basename(__dirname), '20', 'lib', 'node_modules'),
+    path.join(__dirname, '..', 'nodevenv', path.basename(__dirname), 'node_modules')
+];
+
+for (const nodeModulesPath of nodevenvCandidates) {
+    if (fs.existsSync(nodeModulesPath)) {
+        process.env.NODE_PATH = process.env.NODE_PATH
+            ? `${nodeModulesPath}${path.delimiter}${process.env.NODE_PATH}`
+            : nodeModulesPath;
+    }
+}
+Module._initPaths();
 
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 

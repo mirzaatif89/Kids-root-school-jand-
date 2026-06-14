@@ -4722,9 +4722,13 @@ function getClassFeeDefault(className = '') {
 
 function bindStudentClassFeeAutoFill() {
     const classSelect = document.getElementById('classGrade');
+    const monthlyFeeInput = document.getElementById('monthlyFee');
     if (!classSelect || classSelect.dataset.classFeeBound === '1') return;
     classSelect.dataset.classFeeBound = '1';
     classSelect.addEventListener('change', refreshStudentClassFeeAutoFill);
+    monthlyFeeInput?.addEventListener('input', () => {
+        monthlyFeeInput.dataset.autoClassFee = '0';
+    });
 }
 
 async function refreshStudentClassFeeAutoFill() {
@@ -4749,7 +4753,10 @@ function applyClassFeeDefaultToStudentForm(force = false) {
     }
 
     const currentFee = String(monthlyFeeInput.value || '').trim();
-    if (force || !currentFee || currentFee === '0' || monthlyFeeInput.dataset.autoClassFee === '1') {
+    const canReplaceFee = force
+        ? (monthlyFeeInput.dataset.autoClassFee !== '0')
+        : (!currentFee || currentFee === '0' || monthlyFeeInput.dataset.autoClassFee === '1');
+    if (canReplaceFee) {
         monthlyFeeInput.value = feeDefault.monthlyFee;
         monthlyFeeInput.dataset.autoClassFee = '1';
         if (feeFrequencyInput) feeFrequencyInput.value = feeDefault.feeFrequency || 'Monthly';
@@ -5159,6 +5166,8 @@ async function handleStudentFormSubmit(e) {
         enrollmentStatus,
         monthlyFee: monthlyFeeInput || '0',
         feeFrequency: document.getElementById('feeFrequency') ? document.getElementById('feeFrequency').value : 'Monthly',
+        createdAt: existingStudent?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
         username: usernameInput,
         password: studentPasswordInput,
         plainPassword: studentPasswordInput,

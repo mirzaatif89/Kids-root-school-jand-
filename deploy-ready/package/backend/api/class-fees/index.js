@@ -1,5 +1,5 @@
 const { createHandler, sendJson } = require('../_lib/http');
-const { getDb } = require('../_lib/db');
+const { getDb, Op } = require('../_lib/db');
 const { JWT_SECRET, jwt } = require('../_lib/services');
 
 function normalizeClassFeeConfig(input = {}) {
@@ -67,6 +67,24 @@ function assertAdminOrPrincipal(req) {
     }
 }
 
+async function applyClassFeeToStudents(db, className, monthlyFee, feeFrequency, previousMonthlyFee = '') {
+    if (!db.models.Student || !className) return;
+    const studentUpdate = { feeFrequency };
+    if (monthlyFee) studentUpdate.monthlyFee = monthlyFee;
+    const feeWhere = [
+        { monthlyFee: null },
+        { monthlyFee: '' },
+        { monthlyFee: '0' }
+    ];
+    if (previousMonthlyFee) feeWhere.push({ monthlyFee: String(previousMonthlyFee) });
+    await db.models.Student.update(studentUpdate, {
+        where: {
+            classGrade: className,
+            [Op.or]: feeWhere
+        }
+    });
+}
+
 module.exports = createHandler({
     GET: async ({ res, db }) => {
         sendJson(res, 200, { success: true, classFees: await readClassFeeConfig(db), classFeeHistory: await readClassFeeHistory(db) });
@@ -87,6 +105,7 @@ module.exports = createHandler({
         }
 
         const classFees = await readClassFeeConfig(db);
+        const previousMonthlyFee = String(classFees[className]?.monthlyFee || '').trim();
         classFees[className] = { monthlyFee, feeFrequency, feeMonth, feeYear };
         const classFeeHistory = await readClassFeeHistory(db);
         const historyEntry = {
@@ -109,12 +128,7 @@ module.exports = createHandler({
             settingValue: JSON.stringify(classFeeHistory.slice(0, 500))
         });
 
-        if (db.models.Student) {
-            await db.models.Student.update(
-                { monthlyFee, feeFrequency },
-                { where: { classGrade: className } }
-            );
-        }
+        await applyClassFeeToStudents(db, className, monthlyFee, feeFrequency, previousMonthlyFee);
 
         sendJson(res, 200, { success: true, classFees, classFeeHistory });
     }

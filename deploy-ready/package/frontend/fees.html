@@ -283,6 +283,37 @@
             display: none;
         }
 
+        .fee-filter-row {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .fee-campus-filter {
+            min-height: var(--app-control-height);
+            min-width: 190px;
+            width: 190px;
+            padding: 0 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--surface-color);
+            color: var(--text-primary);
+            font-weight: 700;
+            outline: none;
+        }
+
+        .fee-campus-filter:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        .fee-filter-row .search-bar {
+            width: 300px;
+            max-width: 300px;
+        }
+
         .fee-status-highlight {
             box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
         }
@@ -292,8 +323,9 @@
         }
 
         .fee-header-actions {
-            align-items: center;
-            flex-wrap: wrap;
+            align-items: flex-end;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         .fine-rule-dropdown {
@@ -500,8 +532,12 @@
 
         @media (max-width: 760px) {
             .fee-header-actions,
+            .fee-filter-row,
+            .fee-campus-filter,
+            .fee-filter-row .search-bar,
             .fine-rule-trigger {
                 width: 100%;
+                max-width: none;
             }
 
             .fine-rule-menu {
@@ -646,9 +682,14 @@
                             </div>
                         </div>
                     </div>
-                    <div class="search-bar">
-                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
-                        <input type="text" id="feeSearchInput" placeholder="Search students by name or roll no...">
+                    <div class="fee-filter-row">
+                        <select id="feeCampusFilter" class="fee-campus-filter" aria-label="Filter by campus">
+                            <option value="all">All Campuses</option>
+                        </select>
+                        <div class="search-bar">
+                            <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                            <input type="text" id="feeSearchInput" placeholder="Search students by name or roll no...">
+                        </div>
                     </div>
                 </div>
             </header>
@@ -658,7 +699,7 @@
                 <p style="color: var(--primary-color); font-weight: 600; font-size: 0.9rem;">
                     <i data-lucide="info" size="16"
                         style="display:inline; vertical-align:middle; margin-right: 4px;"></i>
-                    Showing matches for "<span id="searchText"></span>" across all classes.
+                    Showing matches for "<span id="searchText"></span>" in <span id="searchCampusText">all campuses</span>.
                 </p>
             </div>
 
@@ -862,12 +903,28 @@
             return lateDays;
         }
 
+        function parseStudentFeeDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (match) {
+                const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+            match = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+            if (match) {
+                const parsed = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
         function getStudentFeeStartDate(student) {
-            const dateValues = [student?.admissionDate, student?.createdAt, student?.updatedAt];
+            const dateValues = [student?.createdAt, student?.admissionDate];
             for (const value of dateValues) {
-                if (!value) continue;
-                const parsed = new Date(value);
-                if (!Number.isNaN(parsed.getTime())) return parsed;
+                const parsed = parseStudentFeeDate(value);
+                if (parsed) return parsed;
             }
             return new Date();
         }
@@ -1135,15 +1192,40 @@
                 await loadClassFeeDefaults();
             }
             initFeeFineDropdown();
+            populateFeeCampusFilter();
             renderFeesClassGrid();
             syncAutomaticFineCharges();
+
+            const campusFilter = document.getElementById('feeCampusFilter');
+            if (campusFilter) {
+                campusFilter.addEventListener('change', () => {
+                    const searchInput = document.getElementById('feeSearchInput');
+                    const term = (searchInput?.value || '').toLowerCase().trim();
+                    const tableView = document.getElementById('feesTableView');
+                    const recordView = document.getElementById('studentFeeRecordView');
+
+                    if (recordView.classList.contains('active')) {
+                        backToFeesList();
+                        return;
+                    }
+
+                    if (term) {
+                        showFeeSearchResults(term);
+                    } else if (tableView.classList.contains('active')) {
+                        const classId = tableView.dataset.classId || 'all';
+                        updateFeeListHeading(classId);
+                        renderClassStudentList(classId);
+                    } else {
+                        renderFeesClassGrid();
+                    }
+                });
+            }
 
             // Search implementation
             const searchInput = document.getElementById('feeSearchInput');
             if (searchInput) {
                 searchInput.addEventListener('input', (e) => {
                     const tableView = document.getElementById('feesTableView');
-                    const gridView = document.getElementById('feesGridView');
                     const recordView = document.getElementById('studentFeeRecordView');
                     const searchInfo = document.getElementById('searchResultsInfo');
 
@@ -1155,6 +1237,7 @@
                             backToFeesList();
                         } else if (tableView.classList.contains('active') && tableView.dataset.classId !== 'search_results') {
                             const classId = tableView.dataset.classId;
+                            updateFeeListHeading(classId);
                             renderClassStudentList(classId);
                         } else {
                             backToFeesList();
@@ -1162,20 +1245,7 @@
                         return;
                     }
 
-                    // Global search logic
-                    gridView.style.display = 'none';
-                    recordView.classList.remove('active');
-                    tableView.classList.add('active');
-                    tableView.dataset.classId = 'search_results';
-
-                    document.getElementById('selectedClassTitle').innerText = 'Search Results';
-                    document.getElementById('selectedClassSubtitle').innerText = 'Students matching details in all classes';
-                    document.getElementById('pageTitle').innerText = 'Searching Results...';
-
-                    document.getElementById('searchText').innerText = term;
-                    searchInfo.style.display = 'block';
-
-                    renderClassStudentList('all', term);
+                    showFeeSearchResults(term);
                 });
             }
         });
@@ -1196,9 +1266,99 @@
             { id: '10', name: 'Class Ten', icon: 'flask-conical', keywords: ['10', 'ten', '10th', 'class 10', 'class ten'] },
         ];
 
+        function getStudentCampusName(student) {
+            return (student.campusName || student.branchName || student.campus || 'Main Campus').toString().trim() || 'Main Campus';
+        }
+
+        function getSelectedFeeCampus() {
+            return document.getElementById('feeCampusFilter')?.value || 'all';
+        }
+
+        function getSelectedFeeCampusLabel() {
+            const select = document.getElementById('feeCampusFilter');
+            return select?.selectedOptions?.[0]?.textContent || 'All Campuses';
+        }
+
+        function getFeeCampusSuffix() {
+            const campus = getSelectedFeeCampusLabel();
+            return getSelectedFeeCampus() === 'all' ? '' : ` - ${campus}`;
+        }
+
+        function getCampusFilteredFeeStudents() {
+            const selectedCampus = getSelectedFeeCampus();
+            const students = getData(STORAGE_KEY_STUDENTS);
+
+            if (selectedCampus === 'all') {
+                return students;
+            }
+
+            return students.filter(student => getStudentCampusName(student) === selectedCampus);
+        }
+
+        function populateFeeCampusFilter() {
+            const select = document.getElementById('feeCampusFilter');
+            if (!select) return;
+
+            const campuses = [...new Set(getData(STORAGE_KEY_STUDENTS).map(getStudentCampusName))]
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b));
+
+            const currentValue = select.value || 'all';
+            select.innerHTML = '<option value="all">All Campuses</option>';
+
+            campuses.forEach(campus => {
+                const option = document.createElement('option');
+                option.value = campus;
+                option.textContent = campus;
+                select.appendChild(option);
+            });
+
+            select.value = campuses.includes(currentValue) ? currentValue : 'all';
+        }
+
+        function updateFeeListHeading(classId) {
+            const suffix = getFeeCampusSuffix();
+
+            if (classId === 'all') {
+                document.getElementById('selectedClassTitle').innerText = 'All Students' + suffix;
+                document.getElementById('selectedClassSubtitle').innerText = 'All fee paid, pending, and monthly records';
+                document.getElementById('pageTitle').innerText = 'Fees: All Students' + suffix;
+                return;
+            }
+
+            if (classId === 'search_results') {
+                document.getElementById('selectedClassTitle').innerText = 'Search Results';
+                document.getElementById('selectedClassSubtitle').innerText = 'Students matching details in selected campus/classes';
+                document.getElementById('pageTitle').innerText = 'Searching Results' + suffix;
+                return;
+            }
+
+            const cls = feeClasses.find(c => c.id === classId);
+            const className = cls ? cls.name : '';
+            document.getElementById('selectedClassTitle').innerText = className + ' Students' + suffix;
+            document.getElementById('selectedClassSubtitle').innerText = 'Click a row to manage monthly fee records';
+            document.getElementById('pageTitle').innerText = 'Fees: ' + className + suffix;
+        }
+
+        function showFeeSearchResults(term) {
+            const tableView = document.getElementById('feesTableView');
+            document.getElementById('feesGridView').style.display = 'none';
+            document.getElementById('studentFeeRecordView').classList.remove('active');
+            tableView.classList.add('active');
+            tableView.dataset.classId = 'search_results';
+
+            updateFeeListHeading('search_results');
+            document.getElementById('searchText').innerText = term;
+            document.getElementById('searchCampusText').innerText =
+                getSelectedFeeCampus() === 'all' ? 'all campuses' : getSelectedFeeCampusLabel();
+            document.getElementById('searchResultsInfo').style.display = 'block';
+
+            renderClassStudentList('all', term);
+        }
+
         function renderFeesClassGrid() {
             const grid = document.getElementById('feesClassGrid');
-            const students = getData(STORAGE_KEY_STUDENTS);
+            const students = getCampusFilteredFeeStudents();
             grid.innerHTML = '';
 
             const allCard = document.createElement('div');
@@ -1208,9 +1368,7 @@
                 const tableView = document.getElementById('feesTableView');
                 tableView.classList.add('active');
                 tableView.dataset.classId = 'all';
-                document.getElementById('selectedClassTitle').innerText = 'All Students';
-                document.getElementById('selectedClassSubtitle').innerText = 'All fee paid, pending, and monthly records';
-                document.getElementById('pageTitle').innerText = 'Fees: All Students';
+                updateFeeListHeading('all');
                 renderClassStudentList('all');
             };
             allCard.innerHTML = `
@@ -1249,9 +1407,7 @@
             tableView.classList.add('active');
             tableView.dataset.classId = classId;
 
-            document.getElementById('selectedClassTitle').innerText = cls.name + ' Students';
-            document.getElementById('selectedClassSubtitle').innerText = 'Click a row to manage monthly fee records';
-            document.getElementById('pageTitle').innerText = 'Fees: ' + cls.name;
+            updateFeeListHeading(classId);
 
             renderClassStudentList(classId);
         }
@@ -1259,14 +1415,15 @@
         function renderClassStudentList(classId, term = '') {
             const tbody = document.getElementById('studentListTableBody');
             const noData = document.getElementById('noFeeData');
-            const students = getData(STORAGE_KEY_STUDENTS);
+            const students = getCampusFilteredFeeStudents();
 
             let filteredStudents = [];
 
-            if (classId === 'all') {
+            if (classId === 'all' || classId === 'search_results') {
                 filteredStudents = students;
             } else {
                 const cls = feeClasses.find(c => c.id === classId);
+                if (!cls) return;
                 filteredStudents = students.filter(s => {
                     const sClass = (s.classGrade || '').toLowerCase().trim();
                     return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
@@ -1516,13 +1673,10 @@
 
             const classId = tableView.dataset.classId;
             if (classId === 'search_results') {
-                document.getElementById('pageTitle').innerText = 'Searching Results...';
+                updateFeeListHeading('search_results');
                 document.getElementById('searchResultsInfo').style.display = 'block';
-            } else if (classId === 'all') {
-                document.getElementById('pageTitle').innerText = 'Fees: All Students';
             } else {
-                const cls = feeClasses.find(c => c.id === classId);
-                document.getElementById('pageTitle').innerText = 'Fees: ' + (cls ? cls.name : '');
+                updateFeeListHeading(classId);
             }
 
             renderClassStudentList(classId, document.getElementById('feeSearchInput').value.toLowerCase());

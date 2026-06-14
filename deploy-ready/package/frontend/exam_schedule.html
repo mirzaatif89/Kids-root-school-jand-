@@ -1678,7 +1678,7 @@
             const branding = getExamBrandingSettings();
             const logoSrc = getExamLogoSrc();
             document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
-            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || branding.schoolName || 'Kids Roots Jand';
+            document.getElementById('previewDateSheetSchoolName').textContent = 'Kids Roots Jand';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';

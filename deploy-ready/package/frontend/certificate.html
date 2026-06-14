@@ -19,9 +19,9 @@
         .certificate-sheet {
             position: relative;
             width: min(100%, 1120px);
-            aspect-ratio: 1.28 / 1;
+            aspect-ratio: 1.414 / 1;
             border: 8px solid #367b65;
-            padding: 34px 44px;
+            padding: 30px 42px 40px;
             background:
                 radial-gradient(circle at 50% -8%, rgba(54, 123, 101, .18), transparent 28%),
                 radial-gradient(circle at 50% 116%, rgba(54, 123, 101, .14), transparent 30%),
@@ -31,6 +31,7 @@
             margin: 0 auto;
             overflow: hidden;
             font-family: Georgia, 'Times New Roman', serif;
+            box-sizing: border-box;
         }
         .certificate-sheet::before {
             content: "";
@@ -44,26 +45,80 @@
         .slc-school { text-align: left; padding-top: 6px; }
         .slc-school h1 { margin: 0; color: #4b4578; font-family: Arial, sans-serif; font-size: 44px; letter-spacing: .18em; line-height: 1; text-transform: uppercase; }
         .slc-school p { margin: 8px 0 0; color: #b0445e; font-family: Arial, sans-serif; font-size: 22px; font-weight: 800; }
-        .slc-title { text-align: center; font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 46px; color: #1f2f2c; line-height: 1; margin: 20px 0 18px; position: relative; z-index: 1; }
-        .slc-row { display: grid; grid-template-columns: var(--slc-columns, 1fr); gap: 30px; margin: 22px 0; position: relative; z-index: 1; }
+        .slc-title { text-align: center; font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 46px; color: #1f2f2c; line-height: 1; margin: 18px 0 16px; position: relative; z-index: 1; }
+        .slc-row { display: grid; grid-template-columns: var(--slc-columns, 1fr); gap: 30px; margin: 18px 0; position: relative; z-index: 1; }
         .slc-row.two { --slc-columns: 1fr 1fr; }
         .slc-row.dues { --slc-columns: 1.1fr 1fr; gap: 22px; }
         .slc-field { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 8px; min-width: 0; }
         .slc-label { white-space: nowrap; font-size: 24px; color: #34413c; }
         .slc-value { min-height: 30px; border-bottom: 2px solid rgba(36, 49, 45, .55); padding: 0 10px 3px; font-size: 24px; font-family: Arial, sans-serif; font-weight: 700; color: #17231f; overflow-wrap: anywhere; }
-        .slc-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 54px; margin-top: 72px; position: relative; z-index: 1; }
+        .slc-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 54px; margin-top: 48px; padding-bottom: 8px; position: relative; z-index: 1; }
         .slc-footer .slc-field { grid-template-columns: auto 1fr; }
         @media print {
             body * { visibility:hidden; }
             #certificatePreview, #certificatePreview * { visibility:visible; }
+            html,
+            body {
+                width: 297mm;
+                height: 210mm;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: hidden !important;
+                background: #fff !important;
+            }
             #certificatePreview {
-                position:absolute;
-                inset:0;
-                width: 100vw;
-                height: 100vh;
-                margin:0;
-                border-width:8px;
+                position: fixed;
+                left: 8mm;
+                top: 8mm;
+                width: 281mm;
+                height: 194mm;
+                margin: 0 !important;
+                border-width: 7px;
+                padding: 10mm 12mm 14mm;
                 box-shadow: none;
+                overflow: hidden;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+                break-inside: avoid-page;
+            }
+            #certificatePreview::before {
+                inset: 5mm;
+            }
+            #certificatePreview .slc-head {
+                grid-template-columns: 28mm 1fr 28mm;
+                gap: 8mm;
+            }
+            #certificatePreview .slc-logo {
+                width: 23mm;
+                height: 23mm;
+            }
+            #certificatePreview .slc-school h1 {
+                font-size: 32px;
+            }
+            #certificatePreview .slc-school p {
+                font-size: 17px;
+                margin-top: 5px;
+            }
+            #certificatePreview .slc-title {
+                font-size: 36px;
+                margin: 7mm 0 5mm;
+            }
+            #certificatePreview .slc-row {
+                margin: 4.2mm 0;
+                gap: 10mm;
+            }
+            #certificatePreview .slc-label,
+            #certificatePreview .slc-value {
+                font-size: 17px;
+            }
+            #certificatePreview .slc-value {
+                min-height: 7mm;
+                padding-bottom: 1mm;
+            }
+            #certificatePreview .slc-footer {
+                margin-top: 11mm;
+                padding-bottom: 0;
+                gap: 16mm;
             }
             @page { size: A4 landscape; margin: 8mm; }
         }

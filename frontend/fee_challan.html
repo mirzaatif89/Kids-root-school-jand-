@@ -3060,6 +3060,23 @@
             }
         }
 
+        function parseChallanStudentDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (match) {
+                const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+            match = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+            if (match) {
+                const parsed = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
         function getChallanStudentFeeSummary(student) {
             const challanMonthLabel = String(document.getElementById('challanMonth')?.value || '').trim();
             let effectiveNow = new Date();
@@ -3075,32 +3092,26 @@
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
             
-            // Get admission month and year
-            let admissionMonthIndex = 0;
-            let admissionYear = currentYear;
+            let feeStartMonthIndex = 0;
+            let feeStartYear = currentYear;
+            const feeStartDate = parseChallanStudentDate(student?.createdAt) || parseChallanStudentDate(student?.admissionDate);
             
-            if (student?.admissionDate) {
-                const admissionDate = new Date(student.admissionDate);
-                admissionMonthIndex = admissionDate.getMonth();
-                admissionYear = admissionDate.getFullYear();
+            if (feeStartDate) {
+                feeStartMonthIndex = feeStartDate.getMonth();
+                feeStartYear = feeStartDate.getFullYear();
             } else {
                 // Fallback: try to get from first recorded payment month
                 const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => Number(studentPayments[month]?.amount || 0) > 0);
                 if (firstPaidMonthIndex >= 0) {
-                    admissionMonthIndex = firstPaidMonthIndex;
-                    admissionYear = currentYear;
+                    feeStartMonthIndex = firstPaidMonthIndex;
+                    feeStartYear = currentYear;
                 }
             }
 
-            // Generate all months from admission date to current month
             const applicableMonths = [];
-            for (let year = admissionYear; year <= currentYear; year++) {
-                const startMonth = year === admissionYear ? admissionMonthIndex : 0;
-                const endMonth = year === currentYear ? currentMonthIndex : 11;
-                
-                for (let i = startMonth; i <= endMonth; i++) {
-                    applicableMonths.push(CHALLAN_MONTHS[i]);
-                }
+            const startMonth = feeStartYear === currentYear ? feeStartMonthIndex : 0;
+            if (feeStartYear <= currentYear && startMonth <= currentMonthIndex) {
+                for (let i = startMonth; i <= currentMonthIndex; i++) applicableMonths.push(CHALLAN_MONTHS[i]);
             }
 
             const monthlyFee = getChallanStudentMonthlyFee(student);
@@ -3119,13 +3130,13 @@
                 }
             });
 
-            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
+            if (!pendingMonths.length && applicableMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
                 pendingMonths.push(CHALLAN_MONTHS[currentMonthIndex]);
             }
 
             return {
                 monthlyFee,
-                admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
+                admissionMonth: CHALLAN_MONTHS[feeStartMonthIndex],
                 paidMonths,
                 pendingMonths,
                 pendingAmount
@@ -3133,8 +3144,9 @@
         }
 
         function getStudentAdmissionMonthIndex(student, studentMonthly = {}, fallbackMonthIndex = new Date().getMonth()) {
-            const admissionMonthIndex = parseMonthIndex(student?.admissionDate);
-            if (admissionMonthIndex >= 0) return Math.min(admissionMonthIndex, fallbackMonthIndex);
+            const createdMonthIndex = parseMonthIndex(student?.createdAt);
+            const feeStartMonthIndex = createdMonthIndex >= 0 ? createdMonthIndex : parseMonthIndex(student?.admissionDate);
+            if (feeStartMonthIndex >= 0) return Math.min(feeStartMonthIndex, fallbackMonthIndex);
 
             const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => studentMonthly[month] === 'Paid');
             if (firstPaidMonthIndex >= 0) return Math.min(firstPaidMonthIndex, fallbackMonthIndex);
@@ -3148,8 +3160,8 @@
         function parseMonthIndex(value) {
             if (!value) return -1;
 
-            const parsed = new Date(value);
-            if (!Number.isNaN(parsed.getTime())) return parsed.getMonth();
+            const parsed = parseChallanStudentDate(value);
+            if (parsed) return parsed.getMonth();
 
             const normalized = String(value).trim().toLowerCase();
             return CHALLAN_MONTHS.findIndex(month =>
@@ -3795,6 +3807,22 @@
             `;
         }
 
+        function buildBulkStudentPrintPagesMarkup(challans = []) {
+            const rows = Array.isArray(challans) ? challans : [];
+            const sheets = [];
+            for (let index = 0; index < rows.length; index += 2) {
+                const first = rows[index];
+                const second = rows[index + 1];
+                sheets.push(`
+                    <div class="challan-a4-sheet">
+                        ${first ? buildBulkGroupMarkup(first.data, first.qrState) : ''}
+                        ${second ? buildBulkGroupMarkup(second.data, second.qrState) : ''}
+                    </div>
+                `);
+            }
+            return sheets.join('');
+        }
+
         function buildChallanKeyPart(value) {
             return String(value || '')
                 .toLowerCase()
@@ -4023,7 +4051,7 @@
                 }
 
                 if (printSheet) {
-                    printSheet.innerHTML = challans.map(row => buildSingleStudentPrintPageMarkup(row.data, row.qrState)).join('');
+                    printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
                     await new Promise((resolve) => requestAnimationFrame(() => resolve()));
                     await waitForPrintImages(printSheet);
                 }
@@ -4304,7 +4332,7 @@
                     }
                 }
 
-                printSheet.innerHTML = challans.map(row => buildSingleStudentPrintPageMarkup(row.data, row.qrState)).join('');
+                printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
                 hideClassStudentsPopup();
                 await new Promise((resolve) => requestAnimationFrame(() => resolve()));
                 await waitForPrintImages(printSheet);
@@ -4509,7 +4537,7 @@
                 }
 
                 // Render all challans to print sheet
-                printSheet.innerHTML = challans.map(row => buildSingleStudentPrintPageMarkup(row.data, row.qrState)).join('');
+                printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
                 
                 // Wait for images to load and then auto-print
                 await new Promise((resolve) => requestAnimationFrame(() => resolve()));

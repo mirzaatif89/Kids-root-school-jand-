@@ -4,151 +4,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kids Roots Jand School</title>
+    <title>Kids Roots Schools Jand</title>
     <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="website.css?v=20260529-2">
+    <link rel="stylesheet" href="website.css?v=20260605-title-small">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
     <header class="site-header">
         <div class="top-strip">
-            <a href="tel:+923482772446"><i data-lucide="phone"></i><span>Main Campus: Jand School Official 03482772446</span></a>
+            <span><i data-lucide="map-pin"></i><span id="headerAddress">Main Campus Jand</span></span>
+            <a href="tel:+923013016755"><i data-lucide="phone"></i><span>0301-3016755</span></a>
             <a href="mailto:rootsjand@gmail.com"><i data-lucide="mail"></i><span>rootsjand@gmail.com</span></a>
-            <div class="social-links" aria-label="Social media">
-                <a href="#" aria-label="Facebook"><i data-lucide="message-circle"></i></a>
-                <a href="#" aria-label="Instagram"><i data-lucide="camera"></i></a>
-                <a href="#" aria-label="Youtube"><i data-lucide="play-circle"></i></a>
-            </div>
         </div>
 
-        <nav class="main-nav">
-            <a class="brand" href="/">
+        <nav class="main-nav" aria-label="Main navigation">
+            <a class="brand" href="#home">
                 <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
-                <span>Kids Roots Jand</span>
+                <span>Kids Roots Schools Jand</span>
             </a>
             <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
                 <i data-lucide="menu"></i>
             </button>
             <div class="nav-links" id="siteNavLinks">
                 <a href="#home">Home</a>
-                <a href="#about">About Us</a>
-                <a href="#events">Events</a>
-                <a href="#academics">Academics</a>
+                <a href="#about">About</a>
+                <a href="#events">Notices</a>
+                <a href="#admissions">Admissions</a>
                 <a href="#contact">Contact</a>
-                <a class="nav-login" href="/login">Login</a>
+                <a class="nav-login" href="/login">Portal Login</a>
             </div>
         </nav>
     </header>
 
     <main>
-        <section class="home-banner" id="home">
-            <div class="home-banner-inner">
-                <p class="eyebrow">Kids Roots School System</p>
-                <h1>Quality learning for confident young minds.</h1>
-                <p>Kids Roots Jand and Langar campuses provide a focused school environment for academics, character building, events, and parent communication.</p>
+        <section class="hero" id="home">
+            <div class="hero-content">
+                <p class="eyebrow">English Model School</p>
+                <h1 class="hero-title">
+                    <span>Kids Roots Schools</span>
+                    <span>Jand</span>
+                </h1>
+                <p class="hero-lead">A disciplined, caring school for early and elementary education with Islamic values, activity-based learning, and practical technology exposure.</p>
+                <div class="hero-highlights" aria-label="School highlights">
+                    <span><i data-lucide="book-open-check"></i> Pre to Elementary</span>
+                    <span><i data-lucide="heart-handshake"></i> Taleem with Tarbiyah</span>
+                    <span><i data-lucide="cpu"></i> Technology Exposure</span>
+                </div>
                 <div class="hero-actions">
-                    <a class="primary-action" href="#contact">Contact School</a>
-                    <a class="secondary-action" href="/login">Portal Login</a>
+                    <a class="primary-action" href="#admissions"><i data-lucide="clipboard-edit"></i> Admission Inquiry</a>
+                    <a class="secondary-action" href="/login"><i data-lucide="log-in"></i> School Portal</a>
                 </div>
             </div>
-            <div class="banner-card">
-                <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
-                <strong>Jand School Official</strong>
-                <span>03482772446</span>
+        </section>
+
+        <section class="admissions-banner" aria-label="Admissions open banner">
+            <div class="admissions-banner-features">
+                <span>Experienced Faculty</span>
+                <span>Modern Classrooms</span>
+                <span>Islamic Values</span>
+                <span>STEM Education</span>
+                <span>Sports & Arts</span>
+                <span>Character Development</span>
+            </div>
+            <div class="admissions-banner-center">
+                <img src="images/logo.png?v=20260605-admissions" alt="Kids Roots English Model Schools logo">
+                <p>Kids Roots English Model Schools</p>
+                <h2>Admissions Open</h2>
+            </div>
+            <div class="admissions-banner-card">
+                <div class="student-badge">KR</div>
+                <strong>Pre to Elementary</strong>
+                <span>Quality learning with values, confidence, and care.</span>
+            </div>
+            <div class="admissions-banner-url">www.kidsrootsjand.com</div>
+        </section>
+
+        <section class="website-banner-section" id="websiteBannerSection" hidden>
+            <div class="website-banner-track" id="websiteBannerTrack"></div>
+            <div class="website-banner-dots" id="websiteBannerDots"></div>
+        </section>
+
+        <section class="section-shell about-section" id="about">
+            <div class="section-heading">
+                <p class="eyebrow">About The School</p>
+                <h2>Clear routines, strong values, and focused learning.</h2>
+                <p>Kids Roots Jand keeps learning practical and age-appropriate. Students are guided through academics, manners, discipline, confidence building, and technology awareness.</p>
+            </div>
+
+            <div class="feature-grid">
+                <article>
+                    <i data-lucide="book-open-check"></i>
+                    <h3>Understanding First</h3>
+                    <p>Lessons are planned around concepts, activities, and classroom participation instead of memorization only.</p>
+                </article>
+                <article>
+                    <i data-lucide="heart-handshake"></i>
+                    <h3>Taleem With Tarbiyah</h3>
+                    <p>Islamic values, respect, cleanliness, responsibility, and discipline are part of daily school life.</p>
+                </article>
+                <article>
+                    <i data-lucide="cpu"></i>
+                    <h3>Modern Exposure</h3>
+                    <p>Students receive practical exposure to computers, AI concepts, robotics activities, and digital confidence.</p>
+                </article>
             </div>
         </section>
 
-        <section class="content-section" id="about">
-            <div class="section-heading">
-                <p class="eyebrow">About Us</p>
-                <h2>All details for parents, students, and school visitors in one place.</h2>
-                <p>Kids Roots Jand School keeps academic records, notices, events, admissions, and communication connected with the school management system.</p>
-            </div>
-            <div class="about-grid">
-                <article>
-                    <i data-lucide="school"></i>
-                    <h3>Main Campus</h3>
-                    <p>Jand School Official</p>
-                    <a href="tel:+923482772446">03482772446</a>
-                </article>
-                <article>
-                    <i data-lucide="map-pin"></i>
-                    <h3>Campus 1</h3>
-                    <p>Langar School Official</p>
-                    <a href="tel:+923115815280">03115815280</a>
-                </article>
-                <article>
-                    <i data-lucide="mail"></i>
-                    <h3>Email</h3>
-                    <p>Official school email</p>
-                    <a href="mailto:rootsjand@gmail.com">rootsjand@gmail.com</a>
-                </article>
-            </div>
-        </section>
-
-        <section class="content-section muted-section" id="events">
-            <div class="section-heading">
-                <p class="eyebrow">Events</p>
-                <h2>School events, notices, and updates.</h2>
-            </div>
-            <div class="data-layout">
-                <div class="data-panel wide-panel">
+        <section class="notice-section" id="events">
+            <div class="section-shell notice-inner">
+                <div class="section-heading compact">
+                    <p class="eyebrow">Notices & Events</p>
+                    <h2>Latest updates from school</h2>
+                </div>
+                <article class="data-panel notice-panel">
                     <div class="panel-title">
-                        <h3>Latest Events & Notices</h3>
+                        <h3>Public Notices</h3>
                         <span id="noticeUpdated">Live</span>
                     </div>
                     <div class="notice-list" id="noticeList">
                         <p class="empty-state">Loading events...</p>
                     </div>
-                </div>
+                </article>
             </div>
         </section>
 
-        <section class="content-section" id="academics">
-            <div class="section-heading">
-                <p class="eyebrow">Academics</p>
-                <h2>Classes and faculty details from the school system.</h2>
+        <section class="section-shell admission-section" id="admissions">
+            <div>
+                <p class="eyebrow">Admissions</p>
+                <h2>Talk to the school office</h2>
+                <p>Send an inquiry for admission, fee details, class availability, or campus information. The message opens in your email app.</p>
             </div>
-            <div class="data-layout">
-                <div class="data-panel">
-                    <div class="panel-title">
-                        <h3>Class Overview</h3>
-                        <span id="classUpdated">Live</span>
-                    </div>
-                    <div class="class-list" id="classList">
-                        <p class="empty-state">Loading classes...</p>
-                    </div>
-                </div>
-                <div class="data-panel">
-                    <div class="panel-title">
-                        <h3>Faculty</h3>
-                        <span id="facultyUpdated">Live</span>
-                    </div>
-                    <div class="faculty-list" id="facultyList">
-                        <p class="empty-state">Loading teachers...</p>
-                    </div>
-                </div>
-            </div>
+            <form class="inquiry-form" id="inquiryForm">
+                <label>Name<input type="text" id="inquiryName" placeholder="Parent / student name"></label>
+                <label>Class<input type="text" id="inquiryClass" placeholder="Required class"></label>
+                <label>Phone<input type="tel" id="inquiryPhone" placeholder="Contact number"></label>
+                <label class="full-field">Message<textarea id="inquiryMessage" placeholder="Write your question"></textarea></label>
+                <button type="submit"><i data-lucide="send"></i> Send Inquiry</button>
+            </form>
         </section>
 
         <section class="portal-section">
             <div>
-                <p class="eyebrow">Portal</p>
-                <h2>Login access for administration, teachers, students, and staff.</h2>
-                <p>Use the school portal for attendance, fees, notices, academic records, and operational dashboards.</p>
+                <p class="eyebrow">School Portal</p>
+                <h2>Login access for school operations</h2>
+                <p>Attendance, fees, results, notices, students, teachers, and administrative records are managed through the school portal.</p>
             </div>
             <div class="portal-actions">
-                <a href="/login">Admin / Staff Login</a>
-                <a href="/student_portal">Student Portal</a>
-                <a href="/teacher_portal">Teacher Portal</a>
+                <a href="/login"><i data-lucide="shield-check"></i> Admin / Staff</a>
+                <a href="/student_portal"><i data-lucide="graduation-cap"></i> Student Portal</a>
+                <a href="/teacher_portal"><i data-lucide="book-user"></i> Teacher Portal</a>
             </div>
         </section>
 
-        <section class="content-section contact-section" id="contact">
-            <div class="section-heading">
+        <section class="section-shell contact-section" id="contact">
+            <div class="section-heading compact">
                 <p class="eyebrow">Contact</p>
-                <h2>Reach Kids Roots Jand School.</h2>
+                <h2>Reach Kids Roots Jand School</h2>
+                <p id="contactAddress">Main Campus Jand</p>
             </div>
             <div class="contact-grid">
                 <a href="tel:+923482772446"><i data-lucide="phone"></i><span>Main Campus: 03482772446</span></a>
@@ -160,10 +173,13 @@
 
     <footer class="site-footer">
         <img src="images/logo.png?v=20260529-logo2" alt="Kids Roots Jand School logo">
-        <span>Kids Roots Jand School</span>
+        <div>
+            <strong>Kids Roots Jand School</strong>
+            <span>Education with values, discipline, and confidence.</span>
+        </div>
     </footer>
 
-    <script src="website.js"></script>
+    <script src="website.js?v=20260605-admissions-banner"></script>
 </body>
 
 </html>

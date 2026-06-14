@@ -736,6 +736,11 @@
             margin-top: 0.65rem;
         }
 
+        .portal-quiz-result.fail {
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
         .leave-status {
             display: inline-flex;
             border-radius: 999px;
@@ -1145,18 +1150,196 @@
             color: #0f766e;
         }
 
+        .student-notification-wrap {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            z-index: 90;
+        }
+
+        .student-notification-button {
+            position: relative;
+            width: 44px;
+            height: 44px;
+            border: 1px solid #cbd5e1;
+            border-radius: 999px;
+            background: #ffffff;
+            color: #581c87;
+            display: inline-grid;
+            place-items: center;
+            cursor: pointer;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, 0.1);
+        }
+
+        .student-notification-button:hover {
+            border-color: #7c3aed;
+            color: #7c3aed;
+        }
+
+        .student-notification-button i,
+        .student-notification-button svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .student-notification-count {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            min-width: 20px;
+            height: 20px;
+            padding: 0 5px;
+            border: 2px solid #ffffff;
+            border-radius: 999px;
+            background: #dc2626;
+            color: #ffffff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.68rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .student-notification-count.show {
+            display: inline-flex;
+        }
+
+        .student-notification-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            width: min(360px, calc(100vw - 32px));
+            max-height: min(470px, calc(100vh - 130px));
+            overflow: hidden;
+            border: 1px solid #dbe3ee;
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.22);
+            display: none;
+        }
+
+        .student-notification-panel.open {
+            display: block;
+        }
+
+        .student-notification-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 14px 14px 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .student-notification-head strong {
+            color: #0f172a;
+            font-size: 1rem;
+            font-weight: 900;
+        }
+
+        .student-notification-head span {
+            color: #64748b;
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .student-notification-list {
+            max-height: 390px;
+            overflow: auto;
+            padding: 8px;
+        }
+
+        .student-notification-item {
+            display: grid;
+            grid-template-columns: 34px 1fr;
+            gap: 10px;
+            padding: 11px 9px;
+            border-radius: 12px;
+            color: #0f172a;
+        }
+
+        .student-notification-item.unread {
+            background: #f5f3ff;
+        }
+
+        .student-notification-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #0369a1;
+            display: grid;
+            place-items: center;
+        }
+
+        .student-notification-icon i,
+        .student-notification-icon svg {
+            width: 17px;
+            height: 17px;
+        }
+
+        .student-notification-title {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.7rem;
+            color: #0f172a;
+            font-weight: 900;
+            line-height: 1.25;
+        }
+
+        .student-notification-time {
+            color: #64748b;
+            flex: 0 0 auto;
+            font-size: 0.72rem;
+            font-weight: 800;
+        }
+
+        .student-notification-text {
+            margin-top: 3px;
+            color: #475569;
+            font-size: 0.82rem;
+            line-height: 1.4;
+        }
+
+        .student-notification-empty {
+            padding: 28px 14px;
+            color: #64748b;
+            font-weight: 800;
+            text-align: center;
+        }
+
         body.portal-dark .user-card,
         body.portal-dark .stat-card,
         body.portal-dark .module-card,
         body.portal-dark .panel-card,
-        body.portal-dark .student-portal-menu {
+        body.portal-dark .student-portal-menu,
+        body.portal-dark .student-notification-panel,
+        body.portal-dark .student-notification-button {
             background: #111827;
             border-color: #334155;
             color: #e5edf4;
         }
 
-        body.portal-dark .student-portal-menu-item {
+        body.portal-dark .student-portal-menu-item,
+        body.portal-dark .student-notification-title,
+        body.portal-dark .student-notification-head strong {
             color: #e5edf4;
+        }
+
+        body.portal-dark .student-notification-head {
+            border-color: #334155;
+        }
+
+        body.portal-dark .student-notification-item.unread {
+            background: #1f2937;
+        }
+
+        body.portal-dark .student-notification-text,
+        body.portal-dark .student-notification-time,
+        body.portal-dark .student-notification-head span,
+        body.portal-dark .student-notification-empty {
+            color: #cbd5e1;
         }
 
         body.portal-dark .student-portal-menu-item:hover {
@@ -1551,6 +1734,16 @@
                 right: auto;
             }
 
+            .student-notification-wrap {
+                top: 12px;
+                right: 12px;
+            }
+
+            .student-notification-panel {
+                right: 0;
+                width: min(330px, calc(100vw - 24px));
+            }
+
             .portal-container {
                 padding: 12px 12px 30px;
             }
@@ -1820,6 +2013,21 @@
                         <i data-lucide="log-out"></i>
                         <span>Logout</span>
                     </button>
+                </div>
+            </div>
+            <div class="student-notification-wrap">
+                <button class="student-notification-button" type="button" id="studentNotificationButton" aria-label="Open notifications" aria-expanded="false">
+                    <i data-lucide="bell"></i>
+                    <span class="student-notification-count" id="studentNotificationCount">0</span>
+                </button>
+                <div class="student-notification-panel" id="studentNotificationPanel" aria-label="Student notifications">
+                    <div class="student-notification-head">
+                        <strong>Notifications</strong>
+                        <span id="studentNotificationSummary">No new alerts</span>
+                    </div>
+                    <div class="student-notification-list" id="studentNotificationList">
+                        <div class="student-notification-empty">No notifications yet.</div>
+                    </div>
                 </div>
             </div>
             <div class="user-card-main">
@@ -2288,10 +2496,12 @@
         const STUDENT_ASSIGNMENT_SUBMISSION_KEY = 'eduCore_student_assignment_submissions';
         const COMPLAINT_KEY = 'eduCore_complaints';
         const STUDENT_THEME_KEY = 'eduCore_student_portal_theme';
+        const STUDENT_NOTIFICATION_READ_KEY = 'eduCore_student_notification_read_at';
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
         const authToken = sessionStorage.getItem('eduCore_token');
         let studentResultHistory = [];
         let editingStudentLeaveId = '';
+        let currentStudentNotifications = [];
 
         if (!loggedInUser || loggedInUser.role !== 'Student' || !authToken) {
             window.location.href = '/login';
@@ -2812,6 +3022,7 @@
             document.getElementById('studentAssignmentForm').reset();
             updateStudentAssignmentFileLabel();
             renderStudentAssignmentSubmissions(student);
+            updateStudentNotifications(student);
             showAppAlert('Your assignment has been submitted.', 'Assignment Submitted');
         }
 
@@ -2842,15 +3053,19 @@
             list.innerHTML = items.map((item) => {
                 const questions = Array.isArray(item.questions) ? item.questions : [];
                 const submission = submissions.find((entry) => entry.quizId === item.id);
+                const questionMarksTotal = questions.reduce((sum, question) => sum + Math.max(1, Number(question.marks || 1)), 0);
+                const totalMarks = Math.max(1, Number(item.totalMarks || questionMarksTotal || 1));
+                const passMarks = Math.min(totalMarks, Math.max(1, Number(item.passMarks || Math.ceil(totalMarks / 2))));
+                const passed = submission ? (submission.passed === undefined ? Number(submission.score || 0) >= passMarks : Boolean(submission.passed)) : false;
                 return `
                     <article class="portal-content-card">
                         <h4>${escapeHtml(item.title || 'Quiz')}</h4>
                         <div class="portal-content-meta">
-                            ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(item.totalMarks || questions.reduce((sum, question) => sum + Number(question.marks || 0), 0) || 0)} Marks
+                            ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(totalMarks)} Marks - Pass Marks: ${escapeHtml(passMarks)}
                         </div>
                         <p>${escapeHtml(item.details || '-')}</p>
                         ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_QUIZ_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
-                        ${submission ? `<div class="portal-quiz-result">Submitted: ${escapeHtml(submission.score)} / ${escapeHtml(submission.totalMarks)} marks</div>` : ''}
+                        ${submission ? `<div class="portal-quiz-result ${passed ? '' : 'fail'}">Submitted: ${escapeHtml(submission.score)} / ${escapeHtml(submission.totalMarks)} marks - ${passed ? 'Pass' : 'Fail'}</div>` : ''}
                         ${questions.length ? renderStudentQuizForm(item, submission) : '<div class="empty-note" style="margin-top:.8rem;">This quiz only has an attached file.</div>'}
                     </article>
                 `;
@@ -2919,6 +3134,8 @@
             const studentKey = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim();
             const totalMarks = Math.max(1, Number(quiz.totalMarks || questionMarksTotal || 1));
             const score = questionMarksTotal ? Math.round((rawScore / questionMarksTotal) * totalMarks) : 0;
+            const passMarks = Math.min(totalMarks, Math.max(1, Number(quiz.passMarks || Math.ceil(totalMarks / 2))));
+            const passed = score >= passMarks;
             const submissions = getPortalData(STUDENT_QUIZ_SUBMISSION_KEY);
             const duplicateIndex = submissions.findIndex((item) => item.studentKey === studentKey && item.quizId === quizId);
             const submission = {
@@ -2935,12 +3152,16 @@
                 rawScore,
                 score,
                 totalMarks,
+                passMarks,
+                passed,
+                status: passed ? 'Pass' : 'Fail',
                 submittedAt: new Date().toISOString()
             };
             if (duplicateIndex >= 0) submissions[duplicateIndex] = submission; else submissions.push(submission);
             localStorage.setItem(STUDENT_QUIZ_SUBMISSION_KEY, JSON.stringify(submissions));
             applyStudentQuizzes(student);
-            showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}`, 'Quiz Result');
+            updateStudentNotifications(student);
+            showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}. Pass marks: ${passMarks}. Result: ${passed ? 'Pass' : 'Fail'}`, 'Quiz Result');
         }
 
         function applyStudentUploadedLectures(student = {}) {
@@ -3099,6 +3320,7 @@
             event.target.reset();
             updateStudentComplaintFileLabel();
             renderStudentComplaints(student);
+            updateStudentNotifications(student);
             showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
         }
 
@@ -3159,6 +3381,7 @@
                 // Keep the last cached history visible when the API is temporarily unavailable.
             }
             renderStudentLeaveHistory(student);
+            updateStudentNotifications(student);
         }
 
         function renderStudentLeaveHistory(student = {}) {
@@ -3242,6 +3465,7 @@
                 setStudentLeaveSubmitText('Submit Leave');
             }
             renderStudentLeaveHistory(student);
+            updateStudentNotifications(student);
             showAppAlert('Leave request deleted.', 'Leave Deleted');
         }
 
@@ -3384,8 +3608,10 @@
                 const notices = result.notices || [];
                 localStorage.setItem(STORAGE_KEY_SPECIAL_NOTICES, JSON.stringify(notices));
                 renderSpecialNotices(notices);
+                updateStudentNotifications();
             } catch (error) {
                 renderSpecialNotices(JSON.parse(localStorage.getItem(STORAGE_KEY_SPECIAL_NOTICES) || '[]'));
+                updateStudentNotifications();
             }
         }
 
@@ -3405,6 +3631,343 @@
                 student?.rollNo,
                 loggedInUser?.id
             ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+        }
+
+        function getStudentNotificationReadMap() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(STUDENT_NOTIFICATION_READ_KEY) || '{}');
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (_error) {
+                return {};
+            }
+        }
+
+        function getStudentNotificationKey(student = {}) {
+            return String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || 'student').trim().toLowerCase();
+        }
+
+        function getStudentNotificationReadAt(student = {}) {
+            const readMap = getStudentNotificationReadMap();
+            const parsed = new Date(readMap[getStudentNotificationKey(student)] || 0);
+            return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
+        }
+
+        function markStudentNotificationsRead(student = getCurrentPortalStudent()) {
+            const readMap = getStudentNotificationReadMap();
+            readMap[getStudentNotificationKey(student)] = new Date().toISOString();
+            localStorage.setItem(STUDENT_NOTIFICATION_READ_KEY, JSON.stringify(readMap));
+            renderStudentNotificationBadge(student);
+        }
+
+        function parseStudentNotificationDate(value, fallback = '') {
+            const raw = value || fallback;
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? new Date(0) : parsed;
+        }
+
+        function formatStudentNotificationTime(date) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime()) || date.getTime() === 0) return '';
+            const now = new Date();
+            const diffMs = now - date;
+            const diffHours = Math.floor(diffMs / 3600000);
+            if (diffHours < 1 && diffMs >= 0) return 'Just now';
+            if (diffHours < 24 && diffMs >= 0) return `${diffHours}h ago`;
+            return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+        }
+
+        function addStudentNotification(items, notification) {
+            if (!notification?.title || !notification?.message) return;
+            const date = notification.date instanceof Date ? notification.date : parseStudentNotificationDate(notification.date);
+            items.push({
+                id: notification.id || `${notification.type || 'alert'}-${items.length}`,
+                type: notification.type || 'Activity',
+                icon: notification.icon || 'bell',
+                title: notification.title,
+                message: notification.message,
+                date
+            });
+        }
+
+        function getLatestStudentAttendanceRecord(student = {}) {
+            let attendanceStore = {};
+            try {
+                attendanceStore = JSON.parse(localStorage.getItem(STUDENT_ATTENDANCE_KEY) || '{}');
+            } catch (_error) {
+                attendanceStore = {};
+            }
+            const candidates = getStudentIdentityCandidates(student);
+            const attendanceKey = Object.keys(attendanceStore).find((key) => candidates.includes(String(key || '').trim().toLowerCase()));
+            const records = attendanceKey && Array.isArray(attendanceStore[attendanceKey]) ? attendanceStore[attendanceKey] : [];
+            return records
+                .map((item) => (typeof item === 'string' ? { status: item } : item))
+                .filter((item) => ['Present', 'Absent', 'Late', 'Leave'].includes(item?.status))
+                .sort((a, b) => parseStudentNotificationDate(b.date).getTime() - parseStudentNotificationDate(a.date).getTime())[0] || null;
+        }
+
+        function getLatestByDate(items = [], dateFields = ['updatedAt', 'createdAt', 'date']) {
+            return [...items].sort((a, b) => {
+                const bDate = parseStudentNotificationDate(dateFields.map((field) => b?.[field]).find(Boolean)).getTime();
+                const aDate = parseStudentNotificationDate(dateFields.map((field) => a?.[field]).find(Boolean)).getTime();
+                return bDate - aDate;
+            })[0] || null;
+        }
+
+        function getStudentNotificationItems(student = {}) {
+            const items = [];
+            const latestAttendance = getLatestStudentAttendanceRecord(student);
+            if (latestAttendance) {
+                addStudentNotification(items, {
+                    id: `attendance-${latestAttendance.date || latestAttendance.status}`,
+                    type: 'Attendance',
+                    icon: 'calendar-check',
+                    title: 'Attendance updated',
+                    message: `${latestAttendance.status} marked${latestAttendance.date ? ` for ${formatScheduleDate(latestAttendance.date)}` : ''}.`,
+                    date: latestAttendance.date
+                });
+            }
+
+            const feeAmount = Number(student.monthlyFee || 0);
+            if (feeAmount > 0 && String(student.feesStatus || 'Pending') !== 'Paid') {
+                addStudentNotification(items, {
+                    id: `fee-${student.id || student.studentCode || 'student'}`,
+                    type: 'Fees',
+                    icon: 'receipt',
+                    title: 'Fee pending',
+                    message: `${formatCurrency(feeAmount)} is currently pending.`,
+                    date: student.updatedAt || student.createdAt || ''
+                });
+            }
+
+            const latestDiary = getLatestByDate(getClassWiseItems(STUDENT_DIARY_KEY, student), ['date', 'updatedAt', 'createdAt']);
+            if (latestDiary) {
+                addStudentNotification(items, {
+                    id: `diary-${latestDiary.id || latestDiary.date || latestDiary.title}`,
+                    type: 'Diary',
+                    icon: 'book-open',
+                    title: 'New diary entry',
+                    message: `${latestDiary.title || 'Diary'} ${latestDiary.date ? `for ${latestDiary.date}` : 'has been added'}.`,
+                    date: latestDiary.date || latestDiary.updatedAt || latestDiary.createdAt
+                });
+            }
+
+            const latestAssignment = getLatestByDate(getClassWiseItems(STUDENT_UPLOADED_ASSIGNMENT_KEY, student), ['dueDate', 'startDate', 'updatedAt', 'createdAt']);
+            if (latestAssignment) {
+                addStudentNotification(items, {
+                    id: `assignment-${latestAssignment.id || latestAssignment.file?.name || latestAssignment.dueDate}`,
+                    type: 'Assignment',
+                    icon: 'pencil-line',
+                    title: 'Assignment available',
+                    message: `${latestAssignment.file?.name || latestAssignment.title || 'Assignment'}${latestAssignment.dueDate ? ` due ${latestAssignment.dueDate}` : ''}.`,
+                    date: latestAssignment.updatedAt || latestAssignment.createdAt || latestAssignment.startDate || latestAssignment.dueDate
+                });
+            }
+
+            const latestSubmission = getLatestByDate(getStudentAssignmentSubmissions(student), ['submittedAt']);
+            if (latestSubmission) {
+                addStudentNotification(items, {
+                    id: `submission-${latestSubmission.id || latestSubmission.submittedAt}`,
+                    type: 'Submission',
+                    icon: 'upload',
+                    title: 'Assignment submitted',
+                    message: `${latestSubmission.assignmentTitle || 'Assignment'} was submitted.`,
+                    date: latestSubmission.submittedAt
+                });
+            }
+
+            const latestQuiz = getLatestByDate(getClassWiseItems(STUDENT_QUIZ_KEY, student), ['dueDate', 'updatedAt', 'createdAt']);
+            if (latestQuiz) {
+                addStudentNotification(items, {
+                    id: `quiz-${latestQuiz.id || latestQuiz.title}`,
+                    type: 'Quiz',
+                    icon: 'circle-help',
+                    title: 'Quiz available',
+                    message: `${latestQuiz.title || 'Quiz'}${latestQuiz.dueDate ? ` due ${latestQuiz.dueDate}` : ' is available'}.`,
+                    date: latestQuiz.updatedAt || latestQuiz.createdAt || latestQuiz.dueDate
+                });
+            }
+
+            const latestLecture = getLatestByDate(getClassWiseItems(STUDENT_UPLOADED_LECTURE_KEY, student), ['updatedAt', 'createdAt', 'date']);
+            if (latestLecture) {
+                addStudentNotification(items, {
+                    id: `lecture-${latestLecture.id || latestLecture.title}`,
+                    type: 'Lecture',
+                    icon: 'presentation',
+                    title: 'Lecture uploaded',
+                    message: `${latestLecture.title || latestLecture.file?.name || 'Lecture'} is available.`,
+                    date: latestLecture.updatedAt || latestLecture.createdAt || latestLecture.date
+                });
+            }
+
+            const latestResult = getLatestStudentResult(student);
+            if (latestResult) {
+                const percentage = calculateResultPercentage(latestResult);
+                addStudentNotification(items, {
+                    id: `result-${latestResult.id || latestResult.updatedAt || latestResult.termTitle}`,
+                    type: 'Result',
+                    icon: 'clipboard-list',
+                    title: 'Result updated',
+                    message: `${latestResult.termTitle || 'Result'}: ${formatMark(percentage)}%.`,
+                    date: latestResult.updatedAt || latestResult.resultDate || latestResult.createdAt
+                });
+            }
+
+            const dateSheet = loadDateSheetState();
+            if (dateSheet?.status === 'executed') {
+                addStudentNotification(items, {
+                    id: `date-sheet-${dateSheet.updatedAt || dateSheet.dateSheetExamTitle || 'executed'}`,
+                    type: 'Date Sheet',
+                    icon: 'calendar-days',
+                    title: 'Date sheet published',
+                    message: dateSheet.dateSheetExamTitle || 'Exam date sheet is available.',
+                    date: dateSheet.updatedAt || dateSheet.createdAt || ''
+                });
+            }
+
+            const latestLeave = getLatestByDate(getStudentLeaveRequests(student), ['updatedAt', 'reviewedAt', 'createdAt']);
+            if (latestLeave) {
+                addStudentNotification(items, {
+                    id: `leave-${latestLeave.id || latestLeave.updatedAt || latestLeave.status}`,
+                    type: 'Leave',
+                    icon: 'calendar-minus',
+                    title: 'Leave request update',
+                    message: `Your leave request is ${latestLeave.status || 'Pending'}.`,
+                    date: latestLeave.updatedAt || latestLeave.reviewedAt || latestLeave.createdAt
+                });
+            }
+
+            const latestComplaint = getLatestByDate(getPortalComplaintsForStudent(student), ['updatedAt', 'actionAt', 'repliedAt', 'createdAt']);
+            if (latestComplaint && (latestComplaint.reply || latestComplaint.actionTaken || getComplaintThread(latestComplaint).some((entry) => entry.role === 'Admin'))) {
+                addStudentNotification(items, {
+                    id: `complaint-${latestComplaint.id || latestComplaint.updatedAt || latestComplaint.actionAt}`,
+                    type: 'Complaint',
+                    icon: 'message-square',
+                    title: 'Complaint update',
+                    message: `${latestComplaint.subject || 'Complaint'} has a school response.`,
+                    date: latestComplaint.updatedAt || latestComplaint.actionAt || latestComplaint.repliedAt || latestComplaint.createdAt
+                });
+            }
+
+            const latestNotice = getLatestByDate(getPortalData(STORAGE_KEY_SPECIAL_NOTICES), ['updatedAt', 'createdAt', 'date']);
+            if (latestNotice) {
+                addStudentNotification(items, {
+                    id: `notice-${latestNotice.id || latestNotice.title}`,
+                    type: 'Notice',
+                    icon: 'megaphone',
+                    title: 'School notice',
+                    message: latestNotice.title || latestNotice.message || 'New school notice is available.',
+                    date: latestNotice.updatedAt || latestNotice.createdAt || latestNotice.date
+                });
+            }
+
+            const seen = new Set();
+            return items
+                .filter((item) => {
+                    if (seen.has(item.id)) return false;
+                    seen.add(item.id);
+                    return true;
+                })
+                .sort((a, b) => b.date.getTime() - a.date.getTime())
+                .slice(0, 20);
+        }
+
+        function renderStudentNotificationBadge(student = getCurrentPortalStudent()) {
+            const countEl = document.getElementById('studentNotificationCount');
+            const summaryEl = document.getElementById('studentNotificationSummary');
+            if (!countEl || !summaryEl) return;
+            const readAt = getStudentNotificationReadAt(student);
+            const unread = currentStudentNotifications.filter((item) => item.date > readAt).length;
+            countEl.textContent = unread > 9 ? '9+' : String(unread);
+            countEl.classList.toggle('show', unread > 0);
+            summaryEl.textContent = unread ? `${unread} new alert${unread === 1 ? '' : 's'}` : 'All caught up';
+        }
+
+        function updateStudentNotifications(student = getCurrentPortalStudent()) {
+            currentStudentNotifications = getStudentNotificationItems(student);
+            const list = document.getElementById('studentNotificationList');
+            if (!list) return;
+            const readAt = getStudentNotificationReadAt(student);
+
+            if (!currentStudentNotifications.length) {
+                list.innerHTML = '<div class="student-notification-empty">No notifications yet.</div>';
+                renderStudentNotificationBadge(student);
+                return;
+            }
+
+            list.innerHTML = currentStudentNotifications.map((item) => `
+                <article class="student-notification-item${item.date > readAt ? ' unread' : ''}">
+                    <div class="student-notification-icon"><i data-lucide="${escapeHtml(item.icon)}"></i></div>
+                    <div>
+                        <div class="student-notification-title">
+                            <span>${escapeHtml(item.title)}</span>
+                            <span class="student-notification-time">${escapeHtml(formatStudentNotificationTime(item.date))}</span>
+                        </div>
+                        <div class="student-notification-text">${escapeHtml(item.message)}</div>
+                    </div>
+                </article>
+            `).join('');
+            renderStudentNotificationBadge(student);
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function bindStudentNotifications() {
+            const button = document.getElementById('studentNotificationButton');
+            const panel = document.getElementById('studentNotificationPanel');
+            if (!button || !panel) return;
+
+            button.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const isOpen = panel.classList.toggle('open');
+                button.setAttribute('aria-expanded', String(isOpen));
+                if (isOpen) {
+                    markStudentNotificationsRead();
+                    updateStudentNotifications();
+                }
+            });
+
+            panel.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+
+            document.addEventListener('click', () => {
+                panel.classList.remove('open');
+                button.setAttribute('aria-expanded', 'false');
+            });
+
+            window.addEventListener('storage', (event) => {
+                const refreshKeys = [
+                    STUDENT_ATTENDANCE_KEY,
+                    STUDENT_DIARY_KEY,
+                    STUDENT_COURSE_KEY,
+                    STUDENT_QUIZ_KEY,
+                    STUDENT_UPLOADED_LECTURE_KEY,
+                    STUDENT_UPLOADED_ASSIGNMENT_KEY,
+                    STUDENT_ASSIGNMENT_SUBMISSION_KEY,
+                    STUDENT_LEAVE_KEY,
+                    COMPLAINT_KEY,
+                    STORAGE_KEY_SPECIAL_NOTICES,
+                    DATE_SHEET_KEY,
+                    RESULT_ARCHIVE_KEY
+                ];
+                if (refreshKeys.includes(event.key)) {
+                    updateStudentNotifications();
+                }
+            });
+        }
+
+        function startStudentNotificationRefresh() {
+            window.setInterval(async () => {
+                const student = getCurrentPortalStudent();
+                if (!student || !Object.keys(student).length) return;
+                try {
+                    await loadStudentAttendanceForPortal();
+                    await loadExecutedDateSheet();
+                    applyStudentAttendance(student);
+                    applyStudentPerformance(student);
+                    updateStudentNotifications(student);
+                } catch (_error) {
+                    updateStudentNotifications(student);
+                }
+            }, 45000);
         }
 
         function loadResultArchive() {
@@ -4136,6 +4699,7 @@
             if (rollInput) rollInput.value = student.rollNo || '';
 
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
+            updateStudentNotifications(student);
         }
 
         function readStudentPortalPhoto(file) {
@@ -4323,6 +4887,8 @@
                 const result = studentResultHistory[index];
                 if (result) applyStudentResult(result);
             });
+            bindStudentNotifications();
+            startStudentNotificationRefresh();
             loadStudentProfile();
             document.getElementById('studentPortalPhoto')?.addEventListener('change', updateStudentPortalPhoto);
             loadSpecialNoticesForPortal();
