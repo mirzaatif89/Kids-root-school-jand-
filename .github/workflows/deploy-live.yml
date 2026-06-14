@@ -59,6 +59,7 @@ jobs:
           else
             ssh-add ~/.ssh/live_deploy_key
           fi
+          ssh-add -l
 
       - name: Upload code via rsync over SSH
         shell: bash
@@ -70,7 +71,7 @@ jobs:
         run: |
           set -euo pipefail
           rsync -az --delete \
-            -e "ssh -p $LIVE_PORT -i ~/.ssh/live_deploy_key -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no" \
+            -e "ssh -p $LIVE_PORT -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no" \
             --exclude='.git/' \
             --exclude='.github/' \
             --exclude='.env' \
@@ -95,7 +96,7 @@ jobs:
           LIVE_APP_PATH: ${{ secrets.LIVE_APP_PATH }}
         run: |
           set -euo pipefail
-          ssh -p "$LIVE_PORT" -i ~/.ssh/live_deploy_key -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no "$LIVE_USER@$LIVE_HOST" \
+          ssh -p "$LIVE_PORT" -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no "$LIVE_USER@$LIVE_HOST" \
             "LIVE_APP_PATH='$LIVE_APP_PATH' bash -s" << 'EOF'
           set -e
           cd "$LIVE_APP_PATH"
