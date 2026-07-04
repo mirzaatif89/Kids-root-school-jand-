@@ -1741,6 +1741,21 @@ tbody tr:hover {
     animation: eduWelcomeIconPop 900ms ease-out both;
 }
 
+.edu-welcome-logo-wrap {
+    background: #ffffff;
+    border-color: rgba(32, 176, 164, 0.32);
+    box-shadow: 0 14px 32px rgba(15, 23, 42, 0.16);
+    padding: 10px;
+}
+
+.edu-welcome-logo {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 14px;
+}
+
 .edu-welcome-icon::before {
     content: "";
     position: absolute;

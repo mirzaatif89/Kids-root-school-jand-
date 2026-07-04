@@ -1738,7 +1738,7 @@
         let classPopupSelectedStudentIds = new Set();
         let classPopupLastVisibleStudentIds = [];
         let challanSelectedFeeMonths = [];
-        const CHALLAN_FALLBACK_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
+        let challanRegisteredCampuses = [];
         const CHALLAN_FALLBACK_CLASSES = [
             'Play Group', 'KG1', 'KG2',
             'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
@@ -1808,6 +1808,7 @@
             if (typeof loadClassFeeDefaults === 'function') {
                 await loadClassFeeDefaults();
             }
+            await loadChallanRegisteredCampuses();
             await loadChallanStudents();
             bindChallanFilterDropdown();
             bindChallanActionsDropdown();
@@ -1891,11 +1892,54 @@
             await mergeChallanFeePaymentsIntoMonthlyStore();
         }
 
+        async function loadChallanRegisteredCampuses() {
+            const addCampus = (campusMap, campusName) => {
+                const normalized = String(campusName || '').trim();
+                if (!normalized) return;
+                const key = normalizeCampusKey(normalized);
+                if (!campusMap.has(key)) campusMap.set(key, normalized);
+            };
+            const campusMap = new Map();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/branches`);
+                if (!response.ok) throw new Error('Registered campuses could not be loaded.');
+                const result = await response.json();
+                const branches = Array.isArray(result) ? result : (Array.isArray(result?.branches) ? result.branches : []);
+                branches.forEach((branch) => {
+                    if (branch?.isActive === false) return;
+                    addCampus(campusMap, branch?.campusName);
+                });
+            } catch (error) {
+                console.warn('Registered campuses could not be loaded for challan filters:', error.message);
+            }
+
+            const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
+            if (user?.role === 'Branch' && user.campusName) {
+                addCampus(campusMap, user.campusName);
+            }
+
+            challanRegisteredCampuses = Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+        }
+
         function getChallanStudentMonthlyFee(student = {}) {
             if (typeof getDashboardStudentFee === 'function') {
                 return getDashboardStudentFee(student);
             }
             return Number(student?.monthlyFee || student?.fee || 0) || 0;
+        }
+
+        function getChallanStudentRemainingAmount(student = {}) {
+            return Number(student?.remainingAmount || student?.remainingCharges || 0) || 0;
+        }
+
+        function getChallanManualAdditionalCharges() {
+            return Number(document.getElementById('additionalCharges')?.value || 0) || 0;
+        }
+
+        function getChallanAdditionalChargesForStudent(student = {}, includeRemainingAmount = true) {
+            const manualCharges = getChallanManualAdditionalCharges();
+            return manualCharges + (includeRemainingAmount ? getChallanStudentRemainingAmount(student) : 0);
         }
 
         function bindChallanFilterDropdown() {
@@ -2014,7 +2058,7 @@
 
         function getAvailableChallanCampuses() {
             const campusMap = new Map();
-            [...CHALLAN_FALLBACK_CAMPUSES, ...challanStudents.map((student) => String(student?.campusName || '').trim())]
+            challanRegisteredCampuses
                 .forEach((campusName) => {
                     const normalized = String(campusName || '').trim();
                     if (!normalized) return;
@@ -2041,7 +2085,13 @@
 
             const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
             if (user?.role === 'Branch' && user.campusName) {
-                select.value = campuses.includes(user.campusName) ? user.campusName : user.campusName;
+                if (!campuses.includes(user.campusName)) {
+                    const option = document.createElement('option');
+                    option.value = user.campusName;
+                    option.textContent = user.campusName;
+                    select.appendChild(option);
+                }
+                select.value = user.campusName;
                 select.disabled = true;
                 applyBranchDetailsToChallan(user.campusName);
             } else {
@@ -2468,7 +2518,11 @@
                 const matchesTerm = !term || String(student.fullName || '').toLowerCase().includes(term) ||
                     String(student.rollNo || '').toLowerCase().includes(term) ||
                     String(student.studentCode || '').toLowerCase().includes(term) ||
-                    String(student.id || '').toLowerCase().includes(term);
+                    String(student.id || '').toLowerCase().includes(term) ||
+                    String(student.fatherName || '').toLowerCase().includes(term) ||
+                    String(student.classGrade || '').toLowerCase().includes(term) ||
+                    String(student.campusName || '').toLowerCase().includes(term) ||
+                    String(student.parentPhone || '').toLowerCase().includes(term);
                 if (!matchesTerm) return false;
                 // Allow viewing left students, but do not allow selecting/printing challans for them.
                 if (statusFilter === 'all') return true;
@@ -2621,10 +2675,12 @@
                 document.getElementById('feeMonth').value = 'Paid';
                 document.getElementById('baseAmount').value = 0;
                 document.getElementById('payNowAmount').value = 0;
+                document.getElementById('additionalCharges').value = 0;
                 document.getElementById('fineFrequency').value = 'none';
                 document.getElementById('fineRate').value = 0;
                 document.getElementById('fineUnits').value = 0;
                 document.getElementById('fineAmount').value = 0;
+                document.getElementById('discountValue').value = '0';
             }
             if (!terminated) {
                 if (isPaid) document.getElementById('payNowAmount').value = 0;
@@ -2655,6 +2711,13 @@
             return unique;
         }
 
+        function getCurrentChallanFeeMonthName() {
+            const challanMonthLabel = String(document.getElementById('challanMonth')?.value || '').trim();
+            const parsed = challanMonthLabel ? new Date(challanMonthLabel.replace(',', ' 1,')) : new Date();
+            const safeDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+            return CHALLAN_MONTHS[safeDate.getMonth()] || CHALLAN_MONTHS[new Date().getMonth()];
+        }
+
         function renderFeeMonthPicker(student, summary, opts = {}) {
             const grid = document.getElementById('feeMonthPickerGrid');
             const empty = document.getElementById('feeMonthPickerEmpty');
@@ -2669,51 +2732,16 @@
                 return;
             }
 
-            setFeeMonthPickerVisibility(true);
             const pendingMonths = getPendingMonthsForPicker(summary);
-
-            // Default selection: keep still-valid selections, otherwise select all pending months.
-            const pendingSet = new Set(pendingMonths);
-            challanSelectedFeeMonths = (challanSelectedFeeMonths || []).filter((m) => pendingSet.has(m));
-            if (!challanSelectedFeeMonths.length && pendingMonths.length) {
-                challanSelectedFeeMonths = pendingMonths.slice();
-            }
-
+            challanSelectedFeeMonths = pendingMonths.slice();
             grid.innerHTML = '';
+            setFeeMonthPickerVisibility(false);
             if (!pendingMonths.length) {
-                empty.style.display = 'block';
-                // Allow "dues only" challan while still keeping a label.
-                document.getElementById('feeMonth').value = 'Dues';
+                empty.style.display = 'none';
+                document.getElementById('feeMonth').value = getCurrentChallanFeeMonthName();
                 return;
             }
-
             empty.style.display = 'none';
-            pendingMonths.forEach((month) => {
-                const id = `feeMonthPick_${String(month).replace(/[^a-z0-9]/gi, '_')}`;
-                const label = document.createElement('label');
-                label.className = 'challan-month-picker-item';
-                label.setAttribute('for', id);
-
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'feeMonthPick';
-                checkbox.id = id;
-                checkbox.value = month;
-                checkbox.checked = challanSelectedFeeMonths.includes(month);
-                checkbox.addEventListener('change', () => {
-                    challanSelectedFeeMonths = getSelectedFeeMonthsFromPicker();
-                    applySelectedFeeMonthsToChallan(summary);
-                    renderStudentFeeSnapshot(student, summary);
-                    triggerChallanRefresh();
-                });
-
-                const text = document.createElement('span');
-                text.textContent = month;
-
-                label.appendChild(checkbox);
-                label.appendChild(text);
-                grid.appendChild(label);
-            });
         }
 
         function getSelectedFeeMonthsFromPicker() {
@@ -2807,8 +2835,7 @@
 
             const feeMonthInput = document.getElementById('feeMonth');
             if (feeMonthInput) {
-                // Show all selected months in a single challan.
-                feeMonthInput.value = safeSelected.length ? safeSelected.join(', ') : 'Dues';
+                feeMonthInput.value = getCurrentChallanFeeMonthName();
             }
 
             const baseInput = document.getElementById('baseAmount');
@@ -2819,7 +2846,7 @@
                 if (!safeSelected.length) {
                     particularsInput.value = particularsInput.value || 'Dues';
                 } else {
-                    particularsInput.value = 'Tuition Fee';
+                    particularsInput.value = safeSelected.length > 1 ? 'Tuition Fee + Pending Dues' : 'Tuition Fee';
                 }
             }
 
@@ -2865,6 +2892,10 @@
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
             const monthlyFee = getChallanStudentMonthlyFee(student);
+            if (!(monthlyFee > 0)) {
+                line.textContent = 'Status: Paid';
+                return;
+            }
             const allPaid = months.every((m) => Number(studentPayments[String(m || '').trim()]?.amount || 0) >= monthlyFee && monthlyFee > 0);
             const baseLabel = allPaid ? 'Paid' : 'Pending';
             const tail = data.remainingDue > 0 ? ` (Remaining: PKR ${formatCurrency(data.remainingDue)})` : '';
@@ -3016,7 +3047,7 @@
                 renderStudentFeeSnapshot(student, summary);
             } else {
                 const feeMonthInput = document.getElementById('feeMonth');
-                if (feeMonthInput) feeMonthInput.value = 'Dues';
+                if (feeMonthInput) feeMonthInput.value = getCurrentChallanFeeMonthName();
             }
             triggerChallanRefresh();
         }
@@ -3119,6 +3150,16 @@
             const pendingMonths = [];
             let pendingAmount = 0;
 
+            if (!(monthlyFee > 0)) {
+                return {
+                    monthlyFee: 0,
+                    admissionMonth: CHALLAN_MONTHS[feeStartMonthIndex],
+                    paidMonths: applicableMonths.slice(),
+                    pendingMonths: [],
+                    pendingAmount: 0
+                };
+            }
+
             applicableMonths.forEach((month) => {
                 const paidAmount = Number(studentPayments[month]?.amount || 0);
                 const paidInMonthlyRecord = String(studentMonthlyFees[month] || '').toLowerCase() === 'paid';
@@ -3183,12 +3224,12 @@
             }
             const statusLabel = isStudentFeePaid(student, summary) ? 'Paid' : 'Pending';
             const payingMonths = Array.isArray(challanSelectedFeeMonths) && challanSelectedFeeMonths.length
-                ? challanSelectedFeeMonths.join(', ')
+                ? getCurrentChallanFeeMonthName()
                 : '';
             const data = getChallanData();
             const selectedMonths = Array.isArray(data?.feeMonths) ? data.feeMonths : [];
             const impactLine = selectedMonths.length
-                ? `Selected: <strong>${escapeHtml(selectedMonths.join(', '))}</strong> | Pay now: <strong>PKR ${formatCurrency(data.payNowAmount)}</strong> | Remaining: <strong>PKR ${formatCurrency(data.remainingDue)}</strong>`
+                ? `Current Month: <strong>${escapeHtml(getCurrentChallanFeeMonthName())}</strong> | Pending dues included: <strong>${selectedMonths.length}</strong> | Pay now: <strong>PKR ${formatCurrency(data.payNowAmount)}</strong> | Remaining: <strong>PKR ${formatCurrency(data.remainingDue)}</strong>`
                 : '';
 
             // Calculate paid and pending amounts
@@ -3225,12 +3266,12 @@
             snapshot.innerHTML = `
                 <div><strong>${escapeHtml(student.fullName || 'Student')}</strong> | Roll No: ${escapeHtml(student.rollNo || '-')} | Class: ${escapeHtml(student.classGrade || '-')}</div>
                 <div>Status: <strong>${escapeHtml(statusLabel)}</strong></div>
-                ${payingMonths ? `<div>Paying Month(s): <strong>${escapeHtml(payingMonths)}</strong></div>` : ''}
+                ${payingMonths ? `<div>Fee Month: <strong>${escapeHtml(payingMonths)}</strong></div>` : ''}
                 ${impactLine ? `<div>${impactLine}</div>` : ''}
                 <div>Admission Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
                 <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
                 <div>Paid Months: ${escapeHtml(paidDetails)} | <strong>Amount: PKR ${totalPaidAmount.toLocaleString('en-PK')}</strong></div>
-                <div>Pending Months: <strong>${pendingDetails}</strong></div>
+                <div>Included Pending Dues: <strong>${pendingDetails}</strong></div>
                 ${partialPaidAmount > 0 ? `<div>Added Payment: <strong>PKR ${partialPaidAmount.toLocaleString('en-PK')}</strong></div>` : ''}
                 <div>Pending Amount: <strong>PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
                 <div>Total Due: <strong style="color: #dc2626;">PKR ${Number(data.totalDue || totalPendingAmount).toLocaleString('en-PK')}</strong></div>
@@ -3559,11 +3600,13 @@
             const payNowInput = document.getElementById('payNowAmount');
             if (payNowInput && payNowInput.dataset.userEdited !== '1') {
                 const baseAmount = Number(document.getElementById('baseAmount')?.value || 0);
-                const additionalCharges = Number(document.getElementById('additionalCharges')?.value || 0);
+                const selectedStudent = getSelectedChallanStudent();
+                const feeMonthLabel = String(document.getElementById('feeMonth')?.value || '').trim().toLowerCase();
+                const includeRemainingAmount = !!selectedStudent && !['paid', 'left'].includes(feeMonthLabel);
+                const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent, includeRemainingAmount);
                 const discountInput = String(document.getElementById('discountValue')?.value || '').trim();
                 const numericDiscount = Number(discountInput);
                 const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-                const selectedStudent = getSelectedChallanStudent();
                 const feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths : [];
                 const paidAmount = getChallanPaidAmountForMonths(selectedStudent, feeMonths);
                 const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount - paidAmount, 0);
@@ -3575,13 +3618,14 @@
         function getChallanData() {
             const selectedStudent = getSelectedChallanStudent();
             const baseAmount = Number(document.getElementById('baseAmount').value || 0);
-            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
+            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
+            const includeRemainingAmount = selectedStudent && !['paid', 'left'].includes(feeMonthLabel.toLowerCase());
+            const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent, includeRemainingAmount);
             const fineAmount = syncChallanFineAmount();
             const fineLabel = getChallanFineLabel();
             const discountInput = document.getElementById('discountValue').value.trim();
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
             let feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths.slice() : [];
             if (!feeMonths.length) {
                 feeMonths = extractChallanMonthNames(feeMonthLabel);
@@ -3648,8 +3692,14 @@
             if (!selectedStudent || !data.studentId) return 'Select a student to generate the QR code.';
             if (isStudentTerminated(selectedStudent) || data?.isTerminated) return 'Student left school (terminated).';
             const feeMonthLabel = String(data?.feeMonth || '').trim();
-            if (feeMonthLabel && feeMonthLabel.toLowerCase() !== 'paid' && isStudentPaidForMonth(selectedStudent, feeMonthLabel)) return 'Paid';
-            if (isStudentFeePaid(selectedStudent)) return 'Paid';
+            const payableMonths = Array.isArray(data?.feeMonths) ? data.feeMonths : [];
+            if (
+                feeMonthLabel &&
+                feeMonthLabel.toLowerCase() !== 'paid' &&
+                !payableMonths.length &&
+                isStudentPaidForMonth(selectedStudent, feeMonthLabel)
+            ) return 'Paid';
+            if (!payableMonths.length && isStudentFeePaid(selectedStudent)) return 'Paid';
             if (!data.feeMonth || data.feeMonth === '-') return 'Fee month is required.';
             if (!data.challanNumber || data.challanNumber === '-') return 'Challan number is required.';
             if (data.totalDue <= 0) return 'No due amount, QR code is not required.';
@@ -3671,9 +3721,9 @@
         function buildVoucherAmountRows(data) {
             const terminated = !!data?.isTerminated;
             const rows = [
-                ['This Month', terminated ? 0 : data.baseAmount],
+                ['Current Month + Pending Dues', terminated ? 0 : data.baseAmount],
                 ['Arrears', 0],
-                ['Papers + Printing charges', terminated ? 0 : data.additionalCharges],
+                ['Remaining / Additional Charges', terminated ? 0 : data.additionalCharges],
                 ['Others', terminated ? 0 : data.fineAmount]
             ];
 
@@ -3850,7 +3900,7 @@
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student?.id] || {};
             const monthlyFee = getChallanStudentMonthlyFee(student);
-            if (!(monthlyFee > 0)) return false;
+            if (!(monthlyFee > 0)) return true;
             return months.every((month) => Number(studentPayments[month]?.amount || 0) >= monthlyFee);
         }
 
@@ -3911,7 +3961,7 @@
                     || new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
                 const dueDateLabel = formatDate(document.getElementById('dueDate').value);
                 const sessionLabel = document.getElementById('challanSession').value.trim() || '-';
-                const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
+                const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent);
                 const fineAmount = syncChallanFineAmount();
                 const fineLabel = getChallanFineLabel();
                 const discountInput = document.getElementById('discountValue').value.trim();
@@ -4131,7 +4181,6 @@
             const sessionLabel = document.getElementById('challanSession').value.trim() || '-';
 
             const baseAmountFallback = Number(document.getElementById('baseAmount').value || 0);
-            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const fineAmount = syncChallanFineAmount();
             const fineLabel = getChallanFineLabel();
             const discountInput = document.getElementById('discountValue').value.trim();
@@ -4178,7 +4227,7 @@
                 const campusAwareAddress = useFormAddressForBulk ? branding.schoolAddress : stripChallanPhone(defaultCampusAddress);
                 const campusAwarePhone = useFormAddressForBulk ? branding.schoolPhone : (branding.schoolPhone || extractChallanPhone(defaultCampusAddress));
 
-                const feeMonthLabel = monthsUnique.join(', ');
+                const feeMonthLabel = getCurrentChallanFeeMonthName();
                 const challanNumber = generateBulkChallanNumber(student, monthsUnique[0] || 'Dues');
 
                 const baseAmount = statusFilter === 'paid'
@@ -4187,6 +4236,7 @@
 
                 const paidAmount = statusFilter === 'paid' ? 0 : getChallanPaidAmountForMonths(student, monthsUnique);
                 const appliedFineAmount = statusFilter === 'paid' ? 0 : getChallanFineAmountForMonths(monthsUnique, fineAmount);
+                const additionalCharges = statusFilter === 'paid' ? 0 : getChallanAdditionalChargesForStudent(student);
                 const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
                 const totalDue = Math.max(grossTotal - paidAmount, 0);
 
@@ -4357,7 +4407,6 @@
             const challanMonthLabel = document.getElementById('challanMonth').value.trim() || new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             const dueDateRaw = document.getElementById('dueDate').value;
             const dueDateLabel = dueDateRaw ? new Date(dueDateRaw).toLocaleDateString('en-GB') : 'Check the school website';
-            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const fineAmount = syncChallanFineAmount();
             const fineLabel = getChallanFineLabel();
             const discountInput = document.getElementById('discountValue').value.trim();
@@ -4428,12 +4477,13 @@
                     const branchDetails = getChallanBranchContactDetails(student?.campusName);
                     const defaultCampusAddress = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
 
-                    const feeMonthCombined = pendingMonths.join(', ');
+                    const feeMonthCombined = getCurrentChallanFeeMonthName();
                     const challanNumber = generateBulkChallanNumber(student, pendingMonths[0] || 'Dues');
 
                     const baseAmount = (pendingMonths.length * monthlyFee) || (monthlyFee || baseAmountFallback);
                     const paidAmount = getChallanPaidAmountForMonths(student, pendingMonths);
                     const appliedFineAmount = getChallanFineAmountForMonths(pendingMonths, fineAmount);
+                    const additionalCharges = getChallanAdditionalChargesForStudent(student);
                     const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
                     const totalDue = Math.max(grossTotal - paidAmount, 0);
 

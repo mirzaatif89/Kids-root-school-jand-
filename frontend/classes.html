@@ -408,9 +408,14 @@
             });
 
             if (searchTerm) {
+                const term = String(searchTerm || '').toLowerCase().trim();
                 classStudents = classStudents.filter(s =>
-                    s.fullName.toLowerCase().includes(searchTerm) ||
-                    s.rollNo.toLowerCase().includes(searchTerm)
+                    String(s.fullName || '').toLowerCase().includes(term) ||
+                    String(s.rollNo || '').toLowerCase().includes(term) ||
+                    String(s.studentCode || '').toLowerCase().includes(term) ||
+                    String(s.fatherName || '').toLowerCase().includes(term) ||
+                    String(s.campusName || '').toLowerCase().includes(term) ||
+                    String(s.parentPhone || '').toLowerCase().includes(term)
                 );
             }
 

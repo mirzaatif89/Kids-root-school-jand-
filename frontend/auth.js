@@ -448,6 +448,84 @@
         callback();
     }
 
+    const WELCOME_SESSION_KEY = 'eduCore_welcome_payload';
+
+    function escapeWelcomeText(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function getWelcomeSchoolName() {
+        try {
+            const settings = JSON.parse(localStorage.getItem('eduCore_settings') || '{}') || {};
+            return String(settings.schoolName || settings.schoolTitle || 'Kids Roots Jand').trim() || 'Kids Roots Jand';
+        } catch (_error) {
+            return 'Kids Roots Jand';
+        }
+    }
+
+    function showWelcomeAnimationIfNeeded() {
+        if (document.getElementById('loginForm')) return;
+        if (!sessionStorage.getItem('eduCore_token')) return;
+
+        let payload = null;
+        try {
+            payload = JSON.parse(sessionStorage.getItem(WELCOME_SESSION_KEY) || 'null');
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (!payload || !payload.at) return;
+        if (Date.now() - Number(payload.at) > 5 * 60 * 1000) {
+            sessionStorage.removeItem(WELCOME_SESSION_KEY);
+            return;
+        }
+
+        sessionStorage.removeItem(WELCOME_SESSION_KEY);
+        if (document.getElementById('eduWelcomeOverlay')) return;
+
+        const displayName = String(payload.displayName || loggedInUser?.fullName || loggedInUser?.username || 'User').trim() || 'User';
+        const schoolName = String(payload.schoolName || getWelcomeSchoolName()).trim() || 'Kids Roots Jand';
+        const logoSrc = 'images/logo.png';
+        const overlay = document.createElement('div');
+        overlay.id = 'eduWelcomeOverlay';
+        overlay.className = 'edu-welcome-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.innerHTML = `
+            <div class="edu-welcome-card">
+                <div class="edu-welcome-glow" aria-hidden="true"></div>
+                <div class="edu-welcome-icon edu-welcome-logo-wrap">
+                    <img class="edu-welcome-logo" src="${escapeWelcomeText(logoSrc)}" alt="${escapeWelcomeText(schoolName)} logo">
+                </div>
+                <h2 class="edu-welcome-title">Welcome, ${escapeWelcomeText(displayName)}</h2>
+                <p class="edu-welcome-subtitle">Welcome ${escapeWelcomeText(displayName)} in ${escapeWelcomeText(schoolName)}.</p>
+                <div class="edu-welcome-divider" aria-hidden="true"></div>
+                <button type="button" class="edu-welcome-skip">Get Started</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            if (!overlay.classList.contains('active')) return;
+            overlay.classList.add('closing');
+            window.setTimeout(() => overlay.remove(), 240);
+        };
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close();
+        });
+        overlay.querySelector('.edu-welcome-skip')?.addEventListener('click', close);
+        overlay.classList.add('active');
+        window.setTimeout(close, 2400);
+    }
+
     function getHomePage(user, permissions) {
         const group = getGroupConfig(user, permissions);
         const registryEntry = pageRegistry[currentPage];
@@ -1214,9 +1292,11 @@
 
         if (!canAccessPage(loggedInUser, permissions, currentPage)) {
             redirectToAllowedHome(loggedInUser, permissions);
+            return;
         }
 
         startActiveSessionTracking();
+        runWhenReady(showWelcomeAnimationIfNeeded);
     })();
 })();
 

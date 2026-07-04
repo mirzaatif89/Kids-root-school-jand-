@@ -304,7 +304,43 @@
             outline: none;
         }
 
+        .fee-print-filter {
+            min-height: var(--app-control-height);
+            min-width: 150px;
+            width: 150px;
+            padding: 0 0.9rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--surface-color);
+            color: var(--text-primary);
+            font-weight: 700;
+            outline: none;
+        }
+
+        .fee-print-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.55rem;
+            flex-wrap: wrap;
+        }
+
+        .fee-print-btn {
+            min-height: var(--app-control-height);
+            padding: 0 0.9rem;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            white-space: nowrap;
+        }
+
         .fee-campus-filter:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
+        }
+
+        .fee-print-filter:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.12);
         }
@@ -534,10 +570,17 @@
             .fee-header-actions,
             .fee-filter-row,
             .fee-campus-filter,
+            .fee-print-filter,
+            .fee-print-controls,
             .fee-filter-row .search-bar,
             .fine-rule-trigger {
                 width: 100%;
                 max-width: none;
+            }
+
+            .fee-print-btn {
+                width: 100%;
+                justify-content: center;
             }
 
             .fine-rule-menu {
@@ -686,6 +729,19 @@
                         <select id="feeCampusFilter" class="fee-campus-filter" aria-label="Filter by campus">
                             <option value="all">All Campuses</option>
                         </select>
+                        <div class="fee-print-controls">
+                            <select id="feePrintClassFilter" class="fee-print-filter" aria-label="Class for fee print">
+                                <option value="all">All Classes</option>
+                            </select>
+                            <select id="feePrintStatusFilter" class="fee-print-filter" aria-label="Fee status for print">
+                                <option value="paid">Paid</option>
+                                <option value="unpaid">Unpaid</option>
+                            </select>
+                            <button class="btn btn-outline fee-print-btn" type="button" onclick="printFeeStatusStudentList()">
+                                <i data-lucide="printer" size="17"></i>
+                                <span>Print</span>
+                            </button>
+                        </div>
                         <div class="search-bar">
                             <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
                             <input type="text" id="feeSearchInput" placeholder="Search students by name or roll no...">
@@ -1193,6 +1249,7 @@
             }
             initFeeFineDropdown();
             populateFeeCampusFilter();
+            populateFeePrintClassFilter();
             renderFeesClassGrid();
             syncAutomaticFineCharges();
 
@@ -1284,6 +1341,26 @@
             return getSelectedFeeCampus() === 'all' ? '' : ` - ${campus}`;
         }
 
+        function getFeeClassLabelById(classId = 'all') {
+            if (classId === 'all') return 'All Classes';
+            const cls = feeClasses.find(c => c.id === classId);
+            return cls ? cls.name : 'Selected Class';
+        }
+
+        function populateFeePrintClassFilter() {
+            const select = document.getElementById('feePrintClassFilter');
+            if (!select) return;
+            const previousValue = select.value || 'all';
+            select.innerHTML = '<option value="all">All Classes</option>';
+            feeClasses.forEach((cls) => {
+                const option = document.createElement('option');
+                option.value = cls.id;
+                option.textContent = cls.name;
+                select.appendChild(option);
+            });
+            select.value = [...select.options].some(option => option.value === previousValue) ? previousValue : 'all';
+        }
+
         function getCampusFilteredFeeStudents() {
             const selectedCampus = getSelectedFeeCampus();
             const students = getData(STORAGE_KEY_STUDENTS);
@@ -1293,6 +1370,40 @@
             }
 
             return students.filter(student => getStudentCampusName(student) === selectedCampus);
+        }
+
+        function studentMatchesFeeClass(student, classId = 'all') {
+            if (classId === 'all' || classId === 'search_results') return true;
+            const cls = feeClasses.find(c => c.id === classId);
+            if (!cls) return false;
+            const sClass = (student.classGrade || '').toLowerCase().trim();
+            return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
+        }
+
+        function isCurrentMonthFeePaid(student = {}) {
+            const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES) || '{}');
+            const studentMonthly = monthlyFees[student.id] || {};
+            return studentMonthly[CURRENT_MONTH_NAME] === 'Paid' || String(student.feesStatus || '').toLowerCase() === 'paid';
+        }
+
+        function getFeePrintFilteredStudents() {
+            const classId = document.getElementById('feePrintClassFilter')?.value || 'all';
+            const status = String(document.getElementById('feePrintStatusFilter')?.value || 'paid').toLowerCase();
+            return getCampusFilteredFeeStudents()
+                .filter(student => studentMatchesFeeClass(student, classId))
+                .filter(student => {
+                    const paid = isCurrentMonthFeePaid(student);
+                    return status === 'paid' ? paid : !paid;
+                })
+                .sort((a, b) => {
+                    const rollA = Number.parseInt(String(a.rollNo || ''), 10);
+                    const rollB = Number.parseInt(String(b.rollNo || ''), 10);
+                    const rollAValid = Number.isFinite(rollA);
+                    const rollBValid = Number.isFinite(rollB);
+                    if (rollAValid && rollBValid && rollA !== rollB) return rollA - rollB;
+                    if (rollAValid !== rollBValid) return rollAValid ? -1 : 1;
+                    return String(a.fullName || '').localeCompare(String(b.fullName || ''));
+                });
         }
 
         function populateFeeCampusFilter() {
@@ -1356,6 +1467,124 @@
             renderClassStudentList('all', term);
         }
 
+        function printFeeStatusStudentList() {
+            const classId = document.getElementById('feePrintClassFilter')?.value || 'all';
+            const status = String(document.getElementById('feePrintStatusFilter')?.value || 'paid').toLowerCase();
+            const students = getFeePrintFilteredStudents();
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const rawSchoolName = String(branding.schoolName || branding.schoolTitle || '').trim();
+            const schoolName = rawSchoolName || 'Kids Roots Jand';
+            const campusLabel = getSelectedFeeCampus() === 'all' ? 'All Campuses' : getSelectedFeeCampusLabel();
+            const classLabel = getFeeClassLabelById(classId);
+            const statusLabel = status === 'paid' ? 'Paid Students' : 'Unpaid Students';
+            const printedAt = new Date().toLocaleString();
+            const totalMonthlyFee = students.reduce((sum, student) => sum + getFeeStudentMonthlyAmount(student), 0);
+            const totalCurrentFine = students.reduce((sum, student) => (
+                sum + getStudentMonthFineAmount(student, CURRENT_MONTH_NAME, isCurrentMonthFeePaid(student) ? 'Paid' : '')
+            ), 0);
+            const totalPayable = totalMonthlyFee + totalCurrentFine;
+            const esc = (value) => escapeHtml(String(value ?? ''));
+            const formatAmount = (value) => `PKR ${(Number(value) || 0).toLocaleString('en-PK')}`;
+
+            const rowsMarkup = students.length ? students.map((student, index) => {
+                const monthlyFee = getFeeStudentMonthlyAmount(student);
+                const fineAmount = getStudentMonthFineAmount(student, CURRENT_MONTH_NAME, isCurrentMonthFeePaid(student) ? 'Paid' : '');
+                const currentStatus = isCurrentMonthFeePaid(student) ? 'Paid' : 'Unpaid';
+                return `
+                    <tr>
+                        <td class="num">${index + 1}</td>
+                        <td>${esc(student.rollNo || '-')}</td>
+                        <td>${esc(student.fullName || '-')}</td>
+                        <td>${esc(student.fatherName || '-')}</td>
+                        <td>${esc(student.classGrade || '-')}</td>
+                        <td>${esc(getStudentCampusName(student))}</td>
+                        <td class="amount">${esc(formatAmount(monthlyFee))}</td>
+                        <td class="amount">${esc(formatAmount(fineAmount))}</td>
+                        <td class="status ${currentStatus.toLowerCase()}">${esc(currentStatus)}</td>
+                    </tr>
+                `;
+            }).join('') : '<tr><td colspan="9" class="empty">No students found for selected filters.</td></tr>';
+
+            const html = `
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                    <title>${esc(schoolName)} - ${esc(statusLabel)}</title>
+                    <style>
+                        :root { color-scheme: light; }
+                        @page { size: A4 landscape; margin: 11mm; }
+                        body { margin: 0; font-family: Arial, sans-serif; color: #111827; background: #fff; }
+                        .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+                        .title { font-size: 20px; font-weight: 800; text-transform: uppercase; }
+                        .subtitle { margin-top: 4px; color: #475569; font-size: 12px; line-height: 1.5; }
+                        .summary { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px; justify-content: end; font-size: 12px; }
+                        .pill { border: 1px solid #94a3b8; border-radius: 6px; padding: 6px 8px; font-weight: 700; background: #f8fafc; }
+                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                        th, td { border: 1px solid #64748b; padding: 6px 7px; text-align: left; }
+                        th { background: #f1f5f9; font-size: 10px; text-transform: uppercase; }
+                        .num { width: 34px; text-align: center; }
+                        .amount { text-align: right; white-space: nowrap; }
+                        .status { font-weight: 800; text-align: center; }
+                        .status.paid { color: #166534; }
+                        .status.unpaid { color: #991b1b; }
+                        .empty { text-align: center; color: #475569; padding: 16px; }
+                        @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div>
+                            <div class="title">${esc(schoolName)}</div>
+                            <div class="subtitle">
+                                ${esc(statusLabel)} | ${esc(CURRENT_MONTH_NAME)}<br>
+                                Campus: ${esc(campusLabel)} | Class: ${esc(classLabel)}<br>
+                                Printed: ${esc(printedAt)}
+                            </div>
+                        </div>
+                        <div class="summary">
+                            <div class="pill">Students: ${students.length}</div>
+                            <div class="pill">Monthly: ${esc(formatAmount(totalMonthlyFee))}</div>
+                            <div class="pill">Fine: ${esc(formatAmount(totalCurrentFine))}</div>
+                            <div class="pill">Total: ${esc(formatAmount(totalPayable))}</div>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Roll No</th>
+                                <th>Student Name</th>
+                                <th>Father Name</th>
+                                <th>Class</th>
+                                <th>Campus</th>
+                                <th>Monthly Fee</th>
+                                <th>Fine</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsMarkup}</tbody>
+                    </table>
+                    <script>
+                        window.focus();
+                        window.print();
+                        window.onafterprint = () => window.close();
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', 'eduCoreFeeStatusPrint', 'width=1100,height=760');
+            if (!printWindow) {
+                alert('Popup blocked. Please allow popups to print the fee list.');
+                return;
+            }
+            printWindow.document.open();
+            printWindow.document.write(html);
+            printWindow.document.close();
+        }
+
         function renderFeesClassGrid() {
             const grid = document.getElementById('feesClassGrid');
             const students = getCampusFilteredFeeStudents();
@@ -1368,6 +1597,8 @@
                 const tableView = document.getElementById('feesTableView');
                 tableView.classList.add('active');
                 tableView.dataset.classId = 'all';
+                const printClassFilter = document.getElementById('feePrintClassFilter');
+                if (printClassFilter) printClassFilter.value = 'all';
                 updateFeeListHeading('all');
                 renderClassStudentList('all');
             };
@@ -1378,10 +1609,7 @@
             grid.appendChild(allCard);
 
             feeClasses.forEach(cls => {
-                const classStudents = students.filter(s => {
-                    const sClass = (s.classGrade || '').toLowerCase().trim();
-                    return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
-                });
+                const classStudents = students.filter(s => studentMatchesFeeClass(s, cls.id));
 
                 const card = document.createElement('div');
                 card.className = 'fee-card';
@@ -1406,6 +1634,8 @@
             const tableView = document.getElementById('feesTableView');
             tableView.classList.add('active');
             tableView.dataset.classId = classId;
+            const printClassFilter = document.getElementById('feePrintClassFilter');
+            if (printClassFilter) printClassFilter.value = classId;
 
             updateFeeListHeading(classId);
 
@@ -1424,10 +1654,7 @@
             } else {
                 const cls = feeClasses.find(c => c.id === classId);
                 if (!cls) return;
-                filteredStudents = students.filter(s => {
-                    const sClass = (s.classGrade || '').toLowerCase().trim();
-                    return cls.keywords.some(k => sClass === k || sClass === `class ${k}`);
-                });
+                filteredStudents = students.filter(s => studentMatchesFeeClass(s, classId));
             }
 
             if (term) {

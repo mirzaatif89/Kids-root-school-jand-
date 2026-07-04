@@ -190,6 +190,23 @@
             printable.focus();
             printable.setTimeout(() => printable.print(), 450);
         }
+        function downloadLeaveAttachment(id) {
+            const item = data().find((entry) => entry.id === id);
+            if (!item?.fileData) {
+                showAppAlert('Leave attachment was not found.', 'Download Failed');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = item.fileData;
+            link.download = item.fileName || 'leave-attachment';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        }
+        function leaveAttachmentButton(item) {
+            if (!item?.fileData) return '';
+            return `<button class="schedule-action-btn pdf" onclick="downloadLeaveAttachment('${esc(item.id)}')"><i data-lucide="paperclip" width="11"></i> ${esc(item.fileName || 'Attachment')}</button>`;
+        }
         function render() {
             const host = document.getElementById('studentLeaveRequestList');
             const historyHost = document.getElementById('studentLeaveHistoryList');
@@ -199,12 +216,12 @@
             if (!pending.length) {
                 host.innerHTML = '<div class="empty-note">No pending student leave request.</div>';
             } else {
-                host.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Leave Dates</th><th>Applied</th><th>Reason</th><th class="status-col">Status</th><th class="action-col">Actions</th></tr></thead><tbody>${pending.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.rollNo || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note"><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="11"></i> PDF</button></div></td><td class="status-col"><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
+                host.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Class</th><th>Roll</th><th>Leave Dates</th><th>Applied</th><th>Reason</th><th class="status-col">Status</th><th class="action-col">Actions</th></tr></thead><tbody>${pending.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.rollNo || '-')}</td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note"><button class="schedule-action-btn pdf" onclick="downloadLeavePdf('${item.id}')"><i data-lucide="download" width="11"></i> PDF</button>${leaveAttachmentButton(item)}</div></td><td class="status-col"><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span></td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
             }
             if (!requests.length) {
                 historyHost.innerHTML = '<div class="empty-note">No student leave history yet.</div>';
             } else {
-                historyHost.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Leave Dates</th><th>Applied At</th><th>Reason</th><th>Review</th><th class="action-col">Update Status</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}<div class="history-note">Class: ${esc(item.classGrade || '-')} | Roll: ${esc(item.rollNo || '-')}</div></td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}</td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span><div class="history-note">Reviewed: ${esc(formatLeaveDateTime(item.reviewedAt))}</div>${item.reviewReason ? `<div class="history-note" style="color:#991b1b;">Reject reason: ${esc(item.reviewReason)}</div>` : ''}</td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
+                historyHost.innerHTML = `<div class="schedule-table-wrap"><table class="schedule-table"><thead><tr><th>Student</th><th>Leave Dates</th><th>Applied At</th><th>Reason</th><th>Review</th><th class="action-col">Update Status</th></tr></thead><tbody>${requests.map((item) => { const status = String(item.status || 'Pending').toLowerCase(); return `<tr><td>${esc(item.applicantName || item.studentName || '-')}<div class="history-note">Class: ${esc(item.classGrade || '-')} | Roll: ${esc(item.rollNo || '-')}</div></td><td>${esc(item.fromDate || '-')} to ${esc(item.toDate || '-')}</td><td>${esc(formatLeaveDateTime(item.createdAt))}</td><td>${esc(item.reason || '-')}<div class="history-note">${leaveAttachmentButton(item)}</div></td><td><span class="status-pill ${status}">${esc(item.status || 'Pending')}</span><div class="history-note">Reviewed: ${esc(formatLeaveDateTime(item.reviewedAt))}</div>${item.reviewReason ? `<div class="history-note" style="color:#991b1b;">Reject reason: ${esc(item.reviewReason)}</div>` : ''}</td><td class="action-col">${reviewActionButtons(item)}</td></tr>`; }).join('')}</tbody></table></div>`;
             }
             if (window.lucide) window.lucide.createIcons();
         }

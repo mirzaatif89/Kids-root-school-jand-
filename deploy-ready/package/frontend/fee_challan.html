@@ -1738,7 +1738,7 @@
         let classPopupSelectedStudentIds = new Set();
         let classPopupLastVisibleStudentIds = [];
         let challanSelectedFeeMonths = [];
-        const CHALLAN_FALLBACK_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
+        let challanRegisteredCampuses = [];
         const CHALLAN_FALLBACK_CLASSES = [
             'Play Group', 'KG1', 'KG2',
             'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
@@ -1808,6 +1808,7 @@
             if (typeof loadClassFeeDefaults === 'function') {
                 await loadClassFeeDefaults();
             }
+            await loadChallanRegisteredCampuses();
             await loadChallanStudents();
             bindChallanFilterDropdown();
             bindChallanActionsDropdown();
@@ -1889,6 +1890,36 @@
                 challanStudents = [...getData(STORAGE_KEY_STUDENTS)].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
             }
             await mergeChallanFeePaymentsIntoMonthlyStore();
+        }
+
+        async function loadChallanRegisteredCampuses() {
+            const addCampus = (campusMap, campusName) => {
+                const normalized = String(campusName || '').trim();
+                if (!normalized) return;
+                const key = normalizeCampusKey(normalized);
+                if (!campusMap.has(key)) campusMap.set(key, normalized);
+            };
+            const campusMap = new Map();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/branches`);
+                if (!response.ok) throw new Error('Registered campuses could not be loaded.');
+                const result = await response.json();
+                const branches = Array.isArray(result) ? result : (Array.isArray(result?.branches) ? result.branches : []);
+                branches.forEach((branch) => {
+                    if (branch?.isActive === false) return;
+                    addCampus(campusMap, branch?.campusName);
+                });
+            } catch (error) {
+                console.warn('Registered campuses could not be loaded for challan filters:', error.message);
+            }
+
+            const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
+            if (user?.role === 'Branch' && user.campusName) {
+                addCampus(campusMap, user.campusName);
+            }
+
+            challanRegisteredCampuses = Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
         }
 
         function getChallanStudentMonthlyFee(student = {}) {
@@ -2014,7 +2045,7 @@
 
         function getAvailableChallanCampuses() {
             const campusMap = new Map();
-            [...CHALLAN_FALLBACK_CAMPUSES, ...challanStudents.map((student) => String(student?.campusName || '').trim())]
+            challanRegisteredCampuses
                 .forEach((campusName) => {
                     const normalized = String(campusName || '').trim();
                     if (!normalized) return;
@@ -2041,7 +2072,13 @@
 
             const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
             if (user?.role === 'Branch' && user.campusName) {
-                select.value = campuses.includes(user.campusName) ? user.campusName : user.campusName;
+                if (!campuses.includes(user.campusName)) {
+                    const option = document.createElement('option');
+                    option.value = user.campusName;
+                    option.textContent = user.campusName;
+                    select.appendChild(option);
+                }
+                select.value = user.campusName;
                 select.disabled = true;
                 applyBranchDetailsToChallan(user.campusName);
             } else {

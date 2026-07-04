@@ -5280,6 +5280,15 @@ function viewStudentFromEncoded(encodedPayload) {
     viewStudent(payload);
 }
 
+function printStudentAdmissionFormFromEncoded(encodedPayload) {
+    const payload = decodeRowPayload(encodedPayload);
+    if (!payload) {
+        alert('Unable to load student details for printing.');
+        return;
+    }
+    printStudentAdmissionForm(payload);
+}
+
 function getEmailSchoolName() {
     try {
         const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
@@ -5377,6 +5386,11 @@ function handleStudentActionSelect(selectElement, encodedPayload, studentId, isB
 
     if (action === 'view') {
         viewStudentFromEncoded(encodedPayload);
+        return;
+    }
+
+    if (action === 'print_admission') {
+        printStudentAdmissionFormFromEncoded(encodedPayload);
         return;
     }
 
@@ -6042,6 +6056,7 @@ function renderStudents(term = '') {
                     <select class="table-action-select" onchange="handleStudentActionSelect(this, '${encodedStudent}', '${s.id}', ${isBranchUser ? 1 : 0})">
                         <option value="">Actions</option>
                         <option value="view">View</option>
+                        <option value="print_admission">Print Admission Form</option>
                         ${s.email ? '<option value="email">Send Email</option>' : ''}
                         ${canEditStudents ? '<option value="edit">Edit</option>' : ''}
                         ${canEditStudents ? (terminated ? '<option value="reactivate">Reactivate</option>' : '<option value="stuckoff">Stuck-Off</option>') : ''}
@@ -6607,6 +6622,144 @@ function printStudentsList() {
     const printWindow = window.open('', 'eduCoreStudentPrint', 'width=1000,height=700');
     if (!printWindow) {
         alert('Popup blocked. Please allow popups to print the student list.');
+        return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+}
+
+function printStudentAdmissionForm(student = {}) {
+    if (!student || typeof student !== 'object') {
+        alert('Unable to print admission form. Student details are missing.');
+        return;
+    }
+
+    const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+    const rawSchoolName = String(branding.schoolName || branding.schoolTitle || '').trim();
+    const legacyPlaceholderNames = new Set(['harward school', 'harvard school']);
+    const schoolName = rawSchoolName && !legacyPlaceholderNames.has(rawSchoolName.toLowerCase())
+        ? rawSchoolName
+        : 'Kids Roots Jand';
+    const schoolLogo = new URL('images/logo.png', window.location.href).href;
+    const printedAt = new Date().toLocaleString();
+    const statusLabel = getStudentStatusLabel(student);
+
+    const formatDateSafe = (value) => {
+        try {
+            return escapeHtml(formatDateForDisplay(value));
+        } catch (_error) {
+            return escapeHtml(value || '-');
+        }
+    };
+    const fieldValue = (value) => escapeHtml(String(value ?? '').trim() || '-');
+    const photoMarkup = student.profileImage
+        ? `<img src="${escapeHtml(student.profileImage)}" alt="${fieldValue(student.fullName)}">`
+        : `<div class="photo-placeholder">${escapeHtml(getStudentInitial(student.fullName || 'Student'))}</div>`;
+
+    const detailRows = [
+        ['Student ID', student.studentCode],
+        ['Roll No', student.rollNo],
+        ['Full Name', student.fullName],
+        ["Father's Name", student.fatherName],
+        ['Date of Birth', formatDateSafe(student.dob), true],
+        ['Admission Date', formatDateSafe(student.admissionDate || student.createdAt), true],
+        ['Class', student.classGrade],
+        ['Campus Name', student.campusName],
+        ['Gender', student.gender],
+        ['Contact Phone', student.parentPhone],
+        ['Guardian Name', student.guardianName],
+        ['Guardian Contact', student.guardianContact],
+        ['Email', student.email],
+        ['Form B No', student.formB],
+        ['Monthly Fee (PKR)', student.monthlyFee],
+        ['Fee Frequency', student.feeFrequency],
+        ['Username', student.username],
+        ['Status', statusLabel]
+    ];
+
+    const rowsMarkup = detailRows.map(([label, value, alreadyEscaped]) => `
+        <div class="field">
+            <div class="label">${escapeHtml(label)}</div>
+            <div class="value">${alreadyEscaped ? value : fieldValue(value)}</div>
+        </div>
+    `).join('');
+
+    const html = `
+        <!doctype html>
+        <html>
+        <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>${escapeHtml(schoolName)} - Admission Form</title>
+            <style>
+                :root { color-scheme: light; }
+                @page { size: A4; margin: 12mm; }
+                * { box-sizing: border-box; }
+                body { margin: 0; font-family: Arial, sans-serif; color: #111827; background: #fff; }
+                .sheet { width: 100%; min-height: 100vh; border: 2px solid #111827; padding: 16px; }
+                .header { display: grid; grid-template-columns: 76px 1fr 116px; gap: 14px; align-items: center; border-bottom: 2px solid #111827; padding-bottom: 12px; }
+                .logo { width: 70px; height: 70px; object-fit: contain; }
+                .school h1 { margin: 0; font-size: 24px; line-height: 1.15; text-transform: uppercase; }
+                .school p { margin: 6px 0 0; font-size: 13px; color: #475569; }
+                .photo { width: 106px; height: 122px; border: 1.5px solid #111827; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f8fafc; }
+                .photo img { width: 100%; height: 100%; object-fit: cover; }
+                .photo-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #0f766e; }
+                .form-title { text-align: center; font-size: 18px; font-weight: 800; text-transform: uppercase; margin: 14px 0; letter-spacing: .04em; }
+                .meta { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #475569; margin-bottom: 10px; }
+                .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; }
+                .field { min-height: 47px; border: 1px solid #94a3b8; padding: 7px 9px; page-break-inside: avoid; }
+                .label { font-size: 10px; text-transform: uppercase; letter-spacing: .04em; color: #475569; font-weight: 800; margin-bottom: 4px; }
+                .value { font-size: 14px; font-weight: 700; min-height: 18px; word-break: break-word; }
+                .declaration { margin-top: 14px; border: 1px solid #94a3b8; padding: 10px; font-size: 12px; line-height: 1.6; color: #334155; }
+                .signatures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 34px; }
+                .signature { border-top: 1.5px solid #111827; padding-top: 7px; text-align: center; font-size: 12px; font-weight: 700; }
+                @media print {
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .sheet { min-height: auto; }
+                }
+            </style>
+        </head>
+        <body>
+            <main class="sheet">
+                <section class="header">
+                    <img class="logo" src="${escapeHtml(schoolLogo)}" alt="${escapeHtml(schoolName)} logo">
+                    <div class="school">
+                        <h1>${escapeHtml(schoolName)}</h1>
+                        <p>Student Admission Form</p>
+                    </div>
+                    <div class="photo">${photoMarkup}</div>
+                </section>
+                <div class="form-title">Admission Form</div>
+                <div class="meta">
+                    <span>Printed: ${escapeHtml(printedAt)}</span>
+                    <span>Student ID: ${fieldValue(student.studentCode)}</span>
+                </div>
+                <section class="grid">
+                    ${rowsMarkup}
+                </section>
+                <section class="declaration">
+                    I certify that the above information is correct to the best of my knowledge and agree to follow the school rules and policies.
+                </section>
+                <section class="signatures">
+                    <div class="signature">Parent / Guardian</div>
+                    <div class="signature">Admission Officer</div>
+                    <div class="signature">Principal</div>
+                </section>
+            </main>
+            <script>
+                window.focus();
+                window.print();
+                window.onafterprint = () => window.close();
+            </script>
+        </body>
+        </html>
+    `;
+
+    const printWindow = window.open('', 'eduCoreAdmissionFormPrint', 'width=900,height=700');
+    if (!printWindow) {
+        alert('Popup blocked. Please allow popups to print the admission form.');
         return;
     }
 
