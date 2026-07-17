@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - Kids Roots Jand</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .message-layout {
+            display: grid;
+            grid-template-columns: minmax(320px, 0.9fr) minmax(420px, 1.1fr);
+            gap: 1.25rem;
+            align-items: start;
+        }
+
+        .message-layout > .table-container {
+            padding: 1.2rem;
+            border-radius: 8px;
+        }
+
+        .message-form {
+            display: grid;
+            gap: 1.05rem;
+        }
+
+        .message-field label {
+            display: block;
+            margin-bottom: 0.55rem;
+            font-size: 0.86rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .message-field input,
+        .message-field select,
+        .message-field textarea {
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.85rem 0.95rem;
+            font: inherit;
+            color: var(--text-primary);
+            background: #fff;
+        }
+
+        .message-field textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .message-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.05rem;
+        }
+
+        .message-card-list {
+            display: grid;
+            gap: 0.85rem;
+            margin-top: 1rem;
+        }
+
+        .message-card {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            padding: 1rem;
+            display: grid;
+            gap: 0.6rem;
+        }
+
+        .message-card-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .message-pill-row {
+            display: flex;
+            gap: 0.45rem;
+            flex-wrap: wrap;
+        }
+
+        .message-pill {
+            border-radius: 999px;
+            padding: 0.22rem 0.58rem;
+            background: #e0f2fe;
+            color: #075985;
+            font-size: 0.76rem;
+            font-weight: 800;
+        }
+
+        .message-body {
+            color: var(--text-secondary);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 980px) {
+            .message-layout,
+            .message-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="teachers.html" class="nav-item"><i data-lucide="book-open"></i><span>Teachers</span></a>
+                <a href="staff.html" class="nav-item"><i data-lucide="briefcase"></i><span>Staff</span></a>
+                <a href="classes.html" class="nav-item"><i data-lucide="school"></i><span>Classes</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="teacher_salaries.html" class="nav-item"><i data-lucide="wallet"></i><span>Salaries</span></a>
+                <a href="exams.html" class="nav-item"><i data-lucide="clipboard-list"></i><span>Exams</span></a>
+                <a href="messages.html" class="nav-item active"><i data-lucide="message-circle"></i><span>Messages</span></a>
+                <a href="revenue.html" class="nav-item"><i data-lucide="trending-up"></i><span>Revenue</span></a>
+                <a href="permissions.html" class="nav-item"><i data-lucide="shield"></i><span>Permissions</span></a>
+                <a href="aboutme.html" class="nav-item"><i data-lucide="info"></i><span>About Us</span></a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)"><i data-lucide="log-out"></i><span>Logout</span></a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Messages</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.3rem;">Send saved messages to students, teachers, and staff.</p>
+                </div>
+            </header>
+
+            <section class="message-layout">
+                <div class="table-container">
+                    <form id="messageForm" class="message-form">
+                        <div class="message-grid">
+                            <div class="message-field">
+                                <label for="targetRole">Send To</label>
+                                <select id="targetRole" required>
+                                    <option value="Student">Students</option>
+                                    <option value="Teacher">Teachers</option>
+                                    <option value="Staff">Staff</option>
+                                </select>
+                            </div>
+                            <div class="message-field">
+                                <label for="targetScope">Target</label>
+                                <select id="targetScope" required>
+                                    <option value="all">All selected role</option>
+                                    <option value="campus">Campus</option>
+                                    <option value="class">Campus + Class</option>
+                                    <option value="individual">Specific person</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="message-grid">
+                            <div class="message-field" id="campusField">
+                                <label for="campusName">Campus</label>
+                                <select id="campusName"></select>
+                            </div>
+                            <div class="message-field" id="classField">
+                                <label for="classGrade">Class</label>
+                                <select id="classGrade"></select>
+                            </div>
+                        </div>
+
+                        <div class="message-field" id="recipientField">
+                            <label for="recipientId">Recipient</label>
+                            <select id="recipientId"></select>
+                        </div>
+
+                        <div class="message-field">
+                            <label for="messageSubject">Subject</label>
+                            <input type="text" id="messageSubject" placeholder="Message subject" required>
+                        </div>
+
+                        <div class="message-field">
+                            <label for="messageBody">Message</label>
+                            <textarea id="messageBody" placeholder="Write message here..." required></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary"><i data-lucide="send" width="16"></i> Send Message</button>
+                    </form>
+                </div>
+
+                <div class="table-container">
+                    <h2 style="font-size: 1.1rem; margin-bottom: 0.25rem;">Sent Messages</h2>
+                    <p style="color: var(--text-secondary);">Latest messages stay saved here and in recipient portals.</p>
+                    <div class="message-card-list" id="messageHistory"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        const API_BASE_URL = '/api';
+        const authToken = sessionStorage.getItem('eduCore_token');
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser') || 'null');
+        const canSendMessages = ['Admin', 'Principal'].includes(String(loggedInUser?.role || ''));
+        let students = [];
+        let teachers = [];
+        let staffMembers = [];
+        let sentMessages = [];
+        let pendingMessagePrefill = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function normalize(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function uniqueSorted(values) {
+            return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b));
+        }
+
+        function getRoleRecords(role = document.getElementById('targetRole')?.value) {
+            if (role === 'Student') return students;
+            if (role === 'Teacher') return teachers;
+            return staffMembers;
+        }
+
+        function getPersonId(person = {}) {
+            return String(person.id || person.studentCode || person.employeeCode || person.username || '').trim();
+        }
+
+        function getPersonName(person = {}) {
+            return String(person.fullName || person.name || person.username || getPersonId(person) || 'Unnamed').trim();
+        }
+
+        function setOptions(select, options, placeholder) {
+            if (!select) return;
+            select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>` + options.map((option) => {
+                const value = typeof option === 'string' ? option : option.value;
+                const label = typeof option === 'string' ? option : option.label;
+                return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+
+        function hydrateFilters() {
+            const roleSelect = document.getElementById('targetRole');
+            const scopeSelect = document.getElementById('targetScope');
+            if (scopeSelect.value === 'class' && roleSelect.value !== 'Student') {
+                roleSelect.value = 'Student';
+            }
+            const role = roleSelect.value;
+            const scope = scopeSelect.value;
+            const records = getRoleRecords(role);
+            const campuses = uniqueSorted(records.map((item) => item.campusName));
+            const selectedCampus = document.getElementById('campusName').value;
+            const selectedClass = document.getElementById('classGrade').value;
+            const selectedRecipient = document.getElementById('recipientId').value;
+            const classRecords = students.filter((student) => !selectedCampus || normalize(student.campusName) === normalize(selectedCampus));
+            const classes = uniqueSorted(classRecords.map((student) => student.classGrade));
+            const people = records
+                .filter((item) => {
+                    if (scope === 'class') {
+                        return normalize(item.campusName) === normalize(selectedCampus)
+                            && normalize(item.classGrade) === normalize(document.getElementById('classGrade').value);
+                    }
+                    if (scope === 'campus') {
+                        return !selectedCampus || normalize(item.campusName) === normalize(selectedCampus);
+                    }
+                    return true;
+                })
+                .map((item) => ({
+                    value: getPersonId(item),
+                    label: `${getPersonName(item)}${item.classGrade ? ` - ${item.classGrade}` : ''}${item.campusName ? ` - ${item.campusName}` : ''}`
+                }));
+
+            setOptions(document.getElementById('campusName'), campuses, campuses.length ? 'Select campus' : 'No campus found');
+            if (selectedCampus && campuses.includes(selectedCampus)) document.getElementById('campusName').value = selectedCampus;
+            setOptions(document.getElementById('classGrade'), classes, classes.length ? 'Select class' : 'No class found');
+            if (selectedClass && classes.includes(selectedClass)) document.getElementById('classGrade').value = selectedClass;
+            setOptions(document.getElementById('recipientId'), people, people.length ? 'Select recipient' : 'No recipient found');
+            if (selectedRecipient && people.some((person) => person.value === selectedRecipient)) document.getElementById('recipientId').value = selectedRecipient;
+
+            document.getElementById('campusField').style.display = ['campus', 'class', 'individual'].includes(scope) ? 'block' : 'none';
+            document.getElementById('classField').style.display = role === 'Student' && (scope === 'class' || scope === 'individual') ? 'block' : 'none';
+            document.getElementById('recipientField').style.display = scope === 'individual' ? 'block' : 'none';
+        }
+
+        function applyMessagePrefillFromUrl() {
+            if (!pendingMessagePrefill) {
+                const params = new URLSearchParams(window.location.search);
+                let savedPrefill = {};
+                try {
+                    savedPrefill = JSON.parse(sessionStorage.getItem('eduCore_message_prefill') || '{}') || {};
+                } catch (_error) {
+                    savedPrefill = {};
+                }
+                pendingMessagePrefill = {
+                    role: params.get('role') || savedPrefill.role || '',
+                    scope: params.get('scope') || savedPrefill.scope || '',
+                    recipientId: params.get('recipientId') || savedPrefill.recipientId || '',
+                    recipientName: params.get('recipientName') || savedPrefill.recipientName || '',
+                    campusName: params.get('campusName') || savedPrefill.campusName || '',
+                    classGrade: params.get('classGrade') || savedPrefill.classGrade || ''
+                };
+            }
+
+            if (!pendingMessagePrefill.role && !pendingMessagePrefill.scope && !pendingMessagePrefill.recipientId) return;
+
+            const roleSelect = document.getElementById('targetRole');
+            const scopeSelect = document.getElementById('targetScope');
+            const recipientSelect = document.getElementById('recipientId');
+            if (!roleSelect || !scopeSelect || !recipientSelect) return;
+
+            if ([...roleSelect.options].some((option) => option.value === pendingMessagePrefill.role)) {
+                roleSelect.value = pendingMessagePrefill.role;
+            }
+            if ([...scopeSelect.options].some((option) => option.value === pendingMessagePrefill.scope)) {
+                scopeSelect.value = pendingMessagePrefill.scope;
+            }
+
+            hydrateFilters();
+
+            if (pendingMessagePrefill.campusName) {
+                const campusSelect = document.getElementById('campusName');
+                if (campusSelect && ![...campusSelect.options].some((option) => option.value === pendingMessagePrefill.campusName)) {
+                    const option = document.createElement('option');
+                    option.value = pendingMessagePrefill.campusName;
+                    option.textContent = pendingMessagePrefill.campusName;
+                    campusSelect.appendChild(option);
+                }
+                if (campusSelect) campusSelect.value = pendingMessagePrefill.campusName;
+            }
+
+            hydrateFilters();
+
+            if (pendingMessagePrefill.classGrade) {
+                const classSelect = document.getElementById('classGrade');
+                if (classSelect && ![...classSelect.options].some((option) => option.value === pendingMessagePrefill.classGrade)) {
+                    const option = document.createElement('option');
+                    option.value = pendingMessagePrefill.classGrade;
+                    option.textContent = pendingMessagePrefill.classGrade;
+                    classSelect.appendChild(option);
+                }
+                if (classSelect) classSelect.value = pendingMessagePrefill.classGrade;
+            }
+
+            hydrateFilters();
+
+            if (pendingMessagePrefill.recipientId) {
+                const recipientExists = [...recipientSelect.options].some((option) => option.value === pendingMessagePrefill.recipientId);
+                if (recipientExists) {
+                    recipientSelect.value = pendingMessagePrefill.recipientId;
+                } else if (pendingMessagePrefill.recipientName) {
+                    const option = document.createElement('option');
+                    option.value = pendingMessagePrefill.recipientId;
+                    option.textContent = pendingMessagePrefill.recipientName;
+                    recipientSelect.appendChild(option);
+                    recipientSelect.value = pendingMessagePrefill.recipientId;
+                }
+            }
+
+            const subjectInput = document.getElementById('messageSubject');
+            const bodyInput = document.getElementById('messageBody');
+            if (subjectInput && !subjectInput.value.trim()) subjectInput.value = 'Message';
+            if (bodyInput) bodyInput.focus();
+            try {
+                sessionStorage.removeItem('eduCore_message_prefill');
+            } catch (_error) {}
+        }
+
+        async function fetchJson(path) {
+            const response = await fetch(`${API_BASE_URL}${path}`, {
+                headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+            });
+            if (!response.ok) throw new Error(`Unable to load ${path}`);
+            return response.json();
+        }
+
+        async function loadPageData() {
+            if (!canSendMessages) {
+                document.querySelector('.message-layout').style.gridTemplateColumns = '1fr';
+                document.querySelector('.message-layout > .table-container:first-child').style.display = 'none';
+                document.querySelector('header.header h1').textContent = 'Messages';
+                document.querySelector('header.header p').textContent = 'Your saved school messages.';
+                const messageData = await fetchJson('/messages');
+                sentMessages = messageData?.messages || [];
+                renderMessages();
+                return;
+            }
+
+            const [studentData, teacherData, staffData, messageData] = await Promise.all([
+                fetchJson('/students'),
+                fetchJson('/teachers'),
+                fetchJson('/staff'),
+                fetchJson('/messages')
+            ]);
+            students = Array.isArray(studentData) ? studentData : [];
+            teachers = Array.isArray(teacherData) ? teacherData : [];
+            staffMembers = Array.isArray(staffData) ? staffData : [];
+            sentMessages = messageData?.messages || [];
+            hydrateFilters();
+            applyMessagePrefillFromUrl();
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const list = document.getElementById('messageHistory');
+            if (!list) return;
+            if (!sentMessages.length) {
+                list.innerHTML = '<div class="empty-note">No messages sent yet.</div>';
+                return;
+            }
+            list.innerHTML = sentMessages.map((item) => `
+                <article class="message-card">
+                    <div class="message-card-top">
+                        <span style="color: var(--text-secondary); font-size: 0.82rem;">${escapeHtml(item.createdAtLabel || '')}</span>
+                        <strong>${escapeHtml(item.subject || 'Message')}</strong>
+                    </div>
+                    <div class="message-pill-row">
+                        <span class="message-pill">${escapeHtml(item.targetRole || '-')}</span>
+                        <span class="message-pill">${escapeHtml(item.targetScope || '-')}</span>
+                        ${item.campusName ? `<span class="message-pill">${escapeHtml(item.campusName)}</span>` : ''}
+                        ${item.classGrade ? `<span class="message-pill">${escapeHtml(item.classGrade)}</span>` : ''}
+                        ${item.recipientName ? `<span class="message-pill">${escapeHtml(item.recipientName)}</span>` : ''}
+                    </div>
+                    <div class="message-body">${escapeHtml(item.body || '')}</div>
+                </article>
+            `).join('');
+        }
+
+        async function submitMessage(event) {
+            event.preventDefault();
+            const role = document.getElementById('targetRole').value;
+            const scope = document.getElementById('targetScope').value;
+            const recipientSelect = document.getElementById('recipientId');
+            const payload = {
+                targetRole: role,
+                targetScope: scope,
+                campusName: document.getElementById('campusName').value,
+                classGrade: document.getElementById('classGrade').value,
+                recipientId: recipientSelect.value,
+                recipientName: recipientSelect.options[recipientSelect.selectedIndex]?.textContent || '',
+                subject: document.getElementById('messageSubject').value.trim(),
+                body: document.getElementById('messageBody').value.trim()
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) throw new Error(result.message || 'Message could not be sent.');
+                sentMessages = result.messages || [];
+                event.target.reset();
+                hydrateFilters();
+                renderMessages();
+                await showAppAlert('Message sent successfully.', 'Message Sent');
+            } catch (error) {
+                await showAppAlert(error.message || 'Message could not be sent.', 'Message Error');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            document.getElementById('messageForm')?.addEventListener('submit', submitMessage);
+            ['targetRole', 'targetScope', 'campusName', 'classGrade'].forEach((id) => {
+                document.getElementById(id)?.addEventListener('change', hydrateFilters);
+            });
+            loadPageData().catch((error) => showAppAlert(error.message || 'Messages could not be loaded.', 'Load Error'));
+            lucide.createIcons();
+        });
+    </script>
+</body>
+
+</html>

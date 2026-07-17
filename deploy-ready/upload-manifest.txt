@@ -2,13 +2,20 @@
 app.js
 package.json
 package-lock.json
+api/
 backend/
+data/
+docs/
 frontend/
 config/
+admin_credentials.json
 permissions.json
 permissions-detailed.json
 date_sheet.json
 .htaccess
+.cpanel.yml
+render.yaml
+vercel.json
 ecosystem.config.js
 
 # Do not upload
@@ -19,4 +26,3 @@ logs/
 .whatsapp-session/
 *.log
 .codex-*
-

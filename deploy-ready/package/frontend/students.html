@@ -1151,7 +1151,9 @@
                         <label for="studentSearchInput">Search</label>
                         <div class="student-search-control">
                             <i data-lucide="search"></i>
-                            <input type="text" id="studentSearchInput" placeholder="Search">
+                            <input type="text" id="studentSearchInput" placeholder="Search"
+                                oninput="runStudentSearchFromInput(this)"
+                                onkeydown="if(event.key==='Enter'){event.preventDefault();runStudentSearchFromInput(this);}">
                         </div>
                     </div>
                     <div class="student-filter-group">
@@ -1208,7 +1210,7 @@
                         </div>
                         <div class="input-group">
                             <label>Student ID</label>
-                            <input type="text" id="studentCode" placeholder="e.g. STU-001">
+                            <input type="text" id="studentCode" placeholder="STU-001" readonly>
                         </div>
                         <div class="input-group">
                             <label>Full Name</label>
@@ -1240,6 +1242,15 @@
                                 style="background-color: #fff; color: var(--text-primary);">
                         </div>
                         <div class="input-group">
+                            <label>Zero Fee Reason</label>
+                            <input type="text" id="zeroFeeReason" placeholder="Reason if student is studying free">
+                        </div>
+                        <div class="input-group">
+                            <label>Remaining Amount (PKR)</label>
+                            <input type="number" id="remainingAmount" placeholder="0" min="0" step="1"
+                                style="background-color: #fff; color: var(--text-primary);">
+                        </div>
+                        <div class="input-group">
                             <label>Campus Name</label>
                             <select id="campusName" required
                                 style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background-color: #f8fafc;">
@@ -1249,6 +1260,10 @@
                         <div class="input-group">
                             <label>Contact (Phone)</label>
                             <input type="tel" id="parentPhone" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Address</label>
+                            <input type="text" id="studentAddress" placeholder="Student address">
                         </div>
                         <div class="input-group">
                             <label>Guardian Name</label>
@@ -1332,7 +1347,8 @@
                                 <div class="password-field">
                                     <input type="password" id="studentPassword" placeholder="Assign password">
                                     <button type="button" class="password-toggle" data-toggle-password="studentPassword"
-                                        aria-label="Show password" aria-pressed="false">
+                                        onclick="togglePasswordVisibility('studentPassword', this)"
+                                        aria-label="Show password" aria-pressed="false" title="Show password">
                                         <i data-lucide="eye"></i>
                                     </button>
                                 </div>
@@ -1362,7 +1378,7 @@
                             <th>Class</th>
                             <th>Campus</th>
                             <th>Gender</th>
-                            <th>Status</th>
+                            <th>Fee Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -1436,6 +1452,7 @@
                 <div class="student-view-item"><strong>Gender</strong><span id="viewStudentGender">-</span></div>
                 <div class="student-view-item"><strong>Status</strong><span id="viewStudentStatus">-</span></div>
                 <div class="student-view-item"><strong>Parent Phone</strong><span id="viewStudentPhone">-</span></div>
+                <div class="student-view-item"><strong>Address</strong><span id="viewStudentAddress">-</span></div>
                 <div class="student-view-item"><strong>Guardian Name</strong><span id="viewStudentGuardianName">-</span></div>
                 <div class="student-view-item"><strong>Guardian Contact</strong><span id="viewStudentGuardianContact">-</span></div>
                 <div class="student-view-item"><strong>Email</strong><span id="viewStudentEmail">-</span></div>
@@ -1448,8 +1465,23 @@
     </div>
 
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260603-editable-student-id"></script>
+    <script src="script.js?v=20260708-zero-fee-student"></script>
     <script>
+        window.togglePasswordVisibility = window.togglePasswordVisibility || function (targetId, toggleBtn) {
+            const input = document.getElementById(targetId);
+            if (!input) return false;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                toggleBtn.setAttribute('aria-pressed', show ? 'true' : 'false');
+                toggleBtn.setAttribute('title', show ? 'Hide password' : 'Show password');
+                toggleBtn.innerHTML = '<i data-lucide="' + (show ? 'eye-off' : 'eye') + '"></i>';
+            }
+            if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+            input.focus({ preventScroll: true });
+            return false;
+        };
         // Init Icons
         lucide.createIcons();
     </script>

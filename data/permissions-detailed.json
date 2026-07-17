@@ -1,0 +1,648 @@
+{
+  "system": {
+    "loginAccess": {
+      "admin": true,
+      "principal": true,
+      "branch_manager": true,
+      "teacher": true,
+      "senior_teacher": true,
+      "coordinator": true,
+      "student": true,
+      "staff": true,
+      "accountant": true,
+      "receptionist": true,
+      "office_assistant": true
+    },
+    "roles": {
+      "admin": {
+        "name": "System Administrator",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "manage",
+          "students": "manage",
+          "teachers": "manage",
+          "staff": "manage",
+          "classes": "manage",
+          "fees": "manage",
+          "fee_challan": "manage",
+          "teacher_salaries": "manage",
+          "student_attendance": "manage",
+          "teacher_attendance": "manage",
+          "student_attendance_report": "manage",
+          "teacher_attendance_report": "manage",
+          "notifications": "manage",
+          "special_notices": "manage",
+          "exams": "manage",
+          "revenue": "manage",
+          "settings": "manage",
+          "permissions": "manage",
+          "branch_registration": "manage",
+          "aboutme": "manage",
+          "student_portal": "manage"
+        }
+      },
+      "principal": {
+        "name": "Principal",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "manage",
+          "students": "manage",
+          "teachers": "manage",
+          "staff": "manage",
+          "classes": "manage",
+          "fees": "manage",
+          "fee_challan": "manage",
+          "teacher_salaries": "manage",
+          "student_attendance": "manage",
+          "teacher_attendance": "manage",
+          "student_attendance_report": "manage",
+          "teacher_attendance_report": "manage",
+          "notifications": "manage",
+          "special_notices": "manage",
+          "exams": "manage",
+          "revenue": "view",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "view",
+          "aboutme": "manage",
+          "student_portal": "manage"
+        }
+      },
+      "branch_manager": {
+        "name": "Branch Manager",
+        "homePage": "students.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "manage",
+          "teachers": "view",
+          "staff": "view",
+          "classes": "view",
+          "fees": "view",
+          "fee_challan": "view",
+          "teacher_salaries": "none",
+          "student_attendance": "view",
+          "teacher_attendance": "view",
+          "student_attendance_report": "view",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "view",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "teacher": {
+        "name": "Teacher",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "none",
+          "staff": "none",
+          "classes": "view",
+          "fees": "none",
+          "fee_challan": "none",
+          "teacher_salaries": "none",
+          "student_attendance": "edit",
+          "teacher_attendance": "none",
+          "student_attendance_report": "view",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "edit",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "senior_teacher": {
+        "name": "Senior Teacher",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "view",
+          "staff": "none",
+          "classes": "view",
+          "fees": "none",
+          "fee_challan": "none",
+          "teacher_salaries": "none",
+          "student_attendance": "edit",
+          "teacher_attendance": "view",
+          "student_attendance_report": "view",
+          "teacher_attendance_report": "view",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "edit",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "coordinator": {
+        "name": "Coordinator",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "view",
+          "staff": "view",
+          "classes": "manage",
+          "fees": "view",
+          "fee_challan": "view",
+          "teacher_salaries": "none",
+          "student_attendance": "manage",
+          "teacher_attendance": "manage",
+          "student_attendance_report": "manage",
+          "teacher_attendance_report": "manage",
+          "notifications": "manage",
+          "special_notices": "manage",
+          "exams": "edit",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "student": {
+        "name": "Student",
+        "homePage": "student_portal.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "none",
+          "teachers": "none",
+          "staff": "none",
+          "classes": "view",
+          "fees": "view",
+          "fee_challan": "manage",
+          "teacher_salaries": "none",
+          "student_attendance": "view",
+          "teacher_attendance": "none",
+          "student_attendance_report": "none",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "view",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "manage"
+        }
+      },
+      "staff": {
+        "name": "Staff",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "none",
+          "teachers": "none",
+          "staff": "none",
+          "classes": "none",
+          "fees": "none",
+          "fee_challan": "none",
+          "teacher_salaries": "none",
+          "student_attendance": "none",
+          "teacher_attendance": "none",
+          "student_attendance_report": "none",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "none",
+          "exams": "none",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "accountant": {
+        "name": "Accountant",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "none",
+          "staff": "none",
+          "classes": "none",
+          "fees": "manage",
+          "fee_challan": "manage",
+          "teacher_salaries": "manage",
+          "student_attendance": "none",
+          "teacher_attendance": "none",
+          "student_attendance_report": "none",
+          "teacher_attendance_report": "none",
+          "notifications": "none",
+          "special_notices": "none",
+          "exams": "none",
+          "revenue": "manage",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "receptionist": {
+        "name": "Receptionist",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "view",
+          "staff": "none",
+          "classes": "none",
+          "fees": "view",
+          "fee_challan": "view",
+          "teacher_salaries": "none",
+          "student_attendance": "none",
+          "teacher_attendance": "none",
+          "student_attendance_report": "none",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "view",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      },
+      "office_assistant": {
+        "name": "Office Assistant",
+        "homePage": "dashboard.html",
+        "permissions": {
+          "dashboard": "view",
+          "students": "view",
+          "teachers": "view",
+          "staff": "view",
+          "classes": "view",
+          "fees": "none",
+          "fee_challan": "none",
+          "teacher_salaries": "none",
+          "student_attendance": "none",
+          "teacher_attendance": "none",
+          "student_attendance_report": "none",
+          "teacher_attendance_report": "none",
+          "notifications": "view",
+          "special_notices": "view",
+          "exams": "none",
+          "revenue": "none",
+          "settings": "none",
+          "permissions": "none",
+          "branch_registration": "none",
+          "aboutme": "view",
+          "student_portal": "none"
+        }
+      }
+    }
+  },
+  "designations": {
+    "computer_operator": {
+      "name": "Computer Operator",
+      "description": "Staff member responsible for computer lab and data entry",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": true,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": true,
+          "bulk_action": false
+        },
+        "teachers": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "classes": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "student_attendance": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        },
+        "exams": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        },
+        "fees": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        }
+      }
+    },
+    "teacher": {
+      "name": "Teacher",
+      "description": "Teaching staff member",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "classes": {
+          "view": true,
+          "add": false,
+          "edit": true,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "student_attendance": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": true
+        },
+        "exams": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        }
+      }
+    },
+    "principal": {
+      "name": "Principal",
+      "description": "School principal with full access",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "teachers": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "classes": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "student_attendance": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "teacher_attendance": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "exams": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "fees": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        }
+      }
+    },
+    "senior_teacher": {
+      "name": "Senior Teacher",
+      "description": "Senior teaching staff with additional management responsibilities",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        },
+        "teachers": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "classes": {
+          "view": true,
+          "add": false,
+          "edit": true,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "student_attendance": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "exams": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": true,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        }
+      }
+    },
+    "accountant": {
+      "name": "Accountant",
+      "description": "Finance and accounts management staff",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        },
+        "fees": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "fee_challan": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "teacher_salaries": {
+          "view": true,
+          "add": true,
+          "edit": true,
+          "delete": false,
+          "export": true,
+          "import": true,
+          "bulk_action": true
+        },
+        "revenue": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": true,
+          "import": false,
+          "bulk_action": false
+        }
+      }
+    },
+    "receptionist": {
+      "name": "Receptionist",
+      "description": "Front office receptionist",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "teachers": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "fees": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        }
+      }
+    },
+    "office_assistant": {
+      "name": "Office Assistant",
+      "description": "Administrative assistant",
+      "actionPermissions": {
+        "students": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        },
+        "classes": {
+          "view": true,
+          "add": false,
+          "edit": false,
+          "delete": false,
+          "export": false,
+          "import": false,
+          "bulk_action": false
+        }
+      }
+    }
+  }
+}

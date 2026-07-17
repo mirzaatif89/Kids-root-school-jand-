@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate - Kids Roots Jand</title>
-    <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <link rel="stylesheet" href="style.css?v=20260520-login-apexiums-brand">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         .module-panel { background: #fff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem; box-shadow: var(--shadow-sm); margin-bottom:1.25rem; }
@@ -16,111 +15,20 @@
         .certificate-grid label { display:grid; gap:.4rem; color:var(--text-secondary); font-weight:800; font-size:.85rem; }
         .certificate-grid input,.certificate-grid textarea,.certificate-grid select { width:100%; border:1px solid var(--border-color); border-radius:8px; padding:.65rem .75rem; font:inherit; }
         .certificate-grid textarea { min-height:110px; resize:vertical; }
-        .certificate-sheet {
-            position: relative;
-            width: min(100%, 1120px);
-            aspect-ratio: 1.414 / 1;
-            border: 8px solid #367b65;
-            padding: 30px 42px 40px;
-            background:
-                radial-gradient(circle at 50% -8%, rgba(54, 123, 101, .18), transparent 28%),
-                radial-gradient(circle at 50% 116%, rgba(54, 123, 101, .14), transparent 30%),
-                repeating-radial-gradient(circle at 50% 50%, rgba(54, 123, 101, .055) 0 1px, transparent 1px 14px),
-                #f8fbf5;
-            color: #24312d;
-            margin: 0 auto;
-            overflow: hidden;
-            font-family: Georgia, 'Times New Roman', serif;
-            box-sizing: border-box;
-        }
-        .certificate-sheet::before {
-            content: "";
-            position: absolute;
-            inset: 18px;
-            border: 2px solid rgba(54, 123, 101, .3);
-            pointer-events: none;
-        }
-        .slc-head { display: grid; grid-template-columns: 120px 1fr 120px; align-items: start; gap: 18px; position: relative; z-index: 1; }
-        .slc-logo { width: 96px; height: 96px; object-fit: contain; display: block; margin: 0 auto; }
-        .slc-school { text-align: left; padding-top: 6px; }
-        .slc-school h1 { margin: 0; color: #4b4578; font-family: Arial, sans-serif; font-size: 44px; letter-spacing: .18em; line-height: 1; text-transform: uppercase; }
-        .slc-school p { margin: 8px 0 0; color: #b0445e; font-family: Arial, sans-serif; font-size: 22px; font-weight: 800; }
-        .slc-title { text-align: center; font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 46px; color: #1f2f2c; line-height: 1; margin: 18px 0 16px; position: relative; z-index: 1; }
-        .slc-row { display: grid; grid-template-columns: var(--slc-columns, 1fr); gap: 30px; margin: 18px 0; position: relative; z-index: 1; }
-        .slc-row.two { --slc-columns: 1fr 1fr; }
-        .slc-row.dues { --slc-columns: 1.1fr 1fr; gap: 22px; }
-        .slc-field { display: grid; grid-template-columns: auto 1fr; align-items: end; gap: 8px; min-width: 0; }
-        .slc-label { white-space: nowrap; font-size: 24px; color: #34413c; }
-        .slc-value { min-height: 30px; border-bottom: 2px solid rgba(36, 49, 45, .55); padding: 0 10px 3px; font-size: 24px; font-family: Arial, sans-serif; font-weight: 700; color: #17231f; overflow-wrap: anywhere; }
-        .slc-footer { display: grid; grid-template-columns: 1fr 1fr; gap: 54px; margin-top: 48px; padding-bottom: 8px; position: relative; z-index: 1; }
-        .slc-footer .slc-field { grid-template-columns: auto 1fr; }
+        .certificate-sheet { border:8px double #0f766e; padding:32px; background:#fff; color:#111827; max-width:860px; margin:0 auto; text-align:center; }
+        .certificate-head { display:grid; grid-template-columns:96px 1fr 96px; align-items:center; gap:18px; margin-bottom:22px; }
+        .certificate-logo { width:96px; height:96px; object-fit:contain; display:block; margin:0 auto; }
+        .certificate-head h1 { margin:0; font-size:30px; color:#0f766e; }
+        .certificate-head p { margin:6px 0 0; color:#475569; font-weight:700; }
+        .certificate-title { font-size:24px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; margin:22px 0; }
+        .certificate-body { font-size:18px; line-height:1.8; margin:20px auto; max-width:680px; }
+        .certificate-name { font-size:28px; font-weight:900; color:#0f766e; border-bottom:1px solid #94a3b8; display:inline-block; padding:0 30px 6px; margin:10px 0; }
+        .certificate-sign { display:flex; justify-content:space-between; gap:2rem; margin-top:44px; text-align:center; }
+        .certificate-sign div { flex:1; border-top:1px solid #111827; padding-top:8px; font-weight:800; }
         @media print {
             body * { visibility:hidden; }
             #certificatePreview, #certificatePreview * { visibility:visible; }
-            html,
-            body {
-                width: 297mm;
-                height: 210mm;
-                margin: 0 !important;
-                padding: 0 !important;
-                overflow: hidden !important;
-                background: #fff !important;
-            }
-            #certificatePreview {
-                position: fixed;
-                left: 8mm;
-                top: 8mm;
-                width: 281mm;
-                height: 194mm;
-                margin: 0 !important;
-                border-width: 7px;
-                padding: 10mm 12mm 14mm;
-                box-shadow: none;
-                overflow: hidden;
-                box-sizing: border-box;
-                page-break-inside: avoid;
-                break-inside: avoid-page;
-            }
-            #certificatePreview::before {
-                inset: 5mm;
-            }
-            #certificatePreview .slc-head {
-                grid-template-columns: 28mm 1fr 28mm;
-                gap: 8mm;
-            }
-            #certificatePreview .slc-logo {
-                width: 23mm;
-                height: 23mm;
-            }
-            #certificatePreview .slc-school h1 {
-                font-size: 32px;
-            }
-            #certificatePreview .slc-school p {
-                font-size: 17px;
-                margin-top: 5px;
-            }
-            #certificatePreview .slc-title {
-                font-size: 36px;
-                margin: 7mm 0 5mm;
-            }
-            #certificatePreview .slc-row {
-                margin: 4.2mm 0;
-                gap: 10mm;
-            }
-            #certificatePreview .slc-label,
-            #certificatePreview .slc-value {
-                font-size: 17px;
-            }
-            #certificatePreview .slc-value {
-                min-height: 7mm;
-                padding-bottom: 1mm;
-            }
-            #certificatePreview .slc-footer {
-                margin-top: 11mm;
-                padding-bottom: 0;
-                gap: 16mm;
-            }
-            @page { size: A4 landscape; margin: 8mm; }
+            #certificatePreview { position:absolute; inset:0; margin:0; max-width:none; border-width:8px; }
         }
     </style>
 </head>
@@ -150,27 +58,24 @@
             <header class="header"><h1>Certificate</h1></header>
             <section class="module-panel">
                 <h2>Certificate Management</h2>
-                <p>Create and print school leaving certificates with student details.</p>
+                <p>Create and print certificates with the saved school logo, name, and title.</p>
                 <form id="certificateForm" class="certificate-grid">
-                    <label>Select Student
-                        <select id="certificateStudentSelect">
-                            <option value="">Manual Entry</option>
+                    <label>Certificate Type
+                        <select id="certificateType">
+                            <option>Certificate of Achievement</option>
+                            <option>Character Certificate</option>
+                            <option>School Leaving Certificate</option>
+                            <option>Participation Certificate</option>
                         </select>
                     </label>
-                    <label>Sr #<input type="text" id="certificateSrNo" placeholder="e.g. 229"></label>
-                    <label>Reg #<input type="text" id="certificateRegNo" placeholder="Registration number"></label>
-                    <label>Adm #<input type="text" id="certificateAdmNo" placeholder="Admission number"></label>
+                    <label>Student Name<input type="text" id="certificateStudentName" placeholder="Student name"></label>
+                    <label>Class<input type="text" id="certificateClass" placeholder="Class"></label>
                     <label>Date<input type="date" id="certificateDate"></label>
-                    <label>Name<input type="text" id="certificateStudentName" placeholder="Student name"></label>
-                    <label>Father's Name<input type="text" id="certificateFatherName" placeholder="Father name"></label>
-                    <label>Date Of Birth<input type="date" id="certificateDob"></label>
-                    <label>Date of Admission<input type="date" id="certificateAdmissionDate"></label>
-                    <label>Left on<input type="date" id="certificateLeftOn"></label>
-                    <label>Left during session / promoted to class<input type="text" id="certificatePromotedClass" placeholder="e.g. Grade 5"></label>
-                    <label>Dues Paid Up to<input type="text" id="certificateDuesPaid" placeholder="e.g. March 2026"></label>
-                    <label>Conduct<input type="text" id="certificateConduct" value="Good"></label>
+                    <label style="grid-column:1/-1;">Certificate Text
+                        <textarea id="certificateText">This is to certify that the student has successfully completed the required academic work and demonstrated good conduct.</textarea>
+                    </label>
+                    <label>Principal / Head Name<input type="text" id="certificatePrincipal" placeholder="Principal"></label>
                     <label>Prepared By<input type="text" id="certificatePreparedBy" placeholder="Administration"></label>
-                    <label>Principal<input type="text" id="certificatePrincipal" placeholder="Principal"></label>
                     <div style="align-self:end;"><button type="button" class="btn btn-primary" id="printCertificateBtn"><i data-lucide="printer"></i> Print Certificate</button></div>
                 </form>
             </section>
@@ -182,95 +87,34 @@
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
-        function getCertificateStudents() {
-            try {
-                const raw = localStorage.getItem('eduCore_students') || '[]';
-                const students = JSON.parse(raw);
-                return Array.isArray(students) ? students : [];
-            } catch (error) {
-                return [];
-            }
-        }
-
-        function formatCertificateDate(value) {
-            if (!value) return '';
-            const parsed = new Date(value);
-            if (Number.isNaN(parsed.getTime())) return String(value);
-            return parsed.toLocaleDateString('en-GB');
-        }
-
-        function certificateLine(label, value) {
-            return `
-                <div class="slc-field">
-                    <span class="slc-label">${escapeHtml(label)} :-</span>
-                    <span class="slc-value">${escapeHtml(value || '')}</span>
-                </div>
-            `;
-        }
-
-        function populateCertificateStudentOptions() {
-            const select = document.getElementById('certificateStudentSelect');
-            if (!select) return;
-            getCertificateStudents().forEach((student) => {
-                const option = document.createElement('option');
-                option.value = student.id || '';
-                option.textContent = `${student.fullName || 'Student'}${student.studentCode ? ` (${student.studentCode})` : ''}`;
-                select.appendChild(option);
-            });
-        }
-
-        function fillCertificateFromStudent(studentId) {
-            const student = getCertificateStudents().find((item) => String(item.id || '') === String(studentId || ''));
-            if (!student) return;
-            certificateAdmNo.value = student.studentCode || '';
-            certificateStudentName.value = student.fullName || '';
-            certificateFatherName.value = student.fatherName || '';
-            certificateDob.value = student.dob || '';
-            certificateAdmissionDate.value = student.admissionDate || '';
-            certificatePromotedClass.value = student.classGrade || '';
-            renderCertificatePreview();
-        }
-
         function renderCertificatePreview() {
             const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-            const logoSrc = 'images/logo.png';
+            const logoSrc = typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png';
+            const dateValue = certificateDate.value ? new Date(certificateDate.value).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
             certificatePreview.innerHTML = `
-                <div class="slc-head">
-                    <img class="slc-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
-                    <div class="slc-school">
-                        <h1>Kids Roots Jand</h1>
-                        <p>Kids Roots Jand | English Model School</p>
+                <div class="certificate-head">
+                    <img class="certificate-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
+                    <div>
+                        <h1>${escapeHtml(branding.schoolName || 'Kids Roots Jand')}</h1>
+                        <p>${escapeHtml(branding.schoolTitle || 'Kids Roots Jand')}</p>
                     </div>
-                    <div></div>
+                    <img class="certificate-logo" src="${escapeHtml(logoSrc)}" alt="School logo">
                 </div>
-                <div class="slc-title">School Leaving Certificate</div>
-                <div class="slc-row two">
-                    ${certificateLine('Sr #', certificateSrNo.value)}
-                    ${certificateLine('Reg #', certificateRegNo.value)}
+                <div class="certificate-title">${escapeHtml(certificateType.value || 'Certificate')}</div>
+                <div class="certificate-body">
+                    <div>This certificate is awarded to</div>
+                    <div class="certificate-name">${escapeHtml(certificateStudentName.value || 'Student Name')}</div>
+                    <div>Class: <strong>${escapeHtml(certificateClass.value || '-')}</strong></div>
+                    <div>${escapeHtml(certificateText.value || '-')}</div>
+                    <div>Date: <strong>${escapeHtml(dateValue)}</strong></div>
                 </div>
-                <div class="slc-row two">
-                    ${certificateLine('Date', formatCertificateDate(certificateDate.value))}
-                    ${certificateLine('Adm #', certificateAdmNo.value)}
-                </div>
-                <div class="slc-row">${certificateLine('Name', certificateStudentName.value)}</div>
-                <div class="slc-row">${certificateLine("Father's Name", certificateFatherName.value)}</div>
-                <div class="slc-row">${certificateLine('Date Of Birth', formatCertificateDate(certificateDob.value))}</div>
-                <div class="slc-row">${certificateLine('Date of Admission', formatCertificateDate(certificateAdmissionDate.value))}</div>
-                <div class="slc-row">${certificateLine('Left on', formatCertificateDate(certificateLeftOn.value))}</div>
-                <div class="slc-row">${certificateLine('Left during the session / promoted to class', certificatePromotedClass.value)}</div>
-                <div class="slc-row dues">
-                    ${certificateLine('Dues Paid Up to', certificateDuesPaid.value)}
-                    ${certificateLine('Conduct', certificateConduct.value)}
-                </div>
-                <div class="slc-footer">
-                    ${certificateLine('Prepared by', certificatePreparedBy.value)}
-                    ${certificateLine('Principal', certificatePrincipal.value)}
+                <div class="certificate-sign">
+                    <div>${escapeHtml(certificatePreparedBy.value || 'Administration')}</div>
+                    <div>${escapeHtml(certificatePrincipal.value || 'Principal')}</div>
                 </div>
             `;
         }
         certificateDate.value = new Date().toISOString().slice(0, 10);
-        populateCertificateStudentOptions();
-        certificateStudentSelect.addEventListener('change', () => fillCertificateFromStudent(certificateStudentSelect.value));
         certificateForm.addEventListener('input', renderCertificatePreview);
         certificateForm.addEventListener('change', renderCertificatePreview);
         printCertificateBtn.addEventListener('click', () => { renderCertificatePreview(); window.print(); });

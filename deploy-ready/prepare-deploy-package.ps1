@@ -3,19 +3,29 @@ $ErrorActionPreference = 'Stop'
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $packageDir = Join-Path $PSScriptRoot 'package'
 
+if (Test-Path -LiteralPath $packageDir) {
+    Remove-Item -LiteralPath $packageDir -Recurse -Force
+}
 New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
 
 $itemsToCopy = @(
     'app.js',
     'package.json',
     'package-lock.json',
+    'api',
     'backend',
+    'data',
+    'docs',
     'frontend',
     'config',
+    'admin_credentials.json',
     'permissions.json',
     'permissions-detailed.json',
     'date_sheet.json',
     '.htaccess',
+    '.cpanel.yml',
+    'render.yaml',
+    'vercel.json',
     'ecosystem.config.js'
 )
 
@@ -35,4 +45,3 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'cpanel-nodejs-notes.md') -Desti
 
 Write-Host "Deploy package prepared at: $packageDir"
 Write-Host "Upload everything inside deploy-ready/package to your server project root."
-

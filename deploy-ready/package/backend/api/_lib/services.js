@@ -19,6 +19,8 @@ const MODULE_KEYS = [
     'set_fee',
     'fees',
     'fee_challan',
+    'remaining_charges',
+    'payment_history',
     'certificate',
     'complain_box',
     'diary',
@@ -60,6 +62,8 @@ const ALLOWED_HOME_PAGES = new Set([
     'set_fee.html',
     'fees.html',
     'fee_challan.html',
+    'remaining_charges.html',
+    'payment_history.html',
     'certificate.html',
     'complain_box.html',
     'diary.html',
@@ -464,7 +468,17 @@ async function ensureUniqueStudentIdentity(Student, User, item, Op) {
         }
     });
     if (userUsernameConflict) {
-        throw new Error('This username is already used by another account.');
+        const conflictRole = String(userUsernameConflict.role || '').toLowerCase();
+        const linkedStudentId = userUsernameConflict.profileId || String(userUsernameConflict.id || '').replace(/^student_/, '');
+        const linkedStudent = conflictRole === 'student' && linkedStudentId
+            ? await Student.findByPk(linkedStudentId)
+            : null;
+
+        if (conflictRole === 'student' && !linkedStudent) {
+            await userUsernameConflict.destroy();
+        } else {
+            throw new Error('This username is already used by another account.');
+        }
     }
 
     if (!normalizedEmail) {

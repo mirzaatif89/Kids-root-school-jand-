@@ -2,7 +2,7 @@ Logo files yahan rakhein.
 
 Recommended file name:
 
-logo.jpeg
+logo.png
 
 Alternative names if the code needs to be updated:
 

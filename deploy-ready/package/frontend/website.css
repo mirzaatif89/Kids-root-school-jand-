@@ -159,7 +159,7 @@ svg {
     color: #ffffff;
     background:
         linear-gradient(90deg, rgba(15, 71, 120, 0.94) 0%, rgba(27, 111, 184, 0.86) 48%, rgba(22, 129, 95, 0.72) 100%),
-        url("images/logo.png?v=20260529-logo2");
+        url("images/logo.png");
     background-size: auto, min(54vw, 600px) auto;
     background-repeat: no-repeat;
     background-position: center, right 8% center;

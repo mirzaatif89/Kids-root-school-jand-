@@ -69,20 +69,22 @@ function assertAdminOrPrincipal(req) {
 
 async function applyClassFeeToStudents(db, className, monthlyFee, feeFrequency, previousMonthlyFee = '') {
     if (!db.models.Student || !className) return;
-    const studentUpdate = { feeFrequency };
-    if (monthlyFee) studentUpdate.monthlyFee = monthlyFee;
-    const feeWhere = [
-        { monthlyFee: null },
-        { monthlyFee: '' },
-        { monthlyFee: '0' }
-    ];
-    if (previousMonthlyFee) feeWhere.push({ monthlyFee: String(previousMonthlyFee) });
-    await db.models.Student.update(studentUpdate, {
-        where: {
-            classGrade: className,
-            [Op.or]: feeWhere
-        }
-    });
+    const students = await db.models.Student.findAll({ where: { classGrade: className } });
+    const previousFee = String(previousMonthlyFee || '').trim();
+    for (const student of students) {
+        const studentFee = String(student.monthlyFee ?? '').trim();
+        const studentFeeAmount = Number(studentFee || 0) || 0;
+        const isFreeStudy = student.freeStudy === true || String(student.zeroFeeReason || '').trim();
+        const hasManualFee = studentFeeAmount > 0 && (
+            student.monthlyFeeCustom === true ||
+            (previousFee && studentFee !== previousFee)
+        ) || isFreeStudy;
+        if (hasManualFee) continue;
+        student.feeFrequency = feeFrequency;
+        if (monthlyFee) student.monthlyFee = monthlyFee;
+        student.monthlyFeeCustom = false;
+        await student.save();
+    }
 }
 
 module.exports = createHandler({

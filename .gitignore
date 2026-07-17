@@ -1,17 +1,15 @@
 # Dependencies
 node_modules/
-# package-lock.json
+package-lock.json
 
 # Environment Variables
 .env
-.env.*
-!.env.example
-
 admin_credentials.json
 
 # Local Development
 start-server.bat
 test-connection.js
+tools/
 
 # IDE
 .vscode/

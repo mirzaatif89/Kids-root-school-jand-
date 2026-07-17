@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remaining Charges - Kids Roots Jand</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .remaining-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .remaining-filters { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+        .remaining-filters select,
+        .remaining-filters input { min-height: var(--app-control-height); border: 1px solid var(--border-color); border-radius: 8px; background: #fff; padding: 0.55rem 0.75rem; font: inherit; min-width: 180px; }
+        .remaining-summary { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+        .summary-tile { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; box-shadow: var(--shadow-sm); }
+        .summary-tile span { display: block; color: var(--text-secondary); font-size: 0.8rem; font-weight: 800; margin-bottom: 0.35rem; }
+        .summary-tile strong { color: var(--text-primary); font-size: 1.35rem; }
+        .remaining-table-card { background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-sm); overflow: hidden; }
+        .remaining-table-wrap { overflow-x: auto; }
+        .remaining-table { width: 100%; min-width: 960px; border-collapse: collapse; }
+        .remaining-table th,
+        .remaining-table td { padding: 0.85rem 0.8rem; border-bottom: 1px solid var(--border-color); text-align: left; vertical-align: top; }
+        .remaining-table th { background: #f8fafc; color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0; }
+        .remaining-table td:last-child,
+        .remaining-table th:last-child { text-align: right; font-weight: 800; }
+        .student-main { display: grid; gap: 0.2rem; }
+        .student-main strong { color: var(--text-primary); }
+        .student-main span { color: var(--text-secondary); font-size: 0.78rem; }
+        .remaining-row-actions { display: inline-flex; justify-content: flex-end; }
+        .charge-list { display: grid; gap: 0.45rem; }
+        .charge-pill { display: inline-flex; width: fit-content; align-items: center; gap: 0.35rem; padding: 0.22rem 0.55rem; border-radius: 999px; background: #fef3c7; color: #92400e; font-size: 0.76rem; font-weight: 800; }
+        .muted { color: var(--text-secondary); }
+        .empty-row { text-align: center !important; color: var(--text-secondary); padding: 2rem !important; }
+        .remaining-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.48); }
+        .remaining-modal-overlay.active { display: flex; }
+        .remaining-modal { width: min(720px, 100%); max-height: 88vh; overflow: auto; background: #fff; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: var(--shadow-lg); }
+        .remaining-modal-head { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color); }
+        .remaining-modal-head h2 { margin: 0; font-size: 1.25rem; color: var(--text-primary); }
+        .remaining-modal-head p { margin: 0.25rem 0 0; color: var(--text-secondary); }
+        .remaining-modal-body { padding: 1.25rem; display: grid; gap: 1rem; }
+        .remaining-detail-row { display: grid; grid-template-columns: 1fr auto; gap: 1rem; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
+        .remaining-detail-row:last-child { border-bottom: 0; }
+        .remaining-detail-row strong { color: var(--text-primary); }
+        .remaining-detail-row span { color: var(--text-secondary); font-size: 0.85rem; }
+        .remaining-modal-total { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: 0.75rem; border-top: 2px solid var(--border-color); font-size: 1.05rem; font-weight: 900; }
+        @media (max-width: 900px) {
+            .remaining-summary { grid-template-columns: 1fr; }
+            .remaining-filters { width: 100%; }
+            .remaining-filters select,
+            .remaining-filters input { flex: 1 1 100%; }
+        }
+        @media print {
+            .sidebar, .header .btn, .remaining-toolbar { display: none !important; }
+            .main-content { margin: 0 !important; padding: 0 !important; }
+            .remaining-table-card, .summary-tile { box-shadow: none; }
+            .remaining-table { min-width: 0; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+            </div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="students.html" class="nav-item"><i data-lucide="users"></i><span>Students</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="remaining_charges.html" class="nav-item active"><i data-lucide="circle-dollar-sign"></i><span>Remaining Charges</span></a>
+                <a href="annual_charges.html" class="nav-item"><i data-lucide="receipt"></i><span>Annual Charges</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Remaining Charges</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Students with unpaid monthly fee or saved remaining amount.</p>
+                </div>
+                <button class="btn btn-outline" type="button" onclick="window.print()"><i data-lucide="printer"></i> Print</button>
+            </header>
+
+            <div class="remaining-toolbar">
+                <div class="remaining-filters">
+                    <select id="remainingClassFilter" aria-label="Filter by class">
+                        <option value="">All Classes</option>
+                    </select>
+                    <select id="remainingTypeFilter" aria-label="Filter by due type">
+                        <option value="">All Due Types</option>
+                        <option value="Remaining Amount">Remaining Amount</option>
+                        <option value="Monthly Fee">Monthly Fee</option>
+                    </select>
+                    <input type="search" id="remainingSearchInput" placeholder="Search student, roll no, class...">
+                </div>
+                <button class="btn btn-primary" type="button" onclick="loadRemainingCharges()"><i data-lucide="refresh-cw"></i> Refresh</button>
+            </div>
+
+            <section class="remaining-summary">
+                <div class="summary-tile"><span>Total Students</span><strong id="remainingStudentCount">0</strong></div>
+                <div class="summary-tile"><span>Total Items</span><strong id="remainingItemCount">0</strong></div>
+                <div class="summary-tile"><span>Total Remaining</span><strong id="remainingGrandTotal">PKR 0</strong></div>
+            </section>
+
+            <section class="remaining-table-card">
+                <div class="remaining-table-wrap">
+                    <table class="remaining-table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Class</th>
+                                <th>Roll No</th>
+                                <th>Campus</th>
+                                <th>Total</th>
+                                <th>Record</th>
+                            </tr>
+                        </thead>
+                        <tbody id="remainingChargesBody">
+                            <tr><td colspan="6" class="empty-row">Loading remaining charges...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    <div class="remaining-modal-overlay" id="remainingRecordModal" aria-hidden="true">
+        <div class="remaining-modal" role="dialog" aria-modal="true" aria-labelledby="remainingRecordTitle">
+            <div class="remaining-modal-head">
+                <div>
+                    <h2 id="remainingRecordTitle">Pending Record</h2>
+                    <p id="remainingRecordMeta">-</p>
+                </div>
+                <button class="btn btn-outline" type="button" onclick="closeRemainingRecordModal()"><i data-lucide="x"></i> Close</button>
+            </div>
+            <div class="remaining-modal-body">
+                <div id="remainingRecordDetails"></div>
+                <div class="remaining-modal-total"><span>Total Pending</span><strong id="remainingRecordTotal">PKR 0</strong></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
+    <script src="script.js?v=20260705-search-fix"></script>
+    <script>
+        const REMAINING_MONTHLY_KEY = 'eduCore_monthly_fees';
+        const REMAINING_PAYMENT_KEY = 'eduCore_payment_details';
+        const REMAINING_CLASS_FEES_KEY = 'eduCore_class_fees';
+        const REMAINING_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const REMAINING_ACADEMIC_START_MONTH_INDEX = 6; // July
+        let remainingRows = [];
+
+        function remainingApiBaseUrl() {
+            const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.startsWith('192.168.');
+            if (window.location.protocol === 'file:') return 'http://localhost:3000/api';
+            return `${isLocal ? window.location.origin : window.location.origin}/api`;
+        }
+
+        function escRemaining(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+        }
+
+        function moneyRemaining(value) {
+            return `PKR ${Math.round(Number(value || 0)).toLocaleString('en-PK')}`;
+        }
+
+        function readJsonStorage(key, fallback) {
+            try {
+                const value = JSON.parse(localStorage.getItem(key) || '');
+                return value ?? fallback;
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function normalizeClassKey(value = '') {
+            return String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+        }
+
+        function getClassFeeConfig(className = '') {
+            const classFees = readJsonStorage(REMAINING_CLASS_FEES_KEY, {});
+            const key = normalizeClassKey(className);
+            const found = Object.entries(classFees).find(([name]) => normalizeClassKey(name) === key);
+            return found ? (found[1] || {}) : {};
+        }
+
+        function getStudentMonthlyFee(student) {
+            if (student?.freeStudy === true || student?.freeStudy === 'true' || String(student?.zeroFeeReason || student?.freeStudyReason || '').trim()) return 0;
+            if (typeof getDashboardStudentFee === 'function') return Number(getDashboardStudentFee(student) || 0);
+            const studentFeeRaw = String(student?.monthlyFee ?? student?.fee ?? '').trim();
+            const studentFee = Number(studentFeeRaw || 0) || 0;
+            if (studentFee > 0 && (student?.monthlyFeeCustom === true || student?.monthlyFeeCustom === 'true')) return studentFee;
+            const classFee = Number(getClassFeeConfig(student.classGrade).monthlyFee || 0);
+            if (studentFee > 0 && classFee > 0 && studentFee !== classFee) return studentFee;
+            return classFee || studentFee;
+        }
+
+        function parseRemainingDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+            match = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+            if (match) return new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function getAcademicRemainingStartDate(date = new Date()) {
+            const year = date.getMonth() >= REMAINING_ACADEMIC_START_MONTH_INDEX
+                ? date.getFullYear()
+                : date.getFullYear() - 1;
+            return new Date(year, REMAINING_ACADEMIC_START_MONTH_INDEX, 1);
+        }
+
+        function getRemainingMonthPosition(date = new Date()) {
+            const academicStart = getAcademicRemainingStartDate(date);
+            return (date.getFullYear() - academicStart.getFullYear()) * 12 + date.getMonth() - REMAINING_ACADEMIC_START_MONTH_INDEX;
+        }
+
+        function getApplicableMonths(student, date = new Date()) {
+            const studentStart = parseRemainingDate(student.admissionDate) || parseRemainingDate(student.createdAt) || new Date();
+            const academicStart = getAcademicRemainingStartDate(date);
+            const start = studentStart > academicStart ? studentStart : academicStart;
+            const currentMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+            const startMonth = new Date(start.getFullYear(), start.getMonth(), 1);
+            if (startMonth > currentMonth) return [];
+
+            const startPosition = Math.max(getRemainingMonthPosition(startMonth), 0);
+            const endPosition = getRemainingMonthPosition(currentMonth);
+            if (endPosition < startPosition) return [];
+
+            const months = [];
+            for (let position = startPosition; position <= endPosition; position += 1) {
+                months.push(REMAINING_MONTHS[(REMAINING_ACADEMIC_START_MONTH_INDEX + position) % 12]);
+            }
+            return months;
+        }
+
+        function getPaymentAmount(studentId, month) {
+            const details = readJsonStorage(REMAINING_PAYMENT_KEY, {});
+            return Number(details?.[studentId]?.[month]?.amount || 0) || 0;
+        }
+
+        function isTerminated(student) {
+            return String(student?.feesStatus || '').trim().toLowerCase() === 'terminated' ||
+                String(student?.enrollmentStatus || '').trim().toLowerCase() === 'terminated';
+        }
+
+        async function fetchRemainingData(endpoint, fallback) {
+            try {
+                const response = await fetch(`${remainingApiBaseUrl()}/${endpoint}`);
+                if (!response.ok) throw new Error(endpoint);
+                return await response.json();
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        async function hydrateRemainingCaches() {
+            const [studentsResult, paymentsResult] = await Promise.all([
+                fetchRemainingData('students', readJsonStorage('eduCore_students', [])),
+                fetchRemainingData('fees/payments', { payments: [] })
+            ]);
+
+            const students = Array.isArray(studentsResult) ? studentsResult : (studentsResult.students || []);
+            if (students.length) localStorage.setItem('eduCore_students', JSON.stringify(students));
+
+            const payments = Array.isArray(paymentsResult?.payments) ? paymentsResult.payments : [];
+            if (payments.length) {
+                const monthlyFees = readJsonStorage(REMAINING_MONTHLY_KEY, {});
+                const existingPaymentDetails = readJsonStorage(REMAINING_PAYMENT_KEY, {});
+                const paymentDetails = {};
+                payments.forEach((payment) => {
+                    if (!['Paid', 'Partial'].includes(String(payment.status || '')) || !payment.studentId) return;
+                    if (String(payment.paymentSource || '').toLowerCase() === 'fine') return;
+                    const rawMonth = String(payment.feeMonth || '').toLowerCase();
+                    const month = REMAINING_MONTHS.find((item) => rawMonth.includes(item.toLowerCase()) || rawMonth.includes(item.slice(0, 3).toLowerCase()));
+                    if (!month) return;
+                    paymentDetails[payment.studentId] = paymentDetails[payment.studentId] || {};
+                    const existing = existingPaymentDetails?.[payment.studentId]?.[month] || {};
+                    const previous = paymentDetails[payment.studentId][month] || { ...existing, amount: 0 };
+                    paymentDetails[payment.studentId][month] = {
+                        ...previous,
+                        amount: Number(previous.amount || 0) + Number(payment.amount || 0)
+                    };
+                    if (payment.status === 'Paid') {
+                        monthlyFees[payment.studentId] = monthlyFees[payment.studentId] || {};
+                        monthlyFees[payment.studentId][month] = 'Paid';
+                    }
+                });
+                localStorage.setItem(REMAINING_MONTHLY_KEY, JSON.stringify(monthlyFees));
+                localStorage.setItem(REMAINING_PAYMENT_KEY, JSON.stringify(paymentDetails));
+            }
+
+            return {
+                students: students.length ? students : readJsonStorage('eduCore_students', [])
+            };
+        }
+
+        function buildRemainingRows(students) {
+            const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+            const campusMatches = (student) => !selectedCampus || selectedCampus === 'all' ||
+                String(student.campusName || student.branchName || student.campus || 'Main Campus').trim().toLowerCase() === String(selectedCampus).trim().toLowerCase();
+
+            return students.filter((student) => student && student.id && !isTerminated(student) && campusMatches(student)).map((student) => {
+                const items = [];
+                const monthlyFees = readJsonStorage(REMAINING_MONTHLY_KEY, {});
+                const studentMonthly = monthlyFees[student.id] || {};
+                const monthlyFee = getStudentMonthlyFee(student);
+                getApplicableMonths(student).forEach((month) => {
+                    if (!(monthlyFee > 0) || studentMonthly[month] === 'Paid') return;
+                    const paidAmount = getPaymentAmount(student.id, month);
+                    const remainingAmount = Math.max(monthlyFee - paidAmount, 0);
+                    if (remainingAmount > 0) {
+                        items.push({ type: 'Monthly Fee', label: `${month} fee`, amount: remainingAmount });
+                    }
+                });
+                const directRemaining = Number(String(student.remainingAmount || 0).replace(/,/g, '')) || 0;
+                if (directRemaining > 0) items.push({ type: 'Remaining Amount', label: 'Student remaining amount', amount: directRemaining });
+
+                const total = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+                return { student, items, total };
+            }).filter((row) => row.total > 0);
+        }
+
+        function populateRemainingFilters() {
+            const select = document.getElementById('remainingClassFilter');
+            const current = select.value;
+            const classes = Array.from(new Set(remainingRows.map((row) => String(row.student.classGrade || '').trim()).filter(Boolean)))
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            select.innerHTML = '<option value="">All Classes</option>' + classes.map((name) => `<option value="${escRemaining(name)}">${escRemaining(name)}</option>`).join('');
+            if (current && classes.includes(current)) select.value = current;
+        }
+
+        function renderRemainingRows() {
+            const tbody = document.getElementById('remainingChargesBody');
+            const classFilter = document.getElementById('remainingClassFilter').value;
+            const typeFilter = document.getElementById('remainingTypeFilter').value;
+            const term = document.getElementById('remainingSearchInput').value.trim().toLowerCase();
+            let rows = remainingRows;
+
+            if (classFilter) rows = rows.filter((row) => String(row.student.classGrade || '') === classFilter);
+            if (typeFilter) rows = rows.map((row) => ({ ...row, items: row.items.filter((item) => item.type === typeFilter) }))
+                .filter((row) => row.items.length)
+                .map((row) => ({ ...row, total: row.items.reduce((sum, item) => sum + item.amount, 0) }));
+            if (term) {
+                rows = rows.filter((row) => `${row.student.fullName || ''} ${row.student.rollNo || ''} ${row.student.studentCode || ''} ${row.student.classGrade || ''} ${row.student.campusName || ''}`.toLowerCase().includes(term));
+            }
+
+            document.getElementById('remainingStudentCount').textContent = String(rows.length);
+            document.getElementById('remainingItemCount').textContent = String(rows.reduce((sum, row) => sum + row.items.length, 0));
+            document.getElementById('remainingGrandTotal').textContent = moneyRemaining(rows.reduce((sum, row) => sum + row.total, 0));
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-row">${term ? 'No record found.' : 'No remaining charges found.'}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map((row) => {
+                const student = row.student;
+                return `
+                    <tr>
+                        <td>
+                            <div class="student-main">
+                                <strong>${escRemaining(student.fullName || '-')}</strong>
+                                <span>${escRemaining(student.studentCode || '')}</span>
+                            </div>
+                        </td>
+                        <td>${escRemaining(student.classGrade || '-')}</td>
+                        <td>${escRemaining(student.rollNo || '-')}</td>
+                        <td>${escRemaining(student.campusName || 'Main Campus')}</td>
+                        <td>${moneyRemaining(row.total)}</td>
+                        <td><div class="remaining-row-actions"><button class="btn btn-outline" type="button" onclick="openRemainingRecordModal('${escRemaining(student.id)}')">View Record</button></div></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function openRemainingRecordModal(studentId) {
+            const row = remainingRows.find((item) => String(item.student.id) === String(studentId));
+            if (!row) return;
+            const student = row.student;
+            document.getElementById('remainingRecordTitle').textContent = student.fullName || 'Student';
+            document.getElementById('remainingRecordMeta').textContent = `${student.studentCode || '-'} | Roll No: ${student.rollNo || '-'} | Class: ${student.classGrade || '-'}`;
+            document.getElementById('remainingRecordDetails').innerHTML = row.items.map((item) => `
+                <div class="remaining-detail-row">
+                    <div>
+                        <span class="charge-pill">${escRemaining(item.type)}</span>
+                        <div><strong>${escRemaining(item.label)}</strong></div>
+                    </div>
+                    <strong>${moneyRemaining(item.amount)}</strong>
+                </div>
+            `).join('');
+            document.getElementById('remainingRecordTotal').textContent = moneyRemaining(row.total);
+            const modal = document.getElementById('remainingRecordModal');
+            modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function closeRemainingRecordModal() {
+            const modal = document.getElementById('remainingRecordModal');
+            modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        async function loadRemainingCharges() {
+            const tbody = document.getElementById('remainingChargesBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Loading remaining charges...</td></tr>';
+            const { students } = await hydrateRemainingCaches();
+            remainingRows = buildRemainingRows(students);
+            populateRemainingFilters();
+            renderRemainingRows();
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        document.getElementById('remainingClassFilter').addEventListener('change', renderRemainingRows);
+        document.getElementById('remainingTypeFilter').addEventListener('change', renderRemainingRows);
+        document.getElementById('remainingSearchInput').addEventListener('input', renderRemainingRows);
+        document.getElementById('remainingSearchInput').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                renderRemainingRows();
+            }
+        });
+        document.getElementById('remainingRecordModal').addEventListener('mousedown', (event) => {
+            if (event.target.id === 'remainingRecordModal') closeRemainingRecordModal();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeRemainingRecordModal();
+        });
+        document.addEventListener('DOMContentLoaded', loadRemainingCharges);
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+</html>

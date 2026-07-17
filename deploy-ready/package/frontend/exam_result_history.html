@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Result History - Kids Roots Jand</title>
-    <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -15,7 +14,11 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+                <i data-lucide="graduation-cap" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+                    <span style="font-size: 1rem; line-height: 1.2;">Kids Roots Jand</span>
+                    <span style="font-size: 1rem; line-height: 1.2;">System</span>
+                </div>
             </div>
 
             <nav class="nav-links">
@@ -195,7 +198,6 @@
                                         <div>
                                             <h2 id="previewDateSheetSchoolName">Kids Roots Jand</h2>
                                             <p id="previewDateSheetCampus">Main Campus</p>
-                                            <p id="previewDateSheetContact"></p>
                                         </div>
                                         <img class="date-sheet-logo" src="images/logo.png" alt="School logo">
                                     </div>
@@ -280,22 +282,6 @@
                                 <label>Teacher Signature Name<input type="text" id="teacherSignature" value="Class Teacher"></label>
                                 <label>Principal Signature Name<input type="text" id="principalSignature" value="Principal"></label>
                                 <label>Parent Signature Name<input type="text" id="parentSignature" value="Parent / Guardian"></label>
-                                <input type="hidden" id="studentPhotoDataUrl">
-                                <div class="student-photo-uploader">
-                                    <div>
-                                        <strong>Student Photo</strong>
-                                        <span>Upload passport size image for this result card.</span>
-                                    </div>
-                                    <div class="student-photo-actions">
-                                        <label class="btn btn-outline photo-upload-btn">
-                                            <i data-lucide="image-plus" size="16"></i> Upload Image
-                                            <input type="file" id="studentPhotoUpload" accept="image/*">
-                                        </label>
-                                        <button type="button" class="btn btn-outline" id="clearStudentPhotoBtn">
-                                            <i data-lucide="x" size="16"></i> Clear
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -342,18 +328,15 @@
 
                     <div class="result-card-sheet" id="resultCardSheet">
                         <div class="result-card-frame">
-                            <div class="result-card-watermark">KIDS ROOTS JAND</div>
+                            <div class="result-card-watermark">APEXIUMS</div>
                             <div class="result-card-topbar">
-                                <div class="result-logo-box"><img id="previewLeftLogo" src="images/logo.png" alt="School logo"></div>
+                                <div class="result-logo-box"><img id="previewLeftLogo" alt="Left school logo"></div>
                                 <div class="result-school-center">
                                     <h2 id="previewSchoolName">Kids Roots Jand</h2>
                                     <p id="previewCampusName">Main branch</p>
                                     <p id="previewSchoolContact">Address: Dekhni Road Jand | Phone: 03045259900</p>
                                 </div>
-                                <div class="result-student-photo-box" id="previewStudentPhotoBox">
-                                    <img id="previewStudentPhoto" alt="Student photo">
-                                    <span>PHOTO</span>
-                                </div>
+                                <div class="result-logo-box"><img id="previewRightLogo" alt="Right school logo"></div>
                             </div>
 
                             <div class="result-term-title" id="previewTermTitle">3rd Term 2025-26</div>
@@ -497,8 +480,8 @@
         </main>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -967,7 +950,7 @@
 
         .result-card-topbar {
             display: grid;
-            grid-template-columns: 66px 1fr 88px;
+            grid-template-columns: 66px 1fr 66px;
             gap: 12px;
             align-items: center;
             border: 1px solid #555;
@@ -999,77 +982,6 @@
             height: 100%;
             object-fit: contain;
             display: block;
-        }
-
-        .result-student-photo-box {
-            width: 82px;
-            height: 96px;
-            border: 1px solid #555;
-            display: grid;
-            place-items: center;
-            justify-self: end;
-            overflow: hidden;
-            background: #fbfbfb;
-            position: relative;
-            font-size: 11px;
-            font-weight: 700;
-            color: #777;
-        }
-
-        .result-student-photo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none;
-        }
-
-        .result-student-photo-box.has-photo img {
-            display: block;
-        }
-
-        .result-student-photo-box.has-photo span {
-            display: none;
-        }
-
-        .student-photo-uploader {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.9rem 1rem;
-            border: 1px solid #bfdbfe;
-            border-radius: 12px;
-            background: #eff6ff;
-            color: #172554;
-        }
-
-        .student-photo-uploader strong,
-        .student-photo-uploader span {
-            display: block;
-        }
-
-        .student-photo-uploader span {
-            margin-top: 0.15rem;
-            color: #475569;
-            font-size: 0.85rem;
-        }
-
-        .student-photo-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .photo-upload-btn {
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .photo-upload-btn input {
-            display: none;
         }
 
         .result-school-center {
@@ -1252,20 +1164,6 @@
             .schedule-editor .dynamic-row {
                 grid-template-columns: 1fr;
             }
-
-            .result-card-topbar {
-                grid-template-columns: 58px 1fr 76px;
-            }
-
-            .result-student-photo-box {
-                width: 72px;
-                height: 86px;
-            }
-
-            .student-photo-uploader {
-                align-items: flex-start;
-                flex-direction: column;
-            }
         }
 
         @media print {
@@ -1368,7 +1266,7 @@
             }
 
             body.print-result .result-card-topbar {
-                grid-template-columns: 56px 1fr 66px !important;
+                grid-template-columns: 56px 1fr 56px !important;
                 gap: 8px !important;
                 padding: 7px 9px !important;
             }
@@ -1376,12 +1274,6 @@
             body.print-result .result-logo-box {
                 height: 48px !important;
                 font-size: 10px !important;
-            }
-
-            body.print-result .result-student-photo-box {
-                width: 62px !important;
-                height: 74px !important;
-                font-size: 9px !important;
             }
 
             body.print-result .result-school-center h2 {
@@ -1530,7 +1422,7 @@
 
             body.print-result.result-print-dense .result-card-topbar,
             body.print-result.result-print-ultra .result-card-topbar {
-                grid-template-columns: 48px 1fr 56px !important;
+                grid-template-columns: 48px 1fr 48px !important;
                 gap: 6px !important;
                 padding: 5px 7px !important;
             }
@@ -1538,13 +1430,6 @@
             body.print-result.result-print-dense .result-logo-box,
             body.print-result.result-print-ultra .result-logo-box {
                 height: 40px !important;
-            }
-
-            body.print-result.result-print-dense .result-student-photo-box,
-            body.print-result.result-print-ultra .result-student-photo-box {
-                width: 52px !important;
-                height: 62px !important;
-                font-size: 8px !important;
             }
 
             body.print-result.result-print-dense .result-school-center h2,
@@ -1658,17 +1543,12 @@
             }
 
             body.print-result.result-print-ultra .result-card-topbar {
-                grid-template-columns: 42px 1fr 48px !important;
+                grid-template-columns: 42px 1fr 42px !important;
                 padding: 4px 6px !important;
             }
 
             body.print-result.result-print-ultra .result-logo-box {
                 height: 34px !important;
-            }
-
-            body.print-result.result-print-ultra .result-student-photo-box {
-                width: 46px !important;
-                height: 54px !important;
             }
 
             body.print-result.result-print-ultra .result-marks-table td,
@@ -1686,10 +1566,10 @@
         }
     </style>
     <script>
-        const DATE_SHEET_STORAGE_KEY = 'KIDS_ROOTS_JAND_DATE_SHEET_V1';
-        const RESULT_CARD_STORAGE_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_V1';
-        const RESULT_CARD_ARCHIVE_LEGACY_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_ARCHIVE_V1';
-        const RESULT_CARD_ARCHIVE_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_ARCHIVE_V2';
+        const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
+        const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
+        const RESULT_CARD_ARCHIVE_LEGACY_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V1';
+        const RESULT_CARD_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const RESULT_CARD_STUDENT_KEY = 'eduCore_students';
         const defaultScheduleRows = [
             { subject: 'English', className: 'Grade 5', examDate: '2026-05-10', startTime: '09:00', endTime: '10:30' },
@@ -1713,87 +1593,6 @@
             { title: 'Sociability', grade: 'A' },
             { title: 'Any other Observation', grade: 'Excellent' }
         ];
-
-        function getExamBrandingSettings() {
-            const fallback = { schoolName: 'Kids Roots Jand', schoolTitle: 'Kids Roots Jand', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
-            try {
-                return { ...fallback, ...((typeof getBrandingSettings === 'function' ? getBrandingSettings() : {}) || {}) };
-            } catch (_error) {
-                return fallback;
-            }
-        }
-
-        function getExamLogoSrc() {
-            const branding = getExamBrandingSettings();
-            return 'images/logo.png';
-        }
-
-        function getExamContactLine() {
-            const branding = getExamBrandingSettings();
-            const address = branding.address || branding.schoolAddress || '';
-            const parts = [];
-            if (address) parts.push(`Address: ${address}`);
-            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
-            return parts.join(' | ');
-        }
-
-        function applyExamBrandingDefaults(force = false) {
-            const branding = getExamBrandingSettings();
-            const schoolName = 'Kids Roots Jand';
-            const contactLine = getExamContactLine();
-            const logoSrc = getExamLogoSrc();
-            const legacyNames = ['Kids Roots Jand', 'Kids Roots Jand'];
-            const dateSheetSchool = document.getElementById('dateSheetSchoolName');
-            const resultSchool = document.getElementById('schoolName');
-            const contact = document.getElementById('schoolContact');
-            const leftLogo = document.getElementById('leftLogoUrl');
-            const rightLogo = document.getElementById('rightLogoUrl');
-
-            if (dateSheetSchool && (force || !dateSheetSchool.value || legacyNames.includes(dateSheetSchool.value))) dateSheetSchool.value = schoolName;
-            if (resultSchool && (force || !resultSchool.value || legacyNames.includes(resultSchool.value))) resultSchool.value = schoolName;
-            if (contact && contactLine && (force || !contact.value || contact.value.includes('Dekhni Road') || contact.value.includes('Chapri Road') || contact.value.includes('Nai Abadi'))) contact.value = contactLine;
-            if (leftLogo && (force || !leftLogo.value || leftLogo.value === 'images/logo.png')) leftLogo.value = logoSrc;
-            if (rightLogo && (force || !rightLogo.value || rightLogo.value === 'images/logo.png')) rightLogo.value = logoSrc;
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
-        }
-
-        function forceRefreshResultBrandingFromStorage() {
-            const branding = getExamBrandingSettings();
-            const schoolName = 'Kids Roots Jand';
-            const contactLine = getExamContactLine();
-            const logoSrc = getExamLogoSrc();
-            
-            // Force update all branding fields
-            const schoolNameField = document.getElementById('schoolName');
-            if (schoolNameField) schoolNameField.value = schoolName;
-
-            const dateSheetSchoolNameField = document.getElementById('dateSheetSchoolName');
-            if (dateSheetSchoolNameField) dateSheetSchoolNameField.value = schoolName;
-            
-            const contactField = document.getElementById('schoolContact');
-            if (contactField) contactField.value = contactLine;
-            
-            const leftLogoField = document.getElementById('leftLogoUrl');
-            if (leftLogoField) leftLogoField.value = logoSrc;
-            
-            const rightLogoField = document.getElementById('rightLogoUrl');
-            if (rightLogoField) rightLogoField.value = logoSrc;
-            
-            // Update preview immediately with new branding
-            document.getElementById('previewSchoolName').textContent = schoolName;
-            document.getElementById('previewSchoolContact').textContent = contactLine;
-            const dateSheetPreviewName = document.getElementById('previewDateSheetSchoolName');
-            if (dateSheetPreviewName) dateSheetPreviewName.textContent = schoolName;
-            const dateSheetPreviewContact = document.getElementById('previewDateSheetContact');
-            if (dateSheetPreviewContact) dateSheetPreviewContact.textContent = contactLine;
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
-                img.src = logoSrc;
-            });
-            document.getElementById('previewLeftLogo').src = logoSrc;
-            
-            refreshDateSheetPreview();
-            refreshResultCardPreview();
-        }
 
         function loadDateSheetState() {
             try {
@@ -1872,7 +1671,6 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
-            applyExamBrandingDefaults(true);
         }
 
         function readScheduleRows() {
@@ -1918,15 +1716,11 @@
 
         function refreshDateSheetPreview() {
             const rows = readScheduleRows();
-            const branding = getExamBrandingSettings();
-            const logoSrc = getExamLogoSrc();
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => { img.src = logoSrc; });
-            document.getElementById('previewDateSheetSchoolName').textContent = 'Kids Roots Jand';
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'Kids Roots Jand';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || 'Exam Title';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '-';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '-';
             document.getElementById('previewDateSheetCampus').textContent = document.getElementById('dateSheetCampus').value || '';
-            document.getElementById('previewDateSheetContact').textContent = getExamContactLine();
             document.getElementById('previewDateSheetInstructions').textContent = document.getElementById('dateSheetInstructions').value || 'No additional instructions.';
 
             const defaultStart = document.getElementById('dateSheetDefaultStart').value;
@@ -2027,7 +1821,6 @@
                 teacherSignature: document.getElementById('teacherSignature').value,
                 principalSignature: document.getElementById('principalSignature').value,
                 parentSignature: document.getElementById('parentSignature').value,
-                studentPhotoDataUrl: document.getElementById('studentPhotoDataUrl').value,
                 subjects: readSubjectRows(),
                 behaviors: readBehaviorRows()
             };
@@ -2052,7 +1845,6 @@
                 termTitle: document.getElementById('termTitle').value.trim(),
                 leftLogoUrl: document.getElementById('leftLogoUrl').value.trim(),
                 rightLogoUrl: document.getElementById('rightLogoUrl').value.trim(),
-                studentPhotoDataUrl: document.getElementById('studentPhotoDataUrl').value,
                 subjects: readSubjectRows(),
                 behaviors: readBehaviorRows(),
                 updatedAt: new Date().toISOString()
@@ -2206,13 +1998,10 @@
             [
                 'schoolName', 'campusName', 'schoolContact', 'termTitle', 'leftLogoUrl', 'rightLogoUrl',
                 'studentLookupId', 'studentName', 'fatherName', 'studentGrade', 'positionGrade',
-                'teacherRemarks', 'teacherSignature', 'principalSignature', 'parentSignature', 'studentPhotoDataUrl'
+                'teacherRemarks', 'teacherSignature', 'principalSignature', 'parentSignature'
             ].forEach((id) => {
-                if (Object.prototype.hasOwnProperty.call(savedState, id)) document.getElementById(id).value = savedState[id] || '';
+                if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            applyExamBrandingDefaults(true);
         }
 
         const RESULT_BRANCH_CONTACTS = {
@@ -2239,9 +2028,8 @@
 
         function applyBranchDetailsToResultCard(campusName) {
             const branchDetails = getResultBranchContactDetails(campusName);
-            const globalContactLine = getExamContactLine();
             document.getElementById('campusName').value = branchDetails.campusLabel;
-            document.getElementById('schoolContact').value = globalContactLine || branchDetails.contactLine;
+            document.getElementById('schoolContact').value = branchDetails.contactLine;
         }
 
         function findStudentForResultCard(query) {
@@ -2273,16 +2061,12 @@
             document.getElementById('studentName').value = student.fullName || '';
             document.getElementById('fatherName').value = student.fatherName || '';
             document.getElementById('studentGrade').value = student.classGrade || '';
-            document.getElementById('studentPhotoDataUrl').value = student.photoDataUrl || student.photoUrl || student.imageUrl || student.profileImage || '';
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
             applyBranchDetailsToResultCard(student.campusName);
             refreshResultCardPreview();
         }
 
         function updateLogo(logoId, value) {
             const img = document.getElementById(logoId);
-            if (!img) return;
             const box = img.closest('.result-logo-box');
             img.onerror = () => {
                 img.removeAttribute('src');
@@ -2290,74 +2074,6 @@
             };
             img.src = value || '';
             box.classList.toggle('has-logo', Boolean(value));
-        }
-
-        function updateStudentPhoto(value) {
-            const img = document.getElementById('previewStudentPhoto');
-            const box = document.getElementById('previewStudentPhotoBox');
-            if (!img || !box) return;
-
-            img.onerror = () => {
-                img.removeAttribute('src');
-                box.classList.remove('has-photo');
-            };
-
-            if (value) {
-                img.src = value;
-                box.classList.add('has-photo');
-            } else {
-                img.removeAttribute('src');
-                box.classList.remove('has-photo');
-            }
-        }
-
-        function resizeImageForResultCard(file) {
-            return new Promise((resolve, reject) => {
-                if (!file || !file.type || !file.type.startsWith('image/')) {
-                    reject(new Error('Please select a valid image file.'));
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const maxSide = 520;
-                        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-                        const canvas = document.createElement('canvas');
-                        canvas.width = Math.max(1, Math.round(img.width * scale));
-                        canvas.height = Math.max(1, Math.round(img.height * scale));
-                        const context = canvas.getContext('2d');
-                        context.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.86));
-                    };
-                    img.onerror = () => reject(new Error('Image could not be loaded.'));
-                    img.src = reader.result;
-                };
-                reader.onerror = () => reject(new Error('Image could not be read.'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function handleStudentPhotoUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-
-            try {
-                const dataUrl = await resizeImageForResultCard(file);
-                document.getElementById('studentPhotoDataUrl').value = dataUrl;
-                refreshResultCardPreview();
-            } catch (error) {
-                alert(error.message || 'Unable to upload image.');
-                event.target.value = '';
-            }
-        }
-
-        function clearStudentPhoto() {
-            document.getElementById('studentPhotoDataUrl').value = '';
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            refreshResultCardPreview();
         }
 
         function removeDynamicRow(button) {
@@ -2386,14 +2102,13 @@
         function refreshResultCardPreview() {
             const subjects = readSubjectRows();
             const behaviors = readBehaviorRows();
-            const branding = getExamBrandingSettings();
-            const logoSrc = getExamLogoSrc();
 
-            document.getElementById('previewSchoolName').textContent = 'Kids Roots Jand';
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'Kids Roots Jand';
             document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
             document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || 'Term';
-            updateLogo('previewLeftLogo', logoSrc);
+            updateLogo('previewLeftLogo', document.getElementById('leftLogoUrl').value.trim());
+            updateLogo('previewRightLogo', document.getElementById('rightLogoUrl').value.trim());
             document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || 'Student Name';
             document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || 'Father Name';
             document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '-';
@@ -2402,7 +2117,6 @@
             document.getElementById('previewTeacherSignature').textContent = document.getElementById('teacherSignature').value || '-';
             document.getElementById('previewPrincipalSignature').textContent = document.getElementById('principalSignature').value || '-';
             document.getElementById('previewParentSignature').textContent = document.getElementById('parentSignature').value || '-';
-            updateStudentPhoto(document.getElementById('studentPhotoDataUrl').value || '');
 
             const totalMax = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
             const totalObtained = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);
@@ -2439,16 +2153,12 @@
         function resetResultCard() {
             localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
             document.getElementById('resultCardForm').reset();
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            applyExamBrandingDefaults(true);
             renderDynamicEditors({});
             refreshResultCardPreview();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             clearLegacyResultArchive();
-            applyExamBrandingDefaults(true);
             toggleExamSection('resultHistoryCard');
             const dateSheetState = loadDateSheetState();
             const savedState = loadResultCardState();
@@ -2476,8 +2186,6 @@
             });
             document.getElementById('resetDateSheetBtn').addEventListener('click', resetDateSheet);
             document.getElementById('resultCardForm').addEventListener('input', refreshResultCardPreview);
-            document.getElementById('studentPhotoUpload').addEventListener('change', handleStudentPhotoUpload);
-            document.getElementById('clearStudentPhotoBtn').addEventListener('click', clearStudentPhoto);
             document.getElementById('loadStudentResultBtn').addEventListener('click', loadStudentIntoResultCard);
             document.getElementById('studentLookupId').addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
@@ -2521,14 +2229,6 @@
             renderResultHistoryList();
             lucide.createIcons();
         });
-
-        // Listen for branding changes from other tabs/windows
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'eduCore_settings') {
-                forceRefreshResultBrandingFromStorage();
-            }
-        });
-        window.addEventListener('eduCoreBrandingUpdated', forceRefreshResultBrandingFromStorage);
     </script>
 </body>
 

@@ -1,115 +1,104 @@
 name: Auto Deploy Live (cPanel SSH)
 
 on:
-  push:
-    branches:
-      - main
-      - happy-day-restore
   workflow_dispatch:
 
 concurrency:
-  group: live-deploy-ssh
+  group: live-deploy
   cancel-in-progress: true
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Validate required SSH secrets
+        id: precheck
         shell: bash
         env:
           LIVE_HOST: ${{ secrets.LIVE_HOST }}
           LIVE_USER: ${{ secrets.LIVE_USER }}
-          LIVE_PORT: ${{ secrets.LIVE_PORT }}
           LIVE_SSH_KEY: ${{ secrets.LIVE_SSH_KEY }}
-          LIVE_SSH_PASSPHRASE: ${{ secrets.LIVE_SSH_PASSPHRASE }}
           LIVE_APP_PATH: ${{ secrets.LIVE_APP_PATH }}
         run: |
           missing=()
-          for v in LIVE_HOST LIVE_USER LIVE_PORT LIVE_SSH_KEY LIVE_SSH_PASSPHRASE LIVE_APP_PATH; do
+          for v in LIVE_HOST LIVE_USER LIVE_SSH_KEY LIVE_APP_PATH; do
             if [ -z "${!v}" ]; then
               missing+=("$v")
             fi
           done
 
           if [ ${#missing[@]} -gt 0 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "missing=${missing[*]}" >> "$GITHUB_OUTPUT"
             echo "Missing required secrets: ${missing[*]}"
-            exit 1
-          fi
-
-      - name: Prepare SSH key
-        shell: bash
-        env:
-          LIVE_SSH_KEY: ${{ secrets.LIVE_SSH_KEY }}
-          LIVE_SSH_PASSPHRASE: ${{ secrets.LIVE_SSH_PASSPHRASE }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$LIVE_SSH_KEY" > ~/.ssh/live_deploy_key
-          chmod 600 ~/.ssh/live_deploy_key
-          eval "$(ssh-agent -s)"
-
-          if [ -n "${LIVE_SSH_PASSPHRASE:-}" ]; then
-            printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$LIVE_SSH_PASSPHRASE"\n' > ~/.ssh/askpass.sh
-            chmod 700 ~/.ssh/askpass.sh
-            DISPLAY=:0 SSH_ASKPASS="$HOME/.ssh/askpass.sh" SSH_ASKPASS_REQUIRE=force setsid ssh-add ~/.ssh/live_deploy_key < /dev/null
           else
-            ssh-add ~/.ssh/live_deploy_key
+            echo "ready=true" >> "$GITHUB_OUTPUT"
           fi
-          ssh-add -l
 
-      - name: Upload code via rsync over SSH
-        shell: bash
-        env:
-          LIVE_HOST: ${{ secrets.LIVE_HOST }}
-          LIVE_USER: ${{ secrets.LIVE_USER }}
-          LIVE_PORT: ${{ secrets.LIVE_PORT }}
-          LIVE_APP_PATH: ${{ secrets.LIVE_APP_PATH }}
-        run: |
-          set -euo pipefail
-          rsync -az --delete \
-            -e "ssh -p $LIVE_PORT -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no" \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.env' \
-            --exclude='.env.*' \
-            --exclude='node_modules/' \
-            --exclude='logs/' \
-            --exclude='tmp/' \
-            --exclude='uploads/' \
-            --exclude='.whatsapp-session/' \
-            --exclude='deploy-ready/' \
-            --exclude='admin_credentials.json' \
-            --exclude='stderr.log' \
-            --exclude='stdout.log' \
-            ./ "$LIVE_USER@$LIVE_HOST:$LIVE_APP_PATH/"
+      - name: Deploy latest code on live server
+        if: ${{ steps.precheck.outputs.ready == 'true' }}
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.LIVE_HOST }}
+          username: ${{ secrets.LIVE_USER }}
+          key: ${{ secrets.LIVE_SSH_KEY }}
+          port: ${{ secrets.LIVE_PORT }}
+          script_stop: true
+          script: |
+            set -e
 
-      - name: Install dependencies and restart marker
-        shell: bash
-        env:
-          LIVE_HOST: ${{ secrets.LIVE_HOST }}
-          LIVE_USER: ${{ secrets.LIVE_USER }}
-          LIVE_PORT: ${{ secrets.LIVE_PORT }}
-          LIVE_APP_PATH: ${{ secrets.LIVE_APP_PATH }}
+            APP_PATH="${{ secrets.LIVE_APP_PATH }}"
+            BRANCH="${{ secrets.LIVE_BRANCH }}"
+            if [ -z "$BRANCH" ]; then BRANCH="main"; fi
+
+            if [ -z "$APP_PATH" ]; then
+              echo "LIVE_APP_PATH secret is missing."
+              exit 1
+            fi
+
+            cd "$APP_PATH"
+
+            if [ ! -d ".git" ]; then
+              echo "No git repository found at $APP_PATH."
+              echo "Clone your GitHub repo there one time first."
+              exit 1
+            fi
+
+            BACKUP_DIR="$APP_PATH/.deploy-backup"
+            rm -rf "$BACKUP_DIR"
+            mkdir -p "$BACKUP_DIR"
+
+            mkdir -p "$BACKUP_DIR/data"
+            for file in .env data/permissions.json data/date_sheet.json data/admin_credentials.json; do
+              if [ -f "$file" ]; then
+                mkdir -p "$BACKUP_DIR/$(dirname "$file")"
+                cp "$file" "$BACKUP_DIR/$file"
+              fi
+            done
+
+            git fetch --all --prune
+            git checkout "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            for file in .env data/permissions.json data/date_sheet.json data/admin_credentials.json; do
+              if [ -f "$BACKUP_DIR/$file" ]; then
+                mkdir -p "$(dirname "$file")"
+                cp "$BACKUP_DIR/$file" "$file"
+              fi
+            done
+
+            if [ -f "package-lock.json" ]; then
+              npm ci --omit=dev
+            else
+              npm install --omit=dev
+            fi
+
+            mkdir -p tmp
+            touch tmp/restart.txt
+
+            echo "Live deployment completed."
+
+      - name: Skip deploy (missing required secrets)
+        if: ${{ steps.precheck.outputs.ready != 'true' }}
         run: |
-          set -euo pipefail
-          ssh -p "$LIVE_PORT" -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no "$LIVE_USER@$LIVE_HOST" \
-            "LIVE_APP_PATH='$LIVE_APP_PATH' bash -s" << 'EOF'
-          set -e
-          cd "$LIVE_APP_PATH"
-          APP_NAME="$(basename "$LIVE_APP_PATH")"
-          VENV="$HOME/nodevenv/$APP_NAME/20/bin/activate"
-          if [ -f "$VENV" ]; then
-            . "$VENV"
-          fi
-          if [ -f package-lock.json ]; then
-            npm ci --omit=dev
-          else
-            npm install --omit=dev
-          fi
-          mkdir -p tmp
-          date -u +"%Y-%m-%dT%H:%M:%SZ" > tmp/restart.txt
-          EOF
+          echo "Skipping live deploy. Missing secrets: ${{ steps.precheck.outputs.missing }}"

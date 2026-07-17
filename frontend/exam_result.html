@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Exam Result - Kids Roots Jand</title>
-    <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
@@ -14,9 +13,7 @@
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="logo-section">
-                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
-            </div>
+            <div class="logo-section" aria-label="Kids Roots Jand"></div>
 
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item">
@@ -234,11 +231,11 @@
                     <div class="exam-builder-header">
                         <div>
                             <h3>Result Card Details</h3>
-                            <p>Fill out the form, review the preview, then print the card.</p>
+                            <p>Select a student, enter marks, then upload the result into the saved archive.</p>
                         </div>
                         <div class="exam-builder-actions">
                             <button type="button" class="btn btn-outline" id="saveResultCardBtn">
-                                <i data-lucide="save" size="16"></i> Save Result
+                                <i data-lucide="upload-cloud" size="16"></i> Upload Result
                             </button>
                             <button type="button" class="btn btn-outline" id="resetResultCardBtn">
                                 <i data-lucide="rotate-ccw" size="16"></i> Reset
@@ -257,16 +254,15 @@
                             <h4>School Header</h4>
                             <div class="result-form-fields">
                                 <label>School Name<input type="text" id="schoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
-                                <label>Campus / Branch<input type="text" id="campusName" placeholder="Enter campus / branch"></label>
+                                <label>Campus / Branch<select id="campusName"></select></label>
                                 <label>Contact Line<input type="text" id="schoolContact" placeholder="Enter contact line"></label>
                                 <label>Term Title<input type="text" id="termTitle" placeholder="Enter term title"></label>
-                                <label>Session<input type="text" id="resultSession" placeholder="2026-27"></label>
                                 <input type="hidden" id="leftLogoUrl">
                                 <div class="static-logo-note">
                                     <i data-lucide="shield-check" size="18"></i>
                                     <div>
                                         <strong>Fixed Result Card Logo</strong>
-                                        <span>The saved school logo will print on every result card.</span>
+                                        <span>The Kids Roots Jand logo at images/logo.png will print on every result card.</span>
                                     </div>
                                 </div>
                             </div>
@@ -275,39 +271,30 @@
                         <div class="result-form-section">
                             <h4>Student Info</h4>
                             <div class="result-form-fields">
-                                <label>Student ID / Code
+                                <label>Campus
+                                    <select id="resultCampusFilter"></select>
+                                </label>
+                                <label>Class
+                                    <select id="resultClassFilter"></select>
+                                </label>
+                                <label>Student
+                                    <select id="resultStudentSelect"></select>
+                                </label>
+                                <label>Student ID
                                     <div class="inline-field-action">
-                                        <input type="text" id="studentLookupId" placeholder="Enter student ID, student code, or roll number">
+                                        <input type="text" id="studentLookupId" placeholder="Enter student ID, code, or roll number">
                                         <button type="button" class="btn btn-outline" id="loadStudentResultBtn">Load Student</button>
                                     </div>
                                 </label>
+                                <label>Roll Number<input type="text" id="studentRollNo" placeholder="Student roll number"></label>
                                 <label>Student Name<input type="text" id="studentName" placeholder="Enter student name"></label>
                                 <label>Father's Name<input type="text" id="fatherName" placeholder="Enter father's name"></label>
                                 <label>Grade / Class<input type="text" id="studentGrade" placeholder="Enter grade / class"></label>
                                 <label>Position / Grade<input type="text" id="positionGrade" placeholder="Enter position / grade"></label>
-                                <label>Class Position<input type="text" id="classPosition" placeholder="Enter class position"></label>
-                                <label>Class Strength<input type="text" id="classStrength" placeholder="Enter class strength"></label>
                                 <label>Teacher's Remarks<input type="text" id="teacherRemarks" placeholder="Enter teacher remarks"></label>
-                                <label>Overall Comments<input type="text" id="overallComments" placeholder="Enter overall comments"></label>
                                 <label>Teacher Signature Name<input type="text" id="teacherSignature" placeholder="Enter teacher signature name"></label>
                                 <label>Principal Signature Name<input type="text" id="principalSignature" placeholder="Enter principal signature name"></label>
                                 <label>Parent Signature Name<input type="text" id="parentSignature" placeholder="Enter parent signature name"></label>
-                                <input type="hidden" id="studentPhotoDataUrl">
-                                <div class="student-photo-uploader">
-                                    <div>
-                                        <strong>Student Photo</strong>
-                                        <span>Upload passport size image for this result card.</span>
-                                    </div>
-                                    <div class="student-photo-actions">
-                                        <label class="btn btn-outline photo-upload-btn">
-                                            <i data-lucide="image-plus" size="16"></i> Upload Image
-                                            <input type="file" id="studentPhotoUpload" accept="image/*">
-                                        </label>
-                                        <button type="button" class="btn btn-outline" id="clearStudentPhotoBtn">
-                                            <i data-lucide="x" size="16"></i> Clear
-                                        </button>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -353,114 +340,120 @@
                     </div>
 
                     <div class="result-card-sheet" id="resultCardSheet">
-                        <div class="result-card-frame result-pdf-card">
-                            <div class="result-pdf-header">
-                                <div class="result-pdf-logo-cell">
-                                    <div class="result-logo-box"><img id="previewLeftLogo" src="images/logo.png" alt="School logo"></div>
-                                </div>
-                                <div class="result-pdf-school-cell">
-                                    <h2 id="previewSchoolName">Kids Roots English Model Schools</h2>
-                                </div>
-                                <div class="result-pdf-address-cell" id="previewSchoolContact"></div>
-                                <div class="result-pdf-title-cell">Result Card</div>
-                            </div>
-
-                            <div class="result-pdf-student-area">
-                                <div class="result-pdf-meta-lines">
-                                    <div class="pdf-line-field pdf-line-wide">
-                                        <span>Student Name</span>
-                                        <strong id="previewStudentName"></strong>
-                                    </div>
-                                    <div class="pdf-line-field pdf-line-wide">
-                                        <span>Father Name</span>
-                                        <strong id="previewFatherName"></strong>
-                                    </div>
-                                    <div class="pdf-line-field">
-                                        <span>Class</span>
-                                        <strong id="previewStudentGrade"></strong>
-                                    </div>
-                                    <div class="pdf-line-field">
-                                        <span>Session</span>
-                                        <strong id="previewResultSession"></strong>
-                                    </div>
-                                    <div class="pdf-line-field pdf-line-wide">
-                                        <span>Exam | Term</span>
-                                        <strong id="previewTermTitle"></strong>
-                                    </div>
-                                </div>
-                                <div class="result-student-photo-box" id="previewStudentPhotoBox">
-                                    <img id="previewStudentPhoto" alt="Student photo">
-                                    <span>PHOTO</span>
+                        <div class="result-card-frame">
+                            <div class="result-card-watermark">APEXIUMS</div>
+                            <div class="result-card-topbar">
+                                <div class="result-logo-box"><img id="previewLeftLogo" alt="Left school logo"></div>
+                                <div class="result-school-center">
+                                    <h2 id="previewSchoolName">Kids Roots Jand</h2>
+                                    <p id="previewCampusName"></p>
+                                    <p id="previewSchoolContact"></p>
                                 </div>
                             </div>
 
-                            <div class="result-parent-note">
-                                <h3>Respected Parents!</h3>
-                                <p>Thank you for trusting and choosing our school/college for your child's education. Please find his result report below, which has been assessed on knowledge, critical, and application levels.</p>
+                            <div class="result-term-title" id="previewTermTitle"></div>
+
+                            <div class="student-meta-row">
+                                <div class="meta-field">
+                                    <span>Student ID:</span>
+                                    <strong id="previewStudentId"></strong>
+                                </div>
+                                <div class="meta-field">
+                                    <span>Roll No:</span>
+                                    <strong id="previewRollNo"></strong>
+                                </div>
                             </div>
 
-                            <div class="result-pdf-main-grid">
-                                <div class="result-pdf-table-box">
-                                    <table class="result-marks-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Subjects</th>
-                                                <th>Total<br>Marks</th>
-                                                <th>Obtained<br>Marks</th>
-                                                <th>Percentage</th>
-                                                <th>Grade</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="previewSubjectsBody"></tbody>
-                                        <tfoot>
-                                            <tr>
-                                                <td>Total</td>
-                                                <td id="previewTotalMax">0</td>
-                                                <td id="previewTotalObtained">0</td>
-                                                <td id="previewPercentage">0%</td>
-                                                <td id="previewBestPercentage">-</td>
-                                            </tr>
-                                        </tfoot>
-                                    </table>
+                            <div class="student-meta-row">
+                                <div class="meta-field">
+                                    <span>Student's Name:</span>
+                                    <strong id="previewStudentName"></strong>
                                 </div>
+                                <div class="meta-field">
+                                    <span>Father's Name:</span>
+                                    <strong id="previewFatherName"></strong>
+                                </div>
+                            </div>
 
+                            <div class="grade-chip">GRADE: <span id="previewStudentGrade"></span></div>
+
+                            <table class="result-marks-table">
+                                <thead>
+                                    <tr>
+                                        <th>SUBJECT</th>
+                                        <th>MAX MARKS</th>
+                                        <th>MARKS OBTAINED</th>
+                                        <th>BEST SCORE</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="previewSubjectsBody"></tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td>Total Marks</td>
+                                        <td id="previewTotalMax">0</td>
+                                        <td id="previewTotalObtained">0</td>
+                                        <td id="previewTotalBest">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total Percentage</td>
+                                        <td>0%</td>
+                                        <td id="previewPercentage">0%</td>
+                                        <td id="previewBestPercentage">0%</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <div class="position-row">
+                                <div class="position-label">Position / Grade</div>
+                                <div class="position-value" id="previewPositionGrade"></div>
+                            </div>
+
+                            <div class="remarks-signatures">
+                                <div class="remarks-block">
+                                    <span>Class Teacher's Remarks:</span>
+                                    <strong id="previewTeacherRemarks"></strong>
+                                </div>
+                                <div class="signature-block">
+                                    <span>Teacher's Signature:</span>
+                                    <strong id="previewTeacherSignature"></strong>
+                                </div>
+                            </div>
+
+                            <div class="performance-title">PERFORMANCE</div>
+
+                            <div class="performance-grid">
                                 <table class="behavior-table">
                                     <thead>
                                         <tr>
-                                            <th>Personal Growth &<br>Skills</th>
-                                            <th>A</th>
-                                            <th>B</th>
-                                            <th>C</th>
+                                            <th>General Behavior</th>
+                                            <th>Grading</th>
                                         </tr>
                                     </thead>
                                     <tbody id="previewBehaviorBody"></tbody>
                                 </table>
+
+                                <table class="grading-table">
+                                    <tbody>
+                                        <tr><td>A+</td><td>Excellent</td><td>90% & above</td></tr>
+                                        <tr><td>A</td><td>Very Good</td><td>80% & above</td></tr>
+                                        <tr><td>B</td><td>Good</td><td>60% & above</td></tr>
+                                        <tr><td>C</td><td>Fair</td><td>50% & above</td></tr>
+                                        <tr><td>D</td><td>Satisfactory</td><td>40% & above</td></tr>
+                                        <tr><td>E</td><td>Unsatisfactory</td><td>Below 40%</td></tr>
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <div class="result-summary-strip">
-                                <div class="result-summary-title">RESULT SUMMARY:</div>
-                                <div class="pdf-line-field"><span>Total Marks</span><strong id="summaryTotalMax">0</strong></div>
-                                <div class="pdf-line-field"><span>Obt. Marks:</span><strong id="summaryTotalObtained">0</strong></div>
-                                <div class="pdf-line-field"><span>Percentage</span><strong id="summaryPercentage">0%</strong></div>
-                                <div class="pdf-line-field"><span>Grade</span><strong id="previewPositionGrade"></strong></div>
-                                <div class="pdf-line-field"><span>Remarks</span><strong id="previewTeacherRemarks"></strong></div>
-                                <div class="pdf-line-field"><span>Class Position</span><strong id="previewClassPosition"></strong></div>
-                                <div class="pdf-line-field"><span>Class Strength</span><strong id="previewClassStrength"></strong></div>
+                            <div class="bottom-signatures">
+                                <div class="signature-line">
+                                    <strong id="previewPrincipalSignature"></strong>
+                                    <span>Principal's Signature</span>
+                                </div>
+                                <div class="signature-line">
+                                    <strong id="previewParentSignature"></strong>
+                                    <span>Parent's Signature</span>
+                                </div>
                             </div>
-
-                            <div class="overall-comments-box">
-                                <div>Over-All Comments</div>
-                                <p><strong id="overallCommentStudentName"></strong> <span id="previewOverallComments"></span></p>
-                            </div>
-
-                            <div class="result-pdf-signature">
-                                <span>Signature:</span>
-                                <strong id="previewPrincipalSignature"></strong>
-                            </div>
-
-                            <span id="previewTotalBest" hidden>0</span>
-                            <span id="previewTeacherSignature" hidden></span>
-                            <span id="previewParentSignature" hidden></span>
                         </div>
                     </div>
                     </section>
@@ -480,8 +473,26 @@
                         </div>
                     </div>
 
+                    <div class="result-schedule-panel">
+                        <div>
+                            <h4>Portal Result Schedule</h4>
+                            <p>Select campus and class, then set the date when those students can view saved results in their portals.</p>
+                        </div>
+                        <div class="result-schedule-fields">
+                            <label>Campus<select id="resultScheduleCampus"></select></label>
+                            <label>Class<select id="resultScheduleClass"></select></label>
+                            <label>Show On Portal From<input type="date" id="resultPublishDate"></label>
+                            <button type="button" class="btn btn-primary" id="saveResultScheduleBtn">
+                                <i data-lucide="calendar-check" size="16"></i> Set Schedule
+                            </button>
+                        </div>
+                        <div class="result-schedule-list" id="resultScheduleList"></div>
+                    </div>
+
                     <div class="result-history-toolbar">
                         <input type="text" id="resultHistorySearch" placeholder="Search by student name, ID, class, or term">
+                        <select id="resultHistoryCampusFilter"></select>
+                        <select id="resultHistoryClassFilter"></select>
                     </div>
 
                     <div class="table-container result-history-table-wrap">
@@ -489,7 +500,9 @@
                             <thead>
                                 <tr>
                                     <th>Student</th>
-                                    <th>Student ID / Code</th>
+                                    <th>Student ID</th>
+                                    <th>Roll No</th>
+                                    <th>Campus</th>
                                     <th>Class</th>
                                     <th>Term</th>
                                     <th>Total Marks</th>
@@ -510,8 +523,8 @@
         </main>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -648,17 +661,91 @@
         }
 
         .result-history-toolbar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px) minmax(160px, 220px);
+            gap: 0.75rem;
             margin-top: 1.25rem;
             margin-bottom: 1rem;
         }
 
-        .result-history-toolbar input {
+        .result-history-toolbar input,
+        .result-history-toolbar select {
             width: 100%;
             border: 1px solid var(--border-color);
             border-radius: 12px;
             padding: 0.85rem 0.95rem;
             font: inherit;
             background: #fff;
+        }
+
+        .result-schedule-panel {
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            background: #f8fafc;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .result-schedule-panel h4 {
+            margin: 0 0 0.35rem;
+        }
+
+        .result-schedule-panel p {
+            margin: 0;
+            color: var(--text-secondary);
+        }
+
+        .result-schedule-fields {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.8rem;
+            align-items: end;
+            margin-top: 1rem;
+        }
+
+        .result-schedule-fields label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .result-schedule-fields select,
+        .result-schedule-fields input {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.8rem 0.9rem;
+            font: inherit;
+            background: #fff;
+            width: 100%;
+        }
+
+        .result-schedule-list {
+            display: grid;
+            gap: 0.6rem;
+            margin-top: 1rem;
+        }
+
+        .result-schedule-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: #fff;
+            padding: 0.8rem 0.9rem;
+        }
+
+        .result-schedule-item strong {
+            display: block;
+        }
+
+        .result-schedule-item span {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
 
         .result-history-table-wrap {
@@ -786,6 +873,7 @@
         }
 
         .result-form-fields input,
+        .result-form-fields select,
         .result-form-fields textarea,
         .dynamic-row input {
             border: 1px solid var(--border-color);
@@ -980,7 +1068,7 @@
 
         .result-card-topbar {
             display: grid;
-            grid-template-columns: 66px 1fr 88px;
+            grid-template-columns: 66px 1fr;
             gap: 12px;
             align-items: center;
             border: 1px solid #555;
@@ -1014,36 +1102,6 @@
             display: block;
         }
 
-        .result-student-photo-box {
-            width: 82px;
-            height: 96px;
-            border: 1px solid #555;
-            display: grid;
-            place-items: center;
-            justify-self: end;
-            overflow: hidden;
-            background: #fbfbfb;
-            position: relative;
-            font-size: 11px;
-            font-weight: 700;
-            color: #777;
-        }
-
-        .result-student-photo-box img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: none;
-        }
-
-        .result-student-photo-box.has-photo img {
-            display: block;
-        }
-
-        .result-student-photo-box.has-photo span {
-            display: none;
-        }
-
         .static-logo-note {
             grid-column: 1 / -1;
             display: flex;
@@ -1065,47 +1123,6 @@
             margin-top: 0.15rem;
             color: #475569;
             font-size: 0.85rem;
-        }
-
-        .student-photo-uploader {
-            grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.9rem 1rem;
-            border: 1px solid #bfdbfe;
-            border-radius: 12px;
-            background: #eff6ff;
-            color: #172554;
-        }
-
-        .student-photo-uploader strong,
-        .student-photo-uploader span {
-            display: block;
-        }
-
-        .student-photo-uploader span {
-            margin-top: 0.15rem;
-            color: #475569;
-            font-size: 0.85rem;
-        }
-
-        .student-photo-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
-
-        .photo-upload-btn {
-            cursor: pointer;
-            margin: 0;
-        }
-
-        .photo-upload-btn input {
-            display: none;
         }
 
         .result-school-center {
@@ -1267,317 +1284,13 @@
             font-weight: 700;
         }
 
-        .result-pdf-card {
-            min-height: 297mm;
-            padding: 13mm 10mm 12mm;
-            border: none;
-            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
-            font-family: Arial, Helvetica, sans-serif;
-            color: #2b2f36;
-        }
-
-        .result-pdf-header {
-            display: grid;
-            grid-template-columns: 32mm 1fr;
-            border: 1.5px solid #333;
-        }
-
-        .result-pdf-logo-cell {
-            grid-row: span 2;
-            border-right: 1.5px solid #333;
-            display: grid;
-            place-items: center;
-            min-height: 30mm;
-        }
-
-        .result-pdf-logo-cell .result-logo-box {
-            width: 22mm;
-            height: 22mm;
-            border: 0;
-        }
-
-        .result-pdf-school-cell {
-            display: grid;
-            place-items: center;
-            min-height: 18mm;
-            border-bottom: 1.5px solid #333;
-            text-align: center;
-            padding: 0 8mm;
-        }
-
-        .result-pdf-school-cell h2 {
-            margin: 0;
-            font-size: 25px;
-            line-height: 1.15;
-            letter-spacing: 0;
-            text-transform: uppercase;
-            font-weight: 800;
-        }
-
-        .result-pdf-address-cell,
-        .result-pdf-title-cell {
-            grid-column: 1 / -1;
-            display: grid;
-            place-items: center;
-            text-align: center;
-            min-height: 11mm;
-            border-top: 1.5px solid #333;
-            font-size: 15px;
-            font-weight: 800;
-            padding: 0 6mm;
-        }
-
-        .result-pdf-title-cell {
-            min-height: 16mm;
-            font-size: 15px;
-        }
-
-        .result-pdf-student-area {
-            display: grid;
-            grid-template-columns: 1fr 28mm;
-            gap: 8mm;
-            align-items: start;
-            margin: 1mm 0 3mm;
-        }
-
-        .result-pdf-meta-lines {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4mm 5mm;
-        }
-
-        .pdf-line-field {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            align-items: end;
-            gap: 3mm;
-            min-height: 8mm;
-            font-size: 15px;
-        }
-
-        .pdf-line-field span {
-            white-space: nowrap;
-        }
-
-        .pdf-line-field strong {
-            display: block;
-            min-height: 6mm;
-            border-bottom: 1.5px solid #555;
-            text-align: center;
-            font-size: 13px;
-            line-height: 6mm;
-            font-weight: 800;
-        }
-
-        .result-pdf-student-area .result-student-photo-box {
-            width: 25mm;
-            height: 25mm;
-            border: 0;
-            border-radius: 50%;
-            background: #f8cc05;
-            margin-top: 1mm;
-        }
-
-        .result-parent-note {
-            margin: 4mm 0 3mm;
-        }
-
-        .result-parent-note h3 {
-            margin: 0 0 3mm;
-            color: #ff0000;
-            font-size: 20px;
-            line-height: 1;
-        }
-
-        .result-parent-note p {
-            margin: 0 0 0 6mm;
-            color: #4776aa;
-            font-size: 15px;
-            line-height: 1.25;
-            font-weight: 700;
-        }
-
-        .result-pdf-main-grid {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 58mm;
-            gap: 3.5mm;
-            align-items: start;
-        }
-
-        .result-pdf-card .result-marks-table,
-        .result-pdf-card .behavior-table {
-            table-layout: fixed;
-            width: 100%;
-        }
-
-        .result-pdf-card .result-marks-table th,
-        .result-pdf-card .result-marks-table td,
-        .result-pdf-card .behavior-table th,
-        .result-pdf-card .behavior-table td {
-            word-break: normal;
-            overflow-wrap: normal;
-            hyphens: none;
-        }
-
-        .result-pdf-card .result-marks-table th:nth-child(1),
-        .result-pdf-card .result-marks-table td:nth-child(1) {
-            width: 34%;
-        }
-
-        .result-pdf-card .result-marks-table th:nth-child(2),
-        .result-pdf-card .result-marks-table td:nth-child(2),
-        .result-pdf-card .result-marks-table th:nth-child(3),
-        .result-pdf-card .result-marks-table td:nth-child(3) {
-            width: 17%;
-        }
-
-        .result-pdf-card .result-marks-table th:nth-child(4),
-        .result-pdf-card .result-marks-table td:nth-child(4) {
-            width: 20%;
-        }
-
-        .result-pdf-card .result-marks-table th:nth-child(5),
-        .result-pdf-card .result-marks-table td:nth-child(5) {
-            width: 12%;
-        }
-
-        .result-pdf-card .behavior-table th:first-child,
-        .result-pdf-card .behavior-table td:first-child {
-            width: 36mm;
-        }
-
-        .result-pdf-card .behavior-table th:not(:first-child),
-        .result-pdf-card .behavior-table td:not(:first-child) {
-            width: 8mm;
-        }
-
-        .result-pdf-table-box {
-            border: 1.5px solid #333;
-            min-height: 105mm;
-            padding: 2.5mm;
-        }
-
-        .result-pdf-card .result-marks-table th,
-        .result-pdf-card .result-marks-table td,
-        .result-pdf-card .behavior-table th,
-        .result-pdf-card .behavior-table td {
-            border: 1.5px solid #111;
-            padding: 4mm 2.2mm;
-            font-size: 15px;
-            line-height: 1.15;
-            text-align: center;
-        }
-
-        .result-pdf-card .result-marks-table th {
-            background: #008000;
-            color: #fff;
-            font-size: 16px;
-            font-weight: 800;
-        }
-
-        .result-pdf-card .result-marks-table th {
-            white-space: normal;
-        }
-
-        .result-pdf-card .result-marks-table tbody tr:nth-child(odd) td {
-            background: #dff2df;
-        }
-
-        .result-pdf-card .result-marks-table td:first-child {
-            text-align: left;
-            padding-left: 3mm;
-        }
-
-        .result-pdf-card .result-marks-table tfoot td {
-            background: #fff;
-            font-weight: 800;
-        }
-
-        .result-pdf-card .behavior-table th {
-            background: #f2a100;
-            color: #fff;
-            font-weight: 800;
-            padding: 3mm 1.6mm;
-            font-size: 13px;
-            line-height: 1.18;
-        }
-
-        .result-pdf-card .behavior-table td:first-child {
-            text-align: left;
-            padding-left: 2.5mm;
-            white-space: nowrap;
-        }
-
-        .result-pdf-card .behavior-table th:not(:first-child),
-        .result-pdf-card .behavior-table td:not(:first-child) {
-            padding-left: 1mm;
-            padding-right: 1mm;
-            text-align: center;
-        }
-
-        .result-pdf-card .behavior-table tbody tr:nth-child(odd) td {
-            background: #ffec9a;
-        }
-
-        .result-summary-strip {
-            display: grid;
-            grid-template-columns: 50mm 1fr 1fr;
-            gap: 4mm 3mm;
-            align-items: end;
-            margin: 5mm 0 7mm;
-        }
-
-        .result-summary-title {
-            background: #0b88f5;
-            color: #fff;
-            font-weight: 800;
-            padding: 3mm 7mm;
-            font-size: 15px;
-            text-align: center;
-        }
-
-        .overall-comments-box {
-            border: 1.5px solid #111;
-            margin-top: 4mm;
-            text-align: center;
-        }
-
-        .overall-comments-box div {
-            background: #20666a;
-            color: #fff;
-            font-weight: 800;
-            padding: 4mm;
-            font-size: 15px;
-            border-bottom: 1.5px solid #111;
-        }
-
-        .overall-comments-box p {
-            margin: 0;
-            background: #e4f7e3;
-            padding: 4mm;
-            font-size: 15px;
-        }
-
-        .result-pdf-signature {
-            margin-top: 28mm;
-            display: flex;
-            justify-content: center;
-            align-items: end;
-            gap: 3mm;
-            font-size: 15px;
-        }
-
-        .result-pdf-signature strong {
-            min-width: 48mm;
-            border-bottom: 2px dashed #333;
-            min-height: 7mm;
-        }
-
         @media (max-width: 1400px) {
             .exam-builder-layout,
             .result-form-fields,
             .dynamic-row,
             .behavior-editor .dynamic-row,
+            .result-history-toolbar,
+            .result-schedule-fields,
             .student-meta-row,
             .remarks-signatures,
             .performance-grid,
@@ -1593,20 +1306,6 @@
             .date-sheet-meta,
             .schedule-editor .dynamic-row {
                 grid-template-columns: 1fr;
-            }
-
-            .result-card-topbar {
-                grid-template-columns: 58px 1fr 76px;
-            }
-
-            .result-student-photo-box {
-                width: 72px;
-                height: 86px;
-            }
-
-            .student-photo-uploader {
-                align-items: flex-start;
-                flex-direction: column;
             }
         }
 
@@ -1710,7 +1409,7 @@
             }
 
             body.print-result .result-card-topbar {
-                grid-template-columns: 56px 1fr 66px !important;
+                grid-template-columns: 56px 1fr !important;
                 gap: 8px !important;
                 padding: 7px 9px !important;
             }
@@ -1718,12 +1417,6 @@
             body.print-result .result-logo-box {
                 height: 48px !important;
                 font-size: 10px !important;
-            }
-
-            body.print-result .result-student-photo-box {
-                width: 62px !important;
-                height: 74px !important;
-                font-size: 9px !important;
             }
 
             body.print-result .result-school-center h2 {
@@ -1873,7 +1566,7 @@
 
             body.print-result.result-print-dense .result-card-topbar,
             body.print-result.result-print-ultra .result-card-topbar {
-                grid-template-columns: 48px 1fr 56px !important;
+                grid-template-columns: 48px 1fr !important;
                 gap: 6px !important;
                 padding: 5px 7px !important;
             }
@@ -1881,13 +1574,6 @@
             body.print-result.result-print-dense .result-logo-box,
             body.print-result.result-print-ultra .result-logo-box {
                 height: 40px !important;
-            }
-
-            body.print-result.result-print-dense .result-student-photo-box,
-            body.print-result.result-print-ultra .result-student-photo-box {
-                width: 52px !important;
-                height: 62px !important;
-                font-size: 8px !important;
             }
 
             body.print-result.result-print-dense .result-school-center h2,
@@ -2001,17 +1687,12 @@
             }
 
             body.print-result.result-print-ultra .result-card-topbar {
-                grid-template-columns: 42px 1fr 48px !important;
+                grid-template-columns: 42px 1fr !important;
                 padding: 4px 6px !important;
             }
 
             body.print-result.result-print-ultra .result-logo-box {
                 height: 34px !important;
-            }
-
-            body.print-result.result-print-ultra .result-student-photo-box {
-                width: 46px !important;
-                height: 54px !important;
             }
 
             body.print-result.result-print-ultra .result-marks-table td,
@@ -2025,115 +1706,6 @@
             body.print-schedule .date-sheet-frame {
                 border: none;
                 padding: 0;
-            }
-
-            body.print-result .result-pdf-card,
-            body.print-result.result-print-compact .result-pdf-card,
-            body.print-result.result-print-dense .result-pdf-card,
-            body.print-result.result-print-ultra .result-pdf-card {
-                width: 210mm !important;
-                max-width: 210mm !important;
-                height: 297mm !important;
-                min-height: 297mm !important;
-                padding: 13mm 10mm 12mm !important;
-                border: none !important;
-                font-family: Arial, Helvetica, sans-serif !important;
-            }
-
-            body.print-result .result-pdf-card .result-pdf-header {
-                display: grid !important;
-                grid-template-columns: 32mm 1fr !important;
-            }
-
-            body.print-result .result-pdf-card .result-pdf-school-cell h2 {
-                font-size: 25px !important;
-                line-height: 1.15 !important;
-            }
-
-            body.print-result .result-pdf-card .result-pdf-address-cell,
-            body.print-result .result-pdf-card .result-pdf-title-cell,
-            body.print-result .result-pdf-card .pdf-line-field,
-            body.print-result .result-pdf-card .overall-comments-box p,
-            body.print-result .result-pdf-card .result-pdf-signature {
-                font-size: 15px !important;
-                line-height: 1.2 !important;
-            }
-
-            body.print-result .result-pdf-card .result-pdf-main-grid {
-                display: grid !important;
-                grid-template-columns: minmax(0, 1fr) 58mm !important;
-                gap: 3.5mm !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table,
-            body.print-result .result-pdf-card .behavior-table {
-                table-layout: fixed !important;
-                width: 100% !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table th,
-            body.print-result .result-pdf-card .result-marks-table td,
-            body.print-result .result-pdf-card .behavior-table th,
-            body.print-result .result-pdf-card .behavior-table td {
-                padding: 4mm 2.2mm !important;
-                font-size: 15px !important;
-                line-height: 1.15 !important;
-                word-break: normal !important;
-                overflow-wrap: normal !important;
-                hyphens: none !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table th:nth-child(1),
-            body.print-result .result-pdf-card .result-marks-table td:nth-child(1) {
-                width: 34% !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table th:nth-child(2),
-            body.print-result .result-pdf-card .result-marks-table td:nth-child(2),
-            body.print-result .result-pdf-card .result-marks-table th:nth-child(3),
-            body.print-result .result-pdf-card .result-marks-table td:nth-child(3) {
-                width: 17% !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table th:nth-child(4),
-            body.print-result .result-pdf-card .result-marks-table td:nth-child(4) {
-                width: 20% !important;
-            }
-
-            body.print-result .result-pdf-card .result-marks-table th:nth-child(5),
-            body.print-result .result-pdf-card .result-marks-table td:nth-child(5) {
-                width: 12% !important;
-            }
-
-            body.print-result .result-pdf-card .behavior-table th:first-child,
-            body.print-result .result-pdf-card .behavior-table td:first-child {
-                width: 36mm !important;
-            }
-
-            body.print-result .result-pdf-card .behavior-table th:not(:first-child),
-            body.print-result .result-pdf-card .behavior-table td:not(:first-child) {
-                width: 8mm !important;
-                padding-left: 1mm !important;
-                padding-right: 1mm !important;
-                text-align: center !important;
-            }
-
-            body.print-result .result-pdf-card .behavior-table th {
-                padding: 3mm 1.6mm !important;
-                font-size: 13px !important;
-                line-height: 1.18 !important;
-            }
-
-            body.print-result .result-pdf-card .behavior-table td:first-child {
-                padding-left: 2.5mm !important;
-                white-space: nowrap !important;
-            }
-
-            body.print-result .result-pdf-card .result-student-photo-box,
-            body.print-result.result-print-dense .result-pdf-card .result-student-photo-box,
-            body.print-result.result-print-ultra .result-pdf-card .result-student-photo-box {
-                width: 25mm !important;
-                height: 25mm !important;
             }
 
             body.print-result.result-print-color .result-card-frame {
@@ -2156,103 +1728,22 @@
                 color: rgba(0, 0, 0, 0.08) !important;
             }
 
-            body.print-result.result-print-bw .result-logo-box img,
-            body.print-result.result-print-bw .result-student-photo-box img {
+            body.print-result.result-print-bw .result-logo-box img {
                 filter: grayscale(1) contrast(1.15);
             }
         }
     </style>
     <script>
-        const DATE_SHEET_STORAGE_KEY = 'KIDS_ROOTS_JAND_DATE_SHEET_V1';
-        const RESULT_CARD_STORAGE_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_V1';
-        const RESULT_CARD_ARCHIVE_LEGACY_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_ARCHIVE_V1';
-        const RESULT_CARD_ARCHIVE_KEY = 'KIDS_ROOTS_JAND_RESULT_CARD_ARCHIVE_V2';
+        const DATE_SHEET_STORAGE_KEY = 'APEXIUMS_DATE_SHEET_V1';
+        const RESULT_CARD_STORAGE_KEY = 'APEXIUMS_RESULT_CARD_V1';
+        const RESULT_CARD_ARCHIVE_LEGACY_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V1';
+        const RESULT_CARD_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
+        const RESULT_PUBLISH_SCHEDULE_KEY = 'APEXIUMS_RESULT_PUBLISH_SCHEDULE_V1';
         const RESULT_CARD_STUDENT_KEY = 'eduCore_students';
         const defaultScheduleRows = [];
         const defaultSubjects = [];
         const defaultBehaviors = [];
         const STATIC_RESULT_LOGO = 'images/logo.png';
-
-        function getExamBrandingSettings() {
-            const fallback = { schoolName: 'Kids Roots Jand', schoolTitle: 'Kids Roots Jand', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
-            try {
-                const globalBranding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
-                return { ...fallback, ...(globalBranding || {}) };
-            } catch (_error) {
-                return fallback;
-            }
-        }
-
-        function getExamLogoSrc() {
-            const branding = getExamBrandingSettings();
-            return STATIC_RESULT_LOGO;
-        }
-
-        function getExamContactLine() {
-            const branding = getExamBrandingSettings();
-            const address = branding.address || branding.schoolAddress || '';
-            const parts = [];
-            if (address) parts.push(`Address: ${address}`);
-            if (branding.phone) parts.push(`Phone: ${branding.phone}`);
-            return parts.join(' | ');
-        }
-
-        function applyExamBrandingDefaults(force = false) {
-            const branding = getExamBrandingSettings();
-            const schoolName = 'Kids Roots Jand';
-            const contactLine = getExamContactLine();
-            const logoSrc = getExamLogoSrc();
-            const legacyNames = ['Kids Roots Jand', 'Kids Roots Jand'];
-
-            const dateSheetSchool = document.getElementById('dateSheetSchoolName');
-            if (dateSheetSchool && (force || !dateSheetSchool.value || legacyNames.includes(dateSheetSchool.value))) {
-                dateSheetSchool.value = schoolName;
-            }
-
-            const resultSchool = document.getElementById('schoolName');
-            if (resultSchool && (force || !resultSchool.value || legacyNames.includes(resultSchool.value))) {
-                resultSchool.value = schoolName;
-            }
-
-            const contact = document.getElementById('schoolContact');
-            if (contact && contactLine && (force || !contact.value || contact.value.includes('Dekhni Road') || contact.value.includes('Chapri Road') || contact.value.includes('Nai Abadi'))) {
-                contact.value = contactLine;
-            }
-
-            const leftLogo = document.getElementById('leftLogoUrl');
-            if (leftLogo) leftLogo.value = logoSrc;
-
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
-                img.src = logoSrc;
-            });
-        }
-
-        function forceRefreshResultBrandingFromStorage() {
-            const branding = getExamBrandingSettings();
-            const schoolName = 'Kids Roots Jand';
-            const contactLine = getExamContactLine();
-            const logoSrc = getExamLogoSrc();
-            
-            // Force update all branding fields
-            const schoolNameField = document.getElementById('schoolName');
-            if (schoolNameField) schoolNameField.value = schoolName;
-            
-            const contactField = document.getElementById('schoolContact');
-            if (contactField) contactField.value = contactLine;
-            
-            const logoField = document.getElementById('leftLogoUrl');
-            if (logoField) logoField.value = logoSrc;
-            
-            // Update preview immediately with new branding
-            document.getElementById('previewSchoolName').textContent = schoolName;
-            document.getElementById('previewSchoolContact').textContent = contactLine;
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
-                img.src = logoSrc;
-            });
-            document.getElementById('previewLeftLogo').src = logoSrc;
-            
-            refreshResultCardPreview();
-        }
 
         function isLegacyDemoDateSheetState(saved = {}) {
             return (saved.dateSheetSchoolName === 'Kids Roots Jand' || saved.dateSheetSchoolName === 'Kids Roots Jand') &&
@@ -2307,6 +1798,71 @@
             localStorage.setItem(RESULT_CARD_ARCHIVE_KEY, JSON.stringify(records));
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[char]);
+        }
+
+        function normalizeResultValue(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function normalizeResultClass(value) {
+            return normalizeResultValue(value).replace(/\bclass\b/g, '').replace(/[^a-z0-9]/g, '');
+        }
+
+        function readResultStudents() {
+            try {
+                const students = JSON.parse(localStorage.getItem(RESULT_CARD_STUDENT_KEY) || '[]');
+                return Array.isArray(students) ? students : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function getStudentCampus(student = {}) {
+            return student.campusName || student.campus || student.branchName || '';
+        }
+
+        function getStudentClass(student = {}) {
+            return student.classGrade || student.className || student.grade || '';
+        }
+
+        function getStudentLookup(student = {}) {
+            return student.studentCode || student.rollNo || student.id || '';
+        }
+
+        function getStudentInternalId(student = {}) {
+            return student.id || student.profileId || '';
+        }
+
+        function getUniqueValues(values) {
+            return Array.from(new Set(values.map((value) => String(value || '').trim()).filter(Boolean)));
+        }
+
+        function ensureSelectOption(select, value) {
+            if (!select || !value) return;
+            if (![...select.options].some((option) => option.value === value)) {
+                select.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`);
+            }
+        }
+
+        function setSelectOptions(selectId, values, placeholder = 'Select') {
+            const select = document.getElementById(selectId);
+            if (!select) return;
+            const currentValue = select.value;
+            const options = getUniqueValues(values);
+            select.innerHTML = `<option value="">${escapeHtml(placeholder)}</option>` + options.map((value) => (
+                `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`
+            )).join('');
+            if (currentValue && options.includes(currentValue)) select.value = currentValue;
+        }
+
         function clearLegacyResultArchive() {
             localStorage.removeItem(RESULT_CARD_ARCHIVE_LEGACY_KEY);
         }
@@ -2353,7 +1909,6 @@
             ].forEach((id) => {
                 if (savedState[id]) document.getElementById(id).value = savedState[id];
             });
-            applyExamBrandingDefaults(false);
         }
 
         function readScheduleRows() {
@@ -2399,12 +1954,7 @@
 
         function refreshDateSheetPreview() {
             const rows = readScheduleRows();
-            const branding = getExamBrandingSettings();
-            const logoSrc = getExamLogoSrc();
-            document.querySelectorAll('.date-sheet-logo').forEach((img) => {
-                img.src = logoSrc;
-            });
-            document.getElementById('previewDateSheetSchoolName').textContent = 'Kids Roots Jand';
+            document.getElementById('previewDateSheetSchoolName').textContent = document.getElementById('dateSheetSchoolName').value || 'Kids Roots Jand';
             document.getElementById('previewDateSheetExamTitle').textContent = document.getElementById('dateSheetExamTitle').value || '';
             document.getElementById('previewDateSheetSession').textContent = document.getElementById('dateSheetSession').value || '';
             document.getElementById('previewDateSheetClassGroup').textContent = document.getElementById('dateSheetClassGroup').value || '';
@@ -2499,20 +2049,16 @@
                 campusName: document.getElementById('campusName').value,
                 schoolContact: document.getElementById('schoolContact').value,
                 termTitle: document.getElementById('termTitle').value,
-                resultSession: document.getElementById('resultSession').value,
                 studentLookupId: document.getElementById('studentLookupId').value,
+                studentRollNo: document.getElementById('studentRollNo').value,
                 studentName: document.getElementById('studentName').value,
                 fatherName: document.getElementById('fatherName').value,
                 studentGrade: document.getElementById('studentGrade').value,
                 positionGrade: document.getElementById('positionGrade').value,
-                classPosition: document.getElementById('classPosition').value,
-                classStrength: document.getElementById('classStrength').value,
                 teacherRemarks: document.getElementById('teacherRemarks').value,
-                overallComments: document.getElementById('overallComments').value,
                 teacherSignature: document.getElementById('teacherSignature').value,
                 principalSignature: document.getElementById('principalSignature').value,
                 parentSignature: document.getElementById('parentSignature').value,
-                studentPhotoDataUrl: document.getElementById('studentPhotoDataUrl').value,
                 subjects: readSubjectRows(),
                 behaviors: readBehaviorRows()
             };
@@ -2523,9 +2069,13 @@
             return {
                 id: document.getElementById('studentLookupId').value.trim() || `result-${Date.now()}`,
                 studentLookupId: document.getElementById('studentLookupId').value.trim(),
+                studentId: document.getElementById('studentLookupId').value.trim(),
+                rollNo: document.getElementById('studentRollNo').value.trim(),
+                studentRollNo: document.getElementById('studentRollNo').value.trim(),
                 studentName: document.getElementById('studentName').value.trim(),
                 fatherName: document.getElementById('fatherName').value.trim(),
                 studentGrade: document.getElementById('studentGrade').value.trim(),
+                classGrade: document.getElementById('studentGrade').value.trim(),
                 positionGrade: document.getElementById('positionGrade').value.trim(),
                 teacherRemarks: document.getElementById('teacherRemarks').value.trim(),
                 teacherSignature: document.getElementById('teacherSignature').value.trim(),
@@ -2535,12 +2085,7 @@
                 campusName: document.getElementById('campusName').value.trim(),
                 schoolContact: document.getElementById('schoolContact').value.trim(),
                 termTitle: document.getElementById('termTitle').value.trim(),
-                resultSession: document.getElementById('resultSession').value.trim(),
-                leftLogoUrl: getExamLogoSrc(),
-                classPosition: document.getElementById('classPosition').value.trim(),
-                classStrength: document.getElementById('classStrength').value.trim(),
-                overallComments: document.getElementById('overallComments').value.trim(),
-                studentPhotoDataUrl: document.getElementById('studentPhotoDataUrl').value,
+                leftLogoUrl: STATIC_RESULT_LOGO,
                 subjects: readSubjectRows(),
                 behaviors: readBehaviorRows(),
                 updatedAt: new Date().toISOString()
@@ -2549,6 +2094,11 @@
 
         function applyResultRecord(record = {}) {
             fillFormState(record);
+            ensureSelectOption(document.getElementById('resultCampusFilter'), record.campusName || '');
+            ensureSelectOption(document.getElementById('resultClassFilter'), record.studentGrade || record.classGrade || '');
+            document.getElementById('resultCampusFilter').value = record.campusName || '';
+            document.getElementById('resultClassFilter').value = record.studentGrade || record.classGrade || '';
+            populateResultStudentSelect();
             renderDynamicEditors(record);
             refreshResultCardPreview();
         }
@@ -2571,8 +2121,11 @@
             }
 
             saveResultArchive(archive);
+            populateResultPageSelectors();
             renderResultHistoryList();
-            alert('Result card saved successfully.');
+            toggleExamSection('resultHistoryCard');
+            document.getElementById('resultHistoryCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            alert('Result uploaded and saved successfully.');
         }
 
         function loadResultFromArchive(recordId, termTitle) {
@@ -2612,21 +2165,105 @@
             };
         }
 
+        function loadResultPublishSchedules() {
+            try {
+                const schedules = JSON.parse(localStorage.getItem(RESULT_PUBLISH_SCHEDULE_KEY) || '[]');
+                return Array.isArray(schedules) ? schedules : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
+        function saveResultPublishSchedules(schedules) {
+            localStorage.setItem(RESULT_PUBLISH_SCHEDULE_KEY, JSON.stringify(schedules));
+        }
+
+        function getResultScheduleForRecord(record = {}) {
+            const campus = normalizeResultValue(record.campusName);
+            const className = normalizeResultClass(record.studentGrade || record.classGrade);
+            return loadResultPublishSchedules().find((item) => (
+                normalizeResultValue(item.campusName) === campus &&
+                normalizeResultClass(item.classGrade) === className
+            )) || null;
+        }
+
+        function getResultPublishStatus(record = {}) {
+            const schedule = getResultScheduleForRecord(record);
+            if (!schedule?.publishDate) return 'Not scheduled';
+            const today = new Date().toISOString().slice(0, 10);
+            return schedule.publishDate <= today ? `Published ${schedule.publishDate}` : `Scheduled ${schedule.publishDate}`;
+        }
+
+        function renderResultScheduleList() {
+            const container = document.getElementById('resultScheduleList');
+            if (!container) return;
+            const schedules = loadResultPublishSchedules();
+            container.innerHTML = schedules.length ? schedules.map((item) => `
+                <div class="result-schedule-item">
+                    <div>
+                        <strong>${escapeHtml(item.campusName || '-')} / ${escapeHtml(item.classGrade || '-')}</strong>
+                        <span>Portal show date: ${escapeHtml(item.publishDate || '-')}</span>
+                    </div>
+                    <button type="button" class="btn btn-outline result-schedule-delete" data-schedule-id="${escapeHtml(item.id || '')}">Delete</button>
+                </div>
+            `).join('') : '<div class="empty-state-note">No portal result schedule has been set yet.</div>';
+        }
+
+        function saveResultPortalSchedule() {
+            const campusName = document.getElementById('resultScheduleCampus')?.value.trim() || '';
+            const classGrade = document.getElementById('resultScheduleClass')?.value.trim() || '';
+            const publishDate = document.getElementById('resultPublishDate')?.value || '';
+
+            if (!campusName || !classGrade || !publishDate) {
+                alert('Select campus, class, and portal show date first.');
+                return;
+            }
+
+            const schedules = loadResultPublishSchedules();
+            const existingIndex = schedules.findIndex((item) => (
+                normalizeResultValue(item.campusName) === normalizeResultValue(campusName) &&
+                normalizeResultClass(item.classGrade) === normalizeResultClass(classGrade)
+            ));
+            const record = {
+                id: `${normalizeResultValue(campusName)}__${normalizeResultClass(classGrade)}`,
+                campusName,
+                classGrade,
+                publishDate,
+                updatedAt: new Date().toISOString()
+            };
+
+            if (existingIndex >= 0) schedules[existingIndex] = { ...schedules[existingIndex], ...record };
+            else schedules.unshift(record);
+
+            saveResultPublishSchedules(schedules);
+            renderResultScheduleList();
+            renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+            alert('Portal result schedule saved.');
+        }
+
         function renderResultHistoryList(searchTerm = '') {
             const body = document.getElementById('resultHistoryTableBody');
             const emptyState = document.getElementById('resultHistoryEmptyState');
             if (!body || !emptyState) return;
 
             const normalizedTerm = String(searchTerm || '').trim().toLowerCase();
+            const campusFilter = normalizeResultValue(document.getElementById('resultHistoryCampusFilter')?.value || '');
+            const classFilter = normalizeResultClass(document.getElementById('resultHistoryClassFilter')?.value || '');
             const rows = loadResultArchive().filter((item) => {
                 const haystack = [
                     item.studentName,
                     item.studentLookupId,
+                    item.rollNo,
+                    item.studentRollNo,
+                    item.campusName,
                     item.studentGrade,
                     item.termTitle
                 ].join(' ').toLowerCase();
 
-                return !normalizedTerm || haystack.includes(normalizedTerm);
+                if (normalizedTerm && !haystack.includes(normalizedTerm)) return false;
+                if (campusFilter && normalizeResultValue(item.campusName) !== campusFilter) return false;
+                if (classFilter && normalizeResultClass(item.studentGrade || item.classGrade) !== classFilter) return false;
+                return true;
             });
 
             body.innerHTML = rows.map((item) => {
@@ -2635,13 +2272,15 @@
                     <tr>
                         <td>${item.studentName || '-'}</td>
                         <td>${item.studentLookupId || '-'}</td>
+                        <td>${item.rollNo || item.studentRollNo || '-'}</td>
+                        <td>${item.campusName || '-'}</td>
                         <td>${item.studentGrade || '-'}</td>
                         <td>${item.termTitle || '-'}</td>
                         <td>${summary.totalMarks}</td>
                         <td>${summary.obtainedMarks}</td>
                         <td>${summary.percentage}</td>
                         <td>${summary.positionGrade}</td>
-                        <td>${summary.passStatus}</td>
+                        <td>${summary.passStatus}<br><small>${escapeHtml(getResultPublishStatus(item))}</small></td>
                         <td>${formatArchiveDate(item.updatedAt)}</td>
                         <td>
                             <div class="result-history-actions">
@@ -2691,17 +2330,15 @@
         }
 
         function fillFormState(savedState = {}) {
+            ensureSelectOption(document.getElementById('campusName'), savedState.campusName || '');
             [
-                'schoolName', 'campusName', 'schoolContact', 'termTitle', 'resultSession',
-                'studentLookupId', 'studentName', 'fatherName', 'studentGrade', 'positionGrade',
-                'classPosition', 'classStrength', 'teacherRemarks', 'overallComments',
-                'teacherSignature', 'principalSignature', 'parentSignature', 'studentPhotoDataUrl'
+                'schoolName', 'campusName', 'schoolContact', 'termTitle',
+                'studentLookupId', 'studentRollNo', 'studentName', 'fatherName', 'studentGrade', 'positionGrade',
+                'teacherRemarks', 'teacherSignature', 'principalSignature', 'parentSignature'
             ].forEach((id) => {
-                if (Object.prototype.hasOwnProperty.call(savedState, id)) document.getElementById(id).value = savedState[id] || '';
+                const value = id === 'studentRollNo' ? (savedState[id] || savedState.rollNo) : savedState[id];
+                if (value) document.getElementById(id).value = value;
             });
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            applyExamBrandingDefaults(false);
         }
 
         const RESULT_BRANCH_CONTACTS = {
@@ -2728,17 +2365,70 @@
 
         function applyBranchDetailsToResultCard(campusName) {
             const branchDetails = getResultBranchContactDetails(campusName);
-            const globalContactLine = getExamContactLine();
-            document.getElementById('campusName').value = branchDetails.campusLabel;
-            document.getElementById('schoolContact').value = globalContactLine || branchDetails.contactLine;
+            const campusSelect = document.getElementById('campusName');
+            const campusLabel = String(campusName || '').trim() || branchDetails.campusLabel;
+            ensureSelectOption(campusSelect, campusLabel);
+            campusSelect.value = campusLabel;
+            document.getElementById('schoolContact').value = branchDetails.contactLine;
+        }
+
+        function populateResultPageSelectors() {
+            const students = readResultStudents();
+            const archived = loadResultArchive();
+            const campuses = getUniqueValues([
+                ...students.map(getStudentCampus),
+                ...archived.map((record) => record.campusName)
+            ]);
+            const classes = getUniqueValues([
+                ...students.map(getStudentClass),
+                ...archived.map((record) => record.studentGrade || record.classGrade)
+            ]);
+
+            setSelectOptions('campusName', campuses, 'Select campus');
+            setSelectOptions('resultCampusFilter', campuses, 'All campuses');
+            setSelectOptions('resultClassFilter', classes, 'All classes');
+            setSelectOptions('resultScheduleCampus', campuses, 'Select campus');
+            setSelectOptions('resultScheduleClass', classes, 'Select class');
+            setSelectOptions('resultHistoryCampusFilter', campuses, 'All campuses');
+            setSelectOptions('resultHistoryClassFilter', classes, 'All classes');
+            populateResultStudentSelect();
+        }
+
+        function populateResultStudentSelect() {
+            const select = document.getElementById('resultStudentSelect');
+            if (!select) return;
+            const campusFilter = normalizeResultValue(document.getElementById('resultCampusFilter')?.value || '');
+            const classFilter = normalizeResultClass(document.getElementById('resultClassFilter')?.value || '');
+            const students = readResultStudents().filter((student) => {
+                if (campusFilter && normalizeResultValue(getStudentCampus(student)) !== campusFilter) return false;
+                if (classFilter && normalizeResultClass(getStudentClass(student)) !== classFilter) return false;
+                return true;
+            });
+
+            select.innerHTML = '<option value="">Select student</option>' + students.map((student) => {
+                const value = getStudentLookup(student);
+                const label = `${student.fullName || student.name || value || 'Student'} - ID: ${student.studentCode || value || '-'} - Roll: ${student.rollNo || '-'} - ${getStudentClass(student) || '-'} - ${getStudentCampus(student) || '-'}`;
+                return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+            }).join('');
+        }
+
+        function syncStudentFiltersFromStudent(student = {}) {
+            const campus = getStudentCampus(student);
+            const className = getStudentClass(student);
+            ensureSelectOption(document.getElementById('resultCampusFilter'), campus);
+            ensureSelectOption(document.getElementById('resultClassFilter'), className);
+            document.getElementById('resultCampusFilter').value = campus || '';
+            document.getElementById('resultClassFilter').value = className || '';
+            populateResultStudentSelect();
+            ensureSelectOption(document.getElementById('resultStudentSelect'), getStudentLookup(student));
+            document.getElementById('resultStudentSelect').value = getStudentLookup(student) || '';
         }
 
         function findStudentForResultCard(query) {
             const normalizedQuery = String(query || '').trim().toLowerCase();
             if (!normalizedQuery) return null;
 
-            const students = JSON.parse(localStorage.getItem(RESULT_CARD_STUDENT_KEY) || '[]');
-            return students.find((student) => {
+            return readResultStudents().find((student) => {
                 const candidates = [
                     student.id,
                     student.studentCode,
@@ -2758,15 +2448,21 @@
                 return;
             }
 
-            document.getElementById('studentLookupId').value = student.id || student.studentCode || student.rollNo || lookupValue;
-            document.getElementById('studentName').value = student.fullName || '';
+            document.getElementById('studentLookupId').value = student.studentCode || lookupValue;
+            document.getElementById('studentRollNo').value = student.rollNo || '';
+            document.getElementById('studentName').value = student.fullName || student.name || '';
             document.getElementById('fatherName').value = student.fatherName || '';
-            document.getElementById('studentGrade').value = student.classGrade || '';
-            document.getElementById('studentPhotoDataUrl').value = student.photoDataUrl || student.photoUrl || student.imageUrl || student.profileImage || '';
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            applyBranchDetailsToResultCard(student.campusName);
+            document.getElementById('studentGrade').value = getStudentClass(student);
+            syncStudentFiltersFromStudent(student);
+            applyBranchDetailsToResultCard(getStudentCampus(student));
             refreshResultCardPreview();
+        }
+
+        function loadSelectedStudentIntoResultCard() {
+            const selectedId = document.getElementById('resultStudentSelect')?.value || '';
+            if (!selectedId) return;
+            document.getElementById('studentLookupId').value = selectedId;
+            loadStudentIntoResultCard();
         }
 
         function updateLogo(logoId, value) {
@@ -2779,74 +2475,6 @@
             };
             img.src = value || '';
             box.classList.toggle('has-logo', Boolean(value));
-        }
-
-        function updateStudentPhoto(value) {
-            const img = document.getElementById('previewStudentPhoto');
-            const box = document.getElementById('previewStudentPhotoBox');
-            if (!img || !box) return;
-
-            img.onerror = () => {
-                img.removeAttribute('src');
-                box.classList.remove('has-photo');
-            };
-
-            if (value) {
-                img.src = value;
-                box.classList.add('has-photo');
-            } else {
-                img.removeAttribute('src');
-                box.classList.remove('has-photo');
-            }
-        }
-
-        function resizeImageForResultCard(file) {
-            return new Promise((resolve, reject) => {
-                if (!file || !file.type || !file.type.startsWith('image/')) {
-                    reject(new Error('Please select a valid image file.'));
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const maxSide = 520;
-                        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
-                        const canvas = document.createElement('canvas');
-                        canvas.width = Math.max(1, Math.round(img.width * scale));
-                        canvas.height = Math.max(1, Math.round(img.height * scale));
-                        const context = canvas.getContext('2d');
-                        context.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.86));
-                    };
-                    img.onerror = () => reject(new Error('Image could not be loaded.'));
-                    img.src = reader.result;
-                };
-                reader.onerror = () => reject(new Error('Image could not be read.'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function handleStudentPhotoUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-
-            try {
-                const dataUrl = await resizeImageForResultCard(file);
-                document.getElementById('studentPhotoDataUrl').value = dataUrl;
-                refreshResultCardPreview();
-            } catch (error) {
-                alert(error.message || 'Unable to upload image.');
-                event.target.value = '';
-            }
-        }
-
-        function clearStudentPhoto() {
-            document.getElementById('studentPhotoDataUrl').value = '';
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            refreshResultCardPreview();
         }
 
         function removeDynamicRow(button) {
@@ -2866,35 +2494,21 @@
             return Number.isInteger(value) ? String(value) : value.toFixed(1);
         }
 
-        function formatResultPercentage(value) {
-            return `${Number.isFinite(value) ? value.toFixed(2) : '0.00'} %`;
-        }
-
-        function getAcademicGrade(percentage) {
-            if (percentage >= 90) return 'A+';
-            if (percentage >= 80) return 'A';
-            if (percentage >= 60) return 'B';
-            if (percentage >= 50) return 'C';
-            if (percentage >= 40) return 'D';
-            return 'E';
-        }
-
         function removeStudentIdFieldsFromResultCard() {
-            document.querySelectorAll('#previewStudentId, #previewStudentCode, #previewRollNo, .result-student-id, .result-student-code, .result-roll-no').forEach((element) => {
-                element.remove();
-            });
+            // Student ID and roll number are part of the printable result card.
         }
 
         function refreshResultCardPreview() {
             const subjects = readSubjectRows();
             const behaviors = readBehaviorRows();
-            const branding = getExamBrandingSettings();
-            const logoSrc = getExamLogoSrc();
 
-            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'Kids Roots English Model Schools';
+            document.getElementById('previewSchoolName').textContent = document.getElementById('schoolName').value || 'Kids Roots Jand';
+            document.getElementById('previewCampusName').textContent = document.getElementById('campusName').value || '';
             document.getElementById('previewSchoolContact').textContent = document.getElementById('schoolContact').value || '';
             document.getElementById('previewTermTitle').textContent = document.getElementById('termTitle').value || '';
-            updateLogo('previewLeftLogo', logoSrc);
+            updateLogo('previewLeftLogo', STATIC_RESULT_LOGO);
+            document.getElementById('previewStudentId').textContent = document.getElementById('studentLookupId').value || '';
+            document.getElementById('previewRollNo').textContent = document.getElementById('studentRollNo').value || '';
             document.getElementById('previewStudentName').textContent = document.getElementById('studentName').value || '';
             document.getElementById('previewFatherName').textContent = document.getElementById('fatherName').value || '';
             document.getElementById('previewStudentGrade').textContent = document.getElementById('studentGrade').value || '';
@@ -2903,46 +2517,34 @@
             document.getElementById('previewTeacherSignature').textContent = document.getElementById('teacherSignature').value || '';
             document.getElementById('previewPrincipalSignature').textContent = document.getElementById('principalSignature').value || '';
             document.getElementById('previewParentSignature').textContent = document.getElementById('parentSignature').value || '';
-            updateStudentPhoto(document.getElementById('studentPhotoDataUrl').value || '');
 
             const totalMax = subjects.reduce((sum, item) => sum + toNumber(item.max), 0);
             const totalObtained = subjects.reduce((sum, item) => sum + toNumber(item.obtained), 0);
             const totalBest = subjects.reduce((sum, item) => sum + toNumber(item.best), 0);
             const percentage = totalMax ? (totalObtained / totalMax) * 100 : 0;
-            const grade = document.getElementById('positionGrade').value || getAcademicGrade(percentage);
+            const bestPercentage = totalMax ? (totalBest / totalMax) * 100 : 0;
 
             document.getElementById('previewSubjectsBody').innerHTML = subjects.map((item) => `
                 <tr>
                     <td>${item.subject || '-'}</td>
                     <td>${item.max || '0'}</td>
                     <td>${item.obtained || '0'}</td>
-                    <td>${formatResultPercentage(toNumber(item.max) ? (toNumber(item.obtained) / toNumber(item.max)) * 100 : 0)}</td>
-                    <td>${getAcademicGrade(toNumber(item.max) ? (toNumber(item.obtained) / toNumber(item.max)) * 100 : 0)}</td>
+                    <td>${item.best || '0'}</td>
                 </tr>
             `).join('');
 
             document.getElementById('previewBehaviorBody').innerHTML = behaviors.map((item) => `
                 <tr>
                     <td>${item.title || '-'}</td>
-                    <td>${String(item.grade || '').toUpperCase().startsWith('A') ? '&#10003;' : ''}</td>
-                    <td>${String(item.grade || '').toUpperCase().startsWith('B') ? '&#10003;' : ''}</td>
-                    <td>${String(item.grade || '').toUpperCase().startsWith('C') ? '&#10003;' : ''}</td>
+                    <td>${item.grade || '-'}</td>
                 </tr>
             `).join('');
 
             document.getElementById('previewTotalMax').textContent = formatMark(totalMax);
             document.getElementById('previewTotalObtained').textContent = formatMark(totalObtained);
             document.getElementById('previewTotalBest').textContent = formatMark(totalBest);
-            document.getElementById('previewPercentage').textContent = formatResultPercentage(percentage);
-            document.getElementById('previewBestPercentage').textContent = grade;
-            document.getElementById('summaryTotalMax').textContent = formatMark(totalMax);
-            document.getElementById('summaryTotalObtained').textContent = formatMark(totalObtained);
-            document.getElementById('summaryPercentage').textContent = formatResultPercentage(percentage);
-            document.getElementById('previewResultSession').textContent = document.getElementById('resultSession').value || '';
-            document.getElementById('previewClassPosition').textContent = document.getElementById('classPosition').value || '';
-            document.getElementById('previewClassStrength').textContent = document.getElementById('classStrength').value || '';
-            document.getElementById('previewOverallComments').textContent = document.getElementById('overallComments').value || document.getElementById('teacherRemarks').value || '';
-            document.getElementById('overallCommentStudentName').textContent = document.getElementById('studentName').value || '';
+            document.getElementById('previewPercentage').textContent = `${formatMark(percentage)}%`;
+            document.getElementById('previewBestPercentage').textContent = `${formatMark(bestPercentage)}%`;
             removeStudentIdFieldsFromResultCard();
 
             saveResultCardState();
@@ -2951,23 +2553,21 @@
         function resetResultCard() {
             localStorage.removeItem(RESULT_CARD_STORAGE_KEY);
             document.getElementById('resultCardForm').reset();
-            const upload = document.getElementById('studentPhotoUpload');
-            if (upload) upload.value = '';
-            applyExamBrandingDefaults(true);
             renderDynamicEditors({});
             refreshResultCardPreview();
         }
 
         document.addEventListener('DOMContentLoaded', () => {
             clearLegacyResultArchive();
-            applyExamBrandingDefaults(false);
-            toggleExamSection('resultBuilderCard');
+            const initialSectionId = window.location.hash === '#resultHistoryCard' ? 'resultHistoryCard' : 'resultBuilderCard';
+            toggleExamSection(initialSectionId);
             const dateSheetState = loadDateSheetState();
             const savedState = loadResultCardState();
             renderScheduleRows(dateSheetState);
             fillDateSheetForm(dateSheetState);
             refreshDateSheetPreview();
             renderDynamicEditors(savedState);
+            populateResultPageSelectors();
             fillFormState(savedState);
             refreshResultCardPreview();
             document.querySelectorAll('.exam-module-card').forEach((card) => {
@@ -2988,8 +2588,17 @@
             });
             document.getElementById('resetDateSheetBtn').addEventListener('click', resetDateSheet);
             document.getElementById('resultCardForm').addEventListener('input', refreshResultCardPreview);
-            document.getElementById('studentPhotoUpload').addEventListener('change', handleStudentPhotoUpload);
-            document.getElementById('clearStudentPhotoBtn').addEventListener('click', clearStudentPhoto);
+            document.getElementById('resultCampusFilter')?.addEventListener('change', () => {
+                populateResultStudentSelect();
+            });
+            document.getElementById('resultClassFilter')?.addEventListener('change', () => {
+                populateResultStudentSelect();
+            });
+            document.getElementById('resultStudentSelect')?.addEventListener('change', loadSelectedStudentIntoResultCard);
+            document.getElementById('campusName')?.addEventListener('change', () => {
+                applyBranchDetailsToResultCard(document.getElementById('campusName').value);
+                refreshResultCardPreview();
+            });
             document.getElementById('loadStudentResultBtn').addEventListener('click', loadStudentIntoResultCard);
             document.getElementById('studentLookupId').addEventListener('keydown', (event) => {
                 if (event.key === 'Enter') {
@@ -3000,6 +2609,21 @@
             document.getElementById('saveResultCardBtn').addEventListener('click', saveCurrentResultToArchive);
             document.getElementById('resultHistorySearch').addEventListener('input', (event) => {
                 renderResultHistoryList(event.target.value);
+            });
+            document.getElementById('resultHistoryCampusFilter')?.addEventListener('change', () => {
+                renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+            });
+            document.getElementById('resultHistoryClassFilter')?.addEventListener('change', () => {
+                renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+            });
+            document.getElementById('saveResultScheduleBtn')?.addEventListener('click', saveResultPortalSchedule);
+            document.getElementById('resultScheduleList')?.addEventListener('click', (event) => {
+                const button = event.target.closest('.result-schedule-delete');
+                if (!button) return;
+                const scheduleId = button.dataset.scheduleId || '';
+                saveResultPublishSchedules(loadResultPublishSchedules().filter((item) => String(item.id) !== String(scheduleId)));
+                renderResultScheduleList();
+                renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
             });
             document.getElementById('resultHistoryTableBody').addEventListener('click', (event) => {
                 const button = event.target.closest('.result-history-btn');
@@ -3034,15 +2658,9 @@
                 printSection('print-result', 'bw');
             });
             document.getElementById('resetResultCardBtn').addEventListener('click', resetResultCard);
+            renderResultScheduleList();
             renderResultHistoryList();
             lucide.createIcons();
-        });
-
-        // Listen for branding changes from other tabs/windows
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'eduCore_settings') {
-                forceRefreshResultBrandingFromStorage();
-            }
         });
     </script>
 </body>

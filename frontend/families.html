@@ -60,7 +60,7 @@
         </main>
     </div>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="script.js?v=20260705-global-campus-filter"></script>
     <script>
         function readLocalArray(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
         function saveLocalArray(key, value) { localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : [])); }
@@ -182,7 +182,12 @@
         }
         function renderFamiliesPage() {
             const families = readLocalArray('eduCore_families');
-            const students = readLocalArray('eduCore_students');
+            const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+            const campusMatches = (student) => !selectedCampus || selectedCampus === 'all' ||
+                String(student.campusName || student.branchName || student.campus || 'Main Campus').trim().toLowerCase() === String(selectedCampus).trim().toLowerCase();
+            const students = readLocalArray('eduCore_students').filter(campusMatches);
             const list = document.getElementById('familiesList');
             const groups = buildFamilyGroups(families, students);
             if (!groups.length) {

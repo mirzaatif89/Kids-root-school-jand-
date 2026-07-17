@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fee Challan Generator - Kids Roots Jand</title>
-    <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <link rel="stylesheet" href="style.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -233,18 +232,8 @@
         .preview-card {
             border: 1px dashed #d7e3ec;
             border-radius: 0.95rem;
-            padding: 0.9rem 1rem 1.1rem;
-            background: #fff;
-            overflow-x: auto;
-            overflow-y: hidden;
-        }
-
-        .preview-card .challan-bulk-group {
-            width: 780px;
-            min-width: 780px;
-            margin-left: auto;
-            margin-right: auto;
-            zoom: 0.62;
+            padding: 0.8rem;
+            background: linear-gradient(180deg, #fff 0%, #fcfdff 100%);
         }
 
         .preview-sheet {
@@ -318,16 +307,8 @@
         .challan-school-title {
             text-align: center;
             font-weight: 700;
-            font-size: 11px;
-            line-height: 1.18;
-            letter-spacing: 0;
-            margin: 0;
-            white-space: normal;
-        }
-
-        .challan-school-title span {
-            display: block;
-            white-space: nowrap;
+            font-size: 21px;
+            letter-spacing: 0.04em;
         }
 
         .challan-school-subtitle {
@@ -335,48 +316,11 @@
             font-size: 12px;
         }
 
-        .challan-school-contact {
-            text-align: center;
-            font-size: 11px;
-            font-weight: 700;
-            color: #0f4f4a;
-        }
-
         .challan-urdu-note {
             text-align: center;
             font-size: 11px;
             color: #334155;
             min-height: 28px;
-        }
-
-        .challan-logo-field {
-            display: grid;
-            grid-template-columns: 58px 1fr;
-            gap: 0.75rem;
-            align-items: center;
-        }
-
-        .challan-logo-preview {
-            width: 58px;
-            height: 58px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            color: var(--text-secondary);
-            background: #f8fafc;
-            font-size: 0.72rem;
-            font-weight: 800;
-            text-align: center;
-        }
-
-        .challan-logo-preview img {
-            width: 58px;
-            height: 58px;
-            object-fit: contain;
-            display: block;
         }
 
         .challan-terminated-banner {
@@ -937,181 +881,8 @@
             margin-top: 1rem;
         }
 
-        .challan-bulk-group {
-            width: 100%;
-            min-width: 0;
-            background: #fff;
-            color: #111;
-        }
-
-        .challan-copies-container {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 18px;
-            width: 100%;
-        }
-
-        .challan-copy-wrapper {
-            border: 0;
-            padding: 0;
-            background: #fff;
-            min-width: 0;
-        }
-
-        .challan-top-rule {
-            width: 34mm;
-            height: 0;
-            border-top: 2px solid #111;
-            border-bottom: 1px solid #111;
-            margin: 0 auto 8px;
-        }
-
-        .challan-voucher-title {
-            border: 2px solid #111;
-            background: #d9d9d9;
-            text-align: center;
-            font-weight: 800;
-            padding: 4px 6px;
-            margin: 4px 0 8px;
-            font-size: 12px;
-            line-height: 1.25;
-        }
-
-        .challan-form-lines {
-            display: grid;
-            gap: 5px;
-            margin-bottom: 13px;
-            font-size: 10px;
-            line-height: 1.15;
-        }
-
-        .challan-form-line {
-            display: grid;
-            grid-template-columns: 66px minmax(0, 1fr);
-            align-items: end;
-            gap: 7px;
-            min-height: 17px;
-        }
-
-        .challan-form-line.two-up {
-            grid-template-columns: 38px minmax(0, 1fr) 36px minmax(0, 1fr);
-        }
-
-        .challan-form-line span:first-child,
-        .challan-form-line.two-up span:nth-child(3) {
-            white-space: nowrap;
-        }
-
-        .challan-line-value {
-            min-height: 16px;
-            border-bottom: 2px solid #111;
-            font-weight: 700;
-            padding: 0 4px 1px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-size: 10px;
-        }
-
-        .challan-fee-table,
-        .challan-total-table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-            color: #111;
-        }
-
-        .challan-fee-table th {
-            border: 2px solid #111;
-            background: #d9d9d9;
-            font-weight: 800;
-            padding: 5px 6px;
-            font-size: 10px;
-            line-height: 1.15;
-            text-transform: none;
-            overflow-wrap: normal;
-            word-break: normal;
-        }
-
-        .challan-fee-table td {
-            border: 0;
-            padding: 5px 2px;
-            font-size: 10px;
-            height: 18px;
-            line-height: 1.15;
-        }
-
-        .challan-amount-cell {
-            text-align: right;
-            font-weight: 700;
-            white-space: nowrap;
-        }
-
-        .challan-total-table {
-            margin-top: 3px;
-        }
-
-        .challan-total-table td {
-            border: 1.5px solid #111;
-            padding: 5px 6px;
-            font-size: 10px;
-            font-weight: 800;
-            line-height: 1.15;
-        }
-
-        .challan-total-table td:first-child {
-            text-align: center;
-        }
-
-        .challan-notice-box {
-            margin-top: 10px;
-            min-height: 82px;
-            border-right: 2px solid #111;
-            direction: rtl;
-            text-align: right;
-            font-family: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Noto Naskh Arabic", serif;
-            font-size: 11px;
-            line-height: 1.75;
-            padding-right: 6px;
-        }
-
-        .challan-notice-box strong {
-            display: block;
-            text-align: center;
-            font-size: 13px;
-            line-height: 1.6;
-            margin-bottom: 3px;
-        }
-
-        .challan-notice-box p {
-            margin: 0 0 4px;
-        }
-
-        .challan-stamp-box {
-            display: grid;
-            grid-template-columns: 52px 1fr;
-            border: 2px solid #111;
-            height: 74px;
-            margin-top: 42px;
-            font-size: 11px;
-        }
-
-        .challan-stamp-box div {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .challan-stamp-box div:first-child {
-            border-right: 2px solid #111;
-        }
-
         @media (max-width: 1100px) {
             .challan-layout {
-                grid-template-columns: 1fr;
-            }
-
-            .challan-copies-container {
                 grid-template-columns: 1fr;
             }
         }
@@ -1146,7 +917,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 10mm 9mm;
+                margin: 5mm;
             }
 
             html,
@@ -1154,8 +925,8 @@
                 background: #fff;
                 margin: 0;
                 padding: 0;
-                width: 192mm;
-                min-height: 277mm;
+                width: 200mm;
+                min-height: 287mm;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
@@ -1179,95 +950,55 @@
                 display: block;
                 padding: 0;
                 margin: 0;
-                font-family: Arial, Helvetica, sans-serif;
-                width: 192mm;
+                font-family: 'Inter', sans-serif;
+                width: 100%;
             }
 
             .preview-sheet {
-                display: none !important;
-            }
-
-            .challan-copy-wrapper {
-                border: 0;
-                padding: 0;
+                border: 1px solid #475569;
+                margin: 0;
+                height: 89mm;
+                overflow: hidden;
+                box-sizing: border-box;
+                display: flex;
+                min-height: 0;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                page-break-after: avoid;
                 background: #fff;
-                page-break-inside: avoid;
-                break-inside: avoid;
-                font-size: 9.5px !important;
-                line-height: 1.2 !important;
-                min-width: 0;
             }
 
-            .challan-copies-container {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 3.3mm;
-                width: 100%;
-                page-break-inside: avoid;
-                break-inside: avoid;
+            .preview-sheet + .preview-sheet {
+                margin-top: 0;
             }
 
             .challan-bulk-group {
-                width: 100%;
-                min-width: 0;
-                zoom: 1;
-                display: block;
+                height: 269mm;
+                max-height: 269mm;
+                display: grid;
+                grid-template-rows: repeat(3, 1fr);
+                gap: 1mm;
                 margin: 0;
                 overflow: hidden;
                 break-inside: avoid;
                 page-break-inside: avoid;
-                background: #fff;
-                height: 138.5mm;
-                padding: 0 0 4mm;
-                box-sizing: border-box;
-                border-bottom: 2px solid #111;
+                break-after: page;
+                page-break-after: always;
             }
 
             .challan-bulk-group:last-child {
-                border-bottom: 0;
+                break-after: auto;
+                page-break-after: auto;
             }
 
             .challan-bulk-group + .challan-bulk-group {
                 margin-top: 0;
             }
 
-            .challan-bulk-group + .challan-bulk-group .challan-top-rule {
-                visibility: hidden;
-            }
-
-            .challan-a4-sheet {
-                display: grid;
-                grid-template-rows: 1fr 1fr;
-                width: 192mm;
-                height: 277mm;
-                page-break-inside: avoid;
-                break-inside: avoid;
-                background: #fff;
-                page-break-after: always;
-                break-after: page;
-            }
-
-            .challan-a4-sheet:last-child {
-                page-break-after: auto;
-                break-after: auto;
-            }
-
-            .challan-a4-sheet .challan-bulk-group {
-                height: auto;
-                min-height: 0;
-            }
-
-            .challan-top-rule {
-                width: 30mm;
-                border-top-width: 1.5px;
-                border-bottom-width: 1px;
-                margin: 0 auto 3.5mm;
-            }
-
             .challan-paper {
                 height: 100%;
                 box-sizing: border-box;
-                padding: 0;
+                padding: 1mm 1.2mm 0.8mm;
                 display: flex;
                 flex-direction: column;
                 width: 100%;
@@ -1275,110 +1006,114 @@
             }
 
             .challan-copy-label {
-                font-size: 9.5px !important;
-                line-height: 1.2;
-                margin-bottom: 2.5mm;
-                color: #111;
-                text-align: center;
-                font-weight: 900;
+                font-size: 7.2px;
+                line-height: 1;
+                margin-bottom: 0.45mm;
+                color: #334155;
+            }
+
+            .challan-table {
+                font-size: 7.7px;
+                line-height: 1.16;
+                flex: 1 1 0;
+                min-height: 0;
+                border: 1px solid #475569;
+            }
+
+            .challan-table td,
+            .challan-table th {
+                border-color: #64748b;
+                padding: 0.62mm 0.75mm;
+                white-space: normal;
+                vertical-align: middle;
+            }
+
+            .challan-school-mark {
+                width: 11mm;
+                padding: 0.35mm !important;
+            }
+
+            .challan-school-header {
+                min-height: 8mm;
+                gap: 2mm;
+            }
+
+            .challan-school-logo {
+                width: 7mm;
+                height: 7mm;
+                max-width: 7mm;
+                max-height: 7mm;
+                object-fit: contain;
+            }
+
+            .challan-school-name {
+                text-align: left;
+            }
+
+            .challan-school-title {
+                font-size: 10.2px;
+                line-height: 1.05;
+                letter-spacing: 0.03em;
+            }
+
+            .challan-school-subtitle {
+                font-size: 6.7px;
+                line-height: 1.08;
+            }
+
+            .challan-urdu-note {
+                font-size: 6.5px;
+                line-height: 1.08;
+                min-height: 0;
+            }
+
+            .challan-label {
+                width: auto;
+                white-space: nowrap;
+                background: #f1f5f9 !important;
+            }
+
+            .challan-value,
+            .challan-value-wide {
+                width: auto;
+            }
+
+            .challan-subvalue {
+                font-size: 6.3px;
+                line-height: 1.08;
             }
 
             .challan-month-picker-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .challan-school-title {
-                margin: 0;
-                font-size: 9.5px !important;
-                line-height: 1.1 !important;
-                font-weight: 800;
+            .challan-qr-cell {
+                width: 13mm;
                 text-align: center;
-                white-space: normal;
-                letter-spacing: 0;
             }
 
-            .challan-voucher-title {
-                border-width: 1.5px;
-                font-size: 9px !important;
-                line-height: 1.1 !important;
-                padding: 1.3mm 1mm;
-                margin: 1.1mm 0 2.6mm;
+            .challan-qr-cell img {
+                width: 8mm;
+                height: 8mm;
+                object-fit: contain;
             }
 
-            .challan-form-lines {
-                gap: 2mm;
-                margin-bottom: 5.8mm;
-                font-size: 9px !important;
-                line-height: 1.15 !important;
+            .challan-qr-svg svg {
+                width: 8mm;
+                height: 8mm;
             }
 
-            .challan-form-line {
-                grid-template-columns: 17mm minmax(0, 1fr);
-                gap: 2mm;
-                min-height: 4mm;
+            .challan-qr-note {
+                font-size: 6px;
+                line-height: 1.08;
             }
 
-            .challan-form-line.two-up {
-                grid-template-columns: 12mm minmax(13mm, 1fr) 14mm minmax(15mm, 1fr);
-            }
-
-            .challan-line-value {
-                min-height: 3.6mm;
-                border-bottom-width: 1.5px;
-                padding: 0.2mm 1mm;
-                font-size: 8.8px !important;
-            }
-
-            .challan-fee-table th {
-                border-width: 1.5px;
-                font-size: 9px !important;
-                line-height: 1.1 !important;
-                padding: 1.4mm 1.2mm;
-                text-transform: none;
-                white-space: normal;
-            }
-
-            .challan-fee-table td {
-                font-size: 8.8px !important;
-                line-height: 1.15 !important;
-                padding: 1.25mm 0.8mm;
-                height: 4.6mm;
-            }
-
-            .challan-total-table td {
-                border-width: 1.5px;
-                font-size: 8.5px !important;
-                line-height: 1.15 !important;
-                padding: 1.4mm 1.2mm;
-            }
-
-            .challan-notice-box {
-                margin-top: 3.2mm;
-                min-height: 22mm;
-                font-size: 7.2px !important;
-                line-height: 1.55;
-                padding-right: 1.8mm;
-                border-right-width: 1.5px;
-            }
-
-            .challan-notice-box strong {
-                font-size: 8px !important;
-            }
-
-            .challan-notice-box p {
-                margin: 0 0 0.8mm;
-            }
-
-            .challan-stamp-box {
-                grid-template-columns: 11mm 1fr;
-                height: 16.5mm;
-                margin-top: 10mm;
-                font-size: 6.8px !important;
-                border-width: 1.5px;
-            }
-
-            .challan-stamp-box div:first-child {
-                border-right-width: 1.5px;
+            .challan-footer {
+                gap: 4px;
+                font-size: 6.2px;
+                line-height: 1.1;
+                padding: 0.65mm 0.4mm 0;
+                flex: 0 0 auto;
             }
         }
     </style>
@@ -1388,7 +1123,11 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+                <i data-lucide="graduation-cap" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+                    <span style="font-size: 1rem; line-height: 1.2;">Kids Roots Jand</span>
+                    <span style="font-size: 1rem; line-height: 1.2;">System</span>
+                </div>
             </div>
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
@@ -1547,29 +1286,8 @@
                                     <div class="field-help" id="payNowStatusLine">Status: -</div>
                                 </div>
                                 <div class="field-block">
-                                    <label for="additionalCharges">Additional Charges (PKR)</label>
+                                    <label for="additionalCharges">Additional Charges</label>
                                     <input type="number" id="additionalCharges" min="0" value="0">
-                                </div>
-                                <div class="field-block">
-                                    <label for="fineFrequency">Fine Type</label>
-                                    <select id="fineFrequency">
-                                        <option value="none">No Fine</option>
-                                        <option value="day">Per Day</option>
-                                        <option value="week">Per Week</option>
-                                        <option value="month">Per Month</option>
-                                    </select>
-                                </div>
-                                <div class="field-block">
-                                    <label for="fineRate">Fine Rate (PKR)</label>
-                                    <input type="number" id="fineRate" min="0" value="0" placeholder="50">
-                                </div>
-                                <div class="field-block">
-                                    <label for="fineUnits">Late Units</label>
-                                    <input type="number" id="fineUnits" min="0" value="0" placeholder="Days / Weeks / Months">
-                                </div>
-                                <div class="field-block">
-                                    <label for="fineAmount">Fine Amount (PKR)</label>
-                                    <input type="number" id="fineAmount" min="0" value="0" readonly>
                                 </div>
                                 <div class="field-block">
                                     <label for="discountValue">Discount</label>
@@ -1579,9 +1297,17 @@
                                     <label for="particulars">Particulars</label>
                                     <input type="text" id="particulars" placeholder="Tuition Fee">
                                 </div>
+                                <div class="field-block">
+                                    <label for="schoolName">School Name</label>
+                                    <input type="text" id="schoolName" placeholder="Kids Roots Jand">
+                                </div>
+                                <div class="field-block full">
+                                    <label for="schoolAddress">Address / Campus</label>
+                                    <input type="text" id="schoolAddress" placeholder="Main branch - Address: Dekhni Road Jand. Phone: 03045259900">
+                                </div>
                                 <div class="field-block full">
                                     <label for="urduNote">Important Note</label>
-                                    <input type="text" id="urduNote" placeholder="Default Urdu instructions will print on Notice Copy.">
+                                    <input type="text" id="urduNote" placeholder="Note: Fees will not be accepted after the due date.">
                                 </div>
                                 <div class="field-block full">
                                     <label for="challanNotes">Notes / Instructions</label>
@@ -1697,8 +1423,8 @@
         </div>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
     <script>
         const CHALLAN_BRANCH_CONTACTS = {
@@ -1715,11 +1441,10 @@
                 addressLine: 'Address: Nai Abadi. Phone: 03085259900'
             }
         };
-        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'fineFrequency', 'fineRate', 'fineUnits', 'fineAmount', 'discountValue', 'particulars', 'urduNote', 'challanNotes'];
-        const printCopies = ['Office Copy', 'Student Copy', 'Notice Copy'];
+        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'discountValue', 'particulars', 'schoolName', 'schoolAddress', 'urduNote', 'challanNotes'];
+        const printCopies = ['Parents Copy', 'School Copy', 'Information Copy'];
         const CHALLAN_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
         const CHALLAN_PAYMENT_DETAILS_KEY = 'eduCore_payment_details';
-        const CHALLAN_FEE_FINE_RULE_KEY = 'eduCore_fee_fine_rule';
         const CHALLAN_MONTHS = [
             "January", "February", "March", "April", "May", "June",
             "July", "August", "September", "October", "November", "December"
@@ -1738,7 +1463,7 @@
         let classPopupSelectedStudentIds = new Set();
         let classPopupLastVisibleStudentIds = [];
         let challanSelectedFeeMonths = [];
-        let challanRegisteredCampuses = [];
+        const CHALLAN_FALLBACK_CAMPUSES = ['Main Campus', 'Ali campus', 'Fatima Campus'];
         const CHALLAN_FALLBACK_CLASSES = [
             'Play Group', 'KG1', 'KG2',
             'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
@@ -1746,69 +1471,12 @@
             'Graduate'
         ];
 
-        function getStoredChallanBranding() {
-            return typeof getBrandingSettings === 'function'
-                ? getBrandingSettings()
-                : { schoolName: 'Kids Roots Jand', phone: '', address: '', schoolAddress: '', logoDataUrl: '' };
-        }
-
-        function saveChallanBrandingPatch(patch = {}) {
-            const current = getStoredChallanBranding();
-            const next = { ...current, ...patch };
-            if (typeof saveBrandingSettings === 'function') return saveBrandingSettings(next);
-            localStorage.setItem('eduCore_settings', JSON.stringify(next));
-            if (typeof applyGlobalBranding === 'function') applyGlobalBranding(next);
-            return next;
-        }
-
-        function updateChallanLogoPreview(dataUrl = '') {
-            const preview = document.getElementById('challanLogoPreview');
-            if (!preview) return;
-            const src = dataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
-            preview.innerHTML = `<img src="${escapeHtml(src)}" alt="School logo preview">`;
-        }
-
-        function handleChallanLogoUpload(event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => {
-                const dataUrl = String(reader.result || '');
-                saveChallanBrandingPatch({ logoDataUrl: dataUrl });
-                updateChallanLogoPreview(dataUrl);
-                triggerChallanRefresh();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function extractChallanPhone(value = '') {
-            const match = String(value || '').match(/Phone:\s*([0-9+\-\s]+)/i);
-            return match ? match[1].trim() : '';
-        }
-
-        function stripChallanPhone(value = '') {
-            return String(value || '').replace(/\s*\.?\s*Phone:\s*[0-9+\-\s]+/i, '').trim();
-        }
-
-        function getChallanBrandingFromForm(fallbackAddress = '') {
-            const branding = getStoredChallanBranding();
-            const schoolName = branding.schoolName || 'Kids Roots Jand';
-            const schoolPhone = branding.phone || extractChallanPhone(fallbackAddress);
-            const schoolAddress = branding.address || branding.schoolAddress || stripChallanPhone(fallbackAddress) || 'School Address';
-            const schoolLogoSrc = branding.logoDataUrl || (typeof getBrandingLogoSrc === 'function' ? getBrandingLogoSrc() : 'images/logo.png');
-            return { schoolName, schoolPhone, schoolAddress, schoolLogoSrc };
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             initializeChallanPage();
             if (window.lucide) window.lucide.createIcons();
         });
 
         async function initializeChallanPage() {
-            if (typeof loadClassFeeDefaults === 'function') {
-                await loadClassFeeDefaults();
-            }
-            await loadChallanRegisteredCampuses();
             await loadChallanStudents();
             bindChallanFilterDropdown();
             bindChallanActionsDropdown();
@@ -1839,10 +1507,6 @@
             const popupSearch = document.getElementById('classStudentsSearch');
             if (popupSearch) {
                 popupSearch.addEventListener('input', renderClassStudentsPopupList);
-            }
-            const logoInput = document.getElementById('schoolLogoInput');
-            if (logoInput) {
-                logoInput.addEventListener('change', handleChallanLogoUpload);
             }
             const statusFilter = document.getElementById('challanFeeStatusFilter');
             if (statusFilter) {
@@ -1890,56 +1554,6 @@
                 challanStudents = [...getData(STORAGE_KEY_STUDENTS)].sort((a, b) => (a.fullName || '').localeCompare(b.fullName || ''));
             }
             await mergeChallanFeePaymentsIntoMonthlyStore();
-        }
-
-        async function loadChallanRegisteredCampuses() {
-            const addCampus = (campusMap, campusName) => {
-                const normalized = String(campusName || '').trim();
-                if (!normalized) return;
-                const key = normalizeCampusKey(normalized);
-                if (!campusMap.has(key)) campusMap.set(key, normalized);
-            };
-            const campusMap = new Map();
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/branches`);
-                if (!response.ok) throw new Error('Registered campuses could not be loaded.');
-                const result = await response.json();
-                const branches = Array.isArray(result) ? result : (Array.isArray(result?.branches) ? result.branches : []);
-                branches.forEach((branch) => {
-                    if (branch?.isActive === false) return;
-                    addCampus(campusMap, branch?.campusName);
-                });
-            } catch (error) {
-                console.warn('Registered campuses could not be loaded for challan filters:', error.message);
-            }
-
-            const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
-            if (user?.role === 'Branch' && user.campusName) {
-                addCampus(campusMap, user.campusName);
-            }
-
-            challanRegisteredCampuses = Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
-        }
-
-        function getChallanStudentMonthlyFee(student = {}) {
-            if (typeof getDashboardStudentFee === 'function') {
-                return getDashboardStudentFee(student);
-            }
-            return Number(student?.monthlyFee || student?.fee || 0) || 0;
-        }
-
-        function getChallanStudentRemainingAmount(student = {}) {
-            return Number(student?.remainingAmount || student?.remainingCharges || 0) || 0;
-        }
-
-        function getChallanManualAdditionalCharges() {
-            return Number(document.getElementById('additionalCharges')?.value || 0) || 0;
-        }
-
-        function getChallanAdditionalChargesForStudent(student = {}, includeRemainingAmount = true) {
-            const manualCharges = getChallanManualAdditionalCharges();
-            return manualCharges + (includeRemainingAmount ? getChallanStudentRemainingAmount(student) : 0);
         }
 
         function bindChallanFilterDropdown() {
@@ -2058,7 +1672,7 @@
 
         function getAvailableChallanCampuses() {
             const campusMap = new Map();
-            challanRegisteredCampuses
+            [...CHALLAN_FALLBACK_CAMPUSES, ...challanStudents.map((student) => String(student?.campusName || '').trim())]
                 .forEach((campusName) => {
                     const normalized = String(campusName || '').trim();
                     if (!normalized) return;
@@ -2085,13 +1699,7 @@
 
             const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
             if (user?.role === 'Branch' && user.campusName) {
-                if (!campuses.includes(user.campusName)) {
-                    const option = document.createElement('option');
-                    option.value = user.campusName;
-                    option.textContent = user.campusName;
-                    select.appendChild(option);
-                }
-                select.value = user.campusName;
+                select.value = campuses.includes(user.campusName) ? user.campusName : user.campusName;
                 select.disabled = true;
                 applyBranchDetailsToChallan(user.campusName);
             } else {
@@ -2291,7 +1899,7 @@
                     };
 
                     const student = studentsById.get(sid);
-                    const monthlyFee = getChallanStudentMonthlyFee(student);
+                    const monthlyFee = Number(student?.monthlyFee || 0);
                     if (monthlyFee > 0 && nextAmount >= monthlyFee) {
                         monthlyFees[sid][key] = 'Paid';
                     } else {
@@ -2518,11 +2126,7 @@
                 const matchesTerm = !term || String(student.fullName || '').toLowerCase().includes(term) ||
                     String(student.rollNo || '').toLowerCase().includes(term) ||
                     String(student.studentCode || '').toLowerCase().includes(term) ||
-                    String(student.id || '').toLowerCase().includes(term) ||
-                    String(student.fatherName || '').toLowerCase().includes(term) ||
-                    String(student.classGrade || '').toLowerCase().includes(term) ||
-                    String(student.campusName || '').toLowerCase().includes(term) ||
-                    String(student.parentPhone || '').toLowerCase().includes(term);
+                    String(student.id || '').toLowerCase().includes(term);
                 if (!matchesTerm) return false;
                 // Allow viewing left students, but do not allow selecting/printing challans for them.
                 if (statusFilter === 'all') return true;
@@ -2584,7 +2188,7 @@
 
         function applyBranchDetailsToChallan(campusName) {
             const branchDetails = getChallanBranchContactDetails(campusName);
-            return `${branchDetails.campusLabel} - ${stripChallanPhone(branchDetails.addressLine)}`;
+            document.getElementById('schoolAddress').value = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
         }
 
         function setChallanDefaults() {
@@ -2596,8 +2200,9 @@
             document.getElementById('challanMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             document.getElementById('feeMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             document.getElementById('particulars').value = 'Tuition Fee';
+            document.getElementById('schoolName').value = 'Kids Roots Jand';
             applyBranchDetailsToChallan('Main branch');
-            document.getElementById('urduNote').value = '';
+            document.getElementById('urduNote').value = 'Note: Fees will not be accepted after the due date.';
             document.getElementById('challanNotes').value = 'No additional instructions.';
         }
 
@@ -2663,10 +2268,6 @@
                 document.getElementById('baseAmount').value = 0;
                 document.getElementById('payNowAmount').value = 0;
                 document.getElementById('additionalCharges').value = 0;
-                document.getElementById('fineFrequency').value = 'none';
-                document.getElementById('fineRate').value = 0;
-                document.getElementById('fineUnits').value = 0;
-                document.getElementById('fineAmount').value = 0;
                 document.getElementById('discountValue').value = '0';
                 document.getElementById('particulars').value = 'Student Left School';
             } else if (!isPaid) {
@@ -2675,12 +2276,6 @@
                 document.getElementById('feeMonth').value = 'Paid';
                 document.getElementById('baseAmount').value = 0;
                 document.getElementById('payNowAmount').value = 0;
-                document.getElementById('additionalCharges').value = 0;
-                document.getElementById('fineFrequency').value = 'none';
-                document.getElementById('fineRate').value = 0;
-                document.getElementById('fineUnits').value = 0;
-                document.getElementById('fineAmount').value = 0;
-                document.getElementById('discountValue').value = '0';
             }
             if (!terminated) {
                 if (isPaid) document.getElementById('payNowAmount').value = 0;
@@ -2711,13 +2306,6 @@
             return unique;
         }
 
-        function getCurrentChallanFeeMonthName() {
-            const challanMonthLabel = String(document.getElementById('challanMonth')?.value || '').trim();
-            const parsed = challanMonthLabel ? new Date(challanMonthLabel.replace(',', ' 1,')) : new Date();
-            const safeDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-            return CHALLAN_MONTHS[safeDate.getMonth()] || CHALLAN_MONTHS[new Date().getMonth()];
-        }
-
         function renderFeeMonthPicker(student, summary, opts = {}) {
             const grid = document.getElementById('feeMonthPickerGrid');
             const empty = document.getElementById('feeMonthPickerEmpty');
@@ -2732,16 +2320,51 @@
                 return;
             }
 
+            setFeeMonthPickerVisibility(true);
             const pendingMonths = getPendingMonthsForPicker(summary);
-            challanSelectedFeeMonths = pendingMonths.slice();
+
+            // Default selection: keep still-valid selections, otherwise select all pending months.
+            const pendingSet = new Set(pendingMonths);
+            challanSelectedFeeMonths = (challanSelectedFeeMonths || []).filter((m) => pendingSet.has(m));
+            if (!challanSelectedFeeMonths.length && pendingMonths.length) {
+                challanSelectedFeeMonths = pendingMonths.slice();
+            }
+
             grid.innerHTML = '';
-            setFeeMonthPickerVisibility(false);
             if (!pendingMonths.length) {
-                empty.style.display = 'none';
-                document.getElementById('feeMonth').value = getCurrentChallanFeeMonthName();
+                empty.style.display = 'block';
+                // Allow "dues only" challan while still keeping a label.
+                document.getElementById('feeMonth').value = 'Dues';
                 return;
             }
+
             empty.style.display = 'none';
+            pendingMonths.forEach((month) => {
+                const id = `feeMonthPick_${String(month).replace(/[^a-z0-9]/gi, '_')}`;
+                const label = document.createElement('label');
+                label.className = 'challan-month-picker-item';
+                label.setAttribute('for', id);
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'feeMonthPick';
+                checkbox.id = id;
+                checkbox.value = month;
+                checkbox.checked = challanSelectedFeeMonths.includes(month);
+                checkbox.addEventListener('change', () => {
+                    challanSelectedFeeMonths = getSelectedFeeMonthsFromPicker();
+                    applySelectedFeeMonthsToChallan(summary);
+                    renderStudentFeeSnapshot(student, summary);
+                    triggerChallanRefresh();
+                });
+
+                const text = document.createElement('span');
+                text.textContent = month;
+
+                label.appendChild(checkbox);
+                label.appendChild(text);
+                grid.appendChild(label);
+            });
         }
 
         function getSelectedFeeMonthsFromPicker() {
@@ -2753,74 +2376,6 @@
                 .filter(Boolean);
         }
 
-        function readSavedFeeFineRuleForChallan() {
-            try {
-                const saved = JSON.parse(localStorage.getItem(CHALLAN_FEE_FINE_RULE_KEY) || '{}');
-                const frequency = ['day', 'week', 'month'].includes(saved.frequency) ? saved.frequency : 'day';
-                const amount = Math.max(Number(saved.amount || 0), 0);
-                const targetDay = Math.min(Math.max(parseInt(saved.targetDay || 0, 10) || 0, 0), 31);
-                return { frequency, amount, targetDay, active: amount > 0 && targetDay > 0 };
-            } catch (_error) {
-                return { frequency: 'day', amount: 0, targetDay: 0, active: false };
-            }
-        }
-
-        function getSavedFeeFineLateUnitsForChallan(month, rule = readSavedFeeFineRuleForChallan()) {
-            const monthIndex = CHALLAN_MONTHS.indexOf(String(month || '').trim());
-            if (monthIndex < 0 || !rule.active) return 0;
-
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const lastDay = new Date(today.getFullYear(), monthIndex + 1, 0).getDate();
-            const targetDate = new Date(today.getFullYear(), monthIndex, Math.min(rule.targetDay, lastDay));
-            targetDate.setHours(0, 0, 0, 0);
-            if (today <= targetDate) return 0;
-
-            const lateDays = Math.ceil((today - targetDate) / 86400000);
-            if (rule.frequency === 'week') return Math.ceil(lateDays / 7);
-            if (rule.frequency === 'month') return Math.ceil(lateDays / 30);
-            return lateDays;
-        }
-
-        function getSavedFeeFineAmountForChallan(months, rule = readSavedFeeFineRuleForChallan()) {
-            if (!rule.active) return 0;
-            const lateUnits = (Array.isArray(months) ? months : [])
-                .reduce((total, month) => total + getSavedFeeFineLateUnitsForChallan(month, rule), 0);
-            return lateUnits * rule.amount;
-        }
-
-        function getChallanFineAmountForMonths(months, fallbackFineAmount = 0) {
-            const rule = readSavedFeeFineRuleForChallan();
-            return rule.active ? getSavedFeeFineAmountForChallan(months, rule) : Math.max(Number(fallbackFineAmount || 0), 0);
-        }
-
-        function getChallanPaidAmountForMonths(student, months) {
-            if (!student?.id) return 0;
-            const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
-            const studentPayments = paymentDetails[student.id] || {};
-            return (Array.isArray(months) ? months : []).reduce((total, month) => {
-                const key = String(month || '').trim();
-                return key ? total + Math.max(Number(studentPayments[key]?.amount || 0), 0) : total;
-            }, 0);
-        }
-
-        function applySavedFeeFineRuleToChallan(months) {
-            const rule = readSavedFeeFineRuleForChallan();
-            if (!rule.active) return;
-
-            const fineFrequency = document.getElementById('fineFrequency');
-            const fineRate = document.getElementById('fineRate');
-            const fineUnits = document.getElementById('fineUnits');
-            if (!fineFrequency || !fineRate || !fineUnits) return;
-
-            const lateUnits = (Array.isArray(months) ? months : [])
-                .reduce((total, month) => total + getSavedFeeFineLateUnitsForChallan(month, rule), 0);
-            fineFrequency.value = lateUnits > 0 ? rule.frequency : 'none';
-            fineRate.value = lateUnits > 0 ? String(rule.amount) : '0';
-            fineUnits.value = lateUnits > 0 ? String(lateUnits) : '0';
-            syncChallanFineAmount();
-        }
-
         function applySelectedFeeMonthsToChallan(summary) {
             const pendingMonths = getPendingMonthsForPicker(summary);
             const pendingSet = new Set(pendingMonths);
@@ -2829,13 +2384,22 @@
             challanSelectedFeeMonths = safeSelected;
 
             const monthlyFee = Number(summary?.monthlyFee || 0);
+            const selectedStudent = getSelectedChallanStudent();
+            const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
+            const studentPayments = paymentDetails[selectedStudent?.id] || {};
             const baseFee = Number.isFinite(monthlyFee) ? monthlyFee : 0;
-            const baseAmountValue = safeSelected.reduce((total, month) =>
-                String(month || '').trim() ? total + baseFee : total, 0);
+            const baseAmountValue = safeSelected.reduce((total, month) => {
+                const monthKey = String(month || '').trim();
+                if (!monthKey) return total;
+                const alreadyPaid = Number(studentPayments[monthKey]?.amount || 0);
+                const remainingForMonth = Math.max(baseFee - alreadyPaid, 0);
+                return total + remainingForMonth;
+            }, 0);
 
             const feeMonthInput = document.getElementById('feeMonth');
             if (feeMonthInput) {
-                feeMonthInput.value = getCurrentChallanFeeMonthName();
+                // Show all selected months in a single challan.
+                feeMonthInput.value = safeSelected.length ? safeSelected.join(', ') : 'Dues';
             }
 
             const baseInput = document.getElementById('baseAmount');
@@ -2846,7 +2410,7 @@
                 if (!safeSelected.length) {
                     particularsInput.value = particularsInput.value || 'Dues';
                 } else {
-                    particularsInput.value = safeSelected.length > 1 ? 'Tuition Fee + Pending Dues' : 'Tuition Fee';
+                    particularsInput.value = 'Tuition Fee';
                 }
             }
 
@@ -2856,7 +2420,6 @@
                 payNowInput.value = baseAmountValue ? String(baseAmountValue) : '';
             }
 
-            applySavedFeeFineRuleToChallan(safeSelected);
             togglePayNowFieldVisibility();
             updatePayNowStatusLine();
         }
@@ -2891,11 +2454,7 @@
 
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
-            const monthlyFee = getChallanStudentMonthlyFee(student);
-            if (!(monthlyFee > 0)) {
-                line.textContent = 'Status: Paid';
-                return;
-            }
+            const monthlyFee = Number(student?.monthlyFee || 0);
             const allPaid = months.every((m) => Number(studentPayments[String(m || '').trim()]?.amount || 0) >= monthlyFee && monthlyFee > 0);
             const baseLabel = allPaid ? 'Paid' : 'Pending';
             const tail = data.remainingDue > 0 ? ` (Remaining: PKR ${formatCurrency(data.remainingDue)})` : '';
@@ -2948,8 +2507,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.payNowAmount,
-                        fullAmount: data.grossTotal || data.totalDue,
-                        fineAmount: data.fineAmount,
+                        fullAmount: data.totalDue,
                         challanNumber: data.challanNumber
                     })
                 });
@@ -2976,7 +2534,7 @@
                         challanNumbers: Array.from(new Set([...(paymentDetails[data.studentId][key]?.challanNumbers || []), data.challanNumber || ''].filter(Boolean)))
                     };
 
-                    const monthlyFee = getChallanStudentMonthlyFee(selectedStudent);
+                    const monthlyFee = Number(selectedStudent?.monthlyFee || 0);
                     monthlyFees[data.studentId][key] = (monthlyFee > 0 && nextAmount >= monthlyFee) ? 'Paid' : 'Pending';
                 });
                 localStorage.setItem(CHALLAN_MONTHLY_FEES_KEY, JSON.stringify(monthlyFees));
@@ -3047,14 +2605,15 @@
                 renderStudentFeeSnapshot(student, summary);
             } else {
                 const feeMonthInput = document.getElementById('feeMonth');
-                if (feeMonthInput) feeMonthInput.value = getCurrentChallanFeeMonthName();
+                if (feeMonthInput) feeMonthInput.value = 'Dues';
             }
             triggerChallanRefresh();
         }
 
         function isStudentFeePaid(student, summary = getChallanStudentFeeSummary(student)) {
+            const explicitPaid = String(student?.feesStatus || '').toLowerCase() === 'paid';
             const noPending = !summary.pendingMonths.length || summary.pendingAmount <= 0;
-            return noPending;
+            return explicitPaid && noPending;
         }
 
         function updateChallanPaidStateUI(isPaid) {
@@ -3091,23 +2650,6 @@
             }
         }
 
-        function parseChallanStudentDate(value) {
-            const raw = String(value || '').trim();
-            if (!raw) return null;
-            let match = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-            if (match) {
-                const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-                return Number.isNaN(parsed.getTime()) ? null : parsed;
-            }
-            match = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
-            if (match) {
-                const parsed = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]));
-                return Number.isNaN(parsed.getTime()) ? null : parsed;
-            }
-            const parsed = new Date(raw);
-            return Number.isNaN(parsed.getTime()) ? null : parsed;
-        }
-
         function getChallanStudentFeeSummary(student) {
             const challanMonthLabel = String(document.getElementById('challanMonth')?.value || '').trim();
             let effectiveNow = new Date();
@@ -3118,52 +2660,45 @@
 
             const currentMonthIndex = effectiveNow.getMonth();
             const currentYear = effectiveNow.getFullYear();
-            const monthlyFees = JSON.parse(localStorage.getItem(CHALLAN_MONTHLY_FEES_KEY) || '{}');
-            const studentMonthlyFees = monthlyFees[student.id] || {};
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
             
-            let feeStartMonthIndex = 0;
-            let feeStartYear = currentYear;
-            const feeStartDate = parseChallanStudentDate(student?.createdAt) || parseChallanStudentDate(student?.admissionDate);
+            // Get admission month and year
+            let admissionMonthIndex = 0;
+            let admissionYear = currentYear;
             
-            if (feeStartDate) {
-                feeStartMonthIndex = feeStartDate.getMonth();
-                feeStartYear = feeStartDate.getFullYear();
+            if (student?.admissionDate) {
+                const admissionDate = new Date(student.admissionDate);
+                admissionMonthIndex = admissionDate.getMonth();
+                admissionYear = admissionDate.getFullYear();
             } else {
                 // Fallback: try to get from first recorded payment month
                 const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => Number(studentPayments[month]?.amount || 0) > 0);
                 if (firstPaidMonthIndex >= 0) {
-                    feeStartMonthIndex = firstPaidMonthIndex;
-                    feeStartYear = currentYear;
+                    admissionMonthIndex = firstPaidMonthIndex;
+                    admissionYear = currentYear;
                 }
             }
 
+            // Generate all months from admission date to current month
             const applicableMonths = [];
-            const startMonth = feeStartYear === currentYear ? feeStartMonthIndex : 0;
-            if (feeStartYear <= currentYear && startMonth <= currentMonthIndex) {
-                for (let i = startMonth; i <= currentMonthIndex; i++) applicableMonths.push(CHALLAN_MONTHS[i]);
+            for (let year = admissionYear; year <= currentYear; year++) {
+                const startMonth = year === admissionYear ? admissionMonthIndex : 0;
+                const endMonth = year === currentYear ? currentMonthIndex : 11;
+
+                for (let i = startMonth; i <= endMonth; i++) {
+                    applicableMonths.push(CHALLAN_MONTHS[i]);
+                }
             }
 
-            const monthlyFee = getChallanStudentMonthlyFee(student);
+            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
             const paidMonths = [];
             const pendingMonths = [];
             let pendingAmount = 0;
 
-            if (!(monthlyFee > 0)) {
-                return {
-                    monthlyFee: 0,
-                    admissionMonth: CHALLAN_MONTHS[feeStartMonthIndex],
-                    paidMonths: applicableMonths.slice(),
-                    pendingMonths: [],
-                    pendingAmount: 0
-                };
-            }
-
             applicableMonths.forEach((month) => {
                 const paidAmount = Number(studentPayments[month]?.amount || 0);
-                const paidInMonthlyRecord = String(studentMonthlyFees[month] || '').toLowerCase() === 'paid';
-                if (paidInMonthlyRecord || (monthlyFee > 0 && paidAmount >= monthlyFee)) {
+                if (monthlyFee > 0 && paidAmount >= monthlyFee) {
                     paidMonths.push(month);
                 } else {
                     pendingMonths.push(month);
@@ -3171,13 +2706,13 @@
                 }
             });
 
-            if (!pendingMonths.length && applicableMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
+            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
                 pendingMonths.push(CHALLAN_MONTHS[currentMonthIndex]);
             }
 
             return {
                 monthlyFee,
-                admissionMonth: CHALLAN_MONTHS[feeStartMonthIndex],
+                admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
                 paidMonths,
                 pendingMonths,
                 pendingAmount
@@ -3185,9 +2720,8 @@
         }
 
         function getStudentAdmissionMonthIndex(student, studentMonthly = {}, fallbackMonthIndex = new Date().getMonth()) {
-            const createdMonthIndex = parseMonthIndex(student?.createdAt);
-            const feeStartMonthIndex = createdMonthIndex >= 0 ? createdMonthIndex : parseMonthIndex(student?.admissionDate);
-            if (feeStartMonthIndex >= 0) return Math.min(feeStartMonthIndex, fallbackMonthIndex);
+            const admissionMonthIndex = parseMonthIndex(student?.admissionDate);
+            if (admissionMonthIndex >= 0) return Math.min(admissionMonthIndex, fallbackMonthIndex);
 
             const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => studentMonthly[month] === 'Paid');
             if (firstPaidMonthIndex >= 0) return Math.min(firstPaidMonthIndex, fallbackMonthIndex);
@@ -3201,8 +2735,8 @@
         function parseMonthIndex(value) {
             if (!value) return -1;
 
-            const parsed = parseChallanStudentDate(value);
-            if (parsed) return parsed.getMonth();
+            const parsed = new Date(value);
+            if (!Number.isNaN(parsed.getTime())) return parsed.getMonth();
 
             const normalized = String(value).trim().toLowerCase();
             return CHALLAN_MONTHS.findIndex(month =>
@@ -3224,12 +2758,12 @@
             }
             const statusLabel = isStudentFeePaid(student, summary) ? 'Paid' : 'Pending';
             const payingMonths = Array.isArray(challanSelectedFeeMonths) && challanSelectedFeeMonths.length
-                ? getCurrentChallanFeeMonthName()
+                ? challanSelectedFeeMonths.join(', ')
                 : '';
             const data = getChallanData();
             const selectedMonths = Array.isArray(data?.feeMonths) ? data.feeMonths : [];
             const impactLine = selectedMonths.length
-                ? `Current Month: <strong>${escapeHtml(getCurrentChallanFeeMonthName())}</strong> | Pending dues included: <strong>${selectedMonths.length}</strong> | Pay now: <strong>PKR ${formatCurrency(data.payNowAmount)}</strong> | Remaining: <strong>PKR ${formatCurrency(data.remainingDue)}</strong>`
+                ? `Selected: <strong>${escapeHtml(selectedMonths.join(', '))}</strong> | Pay now: <strong>PKR ${formatCurrency(data.payNowAmount)}</strong> | Remaining: <strong>PKR ${formatCurrency(data.remainingDue)}</strong>`
                 : '';
 
             // Calculate paid and pending amounts
@@ -3237,8 +2771,6 @@
             const studentPayments = paymentDetails[student.id] || {};
             let totalPaidAmount = 0;
             const totalPendingAmount = Number(summary?.pendingAmount || 0);
-            const partialPaidAmount = summary.pendingMonths.reduce((total, month) =>
-                total + Math.max(Number(studentPayments[month]?.amount || 0), 0), 0);
 
             summary.paidMonths.forEach(month => {
                 const payment = studentPayments[month];
@@ -3249,10 +2781,11 @@
             const pendingDetails = summary.pendingMonths.length > 0 
                 ? summary.pendingMonths.map(m => {
                     const paidAmount = Number(studentPayments[m]?.amount || 0);
+                    const dueAmount = Math.max(Number(summary.monthlyFee || 0) - paidAmount, 0);
                     if (paidAmount > 0) {
-                        return `${m} (Paid PKR ${formatCurrency(paidAmount)}, Full Fee PKR ${formatCurrency(summary.monthlyFee)})`;
+                        return `${m} (Paid PKR ${formatCurrency(paidAmount)}, Due PKR ${formatCurrency(dueAmount)})`;
                     }
-                    return `${m} (Full Fee PKR ${formatCurrency(summary.monthlyFee)})`;
+                    return `${m} (Due PKR ${formatCurrency(dueAmount)})`;
                 }).join(', ')
                 : 'None';
 
@@ -3266,15 +2799,14 @@
             snapshot.innerHTML = `
                 <div><strong>${escapeHtml(student.fullName || 'Student')}</strong> | Roll No: ${escapeHtml(student.rollNo || '-')} | Class: ${escapeHtml(student.classGrade || '-')}</div>
                 <div>Status: <strong>${escapeHtml(statusLabel)}</strong></div>
-                ${payingMonths ? `<div>Fee Month: <strong>${escapeHtml(payingMonths)}</strong></div>` : ''}
+                ${payingMonths ? `<div>Paying Month(s): <strong>${escapeHtml(payingMonths)}</strong></div>` : ''}
                 ${impactLine ? `<div>${impactLine}</div>` : ''}
                 <div>Admission Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
                 <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
                 <div>Paid Months: ${escapeHtml(paidDetails)} | <strong>Amount: PKR ${totalPaidAmount.toLocaleString('en-PK')}</strong></div>
-                <div>Included Pending Dues: <strong>${pendingDetails}</strong></div>
-                ${partialPaidAmount > 0 ? `<div>Added Payment: <strong>PKR ${partialPaidAmount.toLocaleString('en-PK')}</strong></div>` : ''}
+                <div>Pending Months: <strong>${pendingDetails}</strong></div>
                 <div>Pending Amount: <strong>PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
-                <div>Total Due: <strong style="color: #dc2626;">PKR ${Number(data.totalDue || totalPendingAmount).toLocaleString('en-PK')}</strong></div>
+                <div>Total Due: <strong style="color: #dc2626;">PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
             `;
         }
 
@@ -3294,10 +2826,6 @@
             document.getElementById('baseAmount').value = '';
             document.getElementById('payNowAmount').value = '';
             document.getElementById('additionalCharges').value = 0;
-            document.getElementById('fineFrequency').value = 'none';
-            document.getElementById('fineRate').value = 0;
-            document.getElementById('fineUnits').value = 0;
-            document.getElementById('fineAmount').value = 0;
             document.getElementById('studentFeeSnapshot').textContent = 'Select a student or enter roll number to view pending fee details.';
             challanSelectedFeeMonths = [];
             const pickerGrid = document.getElementById('feeMonthPickerGrid');
@@ -3336,13 +2864,10 @@
                 const payNowInput = document.getElementById('payNowAmount');
                 if (payNowInput) payNowInput.dataset.userEdited = '1';
             }
-            if (['fineFrequency', 'fineRate', 'fineUnits', 'additionalCharges', 'discountValue'].includes(changedId)) {
-                syncChallanFineAmount();
-            }
             if (changedId === 'baseAmount') {
                 togglePayNowFieldVisibility();
             }
-            if (['payNowAmount', 'baseAmount', 'additionalCharges', 'discountValue', 'fineFrequency', 'fineRate', 'fineUnits'].includes(changedId)) {
+            if (changedId === 'payNowAmount' || changedId === 'baseAmount') {
                 const selectedStudent = getSelectedChallanStudent();
                 if (selectedStudent) {
                     const summary = getChallanStudentFeeSummary(selectedStudent);
@@ -3409,8 +2934,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.payNowAmount,
-                        fullAmount: data.grossTotal || data.totalDue,
-                        fineAmount: data.fineAmount,
+                        fullAmount: data.totalDue,
                         challanNumber: data.challanNumber
                     })
                 });
@@ -3467,8 +2991,7 @@
                     feeMonths: payload.feeMonths,
                     session: payload.session,
                     amount: payload.payNowAmount ?? payload.totalDue ?? payload.amount,
-                    fullAmount: payload.grossTotal ?? payload.totalDue ?? payload.fullAmount ?? payload.amount,
-                    fineAmount: payload.fineAmount ?? 0,
+                    fullAmount: payload.totalDue ?? payload.fullAmount ?? payload.amount,
                     challanNumber: payload.challanNumber
                 })
             });
@@ -3579,60 +3102,14 @@
             qrPreviewStatus.textContent = challanQrState.status;
         }
 
-        function calculateChallanFineAmount() {
-            const frequency = String(document.getElementById('fineFrequency')?.value || 'none');
-            if (frequency === 'none') return 0;
-            const rate = Number(document.getElementById('fineRate')?.value || 0);
-            const units = Number(document.getElementById('fineUnits')?.value || 0);
-            return Math.max((Number.isFinite(rate) ? rate : 0) * (Number.isFinite(units) ? units : 0), 0);
-        }
-
-        function getChallanFineLabel() {
-            const frequency = String(document.getElementById('fineFrequency')?.value || 'none');
-            const labels = { day: 'Late Fine (Per Day)', week: 'Late Fine (Per Week)', month: 'Late Fine (Per Month)' };
-            return labels[frequency] || 'Late Fine';
-        }
-
-        function syncChallanFineAmount() {
-            const fineAmount = calculateChallanFineAmount();
-            const fineInput = document.getElementById('fineAmount');
-            if (fineInput) fineInput.value = String(fineAmount);
-            const payNowInput = document.getElementById('payNowAmount');
-            if (payNowInput && payNowInput.dataset.userEdited !== '1') {
-                const baseAmount = Number(document.getElementById('baseAmount')?.value || 0);
-                const selectedStudent = getSelectedChallanStudent();
-                const feeMonthLabel = String(document.getElementById('feeMonth')?.value || '').trim().toLowerCase();
-                const includeRemainingAmount = !!selectedStudent && !['paid', 'left'].includes(feeMonthLabel);
-                const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent, includeRemainingAmount);
-                const discountInput = String(document.getElementById('discountValue')?.value || '').trim();
-                const numericDiscount = Number(discountInput);
-                const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-                const feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths : [];
-                const paidAmount = getChallanPaidAmountForMonths(selectedStudent, feeMonths);
-                const totalDue = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount - paidAmount, 0);
-                payNowInput.value = totalDue ? String(totalDue) : '';
-            }
-            return fineAmount;
-        }
-
         function getChallanData() {
             const selectedStudent = getSelectedChallanStudent();
             const baseAmount = Number(document.getElementById('baseAmount').value || 0);
-            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
-            const includeRemainingAmount = selectedStudent && !['paid', 'left'].includes(feeMonthLabel.toLowerCase());
-            const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent, includeRemainingAmount);
-            const fineAmount = syncChallanFineAmount();
-            const fineLabel = getChallanFineLabel();
+            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const discountInput = document.getElementById('discountValue').value.trim();
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
-            let feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths.slice() : [];
-            if (!feeMonths.length) {
-                feeMonths = extractChallanMonthNames(feeMonthLabel);
-            }
-            const paidAmount = getChallanPaidAmountForMonths(selectedStudent, feeMonths);
-            const grossTotal = Math.max(baseAmount + additionalCharges + fineAmount - discountAmount, 0);
-            const totalDue = Math.max(grossTotal - paidAmount, 0);
+            const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
             const payNowField = document.getElementById('payNowAmount');
             const payNowRaw = payNowField ? String(payNowField.value || '').trim() : '';
@@ -3645,7 +3122,12 @@
             if (payNowAmount > totalDue) payNowAmount = totalDue;
             const remainingDue = Math.max(totalDue - payNowAmount, 0);
 
-            const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
+            const feeMonthLabel = document.getElementById('feeMonth').value.trim() || '-';
+            let feeMonths = Array.isArray(challanSelectedFeeMonths) ? challanSelectedFeeMonths.slice() : [];
+            if (!feeMonths.length) {
+                feeMonths = extractChallanMonthNames(feeMonthLabel);
+            }
+
             return {
                 studentId: selectedStudent ? selectedStudent.id : '',
                 challanNumber: document.getElementById('challanNumber').value.trim() || '-',
@@ -3664,19 +3146,13 @@
                 dueDate: formatDate(document.getElementById('dueDate').value),
                 baseAmount,
                 additionalCharges,
-                fineAmount,
-                fineLabel,
-                paidAmount,
                 discountLabel: discountInput || '0',
                 discountAmount,
                 particulars: document.getElementById('particulars').value.trim() || 'Tuition Fee',
-                schoolName: branding.schoolName,
-                schoolPhone: branding.schoolPhone,
-                schoolAddress: branding.schoolAddress,
-                schoolLogoSrc: branding.schoolLogoSrc,
+                schoolName: document.getElementById('schoolName').value.trim() || 'Kids Roots Jand',
+                schoolAddress: document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`,
                 urduNote: document.getElementById('urduNote').value.trim() || '',
                 notes: document.getElementById('challanNotes').value.trim() || 'No additional instructions.',
-                grossTotal,
                 totalDue,
                 payNowAmount,
                 remainingDue
@@ -3692,14 +3168,8 @@
             if (!selectedStudent || !data.studentId) return 'Select a student to generate the QR code.';
             if (isStudentTerminated(selectedStudent) || data?.isTerminated) return 'Student left school (terminated).';
             const feeMonthLabel = String(data?.feeMonth || '').trim();
-            const payableMonths = Array.isArray(data?.feeMonths) ? data.feeMonths : [];
-            if (
-                feeMonthLabel &&
-                feeMonthLabel.toLowerCase() !== 'paid' &&
-                !payableMonths.length &&
-                isStudentPaidForMonth(selectedStudent, feeMonthLabel)
-            ) return 'Paid';
-            if (!payableMonths.length && isStudentFeePaid(selectedStudent)) return 'Paid';
+            if (feeMonthLabel && feeMonthLabel.toLowerCase() !== 'paid' && isStudentPaidForMonth(selectedStudent, feeMonthLabel)) return 'Paid';
+            if (isStudentFeePaid(selectedStudent)) return 'Paid';
             if (!data.feeMonth || data.feeMonth === '-') return 'Fee month is required.';
             if (!data.challanNumber || data.challanNumber === '-') return 'Challan number is required.';
             if (data.totalDue <= 0) return 'No due amount, QR code is not required.';
@@ -3713,164 +3183,132 @@
             `;
         }
 
-        function buildChallanLineValue(value) {
-            const raw = String(value ?? '').trim();
-            return escapeHtml(raw && raw !== '-' ? raw : '');
-        }
-
-        function buildVoucherAmountRows(data) {
+        function buildPrintMarkup(data, copyLabel, qrState = {}) {
+            const qrStatus = qrState?.status || challanQrState?.status || '';
+            const qrSvg = qrState?.qrSvg || '';
+            const qrImageUrl = qrState?.qrImageUrl || challanQrState?.qrImageUrl || '';
+            const qrFallbackLabel = qrState?.fallbackLabel || (qrStatus === 'Paid' ? 'Paid' : 'QR unavailable');
             const terminated = !!data?.isTerminated;
-            const rows = [
-                ['Current Month + Pending Dues', terminated ? 0 : data.baseAmount],
-                ['Arrears', 0],
-                ['Remaining / Additional Charges', terminated ? 0 : data.additionalCharges],
-                ['Others', terminated ? 0 : data.fineAmount]
-            ];
-
-            if (!terminated && data.discountAmount > 0) rows.push(['Discount', -data.discountAmount]);
-            if (!terminated && data.paidAmount > 0) rows.push(['Added Payment', -data.paidAmount]);
-
-            return rows.map(([label, amount]) => `
-                <tr>
-                    <td>${escapeHtml(label)}</td>
-                    <td class="challan-amount-cell">${amount ? formatCurrency(amount) : ''}</td>
-                </tr>
-            `).join('');
-        }
-
-        function buildPrintMarkup(data, copyLabel) {
-            const terminated = !!data?.isTerminated;
-            const totalDue = terminated ? 0 : data.totalDue;
-            const surcharge = terminated ? 0 : data.fineAmount;
-            const afterDue = totalDue + surcharge;
-            const isNoticeCopy = /notice/i.test(copyLabel);
-            const noticeText = String(data.urduNote || '').trim();
-            const schoolTitle = 'Kids Roots English Model Schools (JAND)';
-            const defaultNotice = `
-                                <p>فیس بل / نوٹس آپ کو صرف یاد دہانی کے لیے بھیجی جاتی ہے۔</p>
-                                <p>فیس ہر ماہ کی 10 تاریخ سے پہلے سکول آفس میں جمع کروائیں اور رسید ضرور لیں۔</p>
-                                <p>مقررہ تاریخ (ہر ماہ کی 10) کے بعد فیس جمع کروانے پر 100 روپے جرمانہ لاگو ہوگا۔</p>
-                                <p>2 ماہ فیس جمع نہ ہونے / بقایاجات کی صورت میں نام خارج کر دیا جائے گا۔</p>
-                                <p>آپ کے بچوں کی تعلیم و تربیت کے لیے بروقت ادائیگی یقینی بنائیں۔</p>
-                            `;
-            const noticeMarkup = noticeText && !/^note:\s*fees will not be accepted/i.test(noticeText)
-                ? `<p>${escapeHtml(noticeText)}</p>`
-                : defaultNotice;
             return `
-                <div class="challan-copy-wrapper">
+                <section class="preview-sheet">
                     <div class="challan-paper">
                         <div class="challan-copy-label">${escapeHtml(copyLabel)}</div>
-                        <h3 class="challan-school-title"><span>Kids Roots English</span><span>Model Schools (JAND)</span></h3>
-                        <div class="challan-voucher-title">Academic Fee Voucher</div>
-
-                        <div class="challan-form-lines">
-                            <div class="challan-form-line two-up">
-                                <span>Reg No</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.admissionNo || data.sid)}</span>
-                                <span>Class</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.classSection)}</span>
-                            </div>
-                            <div class="challan-form-line">
-                                <span>Name</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.studentName)}</span>
-                            </div>
-                            <div class="challan-form-line">
-                                <span>Father's Name</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.fatherName)}</span>
-                            </div>
-                            <div class="challan-form-line two-up">
-                                <span>Month</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.feeMonth || data.challanMonth)}</span>
-                                <span>Due</span>
-                                <span class="challan-line-value">${buildChallanLineValue(data.dueDate)}</span>
-                            </div>
+                        <table class="challan-table">
+                            <colgroup>
+                                <col style="width: 13%;">
+                                <col style="width: 20%;">
+                                <col style="width: 16%;">
+                                <col style="width: 22%;">
+                                <col style="width: 13%;">
+                                <col style="width: 16%;">
+                            </colgroup>
+                            <tr>
+                                <td colspan="6" class="challan-school-title">
+                                    <div class="challan-school-header">
+                                        <img class="challan-school-logo" src="images/logo.png" alt="School logo">
+                                        <span class="challan-school-name">${escapeHtml(data.schoolName)}</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="6" class="challan-school-subtitle">${escapeHtml(data.schoolAddress)}</td>
+                            </tr>
+                            <tr>
+                                <td colspan="6" class="challan-urdu-note">${escapeHtml(data.urduNote || data.notes)}</td>
+                            </tr>
+                            ${terminated ? `
+                            <tr>
+                                <td colspan="6" class="challan-terminated-banner">STUDENT LEFT SCHOOL (TERMINATED)</td>
+                            </tr>` : ''}
+                            <tr>
+                                <td class="challan-label">SID</td>
+                                <td class="challan-value">${escapeHtml(data.sid)}</td>
+                                <td class="challan-label">Student Name</td>
+                                <td class="challan-value-wide">
+                                    ${escapeHtml(data.studentName)}
+                                    <div class="challan-subvalue">Roll No: ${escapeHtml(data.rollNo)}</div>
+                                </td>
+                                <td class="challan-label">Class</td>
+                                <td class="challan-value">${escapeHtml(data.classSection)}</td>
+                            </tr>
+                            <tr>
+                                <td class="challan-label">Roll No.</td>
+                                <td class="challan-value">${escapeHtml(data.rollNo)}</td>
+                                <td class="challan-label">Father Name</td>
+                                <td class="challan-value-wide">${escapeHtml(data.fatherName)}</td>
+                                <td class="challan-label">Father Mobile</td>
+                                <td class="challan-value">${escapeHtml(data.fatherMobile)}</td>
+                            </tr>
+                            <tr>
+                                <td class="challan-label">Challan Month</td>
+                                <td class="challan-value">${escapeHtml(data.challanMonth)}</td>
+                                <td class="challan-label">Due Date</td>
+                                <td class="challan-value-wide">${escapeHtml(data.dueDate)}</td>
+                                <td class="challan-label">Session</td>
+                                <td class="challan-value">${escapeHtml(data.session)}</td>
+                            </tr>
+                            <tr>
+                                <td class="challan-label">Fee Month</td>
+                                <td colspan="3">${escapeHtml(data.feeMonth)}</td>
+                                <td class="challan-label">Challan No.</td>
+                                <td>${escapeHtml(data.challanNumber)}</td>
+                            </tr>
+                            <tr>
+                                <th class="challan-section-title" colspan="3">Particulars</th>
+                                <th class="challan-section-title" colspan="3">Amount</th>
+                            </tr>
+                            <tr>
+                                <td colspan="3">${escapeHtml(data.particulars)}</td>
+                                <td colspan="3">${formatCurrency(terminated ? 0 : data.baseAmount)}</td>
+                            </tr>
+                            ${!terminated && data.additionalCharges > 0 ? `
+                            <tr>
+                                <td colspan="3">Additional Charges</td>
+                                <td colspan="3">${formatCurrency(data.additionalCharges)}</td>
+                            </tr>` : ''}
+                            ${!terminated && data.discountAmount > 0 ? `
+                            <tr>
+                                <td colspan="3">Discount</td>
+                                <td colspan="3">-${formatCurrency(data.discountAmount)}</td>
+                            </tr>` : ''}
+                            <tr class="challan-total-row">
+                                <td colspan="3">${terminated ? 'Total' : (data.remainingDue > 0 ? 'Total Due' : 'Total')}</td>
+                                <td colspan="3">${formatCurrency(terminated ? 0 : data.totalDue)}</td>
+                            </tr>
+                            ${!terminated && data.remainingDue > 0 ? `
+                            <tr class="challan-total-row">
+                                <td colspan="3">Remaining Due</td>
+                                <td colspan="3">${formatCurrency(data.remainingDue)}</td>
+                            </tr>` : ''}
+                            <tr>
+                                <td colspan="4" class="challan-qr-note">
+                                    ${escapeHtml(terminated ? 'Student left school. Payment is not applicable.' : (qrStatus || `Scan QR to mark ${data.feeMonth} as paid.`))}
+                                </td>
+                                <td colspan="2" class="challan-qr-cell">
+                                    ${qrSvg
+                                        ? `<div class="challan-qr-svg" aria-label="Fee payment QR code">${qrSvg}</div>`
+                                        : (qrImageUrl
+                                            ? `<img src="${escapeHtml(qrImageUrl)}" alt="Fee payment QR code">`
+                                            : `<span>${escapeHtml(qrFallbackLabel)}</span>`)}
+                                </td>
+                            </tr>
+                        </table>
+                        <div class="challan-footer">
+                            <div>Date: ____________________</div>
+                            <div>Received: ____________________</div>
+                            <div>Signature: ____________________</div>
                         </div>
-
-                        <table class="challan-fee-table">
-                            <colgroup>
-                                <col>
-                                <col style="width: 30%;">
-                            </colgroup>
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${buildVoucherAmountRows(data)}
-                            </tbody>
-                        </table>
-
-                        <table class="challan-total-table">
-                            <colgroup>
-                                <col>
-                                <col style="width: 30%;">
-                            </colgroup>
-                            <tr>
-                                <td>Total Payables</td>
-                                <td class="challan-amount-cell">${formatCurrency(totalDue)}</td>
-                            </tr>
-                            <tr>
-                                <td>Surcharge (After due date)</td>
-                                <td class="challan-amount-cell">${surcharge ? formatCurrency(surcharge) : ''}</td>
-                            </tr>
-                            <tr>
-                                <td>Total Payables after Due date</td>
-                                <td class="challan-amount-cell">${formatCurrency(afterDue)}</td>
-                            </tr>
-                        </table>
-
-                        ${isNoticeCopy ? `
-                            <div class="challan-notice-box">
-                                <strong>&#1590;&#1585;&#1608;&#1585;&#1740; &#1729;&#1583;&#1575;&#1740;&#1575;&#1578;</strong>
-                                ${noticeMarkup}
-                            </div>
-                        ` : `
-                            <div class="challan-stamp-box">
-                                <div>Date</div>
-                                <div>Stamp &amp; Sign</div>
-                            </div>
-                        `}
                     </div>
-                </div>
+                </section>
             `;
         }
 
         function buildBulkGroupMarkup(data, qrState) {
             return `
                 <div class="challan-bulk-group">
-                    <div class="challan-top-rule"></div>
-                    <div class="challan-copies-container">
-                        ${printCopies.map(copy => buildPrintMarkup(data, copy)).join('')}
-                    </div>
+                    ${printCopies.map(copy => buildPrintMarkup(data, copy, qrState)).join('')}
                 </div>
             `;
-        }
-
-        function buildSingleStudentPrintPageMarkup(data, qrState) {
-            return `
-                <div class="challan-a4-sheet">
-                    ${buildBulkGroupMarkup(data, qrState)}
-                    ${buildBulkGroupMarkup(data, qrState)}
-                </div>
-            `;
-        }
-
-        function buildBulkStudentPrintPagesMarkup(challans = []) {
-            const rows = Array.isArray(challans) ? challans : [];
-            const sheets = [];
-            for (let index = 0; index < rows.length; index += 2) {
-                const first = rows[index];
-                const second = rows[index + 1];
-                sheets.push(`
-                    <div class="challan-a4-sheet">
-                        ${first ? buildBulkGroupMarkup(first.data, first.qrState) : ''}
-                        ${second ? buildBulkGroupMarkup(second.data, second.qrState) : ''}
-                    </div>
-                `);
-            }
-            return sheets.join('');
         }
 
         function buildChallanKeyPart(value) {
@@ -3899,8 +3337,8 @@
             if (!months.length) return false;
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student?.id] || {};
-            const monthlyFee = getChallanStudentMonthlyFee(student);
-            if (!(monthlyFee > 0)) return true;
+            const monthlyFee = Number(student?.monthlyFee || 0);
+            if (!(monthlyFee > 0)) return false;
             return months.every((month) => Number(studentPayments[month]?.amount || 0) >= monthlyFee);
         }
 
@@ -3924,8 +3362,6 @@
             }
 
             if (isStudentTerminated(selectedStudent)) {
-                const printSheet = document.getElementById('printSheet');
-                if (printSheet) printSheet.innerHTML = buildSingleStudentPrintPageMarkup(getChallanData(), challanQrState);
                 window.print();
                 return;
             }
@@ -3936,18 +3372,15 @@
             const monthsToProcess = selectedMonths.length ? selectedMonths : pendingMonths;
 
             if (!monthsToProcess.length) {
-                const printSheet = document.getElementById('printSheet');
-                if (printSheet) printSheet.innerHTML = buildSingleStudentPrintPageMarkup(getChallanData(), challanQrState);
                 window.print();
                 return;
             }
 
             // Single challan: print current preview which includes all selected months + total dues.
-            const printSheet = document.getElementById('printSheet');
-            if (printSheet) printSheet.innerHTML = buildSingleStudentPrintPageMarkup(getChallanData(), challanQrState);
             window.print();
             return;
 
+            const printSheet = document.getElementById('printSheet');
             const previousPrintHtml = printSheet ? printSheet.innerHTML : '';
 
             const btn = document.getElementById('printChallanBtn');
@@ -3961,19 +3394,21 @@
                     || new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
                 const dueDateLabel = formatDate(document.getElementById('dueDate').value);
                 const sessionLabel = document.getElementById('challanSession').value.trim() || '-';
-                const additionalCharges = getChallanAdditionalChargesForStudent(selectedStudent);
-                const fineAmount = syncChallanFineAmount();
-                const fineLabel = getChallanFineLabel();
+                const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
                 const discountInput = document.getElementById('discountValue').value.trim();
                 const numericDiscount = Number(discountInput);
                 const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
                 const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-                const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
+                const schoolName = document.getElementById('schoolName').value.trim() || 'Kids Roots Jand';
+                const schoolAddress = document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`;
                 const urduNote = document.getElementById('urduNote').value.trim() || '';
                 const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
 
-                const monthlyFee = getChallanStudentMonthlyFee(selectedStudent);
+                const monthlyFee = parseInt(selectedStudent?.monthlyFee || 0, 10) || 0;
                 const baseAmountFallback = Number(document.getElementById('baseAmount').value || 0);
+                const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
+                const studentPayments = paymentDetails[selectedStudent.id] || {};
+
                 const challans = [];
                 const items = [];
 
@@ -3984,11 +3419,10 @@
                     const challanNumber = generateBulkChallanNumber(selectedStudent, cleanMonth);
                     const challanMonthLabel = buildChallanMonthLabelForFeeMonth(cleanMonth, challanMonthBase);
 
-                    const baseAmount = monthlyFee || baseAmountFallback;
-                    const paidAmount = getChallanPaidAmountForMonths(selectedStudent, [cleanMonth]);
-                    const appliedFineAmount = getChallanFineAmountForMonths([cleanMonth], fineAmount);
-                    const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
-                    const totalDue = Math.max(grossTotal - paidAmount, 0);
+                    const paidForThisMonth = Number(studentPayments[cleanMonth]?.amount || 0);
+                    const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
+                    const baseAmount = dueForThisMonth || monthlyFee || baseAmountFallback;
+                    const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
                     const data = {
                         studentId: selectedStudent?.id || '',
@@ -4007,19 +3441,13 @@
                         dueDate: dueDateLabel,
                         baseAmount,
                         additionalCharges,
-                        fineAmount: appliedFineAmount,
-                        fineLabel,
-                        paidAmount,
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
-                        schoolName: branding.schoolName,
-                        schoolPhone: branding.schoolPhone,
-                        schoolAddress: branding.schoolAddress,
-                        schoolLogoSrc: branding.schoolLogoSrc,
+                        schoolName,
+                        schoolAddress,
                         urduNote,
                         notes,
-                        grossTotal,
                         totalDue,
                         payNowAmount: totalDue,
                         remainingDue: 0
@@ -4041,8 +3469,7 @@
                             feeMonth: data.feeMonth,
                             session: data.session,
                             amount: data.totalDue,
-                            fullAmount: data.grossTotal || data.totalDue,
-                            fineAmount: data.fineAmount,
+                            fullAmount: data.totalDue,
                             challanNumber: data.challanNumber
                         });
                     }
@@ -4101,7 +3528,7 @@
                 }
 
                 if (printSheet) {
-                    printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
+                    printSheet.innerHTML = challans.map(row => buildBulkGroupMarkup(row.data, row.qrState)).join('');
                     await new Promise((resolve) => requestAnimationFrame(() => resolve()));
                     await waitForPrintImages(printSheet);
                 }
@@ -4181,14 +3608,14 @@
             const sessionLabel = document.getElementById('challanSession').value.trim() || '-';
 
             const baseAmountFallback = Number(document.getElementById('baseAmount').value || 0);
-            const fineAmount = syncChallanFineAmount();
-            const fineLabel = getChallanFineLabel();
+            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const discountInput = document.getElementById('discountValue').value.trim();
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
 
             const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-            const branding = getChallanBrandingFromForm(`${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`);
+            const schoolName = document.getElementById('schoolName').value.trim() || 'Kids Roots Jand';
+            const schoolAddress = document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`;
             const useFormAddressForBulk = !!selectedCampus;
             const urduNote = document.getElementById('urduNote').value.trim() || '';
             const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
@@ -4199,7 +3626,7 @@
             for (const student of targetStudents) {
                 if (isStudentTerminated(student)) continue;
 
-                const monthlyFee = getChallanStudentMonthlyFee(student);
+                const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
                 
                 // Get all pending months for this student
                 const summary = getChallanStudentFeeSummary(student);
@@ -4209,6 +3636,9 @@
 
                 if (statusFilter === 'pending' && (!pendingMonths.length || summary.pendingAmount <= 0)) continue;
                 if (statusFilter === 'paid' && !paidMonths.length) continue;
+                const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
+                const studentPayments = paymentDetails[student.id] || {};
+
                 // Bulk prints: single challan per student (current month + all pending dues).
                 let monthsToProcess = [];
                 if (statusFilter === 'paid') {
@@ -4224,21 +3654,20 @@
                 const generatedStudentId = student?.studentCode || student?.id || student?.rollNo || '';
                 const branchDetails = getChallanBranchContactDetails(student?.campusName);
                 const defaultCampusAddress = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
-                const campusAwareAddress = useFormAddressForBulk ? branding.schoolAddress : stripChallanPhone(defaultCampusAddress);
-                const campusAwarePhone = useFormAddressForBulk ? branding.schoolPhone : (branding.schoolPhone || extractChallanPhone(defaultCampusAddress));
+                const campusAwareAddress = useFormAddressForBulk ? schoolAddress : defaultCampusAddress;
 
-                const feeMonthLabel = getCurrentChallanFeeMonthName();
+                const feeMonthLabel = monthsUnique.join(', ');
                 const challanNumber = generateBulkChallanNumber(student, monthsUnique[0] || 'Dues');
 
                 const baseAmount = statusFilter === 'paid'
                     ? 0
-                    : (monthsUnique.length * monthlyFee) || (monthlyFee || baseAmountFallback);
+                    : monthsUnique.reduce((total, month) => {
+                        const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
+                        const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
+                        return total + (dueForThisMonth || 0);
+                    }, 0) || (monthlyFee || baseAmountFallback);
 
-                const paidAmount = statusFilter === 'paid' ? 0 : getChallanPaidAmountForMonths(student, monthsUnique);
-                const appliedFineAmount = statusFilter === 'paid' ? 0 : getChallanFineAmountForMonths(monthsUnique, fineAmount);
-                const additionalCharges = statusFilter === 'paid' ? 0 : getChallanAdditionalChargesForStudent(student);
-                const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
-                const totalDue = Math.max(grossTotal - paidAmount, 0);
+                const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
                 const data = {
                     studentId: student?.id || '',
@@ -4257,19 +3686,13 @@
                     dueDate: dueDateLabel,
                     baseAmount,
                     additionalCharges,
-                    fineAmount: appliedFineAmount,
-                    fineLabel,
-                    paidAmount,
                     discountLabel: discountInput || '0',
                     discountAmount,
                     particulars,
-                    schoolName: branding.schoolName,
-                    schoolPhone: campusAwarePhone,
+                    schoolName,
                     schoolAddress: campusAwareAddress,
-                    schoolLogoSrc: branding.schoolLogoSrc,
                     urduNote,
                     notes,
-                    grossTotal,
                     totalDue,
                     payNowAmount: totalDue,
                     remainingDue: 0
@@ -4292,8 +3715,7 @@
                         feeMonths: data.feeMonths,
                         session: data.session,
                         amount: data.totalDue,
-                        fullAmount: data.grossTotal || data.totalDue,
-                        fineAmount: data.fineAmount,
+                        fullAmount: data.totalDue,
                         challanNumber: data.challanNumber
                     });
                 }
@@ -4382,7 +3804,7 @@
                     }
                 }
 
-                printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
+                printSheet.innerHTML = challans.map(row => buildBulkGroupMarkup(row.data, row.qrState)).join('');
                 hideClassStudentsPopup();
                 await new Promise((resolve) => requestAnimationFrame(() => resolve()));
                 await waitForPrintImages(printSheet);
@@ -4407,13 +3829,13 @@
             const challanMonthLabel = document.getElementById('challanMonth').value.trim() || new Date().toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             const dueDateRaw = document.getElementById('dueDate').value;
             const dueDateLabel = dueDateRaw ? new Date(dueDateRaw).toLocaleDateString('en-GB') : 'Check the school website';
-            const fineAmount = syncChallanFineAmount();
-            const fineLabel = getChallanFineLabel();
+            const additionalCharges = Number(document.getElementById('additionalCharges').value || 0);
             const discountInput = document.getElementById('discountValue').value.trim();
             const numericDiscount = Number(discountInput);
             const discountAmount = Number.isNaN(numericDiscount) ? 0 : numericDiscount;
             const particulars = document.getElementById('particulars').value.trim() || 'Tuition Fee';
-            const branding = getChallanBrandingFromForm('School Address');
+            const schoolName = document.getElementById('schoolName').value.trim() || 'Kids Roots Jand';
+            const schoolAddress = document.getElementById('schoolAddress').value.trim() || 'School Address';
             const urduNote = document.getElementById('urduNote').value.trim() || '';
             const notes = document.getElementById('challanNotes').value.trim() || 'No additional instructions.';
             
@@ -4427,7 +3849,7 @@
             // Filter students with pending fees (ANY pending month)
             const dueStudents = allStudents.filter(student => {
                 const summary = getChallanStudentFeeSummary(student);
-                const monthlyFee = getChallanStudentMonthlyFee(student);
+                const monthlyFee = Number(student?.monthlyFee || 0);
                 // Student must have pending amount (not fully paid)
                 return monthlyFee > 0 && summary.pendingAmount > 0;
             });
@@ -4465,7 +3887,7 @@
 
                 // Prepare challan data for all due students - ONE CHALLAN PER STUDENT (all pending months)
                 for (const student of dueStudents) {
-                    const monthlyFee = getChallanStudentMonthlyFee(student);
+                    const monthlyFee = parseInt(student?.monthlyFee || 0, 10) || 0;
                     
                     // Get all pending months for this student
                     const summary = getChallanStudentFeeSummary(student);
@@ -4473,19 +3895,23 @@
                     const pendingMonths = Array.from(new Set(pendingMonthsRaw.map((m) => String(m || '').trim()).filter(Boolean)));
                     if (!pendingMonths.length) continue;
 
+                    const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
+                    const studentPayments = paymentDetails[student.id] || {};
+
                     const generatedStudentId = student?.studentCode || student?.id || student?.rollNo || '';
                     const branchDetails = getChallanBranchContactDetails(student?.campusName);
                     const defaultCampusAddress = `${branchDetails.campusLabel} - ${branchDetails.addressLine}`;
 
-                    const feeMonthCombined = getCurrentChallanFeeMonthName();
+                    const feeMonthCombined = pendingMonths.join(', ');
                     const challanNumber = generateBulkChallanNumber(student, pendingMonths[0] || 'Dues');
 
-                    const baseAmount = (pendingMonths.length * monthlyFee) || (monthlyFee || baseAmountFallback);
-                    const paidAmount = getChallanPaidAmountForMonths(student, pendingMonths);
-                    const appliedFineAmount = getChallanFineAmountForMonths(pendingMonths, fineAmount);
-                    const additionalCharges = getChallanAdditionalChargesForStudent(student);
-                    const grossTotal = Math.max(baseAmount + additionalCharges + appliedFineAmount - discountAmount, 0);
-                    const totalDue = Math.max(grossTotal - paidAmount, 0);
+                    const baseAmount = pendingMonths.reduce((total, month) => {
+                        const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
+                        const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
+                        return total + (dueForThisMonth || 0);
+                    }, 0) || (monthlyFee || baseAmountFallback);
+
+                    const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
                     const data = {
                         studentId: student?.id || '',
@@ -4504,19 +3930,13 @@
                         dueDate: dueDateLabel,
                         baseAmount,
                         additionalCharges,
-                        fineAmount: appliedFineAmount,
-                        fineLabel,
-                        paidAmount,
                         discountLabel: discountInput || '0',
                         discountAmount,
                         particulars,
-                        schoolName: branding.schoolName,
-                        schoolPhone: branding.schoolPhone || extractChallanPhone(defaultCampusAddress),
-                        schoolAddress: stripChallanPhone(defaultCampusAddress),
-                        schoolLogoSrc: branding.schoolLogoSrc,
+                        schoolName,
+                        schoolAddress: defaultCampusAddress,
                         urduNote,
                         notes,
-                        grossTotal,
                         totalDue,
                         payNowAmount: totalDue,
                         remainingDue: 0
@@ -4539,8 +3959,7 @@
                             feeMonths: data.feeMonths,
                             session: data.session,
                             amount: data.totalDue,
-                            fullAmount: data.grossTotal || data.totalDue,
-                            fineAmount: data.fineAmount,
+                            fullAmount: data.totalDue,
                             challanNumber: data.challanNumber
                         });
                     }
@@ -4587,7 +4006,7 @@
                 }
 
                 // Render all challans to print sheet
-                printSheet.innerHTML = buildBulkStudentPrintPagesMarkup(challans);
+                printSheet.innerHTML = challans.map(row => buildBulkGroupMarkup(row.data, row.qrState)).join('');
                 
                 // Wait for images to load and then auto-print
                 await new Promise((resolve) => requestAnimationFrame(() => resolve()));
@@ -4670,13 +4089,6 @@
             await Promise.all(workers);
             return results;
         }
-
-        // Listen for branding changes from other tabs/windows
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'eduCore_settings' || event.key === 'STORAGE_KEY_SETTINGS') {
-                triggerChallanRefresh();
-            }
-        });
     </script>
 </body>
 

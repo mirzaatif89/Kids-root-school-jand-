@@ -18,6 +18,7 @@ module.exports = createHandler({
             fullAmount,
             fineAmount,
             paymentMode,
+            paymentDate,
             challanNumber
         } = body || {};
 
@@ -80,7 +81,13 @@ module.exports = createHandler({
 
         const existingPayment = fineOnly ? null : await FeePayment.findByPk(safeChallanNumber);
         const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
-        const paidAt = existingPayment?.paidAt || new Date();
+        const parsePaymentDate = (value) => {
+            const match = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return null;
+            const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+        const paidAt = existingPayment?.paidAt || parsePaymentDate(paymentDate) || new Date();
         const paymentDateLabel = new Date(paidAt).toLocaleDateString('en-GB');
 
         const paymentRow = !fineOnly && paymentAmount > 0 ? {

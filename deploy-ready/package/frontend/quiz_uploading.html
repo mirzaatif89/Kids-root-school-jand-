@@ -34,6 +34,20 @@
         .status-pill { display:inline-flex; border-radius:999px; padding:.25rem .6rem; font-size:.75rem; font-weight:800; }
         .status-pill.pass { background:#dcfce7; color:#166534; }
         .status-pill.fail { background:#fee2e2; color:#991b1b; }
+        .quiz-results-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; flex-wrap:wrap; margin-bottom:1rem; }
+        .quiz-results-head h3 { margin:0; }
+        .quiz-results-filters { display:flex; align-items:flex-end; gap:.75rem; flex-wrap:wrap; }
+        .quiz-results-filter { min-width:180px; }
+        .quiz-results-filter select { min-height:40px; padding:.55rem 1.9rem .55rem .75rem; }
+        .quiz-results-dropdown { position:relative; min-width:210px; }
+        .quiz-results-dropdown-btn { width:100%; min-height:40px; display:flex; align-items:center; justify-content:space-between; gap:.6rem; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#0f172a; padding:.55rem .75rem; font:inherit; cursor:pointer; }
+        .quiz-results-dropdown-btn span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .quiz-results-dropdown-panel { position:absolute; top:calc(100% + 6px); left:0; z-index:20; width:100%; display:none; padding:.45rem; border:1px solid #cbd5e1; border-radius:10px; background:#fff; box-shadow:0 14px 30px rgba(15,23,42,.16); }
+        .quiz-results-dropdown.open .quiz-results-dropdown-panel { display:block; }
+        .quiz-results-check { display:flex; align-items:center; gap:.45rem; min-height:30px; padding:.35rem .4rem; border-radius:8px; font-size:.86rem; cursor:pointer; }
+        .quiz-results-check:hover { background:#f1f5f9; }
+        .quiz-results-check input { width:15px; height:15px; margin:0; accent-color:var(--primary-color); }
+        .quiz-results-print { min-height:40px; }
         .quiz-modal-backdrop { position:fixed; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; padding:1.25rem; background:rgba(15,23,42,.55); }
         .quiz-modal-backdrop.active { display:flex; }
         .quiz-modal { width:min(980px,100%); max-height:90vh; overflow:auto; background:#fff; border-radius:18px; box-shadow:0 28px 80px rgba(15,23,42,.28); }
@@ -102,7 +116,38 @@
                 </div>
             </div>
             <section class="upload-panel"><h3 style="margin-bottom:1rem;">Uploaded Quizzes</h3><div id="quizUploadList"></div></section>
-            <section class="upload-panel"><h3 style="margin-bottom:1rem;">Submitted Quiz Results</h3><div id="quizSubmissionList"></div></section>
+            <section class="upload-panel">
+                <div class="quiz-results-head">
+                    <h3>Submitted Quiz Results</h3>
+                    <div class="quiz-results-filters">
+                        <div class="quiz-results-filter">
+                            <label for="quizResultCampusFilter">Campus</label>
+                            <select id="quizResultCampusFilter"><option value="">All Campus</option></select>
+                        </div>
+                        <div class="quiz-results-filter">
+                            <label for="quizResultClassFilter">Class</label>
+                            <select id="quizResultClassFilter"><option value="">All Class</option></select>
+                        </div>
+                        <div class="quiz-results-filter">
+                            <label for="quizResultStatusOptions">Status</label>
+                            <div class="quiz-results-dropdown" data-quiz-results-dropdown>
+                                <button class="quiz-results-dropdown-btn" type="button" data-quiz-results-dropdown-toggle aria-expanded="false">
+                                    <span id="quizResultStatusSummary">All Status</span>
+                                    <i data-lucide="chevron-down" size="16"></i>
+                                </button>
+                                <div class="quiz-results-dropdown-panel" id="quizResultStatusOptions">
+                                    <label class="quiz-results-check"><input type="checkbox" value="Submitted"><span>Submitted</span></label>
+                                    <label class="quiz-results-check"><input type="checkbox" value="Not Submitted"><span>Not Submitted</span></label>
+                                    <label class="quiz-results-check"><input type="checkbox" value="Pass"><span>Pass</span></label>
+                                    <label class="quiz-results-check"><input type="checkbox" value="Fail"><span>Fail</span></label>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline quiz-results-print" type="button" id="printQuizResultsBtn"><i data-lucide="printer"></i> Print List</button>
+                    </div>
+                </div>
+                <div id="quizSubmissionList"></div>
+            </section>
         </main>
     </div>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
@@ -114,6 +159,160 @@
         function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         let questionDrafts = [];
+        function normalizeQuizFilterValue(value) { return String(value || '').trim().toLowerCase(); }
+        function getQuizStudents() { return data('eduCore_students'); }
+        function findQuizStudentForSubmission(item = {}) {
+            const students = getQuizStudents();
+            const candidates = [
+                item.studentId,
+                item.studentKey,
+                item.studentCode,
+                item.rollNo,
+                item.admissionNo
+            ].map((value) => String(value || '').trim()).filter(Boolean);
+            return students.find((student) => {
+                const studentValues = [
+                    student.id,
+                    student.studentCode,
+                    student.rollNo,
+                    student.admissionNo
+                ].map((value) => String(value || '').trim()).filter(Boolean);
+                return candidates.some((candidate) => studentValues.includes(candidate));
+            }) || students.find((student) => {
+                const nameMatches = normalizeQuizFilterValue(student.fullName) === normalizeQuizFilterValue(item.studentName);
+                const classMatches = !item.classGrade || normalizeQuizFilterValue(student.classGrade) === normalizeQuizFilterValue(item.classGrade);
+                return nameMatches && classMatches;
+            }) || null;
+        }
+        function getQuizSubmissionRow(item = {}) {
+            const student = findQuizStudentForSubmission(item) || {};
+            return {
+                studentId: student.studentCode || student.admissionNo || item.studentCode || item.rollNo || item.studentId || '-',
+                name: item.studentName || student.fullName || '-',
+                fatherName: student.fatherName || item.fatherName || '-',
+                classGrade: item.classGrade || student.classGrade || '-',
+                campusName: student.campusName || item.campusName || 'Main Campus',
+                score: item.score ?? '-',
+                totalMarks: item.totalMarks ?? '-',
+                quizTitle: item.quizTitle || '-',
+                submissionStatus: 'Submitted',
+                resultStatus: (item.passed === undefined ? Number(item.score || 0) >= Number(item.passMarks || 0) : Boolean(item.passed)) ? 'Pass' : 'Fail',
+                raw: item
+            };
+        }
+        function getQuizStudentDisplayId(student = {}) {
+            return student.studentCode || student.admissionNo || student.rollNo || student.id || '-';
+        }
+        function getQuizStudentKey(student = {}) {
+            return String(student.id || student.studentCode || student.rollNo || student.admissionNo || '').trim();
+        }
+        function getQuizItemClass(item = {}) {
+            return String(item.classGrade || '').trim();
+        }
+        function getQuizSubmissionKey(item = {}) {
+            return String(item.quizId || '') + '|' + String(item.studentKey || item.studentId || item.studentCode || item.rollNo || '').trim();
+        }
+        function getSelectedQuizResultStatuses() {
+            return Array.from(document.querySelectorAll('#quizResultStatusOptions input[type="checkbox"]:checked, [data-quiz-results-dropdown] input[type="checkbox"]:checked'))
+                .map((input) => input.value)
+                .filter(Boolean);
+        }
+        function updateQuizResultStatusSummary() {
+            const values = getSelectedQuizResultStatuses();
+            const summary = document.getElementById('quizResultStatusSummary');
+            if (!summary) return;
+            summary.textContent = !values.length ? 'All Status' : (values.length === 1 ? values[0] : `${values.length} selected`);
+        }
+        function setupQuizResultDropdowns() {
+            document.querySelectorAll('[data-quiz-results-dropdown-toggle]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const dropdown = button.closest('[data-quiz-results-dropdown]');
+                    const willOpen = !dropdown?.classList.contains('open');
+                    document.querySelectorAll('[data-quiz-results-dropdown].open').forEach((item) => {
+                        item.classList.remove('open');
+                        item.querySelector('[data-quiz-results-dropdown-toggle]')?.setAttribute('aria-expanded', 'false');
+                    });
+                    if (dropdown && willOpen) {
+                        dropdown.classList.add('open');
+                        button.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+            document.addEventListener('click', (event) => {
+                if (event.target.closest('[data-quiz-results-dropdown]')) return;
+                document.querySelectorAll('[data-quiz-results-dropdown].open').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('[data-quiz-results-dropdown-toggle]')?.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+        function getAllQuizResultRows() {
+            const quizzes = data(QUIZ_KEY);
+            const students = getQuizStudents();
+            const submissions = data(QUIZ_SUBMISSION_KEY);
+            const submissionMap = new Map();
+            submissions.forEach((submission) => submissionMap.set(getQuizSubmissionKey(submission), submission));
+            const rows = [];
+
+            quizzes.forEach((quiz) => {
+                const quizId = String(quiz.id || '').trim();
+                const quizClass = getQuizItemClass(quiz);
+                const classStudents = students.filter((student) => normalizeQuizFilterValue(student.classGrade) === normalizeQuizFilterValue(quizClass));
+                classStudents.forEach((student) => {
+                    const studentKey = getQuizStudentKey(student);
+                    const submission = submissionMap.get(`${quizId}|${studentKey}`)
+                        || submissions.find((item) => String(item.quizId || '') === quizId && normalizeQuizFilterValue(item.studentName) === normalizeQuizFilterValue(student.fullName));
+                    if (submission) {
+                        rows.push(getQuizSubmissionRow(submission));
+                    } else {
+                        rows.push({
+                            studentId: getQuizStudentDisplayId(student),
+                            name: student.fullName || '-',
+                            fatherName: student.fatherName || '-',
+                            classGrade: student.classGrade || quizClass || '-',
+                            campusName: student.campusName || 'Main Campus',
+                            score: '-',
+                            totalMarks: quiz.totalMarks ?? '-',
+                            quizTitle: quiz.title || '-',
+                            submissionStatus: 'Not Submitted',
+                            resultStatus: '-',
+                            raw: null
+                        });
+                    }
+                });
+            });
+
+            submissions.forEach((submission) => {
+                const existing = rows.some((row) => row.raw === submission);
+                if (!existing) rows.push(getQuizSubmissionRow(submission));
+            });
+
+            return rows;
+        }
+        function populateQuizResultFilters() {
+            const campusSelect = document.getElementById('quizResultCampusFilter');
+            const classSelect = document.getElementById('quizResultClassFilter');
+            if (!campusSelect || !classSelect) return;
+            const previousCampus = campusSelect.value;
+            const previousClass = classSelect.value;
+            const rows = getAllQuizResultRows();
+            const campuses = [...new Set(rows.map((row) => String(row.campusName || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            const classes = [...new Set(rows.map((row) => String(row.classGrade || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            campusSelect.innerHTML = '<option value="">All Campus</option>' + campuses.map((campus) => `<option value="${esc(campus)}">${esc(campus)}</option>`).join('');
+            classSelect.innerHTML = '<option value="">All Class</option>' + classes.map((className) => `<option value="${esc(className)}">${esc(className)}</option>`).join('');
+            if (campuses.some((campus) => normalizeQuizFilterValue(campus) === normalizeQuizFilterValue(previousCampus))) campusSelect.value = previousCampus;
+            if (classes.some((className) => normalizeQuizFilterValue(className) === normalizeQuizFilterValue(previousClass))) classSelect.value = previousClass;
+        }
+        function getFilteredQuizSubmissionRows() {
+            const selectedCampus = document.getElementById('quizResultCampusFilter')?.value || '';
+            const selectedClass = document.getElementById('quizResultClassFilter')?.value || '';
+            const selectedStatuses = getSelectedQuizResultStatuses();
+            return getAllQuizResultRows()
+                .filter((row) => !selectedCampus || normalizeQuizFilterValue(row.campusName) === normalizeQuizFilterValue(selectedCampus))
+                .filter((row) => !selectedClass || normalizeQuizFilterValue(row.classGrade) === normalizeQuizFilterValue(selectedClass))
+                .filter((row) => !selectedStatuses.length || selectedStatuses.includes(row.submissionStatus) || selectedStatuses.includes(row.resultStatus));
+        }
         function populateClasses() {
             const students = data('eduCore_students');
             const classes = data('eduCore_classes');
@@ -238,14 +437,84 @@
             if (window.lucide) lucide.createIcons();
         }
         function renderSubmissions() {
-            const submissions = data(QUIZ_SUBMISSION_KEY).sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || '')));
-            if (!submissions.length) { quizSubmissionList.innerHTML = '<div class="empty-note">No student has submitted a quiz yet.</div>'; return; }
-            quizSubmissionList.innerHTML = `<table class="upload-table"><thead><tr><th>Student</th><th>Class</th><th>Quiz</th><th>Score</th><th>Status</th><th>Analysis</th><th>Submitted</th></tr></thead><tbody>${submissions.map((item) => {
-                const rows = Array.isArray(item.checkedRows) ? item.checkedRows : [];
-                const correct = rows.filter((row) => row.isCorrect).length;
-                const passed = item.passed === undefined ? Number(item.score || 0) >= Number(item.passMarks || 0) : Boolean(item.passed);
-                return `<tr><td>${esc(item.studentName || '-')}<br><small>${esc(item.rollNo || item.studentId || '-')}</small></td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.quizTitle || '-')}</td><td><strong>${esc(item.score)} / ${esc(item.totalMarks)}</strong><br><small>Pass: ${esc(item.passMarks || '-')}</small></td><td><span class="status-pill ${passed ? 'pass' : 'fail'}">${passed ? 'Pass' : 'Fail'}</span></td><td>${esc(correct)} correct / ${esc(rows.length - correct)} wrong</td><td>${esc(item.submittedAt ? new Date(item.submittedAt).toLocaleString() : '-')}</td></tr>`;
-            }).join('')}</tbody></table>`;
+            populateQuizResultFilters();
+            const rows = getFilteredQuizSubmissionRows();
+            if (!getAllQuizResultRows().length) { quizSubmissionList.innerHTML = '<div class="empty-note">No quiz result record is available yet.</div>'; return; }
+            if (!rows.length) { quizSubmissionList.innerHTML = '<div class="empty-note">No quiz result found for selected filters.</div>'; return; }
+            quizSubmissionList.innerHTML = `<table class="upload-table"><thead><tr><th>Std ID</th><th>Name</th><th>Father Name</th><th>Class</th><th>Campus</th><th>Total / Obtain Marks</th><th>Quiz Title</th></tr></thead><tbody>${rows.map((row) => (
+                `<tr><td>${esc(row.studentId)}</td><td>${esc(row.name)}</td><td>${esc(row.fatherName)}</td><td>${esc(row.classGrade)}</td><td>${esc(row.campusName)}</td><td><strong>${esc(row.score)} / ${esc(row.totalMarks)}</strong></td><td>${esc(row.quizTitle)}</td></tr>`
+            )).join('')}</tbody></table>`;
+        }
+        function printQuizResultsList() {
+            const rows = getFilteredQuizSubmissionRows();
+            if (!rows.length) { showAppAlert('No submitted quiz found for selected filters.', 'No Results'); return; }
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const logoSrc = branding.logoDataUrl || 'images/logo.png';
+            const selectedCampus = document.getElementById('quizResultCampusFilter')?.value || 'All Campus';
+            const selectedClass = document.getElementById('quizResultClassFilter')?.value || 'All Class';
+            const selectedStatuses = getSelectedQuizResultStatuses();
+            const statusLabel = selectedStatuses.length ? selectedStatuses.join(', ') : 'All Status';
+            const printedAt = new Date().toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' });
+            const rowsHtml = rows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${esc(row.studentId)}</td>
+                    <td>${esc(row.name)}</td>
+                    <td>${esc(row.fatherName)}</td>
+                    <td>${esc(row.classGrade)}</td>
+                    <td>${esc(row.campusName)}</td>
+                    <td>${esc(row.score)} / ${esc(row.totalMarks)}</td>
+                    <td>${esc(row.quizTitle)}</td>
+                </tr>
+            `).join('');
+            const printWindow = window.open('', '_blank', 'width=1100,height=800');
+            if (!printWindow) { showAppAlert('Please allow popups to print quiz results.', 'Popup Blocked'); return; }
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${esc(schoolName)} - Submitted Quiz Results</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 28px; color: #111827; font-family: Arial, sans-serif; background: #fff; }
+                        .print-header { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid #111827; }
+                        .print-header img { width: 64px; height: 64px; object-fit: contain; }
+                        h1 { margin: 0; font-size: 24px; }
+                        .subtitle { margin-top: 4px; color: #4b5563; font-size: 13px; }
+                        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; font-size: 13px; }
+                        .meta div { border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; }
+                        .meta strong { display: block; margin-bottom: 3px; color: #374151; font-size: 11px; text-transform: uppercase; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+                        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; }
+                        @media print { body { padding: 16px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-header">
+                        <img src="${esc(logoSrc)}" alt="${esc(schoolName)} logo">
+                        <div>
+                            <h1>${esc(schoolName)}</h1>
+                            <div class="subtitle">Submitted Quiz Results</div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div><strong>Campus</strong>${esc(selectedCampus)}</div>
+                        <div><strong>Class</strong>${esc(selectedClass)}</div>
+                        <div><strong>Status</strong>${esc(statusLabel)}</div>
+                        <div><strong>Total</strong>${rows.length}</div>
+                        <div><strong>Printed</strong>${esc(printedAt)}</div>
+                    </div>
+                    <table>
+                        <thead><tr><th>#</th><th>Std ID</th><th>Name</th><th>Father Name</th><th>Class</th><th>Campus</th><th>Total / Obtain Marks</th><th>Quiz Title</th></tr></thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <script>window.onload = function () { window.print(); };<\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         }
         function editItem(id) {
             const item = data(QUIZ_KEY).find((entry) => entry.id === id);
@@ -277,7 +546,14 @@
             if (!save(QUIZ_KEY, items)) return;
             quizUploadForm.reset(); quizUploadId.value = ''; questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); closeQuestionModal(); quizSaveBtn.innerHTML = '<i data-lucide="arrow-right"></i> Enter Quiz Questions'; render(); showSuccessModal(editId ? 'Quiz Updated!' : 'Quiz Uploaded!', 'Quiz is visible in student portal.');
         }
-        populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
+        document.getElementById('quizResultCampusFilter')?.addEventListener('change', renderSubmissions);
+        document.getElementById('quizResultClassFilter')?.addEventListener('change', renderSubmissions);
+        document.getElementById('quizResultStatusOptions')?.addEventListener('change', () => {
+            updateQuizResultStatusSummary();
+            renderSubmissions();
+        });
+        document.getElementById('printQuizResultsBtn')?.addEventListener('click', printQuizResultsList);
+        setupQuizResultDropdowns(); updateQuizResultStatusSummary(); populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
     </script>
 </body>
 

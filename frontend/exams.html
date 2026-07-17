@@ -117,6 +117,17 @@
                     <span class="exam-module-link">Open Page</span>
                 </a>
 
+                <a href="exam_result.html#resultHistoryCard" class="exam-module-card">
+                    <div class="exam-module-icon live">
+                        <i data-lucide="calendar-check"></i>
+                    </div>
+                    <div class="exam-module-copy">
+                        <h3>Result Live Schedule</h3>
+                        <p>View uploaded result cards and schedule campus/class results for student portals.</p>
+                    </div>
+                    <span class="exam-module-link">Open Page</span>
+                </a>
+
                 <a href="exam_result_history.html" class="exam-module-card">
                     <div class="exam-module-icon history">
                         <i data-lucide="history"></i>
@@ -501,6 +512,10 @@
 
         .exam-module-icon.history {
             background: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+        }
+
+        .exam-module-icon.live {
+            background: linear-gradient(135deg, #047857 0%, #22c55e 100%);
         }
 
         .exam-module-copy h3 {
@@ -1294,20 +1309,20 @@
             const schoolName = 'Kids Roots Jand';
             const contactLine = getExamContactLine();
             const logoSrc = getExamLogoSrc();
-            
+
             // Force update all branding fields
             const schoolNameField = document.getElementById('schoolName');
             if (schoolNameField) schoolNameField.value = schoolName;
-            
+
             const contactField = document.getElementById('schoolContact');
             if (contactField) contactField.value = contactLine;
-            
+
             const leftLogoField = document.getElementById('leftLogoUrl');
             if (leftLogoField) leftLogoField.value = logoSrc;
-            
+
             const rightLogoField = document.getElementById('rightLogoUrl');
             if (rightLogoField) rightLogoField.value = logoSrc;
-            
+
             // Update preview immediately with new branding
             document.getElementById('previewSchoolName').textContent = schoolName;
             document.getElementById('previewSchoolContact').textContent = contactLine;
@@ -1316,7 +1331,7 @@
             });
             document.getElementById('previewLeftLogo').src = logoSrc;
             document.getElementById('previewRightLogo').src = logoSrc;
-            
+
             refreshResultCardPreview();
             refreshDateSheetPreview();
         }

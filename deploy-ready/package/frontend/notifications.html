@@ -683,7 +683,9 @@
                 String(student.feesStatus || '').toLowerCase() !== 'paid';
             const pendingMonths = isCurrentMonthPending ? [currentMonth] : [];
 
-            const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const monthlyFee = (student?.freeStudy === true || student?.freeStudy === 'true' || String(student?.zeroFeeReason || student?.freeStudyReason || '').trim())
+                ? 0
+                : (parseInt(student.monthlyFee || 0, 10) || 0);
             return {
                 monthlyFee,
                 paidMonths,

@@ -1,0 +1,34 @@
+services:
+  # Backend API Server
+  - type: web
+    name: school-management-backend
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: school-db
+          property: host
+      - key: DB_USER
+        fromDatabase:
+          name: school-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: school-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: school-db
+          property: database
+
+databases:
+  # MySQL Database
+  - name: school-db
+    databaseName: school_system
+    user: school_admin

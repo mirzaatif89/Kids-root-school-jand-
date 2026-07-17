@@ -2,10 +2,10 @@
   "name": "educore-backend",
   "version": "1.0.0",
   "description": "Real-time SQL Backend for School Management System",
-  "main": "backend/server.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node backend/server.js",
-    "dev": "nodemon app.js",
+    "start": "node app.js",
+    "dev": "nodemon backend/server.js",
     "validate": "node scripts/validate-startup.js",
     "validate:start": "npm run validate && npm start",
     "production": "NODE_ENV=production node app.js",
@@ -17,8 +17,9 @@
     "pm2:delete": "pm2 delete ecosystem.config.js"
   },
   "dependencies": {
-    "axios": "^1.16.1",
+    "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
+    "chalk": "^4.1.2",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.22.1",

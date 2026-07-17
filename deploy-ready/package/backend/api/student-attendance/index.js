@@ -4,7 +4,7 @@ const { getDb } = require('../_lib/db');
 function normalizeStatus(status) {
     if (status === 'P') return 'Present';
     if (status === 'A') return 'Absent';
-    if (status === 'Present' || status === 'Late' || status === 'Absent') return status;
+    if (status === 'Present' || status === 'Late' || status === 'Absent' || status === 'Leave') return status;
     return 'Not Marked';
 }
 

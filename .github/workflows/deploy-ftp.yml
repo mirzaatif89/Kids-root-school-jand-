@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - happy-day-restore
   workflow_dispatch:
 
 concurrency:
@@ -31,10 +30,9 @@ jobs:
           FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
           FTP_PORT: ${{ secrets.FTP_PORT }}
-          FTP_SERVER_DIR: ${{ secrets.FTP_SERVER_DIR }}
         run: |
           missing=()
-          for v in FTP_SERVER FTP_USERNAME FTP_PASSWORD FTP_PORT FTP_SERVER_DIR; do
+          for v in FTP_SERVER FTP_USERNAME FTP_PASSWORD FTP_PORT; do
             if [ -z "${!v}" ]; then
               missing+=("$v")
             fi
@@ -58,22 +56,17 @@ jobs:
           port: ${{ secrets.FTP_PORT }}
           protocol: ftp
           local-dir: ./
-          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          server-dir: ./
           dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**
             **/.github/**
-            **/deploy-ready/**
             **/node_modules/**
             **/.env
-            **/.env.*
-            !**/.env.example
-            **/permissions.json
-            **/date_sheet.json
-            **/admin_credentials.json
-            **/.whatsapp-session/**
-            **/logs/**
+            **/data/permissions.json
+            **/data/date_sheet.json
+            **/data/admin_credentials.json
             **/.deploy-backup/**
             **/server.log
             **/stderr.log

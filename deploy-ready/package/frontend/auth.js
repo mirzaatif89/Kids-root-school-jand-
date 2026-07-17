@@ -135,6 +135,8 @@
         'set_fee.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
         'fees.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Fees', icon: 'credit-card' },
         'fee_challan.html': { moduleKey: 'fee_challan', defaultHome: 'dashboard.html', label: 'Fee Challan', icon: 'file-text' },
+        'remaining_charges.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Remaining Charges', icon: 'circle-dollar-sign' },
+        'payment_history.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Payment Statement', icon: 'receipt-text' },
         'fee_logos.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Logos', icon: 'image' },
         'bills.html': { moduleKey: 'bills', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
         'library.html': { moduleKey: 'library', defaultHome: 'dashboard.html', label: 'Library', icon: 'library' },
@@ -151,6 +153,7 @@
         'student_attendance_report.html': { moduleKey: 'student_attendance_report', defaultHome: 'dashboard.html', label: 'Student Attendance Report', icon: 'bar-chart-3' },
         'teacher_attendance_report.html': { moduleKey: 'teacher_attendance_report', defaultHome: 'dashboard.html', label: 'Teacher Attendance Report', icon: 'line-chart' },
         'notifications.html': { moduleKey: 'notifications', defaultHome: 'dashboard.html', label: 'Notifications', icon: 'bell' },
+        'messages.html': { moduleKey: 'messages', defaultHome: 'dashboard.html', label: 'Messages', icon: 'message-circle' },
         'special_notices.html': { moduleKey: 'special_notices', defaultHome: 'dashboard.html', label: 'Special Notices', icon: 'megaphone' },
         'exams.html': { moduleKey: 'exams', defaultHome: 'dashboard.html', label: 'Exams', icon: 'clipboard-list' },
         'exam_schedule.html': { moduleKey: 'exams', defaultHome: 'dashboard.html', label: 'Exam Schedule', icon: 'calendar-days' },
@@ -200,6 +203,7 @@
     function toRoutePath(pageName = '') {
         const normalizedPage = normalizePageName(pageName);
         if (normalizedPage === 'index.html') return '/';
+        if (normalizedPage === 'login.html') return '/login';
         if (normalizedPage.endsWith('.html')) return normalizedPage;
         return String(pageName || 'login.html').replace(/^\/+/, '');
     }
@@ -260,6 +264,7 @@
                     student_attendance_report: 'view',
                     teacher_attendance_report: 'view',
                     notifications: 'manage',
+                    messages: 'manage',
                     special_notices: 'manage',
                     exams: 'manage',
                     bills: 'manage',
@@ -295,6 +300,7 @@
                     student_attendance: 'edit',
                     exams: 'view',
                     notifications: 'view',
+                    messages: 'view',
                     aboutme: 'view'
                 }
             },
@@ -309,6 +315,7 @@
                     student_attendance_report: 'view',
                     exams: 'view',
                     special_notices: 'view',
+                    messages: 'view',
                     aboutme: 'view'
                 }
             },
@@ -321,6 +328,7 @@
                     fee_challan: 'view',
                     exams: 'view',
                     special_notices: 'view',
+                    messages: 'view',
                     aboutme: 'view'
                 }
             }
@@ -448,6 +456,108 @@
         callback();
     }
 
+    function keepActiveSidebarItemVisible(navLinks) {
+        if (!navLinks) return;
+
+        const activeItem = navLinks.querySelector(
+            '.nav-subitem.active[href], .nav-item.active[href], .nav-dropdown.open .nav-dropdown-toggle.active, .nav-item.active'
+        );
+        if (!activeItem) return;
+
+        window.requestAnimationFrame(() => {
+            const navRect = navLinks.getBoundingClientRect();
+            const itemRect = activeItem.getBoundingClientRect();
+
+            if (itemRect.width && navRect.width && navLinks.scrollWidth > navLinks.clientWidth) {
+                const itemCenter = itemRect.left - navRect.left + navLinks.scrollLeft + (itemRect.width / 2);
+                navLinks.scrollLeft = Math.max(0, itemCenter - (navLinks.clientWidth / 2));
+            }
+
+            if (itemRect.height && navRect.height && navLinks.scrollHeight > navLinks.clientHeight) {
+                const itemCenter = itemRect.top - navRect.top + navLinks.scrollTop + (itemRect.height / 2);
+                navLinks.scrollTop = Math.max(0, itemCenter - (navLinks.clientHeight / 2));
+            }
+        });
+    }
+
+    const WELCOME_SESSION_KEY = 'eduCore_welcome_payload';
+
+    function escapeWelcomeText(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[char]));
+    }
+
+    function getWelcomeSchoolName() {
+        try {
+            const settings = JSON.parse(localStorage.getItem('eduCore_settings') || '{}') || {};
+            return String(settings.schoolName || settings.schoolTitle || 'Kids Roots Jand').trim() || 'Kids Roots Jand';
+        } catch (_error) {
+            return 'Kids Roots Jand';
+        }
+    }
+
+    function showWelcomeAnimationIfNeeded() {
+        if (document.getElementById('loginForm')) return;
+        if (!sessionStorage.getItem('eduCore_token')) return;
+
+        let payload = null;
+        try {
+            payload = JSON.parse(sessionStorage.getItem(WELCOME_SESSION_KEY) || 'null');
+        } catch (_error) {
+            payload = null;
+        }
+
+        if (!payload || !payload.at) return;
+        if (Date.now() - Number(payload.at) > 5 * 60 * 1000) {
+            sessionStorage.removeItem(WELCOME_SESSION_KEY);
+            return;
+        }
+
+        sessionStorage.removeItem(WELCOME_SESSION_KEY);
+        if (document.getElementById('eduWelcomeOverlay')) return;
+
+        const displayName = String(payload.displayName || loggedInUser?.fullName || loggedInUser?.username || 'User').trim() || 'User';
+        const schoolName = String(payload.schoolName || getWelcomeSchoolName()).trim() || 'Kids Roots Jand';
+        const logoSrc = 'images/logo.png';
+        const overlay = document.createElement('div');
+        overlay.id = 'eduWelcomeOverlay';
+        overlay.className = 'edu-welcome-overlay';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-modal', 'true');
+        overlay.innerHTML = `
+            <div class="edu-welcome-card">
+                <div class="edu-welcome-glow" aria-hidden="true"></div>
+                <div class="edu-welcome-icon edu-welcome-logo-wrap">
+                    <img class="edu-welcome-logo" src="${escapeWelcomeText(logoSrc)}" alt="${escapeWelcomeText(schoolName)} logo">
+                </div>
+                <h2 class="edu-welcome-title">Welcome, ${escapeWelcomeText(displayName)}</h2>
+                <p class="edu-welcome-subtitle">Welcome ${escapeWelcomeText(displayName)} in ${escapeWelcomeText(schoolName)}.</p>
+                <div class="edu-welcome-divider" aria-hidden="true"></div>
+                <button type="button" class="edu-welcome-skip">Get Started</button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const close = () => {
+            if (!overlay.classList.contains('active')) return;
+            overlay.classList.add('closing');
+            window.setTimeout(() => overlay.remove(), 240);
+        };
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) close();
+        });
+        overlay.querySelector('.edu-welcome-skip')?.addEventListener('click', close);
+        overlay.classList.add('active');
+        window.setTimeout(close, 2400);
+    }
+
     function getHomePage(user, permissions) {
         const group = getGroupConfig(user, permissions);
         const registryEntry = pageRegistry[currentPage];
@@ -557,6 +667,8 @@
                     .filter((item) => item.style.display !== 'none');
                 if (!visibleLinks.length) dropdown.style.display = 'none';
             });
+
+            document.querySelectorAll('.sidebar .nav-links').forEach(keepActiveSidebarItemVisible);
         });
     }
 
@@ -629,6 +741,8 @@
                         { page: 'set_fee.html', label: 'Set Fees', icon: 'badge-dollar-sign' },
                         { page: 'fees.html', label: 'Fees', icon: 'credit-card' },
                         { page: 'fee_challan.html', label: 'Fee Challan', icon: 'file-text' },
+                        { page: 'remaining_charges.html', label: 'Remaining Charges', icon: 'circle-dollar-sign' },
+                        { page: 'payment_history.html', label: 'Payment Statement', icon: 'receipt-text' },
                         { page: 'annual_charges.html', label: 'Annual Charges', icon: 'receipt' }
                     ]
                 },
@@ -653,6 +767,7 @@
                     ]
                 },
                 { type: 'link', page: 'notifications.html', label: 'Notifications', icon: 'bell-ring' },
+                { type: 'link', page: 'messages.html', label: 'Messages', icon: 'message-circle' },
                 {
                     type: 'dropdown',
                     label: 'Permissions',
@@ -728,6 +843,7 @@
             });
 
             if (window.lucide && window.lucide.createIcons) window.lucide.createIcons();
+            keepActiveSidebarItemVisible(navLinks);
         });
     }
 
@@ -1163,8 +1279,16 @@
                 },
                 body: JSON.stringify({ page: currentPage })
             })
-                .then((response) => {
-                    if (response.status === 401 || response.status === 403) {
+                .then(async (response) => {
+                    if (response.status !== 401) return;
+                    let message = '';
+                    try {
+                        const payload = await response.json();
+                        message = String(payload?.message || '').toLowerCase();
+                    } catch (_error) {
+                        message = '';
+                    }
+                    if (!message || /invalid|expired|token|required/.test(message)) {
                         logoutUser();
                     }
                 })
@@ -1214,9 +1338,11 @@
 
         if (!canAccessPage(loggedInUser, permissions, currentPage)) {
             redirectToAllowedHome(loggedInUser, permissions);
+            return;
         }
 
         startActiveSessionTracking();
+        runWhenReady(showWelcomeAnimationIfNeeded);
     })();
 })();
 
@@ -1243,6 +1369,7 @@ function logoutUser(event) {
     sessionStorage.removeItem('loggedInUser');
     sessionStorage.removeItem('eduCore_token');
     sessionStorage.removeItem('eduCore_student_profile');
+    sessionStorage.removeItem('eduCore_session_id');
     sessionStorage.removeItem('eduCore_permissions_config');
     window.location.href = '/login';
 }

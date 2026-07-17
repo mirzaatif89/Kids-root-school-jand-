@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Statement - Kids Roots Jand</title>
+    <link rel="icon" type="image/png" href="images/logo.png">
+    <link rel="stylesheet" href="style.css?v=20260705-payment-history">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .statement-toolbar {
+            display: grid;
+            grid-template-columns: minmax(220px, 1.2fr) repeat(5, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+            align-items: end;
+        }
+
+        .statement-field {
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        .statement-field label {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .statement-field input,
+        .statement-field select {
+            min-height: var(--app-control-height);
+            width: 100%;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.55rem 0.8rem;
+            background: #fff;
+            color: var(--text-primary);
+        }
+
+        .history-table-wrap {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: #fff;
+            overflow-x: auto;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .history-table {
+            width: 100%;
+            min-width: 900px;
+            border-collapse: collapse;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 0.75rem 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: top;
+            font-size: 0.86rem;
+        }
+
+        .history-table th {
+            background: #f8fafc;
+            color: var(--text-secondary);
+            font-size: 0.76rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+        }
+
+        .history-table td:last-child,
+        .history-table th:last-child {
+            text-align: right;
+            font-weight: 800;
+        }
+
+        .history-empty {
+            text-align: center !important;
+            color: var(--text-secondary);
+            padding: 2rem !important;
+        }
+
+        .statement-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        .statement-modal-overlay.active {
+            display: flex;
+        }
+
+        .statement-modal {
+            width: min(1120px, 100%);
+            max-height: 90vh;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .statement-modal-head {
+            display: flex;
+            align-items: start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .statement-modal-head h2 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 1.25rem;
+        }
+
+        .statement-modal-head p {
+            margin: 0.25rem 0 0;
+            color: var(--text-secondary);
+        }
+
+        .statement-modal-body {
+            padding: 1.25rem;
+        }
+
+        .statement-modal-filters {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(160px, 1fr)) auto;
+            gap: 0.8rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .statement-action-cell {
+            text-align: right;
+        }
+
+        .admin-payment-action {
+            display: none;
+        }
+
+        body.payment-admin .admin-payment-action {
+            display: table-cell;
+        }
+
+        .statement-row-actions {
+            display: inline-flex;
+            gap: 0.4rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .statement-row-actions .btn {
+            min-height: 34px;
+            min-width: 92px;
+            padding: 0.42rem 0.7rem;
+            border-radius: 8px;
+            font-size: 0.86rem;
+            line-height: 1;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+
+        .statement-row-actions .btn i,
+        .statement-row-actions .btn svg {
+            width: 16px;
+            height: 16px;
+            flex: 0 0 auto;
+        }
+
+        @media (max-width: 760px) {
+            .statement-toolbar {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
+            </div>
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
+                <a href="fees.html" class="nav-item"><i data-lucide="credit-card"></i><span>Fees</span></a>
+                <a href="fee_challan.html" class="nav-item"><i data-lucide="file-text"></i><span>Fee Challan</span></a>
+                <a href="remaining_charges.html" class="nav-item"><i data-lucide="circle-dollar-sign"></i><span>Remaining Charges</span></a>
+                <a href="payment_history.html" class="nav-item active"><i data-lucide="receipt-text"></i><span>Payment Statement</span></a>
+                <a href="annual_charges.html" class="nav-item"><i data-lucide="receipt"></i><span>Annual Charges</span></a>
+            </nav>
+            <a href="settings.html" class="user-profile"><div class="avatar">AD</div><div class="user-info"><h4>Admin User</h4><p>Admin</p></div></a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1>Payment Statement</h1>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">Check every student payment by student, class, month, and payment date.</p>
+                </div>
+                <div style="display:flex; gap:0.65rem; flex-wrap:wrap;">
+                    <button class="btn btn-outline" type="button" onclick="loadPaymentStatement()"><i data-lucide="refresh-cw"></i> Refresh</button>
+                    <button class="btn btn-primary" type="button" onclick="printPaymentStatement()"><i data-lucide="printer"></i> Print Statement</button>
+                </div>
+            </header>
+
+            <div class="statement-toolbar">
+                <div class="statement-field">
+                    <label for="statementSearchInput">Search</label>
+                    <input type="search" id="statementSearchInput" placeholder="Search student, father, roll, challan...">
+                </div>
+                <div class="statement-field">
+                    <label for="statementStudentFilter">Student</label>
+                    <select id="statementStudentFilter"><option value="">All Students</option></select>
+                </div>
+                <div class="statement-field">
+                    <label for="statementClassFilter">Class</label>
+                    <select id="statementClassFilter"><option value="">All Classes</option></select>
+                </div>
+                <div class="statement-field">
+                    <label for="statementMonthFilter">Payment For</label>
+                    <select id="statementMonthFilter"><option value="">All Months</option></select>
+                </div>
+                <div class="statement-field">
+                    <label for="statementDateFromFilter">Start Date</label>
+                    <input type="date" id="statementDateFromFilter">
+                </div>
+                <div class="statement-field">
+                    <label for="statementDateToFilter">End Date</label>
+                    <input type="date" id="statementDateToFilter">
+                </div>
+            </div>
+
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Father Name</th>
+                            <th>Class</th>
+                            <th>Roll No</th>
+                            <th>Total Records</th>
+                            <th>Last Payment</th>
+                            <th>Total Paid</th>
+                            <th style="text-align:right;">History</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statementBody">
+                        <tr><td colspan="8" class="history-empty">Loading payment statement...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <div class="statement-modal-overlay" id="statementHistoryModal" aria-hidden="true">
+        <div class="statement-modal" role="dialog" aria-modal="true" aria-labelledby="statementHistoryTitle">
+            <div class="statement-modal-head">
+                <div>
+                    <h2 id="statementHistoryTitle">Payment History</h2>
+                    <p id="statementHistoryMeta">-</p>
+                </div>
+                <button class="btn btn-outline" type="button" onclick="closeStatementHistoryModal()"><i data-lucide="x"></i> Close</button>
+            </div>
+            <div class="statement-modal-body">
+                <div class="statement-modal-filters">
+                    <div class="statement-field">
+                        <label for="historyDateFromFilter">Start Date</label>
+                        <input type="date" id="historyDateFromFilter">
+                    </div>
+                    <div class="statement-field">
+                        <label for="historyDateToFilter">End Date</label>
+                        <input type="date" id="historyDateToFilter">
+                    </div>
+                    <button class="btn btn-primary" type="button" onclick="printSelectedStudentStatement()"><i data-lucide="printer"></i> Print Statement</button>
+                </div>
+                <div class="history-table-wrap">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Payment For</th>
+                                <th>Payment Date</th>
+                                <th>Challan No</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th class="admin-payment-action">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statementHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js?v=20260708-payment-history-admin-actions"></script>
+    <script src="script.js?v=20260708-payment-history-admin-actions"></script>
+    <script>
+        let paymentStatementRows = [];
+        let filteredStatementRows = [];
+        let currentStatementStudentKey = '';
+
+        function paymentHistoryApiBaseUrl() {
+            const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.hostname.startsWith('192.168.');
+            if (window.location.protocol === 'file:') return 'http://localhost:3000/api';
+            return `${isLocal ? window.location.origin : window.location.origin}/api`;
+        }
+
+        function moneyHistory(value) {
+            return `PKR ${Math.round(Number(value || 0)).toLocaleString('en-PK')}`;
+        }
+
+        function escHistory(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
+        }
+
+        function getPaymentStatementUser() {
+            try {
+                return JSON.parse(sessionStorage.getItem('loggedInUser') || 'null') || {};
+            } catch (_error) {
+                return {};
+            }
+        }
+
+        function isPaymentStatementAdmin() {
+            return String(getPaymentStatementUser()?.role || '').trim() === 'Admin';
+        }
+
+        function applyPaymentStatementAccessState() {
+            document.body.classList.toggle('payment-admin', isPaymentStatementAdmin());
+        }
+
+        function getPaymentStatementAuthHeaders() {
+            const token = sessionStorage.getItem('eduCore_token') || '';
+            return {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            };
+        }
+
+        async function fetchHistoryJson(endpoint, fallback) {
+            try {
+                const response = await fetch(`${paymentHistoryApiBaseUrl()}/${endpoint}`);
+                if (!response.ok) throw new Error(endpoint);
+                return await response.json();
+            } catch (_error) {
+                return fallback;
+            }
+        }
+
+        function normalizeHistoryDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '-';
+            const slashDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+            if (slashDate) return `${slashDate[1].padStart(2, '0')}/${slashDate[2].padStart(2, '0')}/${slashDate[3]}`;
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) return parsed.toLocaleDateString('en-GB');
+            return raw;
+        }
+
+        function normalizeDateInput(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            const slashDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+            if (slashDate) return `${slashDate[3]}-${slashDate[2].padStart(2, '0')}-${slashDate[1].padStart(2, '0')}`;
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) return '';
+            return parsed.toISOString().slice(0, 10);
+        }
+
+        function historySortTime(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return 0;
+            const dateParts = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
+            if (dateParts) {
+                const year = dateParts[3].length === 2 ? `20${dateParts[3]}` : dateParts[3];
+                return new Date(Number(year), Number(dateParts[2]) - 1, Number(dateParts[1])).getTime() || 0;
+            }
+            const parsed = new Date(raw);
+            if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+            return 0;
+        }
+
+        function normalizedFilterValue(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function getPaymentStatementSelectedCampus() {
+            if (typeof getGlobalCampusFilterForCurrentUser === 'function') return getGlobalCampusFilterForCurrentUser();
+            return String(localStorage.getItem('eduCore_dashboard_campus_filter') || 'all').trim() || 'all';
+        }
+
+        function paymentStatementCampusMatches(campusName = '') {
+            const selectedCampus = getPaymentStatementSelectedCampus();
+            if (!selectedCampus || selectedCampus === 'all') return true;
+            return normalizedFilterValue(campusName || 'Main Campus') === normalizedFilterValue(selectedCampus);
+        }
+
+        function getStatementStudentKey(row = {}) {
+            return String(row.studentId || `${row.student}|${row.fatherName}|${row.rollNo}` || '').trim();
+        }
+
+        function formatStatementChallan(index) {
+            return `CHALLAN-${String(index + 1).padStart(4, '0')}`;
+        }
+
+        function populateStatementFilters() {
+            const studentSelect = document.getElementById('statementStudentFilter');
+            const classSelect = document.getElementById('statementClassFilter');
+            const monthSelect = document.getElementById('statementMonthFilter');
+            const currentStudent = studentSelect.value;
+            const currentClass = classSelect.value;
+            const currentMonth = monthSelect.value;
+            const students = new Map();
+            const classes = new Map();
+            const months = new Map();
+
+            paymentStatementRows.forEach((row) => {
+                if (row.studentId || row.student) students.set(row.studentId || row.student, row.student);
+                if (row.classGrade && row.classGrade !== '-') classes.set(normalizedFilterValue(row.classGrade), row.classGrade);
+                if (row.month && row.month !== '-') months.set(normalizedFilterValue(row.month), row.month);
+            });
+
+            studentSelect.innerHTML = '<option value="">All Students</option>' + Array.from(students.entries())
+                .sort((a, b) => a[1].localeCompare(b[1]))
+                .map(([value, label]) => `<option value="${escHistory(value)}">${escHistory(label)}</option>`)
+                .join('');
+            classSelect.innerHTML = '<option value="">All Classes</option>' + Array.from(classes.values())
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+                .map((value) => `<option value="${escHistory(value)}">${escHistory(value)}</option>`)
+                .join('');
+            monthSelect.innerHTML = '<option value="">All Months</option>' + Array.from(months.values())
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }))
+                .map((value) => `<option value="${escHistory(value)}">${escHistory(value)}</option>`)
+                .join('');
+
+            if (Array.from(students.keys()).some((value) => String(value) === currentStudent)) studentSelect.value = currentStudent;
+            if (Array.from(classes.values()).some((value) => value === currentClass)) classSelect.value = currentClass;
+            if (Array.from(months.values()).some((value) => value === currentMonth)) monthSelect.value = currentMonth;
+        }
+
+        async function loadStudentPaymentStatement() {
+            const [result, studentsResult] = await Promise.all([
+                fetchHistoryJson('fees/payments', { payments: [] }),
+                fetchHistoryJson('students', [])
+            ]);
+            const payments = Array.isArray(result?.payments) ? result.payments : [];
+            const students = Array.isArray(studentsResult) ? studentsResult : (studentsResult.students || []);
+            const studentMap = new Map(students.map((student) => [String(student.id || ''), student]));
+            const rollMap = new Map(students
+                .filter((student) => String(student?.rollNo || '').trim())
+                .map((student) => [String(student.rollNo).trim().toLowerCase(), student]));
+            const nameRollMap = new Map(students
+                .filter((student) => String(student?.fullName || '').trim() || String(student?.rollNo || '').trim())
+                .map((student) => [
+                    `${String(student.fullName || '').trim().toLowerCase()}|${String(student.rollNo || '').trim().toLowerCase()}|${String(student.classGrade || '').trim().toLowerCase()}`,
+                    student
+                ]));
+            paymentStatementRows = payments
+                .filter((payment) => Number(payment.amount || 0) > 0)
+                .map((payment) => {
+                    const rawDate = payment.paidAt || payment.paymentDateLabel || payment.createdAt;
+                    const studentRecord = studentMap.get(String(payment.studentId || '')) ||
+                        rollMap.get(String(payment.rollNo || '').trim().toLowerCase()) ||
+                        nameRollMap.get(`${String(payment.studentName || '').trim().toLowerCase()}|${String(payment.rollNo || '').trim().toLowerCase()}|${String(payment.classGrade || '').trim().toLowerCase()}`) ||
+                        {};
+                    return {
+                        studentId: payment.studentId || '',
+                        student: payment.studentName || studentRecord.fullName || '-',
+                        fatherName: payment.fatherName || studentRecord.fatherName || studentRecord.parentName || '-',
+                        classGrade: payment.classGrade || studentRecord.classGrade || '-',
+                        rollNo: payment.rollNo || studentRecord.rollNo || '-',
+                        campusName: payment.campusName || studentRecord.campusName || studentRecord.branchName || studentRecord.campus || 'Main Campus',
+                        month: payment.feeMonth || '-',
+                        date: normalizeHistoryDate(rawDate),
+                        dateKey: normalizeDateInput(rawDate),
+                        challanNumber: payment.challanNumber || '-',
+                        source: payment.paymentSource || payment.paymentMode || 'Fee',
+                        status: payment.status || 'Paid',
+                        amount: Number(payment.amount || 0),
+                        sortTime: historySortTime(rawDate)
+                    };
+                })
+                .filter((row) => paymentStatementCampusMatches(row.campusName))
+                .sort((a, b) => b.sortTime - a.sortTime);
+            [...paymentStatementRows]
+                .sort((a, b) => a.sortTime - b.sortTime || String(a.challanNumber).localeCompare(String(b.challanNumber)))
+                .forEach((row, index) => {
+                    row.displayChallanNumber = formatStatementChallan(index);
+                });
+        }
+
+        function getFilteredPaymentStatementRows() {
+            const term = document.getElementById('statementSearchInput').value.trim().toLowerCase();
+            const selectedStudent = document.getElementById('statementStudentFilter').value;
+            const selectedClass = document.getElementById('statementClassFilter').value;
+            const selectedMonth = document.getElementById('statementMonthFilter').value;
+            const selectedDateFrom = document.getElementById('statementDateFromFilter').value;
+            const selectedDateTo = document.getElementById('statementDateToFilter').value;
+
+            return paymentStatementRows.filter((row) => {
+                const searchText = `${row.student} ${row.fatherName} ${row.classGrade} ${row.rollNo} ${row.month} ${row.date} ${row.displayChallanNumber} ${row.source} ${row.status}`.toLowerCase();
+                return (!term || searchText.includes(term)) &&
+                    (!selectedStudent || String(row.studentId || row.student) === selectedStudent) &&
+                    (!selectedClass || normalizedFilterValue(row.classGrade) === normalizedFilterValue(selectedClass)) &&
+                    (!selectedMonth || normalizedFilterValue(row.month) === normalizedFilterValue(selectedMonth)) &&
+                    (!selectedDateFrom || row.dateKey >= selectedDateFrom) &&
+                    (!selectedDateTo || row.dateKey <= selectedDateTo);
+            });
+        }
+
+        function getStudentStatementSummaries(rows = []) {
+            const grouped = new Map();
+            rows.forEach((row) => {
+                const key = getStatementStudentKey(row);
+                if (!grouped.has(key)) {
+                    grouped.set(key, {
+                        key,
+                        student: row.student,
+                        fatherName: row.fatherName,
+                        classGrade: row.classGrade,
+                        rollNo: row.rollNo,
+                        records: [],
+                        total: 0,
+                        lastSortTime: 0,
+                        lastDate: '-'
+                    });
+                }
+                const summary = grouped.get(key);
+                summary.records.push(row);
+                summary.total += Number(row.amount || 0);
+                if (Number(row.sortTime || 0) >= summary.lastSortTime) {
+                    summary.lastSortTime = Number(row.sortTime || 0);
+                    summary.lastDate = row.date;
+                }
+            });
+            return Array.from(grouped.values()).sort((a, b) => b.lastSortTime - a.lastSortTime || a.student.localeCompare(b.student));
+        }
+
+        function renderPaymentStatement() {
+            const tbody = document.getElementById('statementBody');
+            const rows = getFilteredPaymentStatementRows();
+            const summaries = getStudentStatementSummaries(rows);
+            filteredStatementRows = rows;
+            if (!summaries.length) {
+                tbody.innerHTML = '<tr><td colspan="8" class="history-empty">No payment statement records found for selected filters.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = summaries.map((row) => `
+                <tr>
+                    <td><strong>${escHistory(row.student)}</strong></td>
+                    <td>${escHistory(row.fatherName)}</td>
+                    <td>${escHistory(row.classGrade)}</td>
+                    <td>${escHistory(row.rollNo)}</td>
+                    <td>${row.records.length}</td>
+                    <td>${escHistory(row.lastDate)}</td>
+                    <td>${moneyHistory(row.total)}</td>
+                    <td class="statement-action-cell"><button class="btn btn-outline" type="button" onclick="openStatementHistory('${escHistory(encodeURIComponent(row.key))}')"><i data-lucide="eye"></i> View History</button></td>
+                </tr>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadPaymentStatement() {
+            await loadStudentPaymentStatement();
+            populateStatementFilters();
+            renderPaymentStatement();
+        }
+
+        function printPaymentStatement() {
+            const summaries = getStudentStatementSummaries(filteredStatementRows.length ? filteredStatementRows : getFilteredPaymentStatementRows());
+            const rows = summaries;
+            if (!rows.length) {
+                alert('No payment records found to print.');
+                return;
+            }
+
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const logoSrc = branding.logoDataUrl || 'images/logo.png';
+            const printedAt = new Date().toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' });
+            const filterText = [
+                document.getElementById('statementStudentFilter').selectedOptions[0]?.textContent || 'All Students',
+                document.getElementById('statementClassFilter').value || 'All Classes',
+                document.getElementById('statementMonthFilter').value || 'All Months',
+                `${document.getElementById('statementDateFromFilter').value || 'Start'} to ${document.getElementById('statementDateToFilter').value || 'End'}`
+            ].join(' | ');
+            const total = rows.reduce((sum, row) => sum + row.total, 0);
+            const rowsHtml = rows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escHistory(row.student)}</td>
+                    <td>${escHistory(row.fatherName)}</td>
+                    <td>${escHistory(row.classGrade)}</td>
+                    <td>${escHistory(row.rollNo)}</td>
+                    <td>${row.records.length}</td>
+                    <td>${escHistory(row.lastDate)}</td>
+                    <td>${moneyHistory(row.total)}</td>
+                </tr>
+            `).join('');
+
+            const printWindow = window.open('', '_blank', 'width=1200,height=850');
+            if (!printWindow) {
+                alert('Please allow popups to print payment statement.');
+                return;
+            }
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escHistory(schoolName)} - Payment Statement</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 24px; color: #111827; font-family: Arial, sans-serif; background: #fff; }
+                        .print-header { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 2px solid #111827; }
+                        .print-header img { width: 62px; height: 62px; object-fit: contain; }
+                        h1 { margin: 0; font-size: 24px; }
+                        .subtitle { margin-top: 4px; color: #4b5563; font-size: 13px; }
+                        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; font-size: 12px; }
+                        .meta div { border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; }
+                        .meta strong { display: block; margin-bottom: 3px; color: #374151; font-size: 10px; text-transform: uppercase; }
+                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                        th, td { border: 1px solid #d1d5db; padding: 7px; text-align: left; vertical-align: top; }
+                        th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; }
+                        td:last-child, th:last-child { text-align: right; font-weight: 700; }
+                        @media print { body { padding: 14px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-header">
+                        <img src="${escHistory(logoSrc)}" alt="${escHistory(schoolName)} logo">
+                        <div>
+                            <h1>${escHistory(schoolName)}</h1>
+                            <div class="subtitle">Payment Statement</div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div><strong>Filters</strong>${escHistory(filterText)}</div>
+                        <div><strong>Total Records</strong>${rows.length}</div>
+                        <div><strong>Total Amount</strong>${moneyHistory(total)}</div>
+                        <div><strong>Printed</strong>${escHistory(printedAt)}</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student</th>
+                                <th>Father Name</th>
+                                <th>Class</th>
+                                <th>Roll No</th>
+                                <th>Total Records</th>
+                                <th>Last Payment</th>
+                                <th>Total Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <script>
+                        window.onload = function () { window.print(); };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        function getCurrentStudentStatementRows() {
+            return paymentStatementRows
+                .filter((row) => getStatementStudentKey(row) === currentStatementStudentKey)
+                .filter((row) => {
+                    const from = document.getElementById('historyDateFromFilter').value;
+                    const to = document.getElementById('historyDateToFilter').value;
+                    return (!from || row.dateKey >= from) && (!to || row.dateKey <= to);
+                })
+                .sort((a, b) => b.sortTime - a.sortTime);
+        }
+
+        function renderStatementHistoryModal() {
+            const tbody = document.getElementById('statementHistoryBody');
+            const rows = getCurrentStudentStatementRows();
+            const total = rows.reduce((sum, row) => sum + row.amount, 0);
+            const firstRow = paymentStatementRows.find((row) => getStatementStudentKey(row) === currentStatementStudentKey);
+            const adminActions = isPaymentStatementAdmin();
+            if (firstRow) {
+                document.getElementById('statementHistoryTitle').textContent = `${firstRow.student} Payment History`;
+                document.getElementById('statementHistoryMeta').textContent = `${firstRow.fatherName} | ${firstRow.classGrade} | Roll No ${firstRow.rollNo} | Total ${moneyHistory(total)}`;
+            }
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="${adminActions ? 8 : 7}" class="history-empty">No payments found for selected dates.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = rows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escHistory(row.month)}</td>
+                    <td>${escHistory(row.date)}</td>
+                    <td>${escHistory(row.displayChallanNumber)}</td>
+                    <td>${escHistory(row.source)}</td>
+                    <td>${escHistory(row.status)}</td>
+                    <td>${moneyHistory(row.amount)}</td>
+                    ${adminActions ? `
+                        <td class="admin-payment-action">
+                            <div class="statement-row-actions">
+                                <button class="btn btn-outline" type="button" onclick="editPaymentStatementRecord('${escHistory(encodeURIComponent(row.challanNumber))}')"><i data-lucide="edit-2"></i> Edit</button>
+                                <button class="btn btn-outline" type="button" onclick="deletePaymentStatementRecord('${escHistory(encodeURIComponent(row.challanNumber))}')"><i data-lucide="trash-2"></i> Delete</button>
+                            </div>
+                        </td>
+                    ` : ''}
+                </tr>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        function findPaymentStatementRowByChallan(encodedChallan) {
+            const challanNumber = decodeURIComponent(encodedChallan || '');
+            return paymentStatementRows.find((row) => String(row.challanNumber || '') === challanNumber);
+        }
+
+        async function editPaymentStatementRecord(encodedChallan) {
+            if (!isPaymentStatementAdmin()) {
+                alert('Only admin can edit payment history.');
+                return;
+            }
+
+            const row = findPaymentStatementRowByChallan(encodedChallan);
+            if (!row || !row.challanNumber || row.challanNumber === '-') {
+                alert('Payment record not found.');
+                return;
+            }
+
+            const amountInput = prompt('Enter payment amount', String(row.amount || 0));
+            if (amountInput === null) return;
+            const amount = Number(amountInput);
+            if (!Number.isFinite(amount) || amount < 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+
+            const dateInput = prompt('Enter payment date (YYYY-MM-DD)', row.dateKey || '');
+            if (dateInput === null) return;
+            const statusInput = prompt('Enter status: Paid or Partial', row.status || 'Paid');
+            if (statusInput === null) return;
+            const status = String(statusInput || '').trim();
+            if (!['Paid', 'Partial'].includes(status)) {
+                alert('Status must be Paid or Partial.');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${paymentHistoryApiBaseUrl()}/fees/payments/${encodeURIComponent(row.challanNumber)}`, {
+                    method: 'PUT',
+                    headers: getPaymentStatementAuthHeaders(),
+                    body: JSON.stringify({
+                        amount,
+                        paidAt: dateInput,
+                        status,
+                        feeMonth: row.month
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) throw new Error(result?.message || 'Payment record could not be updated.');
+                await loadPaymentStatement();
+                if (currentStatementStudentKey) renderStatementHistoryModal();
+            } catch (error) {
+                alert(error.message || 'Payment record could not be updated.');
+            }
+        }
+
+        async function deletePaymentStatementRecord(encodedChallan) {
+            if (!isPaymentStatementAdmin()) {
+                alert('Only admin can delete payment history.');
+                return;
+            }
+
+            const row = findPaymentStatementRowByChallan(encodedChallan);
+            if (!row || !row.challanNumber || row.challanNumber === '-') {
+                alert('Payment record not found.');
+                return;
+            }
+
+            const confirmMessage = `Delete payment ${row.displayChallanNumber || row.challanNumber} for ${row.student}?`;
+            const confirmed = window.showAppConfirm
+                ? await window.showAppConfirm(confirmMessage, 'Delete Payment')
+                : confirm(confirmMessage);
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`${paymentHistoryApiBaseUrl()}/fees/payments/${encodeURIComponent(row.challanNumber)}`, {
+                    method: 'DELETE',
+                    headers: getPaymentStatementAuthHeaders()
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) throw new Error(result?.message || 'Payment record could not be deleted.');
+                await loadPaymentStatement();
+                if (currentStatementStudentKey) renderStatementHistoryModal();
+            } catch (error) {
+                alert(error.message || 'Payment record could not be deleted.');
+            }
+        }
+
+        function openStatementHistory(encodedKey) {
+            currentStatementStudentKey = decodeURIComponent(encodedKey || '');
+            const rows = paymentStatementRows.filter((row) => getStatementStudentKey(row) === currentStatementStudentKey);
+            const dates = rows.map((row) => row.dateKey).filter(Boolean).sort();
+            document.getElementById('historyDateFromFilter').value = dates[0] || '';
+            document.getElementById('historyDateToFilter').value = dates[dates.length - 1] || '';
+            document.getElementById('statementHistoryModal').classList.add('active');
+            document.getElementById('statementHistoryModal').setAttribute('aria-hidden', 'false');
+            renderStatementHistoryModal();
+        }
+
+        function closeStatementHistoryModal() {
+            document.getElementById('statementHistoryModal').classList.remove('active');
+            document.getElementById('statementHistoryModal').setAttribute('aria-hidden', 'true');
+            currentStatementStudentKey = '';
+        }
+
+        function printSelectedStudentStatement() {
+            const rows = getCurrentStudentStatementRows();
+            if (!rows.length) {
+                alert('No payment records found to print.');
+                return;
+            }
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const logoSrc = branding.logoDataUrl || 'images/logo.png';
+            const firstRow = rows[0];
+            const total = rows.reduce((sum, row) => sum + row.amount, 0);
+            const printedAt = new Date().toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' });
+            const dateRange = `${document.getElementById('historyDateFromFilter').value || 'Start'} to ${document.getElementById('historyDateToFilter').value || 'End'}`;
+            const rowsHtml = rows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escHistory(row.month)}</td>
+                    <td>${escHistory(row.date)}</td>
+                    <td>${escHistory(row.displayChallanNumber)}</td>
+                    <td>${escHistory(row.source)}</td>
+                    <td>${escHistory(row.status)}</td>
+                    <td>${moneyHistory(row.amount)}</td>
+                </tr>
+            `).join('');
+            const printWindow = window.open('', '_blank', 'width=1100,height=850');
+            if (!printWindow) {
+                alert('Please allow popups to print payment statement.');
+                return;
+            }
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escHistory(schoolName)} - ${escHistory(firstRow.student)} Statement</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 24px; color: #111827; font-family: Arial, sans-serif; background: #fff; }
+                        .print-header { display: flex; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 2px solid #111827; }
+                        .print-header img { width: 62px; height: 62px; object-fit: contain; }
+                        h1 { margin: 0; font-size: 24px; }
+                        .subtitle { margin-top: 4px; color: #4b5563; font-size: 13px; }
+                        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 16px 0; font-size: 12px; }
+                        .meta div { border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; }
+                        .meta strong { display: block; margin-bottom: 3px; color: #374151; font-size: 10px; text-transform: uppercase; }
+                        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+                        th, td { border: 1px solid #d1d5db; padding: 7px; text-align: left; vertical-align: top; }
+                        th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; }
+                        td:last-child, th:last-child { text-align: right; font-weight: 700; }
+                        @media print { body { padding: 14px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-header">
+                        <img src="${escHistory(logoSrc)}" alt="${escHistory(schoolName)} logo">
+                        <div>
+                            <h1>${escHistory(schoolName)}</h1>
+                            <div class="subtitle">Student Payment Statement</div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div><strong>Student</strong>${escHistory(firstRow.student)}</div>
+                        <div><strong>Father Name</strong>${escHistory(firstRow.fatherName)}</div>
+                        <div><strong>Class / Roll No</strong>${escHistory(firstRow.classGrade)} / ${escHistory(firstRow.rollNo)}</div>
+                        <div><strong>Date Range</strong>${escHistory(dateRange)}</div>
+                        <div><strong>Total Records</strong>${rows.length}</div>
+                        <div><strong>Total Amount</strong>${moneyHistory(total)}</div>
+                        <div><strong>Printed</strong>${escHistory(printedAt)}</div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Payment For</th>
+                                <th>Payment Date</th>
+                                <th>Challan No</th>
+                                <th>Source</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <script>window.onload = function () { window.print(); };<\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        }
+
+        ['statementSearchInput', 'statementStudentFilter', 'statementClassFilter', 'statementMonthFilter', 'statementDateFromFilter', 'statementDateToFilter']
+            .forEach((id) => {
+                document.getElementById(id).addEventListener('input', renderPaymentStatement);
+                document.getElementById(id).addEventListener('change', renderPaymentStatement);
+            });
+        ['historyDateFromFilter', 'historyDateToFilter'].forEach((id) => {
+            document.getElementById(id).addEventListener('input', renderStatementHistoryModal);
+            document.getElementById(id).addEventListener('change', renderStatementHistoryModal);
+        });
+        document.getElementById('statementHistoryModal').addEventListener('mousedown', (event) => {
+            if (event.target.id === 'statementHistoryModal') closeStatementHistoryModal();
+        });
+        document.addEventListener('DOMContentLoaded', () => {
+            applyPaymentStatementAccessState();
+            loadPaymentStatement();
+        });
+        if (window.lucide) window.lucide.createIcons();
+    </script>
+</body>
+</html>

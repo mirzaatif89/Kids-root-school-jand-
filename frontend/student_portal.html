@@ -355,6 +355,83 @@
             box-shadow: var(--shadow-sm);
         }
 
+        .student-portal-ads {
+            display: none;
+            gap: 1rem;
+            margin: -0.75rem 0 2rem;
+        }
+
+        .student-portal-ads.active {
+            display: grid;
+        }
+
+        .student-portal-ad-card {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #cae8e4;
+            border-radius: 22px;
+            background: #ffffff;
+            box-shadow: 0 16px 38px rgba(15, 23, 42, 0.1);
+        }
+
+        .student-portal-ad-link,
+        .student-portal-ad-media {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .student-portal-ad-card img {
+            width: 100%;
+            max-height: 260px;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+            background: #eef7f6;
+        }
+
+        .student-portal-ad-caption {
+            display: grid;
+            gap: 0.25rem;
+            padding: 0.9rem 1rem;
+        }
+
+        .student-portal-ad-caption strong {
+            color: var(--text-primary);
+            font-size: 1rem;
+            line-height: 1.25;
+        }
+
+        .student-portal-ad-caption span {
+            color: var(--text-secondary);
+            font-size: 0.86rem;
+            line-height: 1.35;
+        }
+
+        .student-portal-ad-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 2;
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(15, 23, 42, 0.14);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.92);
+            color: #0f172a;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+        }
+
+        .student-portal-ad-close:hover {
+            background: #0f766e;
+            border-color: #0f766e;
+            color: #ffffff;
+        }
+
         .portal-grid {
             display: grid;
             grid-template-columns: 1.15fr 0.85fr;
@@ -861,6 +938,29 @@
             margin-top: 0.9rem;
             border-top: 1px solid #d9ece9;
             padding-top: 0.9rem;
+        }
+
+        .portal-quiz-form[hidden] {
+            display: none;
+        }
+
+        .portal-quiz-start-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-top: 0.85rem;
+            padding: 0.75rem;
+            border: 1px solid #d9ece9;
+            border-radius: 12px;
+            background: #f8fffe;
+        }
+
+        .portal-quiz-start-row span {
+            color: #475569;
+            font-size: 0.88rem;
+            font-weight: 700;
         }
 
         .portal-quiz-question {
@@ -1521,6 +1621,7 @@
         body.portal-dark .user-card,
         body.portal-dark .stat-card,
         body.portal-dark .module-card,
+        body.portal-dark .student-portal-ad-card,
         body.portal-dark .panel-card,
         body.portal-dark .student-portal-menu,
         body.portal-dark .student-notification-panel,
@@ -1559,8 +1660,13 @@
         body.portal-dark .muted,
         body.portal-dark .mini-stat-label,
         body.portal-dark .module-card span,
+        body.portal-dark .student-portal-ad-caption span,
         body.portal-dark .profile-meta {
             color: #cbd5e1;
+        }
+
+        body.portal-dark .student-portal-ad-caption strong {
+            color: #e5edf4;
         }
 
         .portal-container {
@@ -2085,6 +2191,7 @@
 
             .portal-profile-side,
             .stats-grid,
+            .student-portal-ads,
             .student-action-grid {
                 gap: 10px;
                 grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2127,6 +2234,23 @@
 
             .stats-grid .stat-box:nth-child(n + 3) {
                 display: none;
+            }
+
+            .student-portal-ads {
+                margin: -0.35rem 0 1.25rem;
+                grid-template-columns: 1fr !important;
+            }
+
+            .student-portal-ad-card {
+                border-radius: 24px;
+            }
+
+            .student-portal-ad-card img {
+                max-height: 190px;
+            }
+
+            .student-portal-ad-caption {
+                padding: 0.75rem 0.85rem;
             }
 
             .student-action-btn {
@@ -2437,10 +2561,15 @@
             <button type="button" class="student-action-btn" data-student-action-target="studentSubmitAssignmentSection">
                 <i data-lucide="upload"></i> Submit Assignment
             </button>
+            <button type="button" class="student-action-btn" data-student-action-target="studentMessagesSection">
+                <i data-lucide="message-circle"></i> Messages
+            </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentComplaintSection">
                 <i data-lucide="message-square"></i> Complain Box
             </button>
         </section>
+
+        <section class="student-portal-ads" id="studentPortalAds" aria-label="School advertisements"></section>
 
         <section class="panel-card student-portal-section" id="studentAttendanceSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Attendance</h3>
@@ -2575,7 +2704,7 @@
                 </thead>
                 <tbody id="studentResultBody"></tbody>
             </table>
-            <div class="empty-note" id="studentResultEmpty">No result card has been added for you yet.</div>
+            <div class="empty-note" id="studentResultEmpty">No published result card is available for you yet.</div>
 
             <h4>Result History</h4>
             <table class="panel-table">
@@ -2590,7 +2719,7 @@
                 </thead>
                 <tbody id="studentResultHistoryBody"></tbody>
             </table>
-            <div class="empty-note" id="studentResultHistoryEmpty">No result history found.</div>
+            <div class="empty-note" id="studentResultHistoryEmpty">No published result history found.</div>
         </section>
 
         <section class="panel-card student-portal-section" id="studentLeaveSection" style="display:none; margin-bottom: 1.25rem;">
@@ -2727,6 +2856,12 @@
             </form>
         </section>
 
+        <section class="panel-card student-portal-section" id="studentMessagesSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Messages</h3>
+            <div class="portal-content-list" id="studentMessageList"></div>
+            <div class="empty-note" id="studentMessageEmpty">No messages received yet.</div>
+        </section>
+
         <section class="panel-card student-portal-section complaint-panel-card" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Complain Box</h3>
             <form id="studentComplaintForm">
@@ -2808,6 +2943,7 @@
         const STORAGE_KEY_SETTINGS = 'eduCore_settings';
         const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
+        const RESULT_PUBLISH_SCHEDULE_KEY = 'APEXIUMS_RESULT_PUBLISH_SCHEDULE_V1';
         const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
         let loadedDateSheetRecord = null;
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
@@ -2825,6 +2961,7 @@
         const COMPLAINT_KEY = 'eduCore_complaints';
         const STUDENT_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
         const STUDENT_PAYMENT_DETAILS_KEY = 'eduCore_payment_details';
+        const STUDENT_PORTAL_DISMISSED_BANNERS_KEY = 'eduCore_student_portal_dismissed_banners';
         const STUDENT_FEE_MONTHS = [
             'January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'
@@ -2854,6 +2991,89 @@
                 '"': '&quot;',
                 "'": '&#39;'
             }[char]));
+        }
+
+        function getDismissedStudentPortalBannerIds() {
+            try {
+                const ids = JSON.parse(localStorage.getItem(STUDENT_PORTAL_DISMISSED_BANNERS_KEY) || '[]');
+                return new Set(Array.isArray(ids) ? ids.map((id) => String(id || '')) : []);
+            } catch (_error) {
+                return new Set();
+            }
+        }
+
+        function saveDismissedStudentPortalBannerIds(ids) {
+            localStorage.setItem(STUDENT_PORTAL_DISMISSED_BANNERS_KEY, JSON.stringify(Array.from(ids).filter(Boolean)));
+        }
+
+        function renderStudentPortalBanners(banners = []) {
+            const container = document.getElementById('studentPortalAds');
+            if (!container) return;
+
+            const dismissedIds = getDismissedStudentPortalBannerIds();
+            const activeBanners = (Array.isArray(banners) ? banners : [])
+                .filter((banner) => banner && banner.isActive !== false && String(banner.imageUrl || '').trim())
+                .filter((banner) => !dismissedIds.has(String(banner.id || banner.imageUrl || '')))
+                .sort((a, b) => Number(a.displayOrder || 0) - Number(b.displayOrder || 0));
+
+            if (!activeBanners.length) {
+                container.classList.remove('active');
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = activeBanners.map((banner) => {
+                const bannerId = String(banner.id || banner.imageUrl || '').trim();
+                const title = String(banner.title || 'School Announcement').trim();
+                const subtitle = String(banner.subtitle || '').trim();
+                const imageMarkup = `<img src="${escapeHtml(banner.imageUrl)}" alt="${escapeHtml(title)}">`;
+                const mediaMarkup = String(banner.linkUrl || '').trim()
+                    ? `<a class="student-portal-ad-link" href="${escapeHtml(banner.linkUrl)}" target="_blank" rel="noopener">${imageMarkup}</a>`
+                    : `<div class="student-portal-ad-media">${imageMarkup}</div>`;
+
+                return `
+                    <article class="student-portal-ad-card" data-student-portal-banner="${escapeHtml(bannerId)}">
+                        <button class="student-portal-ad-close" type="button" aria-label="Hide advertisement" data-dismiss-student-banner="${escapeHtml(bannerId)}">
+                            <i data-lucide="x"></i>
+                        </button>
+                        ${mediaMarkup}
+                        <div class="student-portal-ad-caption">
+                            <strong>${escapeHtml(title)}</strong>
+                            ${subtitle ? `<span>${escapeHtml(subtitle)}</span>` : ''}
+                        </div>
+                    </article>
+                `;
+            }).join('');
+
+            container.classList.add('active');
+            container.querySelectorAll('[data-dismiss-student-banner]').forEach((button) => {
+                button.addEventListener('click', () => {
+                    const bannerId = String(button.getAttribute('data-dismiss-student-banner') || '').trim();
+                    const nextDismissedIds = getDismissedStudentPortalBannerIds();
+                    if (bannerId) nextDismissedIds.add(bannerId);
+                    saveDismissedStudentPortalBannerIds(nextDismissedIds);
+                    button.closest('.student-portal-ad-card')?.remove();
+                    if (!container.querySelector('.student-portal-ad-card')) {
+                        container.classList.remove('active');
+                    }
+                });
+            });
+
+            if (window.lucide) window.lucide.createIcons();
+        }
+
+        async function loadStudentPortalBanners() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/banners`);
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data?.success === false) {
+                    throw new Error(data?.message || 'Banners could not be loaded.');
+                }
+                renderStudentPortalBanners(Array.isArray(data?.banners) ? data.banners : (Array.isArray(data) ? data : []));
+            } catch (error) {
+                console.warn('Student portal banners could not be loaded:', error.message);
+                renderStudentPortalBanners([]);
+            }
         }
 
         function getPortalBrandingSettings() {
@@ -3086,6 +3306,7 @@
         }
 
         function getStudentPortalFeeAmount(student = {}) {
+            if (student?.freeStudy === true || student?.freeStudy === 'true' || String(student?.zeroFeeReason || student?.freeStudyReason || '').trim()) return 0;
             return parseInt(student.monthlyFee || student.fee || 0, 10) || 0;
         }
 
@@ -3567,7 +3788,13 @@
                         </div>
                         <p>${escapeHtml(item.details || '-')}</p>
                         ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_QUIZ_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
-                        ${questions.length ? renderStudentQuizForm(item) : '<div class="empty-note" style="margin-top:.8rem;">This quiz only has an attached file.</div>'}
+                        ${questions.length ? `
+                            <div class="portal-quiz-start-row">
+                                <span>${escapeHtml(questions.length)} question${questions.length === 1 ? '' : 's'} available. Start when you are ready.</span>
+                                <button type="button" class="btn btn-primary" onclick="startStudentQuiz('${escapeHtml(item.id || '')}')">Start Quiz</button>
+                            </div>
+                            ${renderStudentQuizForm(item, null, true)}
+                        ` : '<div class="empty-note" style="margin-top:.8rem;">This quiz only has an attached file.</div>'}
                     </article>
                 `;
                 }).join('');
@@ -3601,21 +3828,22 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        function renderStudentQuizForm(quiz = {}, submission = null) {
+        function renderStudentQuizForm(quiz = {}, submission = null, startHidden = false) {
             const questions = Array.isArray(quiz.questions) ? quiz.questions : [];
             return `
-                <form class="portal-quiz-form" data-student-quiz-form="${escapeHtml(quiz.id || '')}">
+                <form class="portal-quiz-form" data-student-quiz-form="${escapeHtml(quiz.id || '')}" ${startHidden ? 'hidden' : ''}>
                     ${questions.map((question, questionIndex) => {
                         const submittedAnswer = Array.isArray(submission?.answers) ? submission.answers[questionIndex] : null;
                         const checkedRow = Array.isArray(submission?.checkedRows) ? submission.checkedRows[questionIndex] : null;
                         const correctOption = (question.options || [])[Number(question.correctIndex || 0)] || '-';
+                        const hasSubmittedAnswer = submission && submittedAnswer !== null && submittedAnswer !== undefined && submittedAnswer !== '';
                         return `
                             <div class="portal-quiz-question">
                                 <strong>${questionIndex + 1}. ${escapeHtml(question.text || 'Question')} (${escapeHtml(question.marks || 1)} mark${Number(question.marks || 1) === 1 ? '' : 's'})</strong>
                                 <div class="portal-quiz-options">
                                     ${(question.options || []).map((option, optionIndex) => `
                                         <label>
-                                            <input type="radio" name="quiz-${escapeHtml(quiz.id || '')}-q-${questionIndex}" value="${optionIndex}" ${Number(submittedAnswer) === optionIndex ? 'checked' : ''} ${submission ? 'disabled' : ''} required>
+                                            <input type="radio" name="quiz-${escapeHtml(quiz.id || '')}-q-${questionIndex}" value="${optionIndex}" ${hasSubmittedAnswer && Number(submittedAnswer) === optionIndex ? 'checked' : ''} ${submission ? 'disabled' : ''} required>
                                             <span>${escapeHtml(option)}</span>
                                         </label>
                                     `).join('')}
@@ -3627,6 +3855,15 @@
                     ${submission ? '' : `<button type="submit" class="btn btn-primary">Submit Quiz</button>`}
                 </form>
             `;
+        }
+
+        function startStudentQuiz(quizId = '') {
+            const form = Array.from(document.querySelectorAll('[data-student-quiz-form]'))
+                .find((item) => String(item.dataset.studentQuizForm || '') === String(quizId || ''));
+            if (!form) return;
+            form.hidden = false;
+            form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            form.querySelector('input[type="radio"]')?.focus();
         }
 
         function submitStudentQuiz(event) {
@@ -4580,6 +4817,15 @@
             }
         }
 
+        function loadResultPublishSchedules() {
+            try {
+                const schedules = JSON.parse(localStorage.getItem(RESULT_PUBLISH_SCHEDULE_KEY) || '[]');
+                return Array.isArray(schedules) ? schedules : [];
+            } catch (error) {
+                return [];
+            }
+        }
+
         function normalizeLoose(value) {
             return String(value || '').trim().toLowerCase();
         }
@@ -4607,6 +4853,21 @@
 
         function getResultRecordClass(record = {}, student = {}) {
             return record.studentGrade || record.classGrade || record.className || student.classGrade || '';
+        }
+
+        function getResultRecordCampus(record = {}, student = {}) {
+            return record.campusName || record.campus || student.campusName || '';
+        }
+
+        function isResultPublishedForStudent(record = {}, student = {}) {
+            const recordCampus = normalizeLoose(getResultRecordCampus(record, student));
+            const recordClass = normalizeResultClass(getResultRecordClass(record, student));
+            const today = new Date().toISOString().slice(0, 10);
+            const schedule = loadResultPublishSchedules().find((item) => (
+                normalizeLoose(item.campusName) === recordCampus &&
+                normalizeResultClass(item.classGrade) === recordClass
+            ));
+            return Boolean(schedule?.publishDate && schedule.publishDate <= today);
         }
 
         function getResultRecordRollCandidates(record = {}, student = {}) {
@@ -4643,6 +4904,7 @@
                 const belongsToStudent = identityCandidates.includes(recordLookup);
 
                 if (!belongsToStudent) return false;
+                if (!isResultPublishedForStudent(record, student)) return false;
                 if (lookupFilter && !identityCandidates.includes(lookupFilter) && recordName !== lookupFilter) return false;
                 if (dateFilter && getResultRecordDate(record) !== dateFilter) return false;
                 if (classFilter && normalizeResultClass(getResultRecordClass(record, student)) !== normalizeResultClass(classFilter)) return false;
@@ -4686,7 +4948,7 @@
                 historyEmpty.textContent = 'Select class and enter roll number to view result history.';
                 historyEmpty.style.display = 'block';
             }
-            if (resultEmpty) resultEmpty.textContent = 'Select class and enter roll number to view your result.';
+            if (resultEmpty) resultEmpty.textContent = 'Select class and enter roll number to view your published result.';
             studentResultHistory = [];
             applyStudentResult(null);
         }
@@ -4792,7 +5054,7 @@
                 rollNo: rollValue
             });
             if (!matches.length) {
-                alert('No saved result card was found for this class and roll number.');
+                alert('No published result card was found for this class and roll number.');
                 renderStudentResultHistory(student, {
                     classGrade: classValue,
                     rollNo: rollValue
@@ -5412,6 +5674,41 @@
             return students.find((student) => student.id === loggedInUser.id);
         }
 
+        function renderStudentMessages(messages = []) {
+            const list = document.getElementById('studentMessageList');
+            const empty = document.getElementById('studentMessageEmpty');
+            if (!list || !empty) return;
+            if (!messages.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+            list.innerHTML = messages.map((item) => `
+                <div class="portal-content-item">
+                    <div class="portal-content-meta">${escapeHtml(item.createdAtLabel || '')}${item.senderName ? ` - ${escapeHtml(item.senderName)}` : ''}</div>
+                    <div class="portal-content-title">${escapeHtml(item.subject || 'Message')}</div>
+                    <p>${escapeHtml(item.body || '')}</p>
+                </div>
+            `).join('');
+        }
+
+        async function loadStudentMessages() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/messages`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Messages could not be loaded.');
+                }
+                renderStudentMessages(result.messages || []);
+            } catch (error) {
+                console.warn('Student messages could not be loaded:', error.message);
+                renderStudentMessages([]);
+            }
+        }
+
         async function loadStudentProfile() {
             try {
                 const response = await fetch(`${API_BASE_URL}/student/me`, {
@@ -5429,6 +5726,7 @@
                 await loadExecutedDateSheet();
                 await mergeStudentFeePaymentsIntoMonthlyStore();
                 applyStudentData(student);
+                await loadStudentMessages();
                 await loadStudentLeaveRequests(student);
                 return;
             } catch (error) {
@@ -5440,6 +5738,7 @@
                     await loadExecutedDateSheet();
                     await mergeStudentFeePaymentsIntoMonthlyStore();
                     applyStudentData(fallbackStudent);
+                    await loadStudentMessages();
                     await loadStudentLeaveRequests(fallbackStudent);
                     return;
                 }
@@ -5552,6 +5851,8 @@
             bindStudentNotifications();
             startStudentNotificationRefresh();
             loadStudentProfile();
+            loadStudentPortalBanners();
+            window.setInterval(loadStudentPortalBanners, 60000);
             document.getElementById('studentPortalPhoto')?.addEventListener('change', updateStudentPortalPhoto);
             loadSpecialNoticesForPortal();
             bindStudentPortalActions();

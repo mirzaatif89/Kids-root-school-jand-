@@ -121,8 +121,18 @@
         function saveBills(items) { localStorage.setItem(BILL_KEY, JSON.stringify(Array.isArray(items) ? items : [])); window.dispatchEvent(new Event('storage')); }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function money(value) { return `PKR ${Math.round(Number(value || 0)).toLocaleString('en-PK')}`; }
+        function getBillSelectedCampus() {
+            if (typeof getGlobalCampusFilterForCurrentUser === 'function') return getGlobalCampusFilterForCurrentUser();
+            return String(localStorage.getItem('eduCore_dashboard_campus_filter') || 'all').trim() || 'all';
+        }
+        function billMatchesSelectedCampus(item) {
+            if (typeof recordMatchesGlobalCampus === 'function') return recordMatchesGlobalCampus(item);
+            const selectedCampus = getBillSelectedCampus();
+            if (!selectedCampus || selectedCampus === 'all') return true;
+            return String(item?.campusName || item?.branchName || item?.campus || 'Main Campus').trim().toLowerCase() === selectedCampus.toLowerCase();
+        }
         function renderBills() {
-            const bills = readBills().sort((a, b) => String(b.billDate || '').localeCompare(String(a.billDate || '')));
+            const bills = readBills().filter(billMatchesSelectedCampus).sort((a, b) => String(b.billDate || '').localeCompare(String(a.billDate || '')));
             const total = bills.reduce((sum, item) => sum + Number(item.amount || 0), 0);
             const paid = bills.filter((item) => item.status === 'Paid').reduce((sum, item) => sum + Number(item.amount || 0), 0);
             billTotal.innerText = money(total);
@@ -177,6 +187,7 @@
                 billDate: billDate.value,
                 status: billStatus.value,
                 notes: billNotes.value.trim(),
+                campusName: existing?.campusName || (getBillSelectedCampus() === 'all' ? '' : getBillSelectedCampus()),
                 createdAt: existing?.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };

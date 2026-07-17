@@ -1271,20 +1271,20 @@
             const schoolName = 'Kids Roots Jand';
             const contactLine = getExamContactLine();
             const logoSrc = getExamLogoSrc();
-            
+
             // Force update all branding fields
             const schoolNameField = document.getElementById('schoolName');
             if (schoolNameField) schoolNameField.value = schoolName;
-            
+
             const contactField = document.getElementById('schoolContact');
             if (contactField) contactField.value = contactLine;
-            
+
             const leftLogoField = document.getElementById('leftLogoUrl');
             if (leftLogoField) leftLogoField.value = logoSrc;
-            
+
             const rightLogoField = document.getElementById('rightLogoUrl');
             if (rightLogoField) rightLogoField.value = logoSrc;
-            
+
             // Update preview immediately with new branding
             document.getElementById('previewSchoolName').textContent = schoolName;
             document.getElementById('previewSchoolContact').textContent = contactLine;
@@ -1293,7 +1293,7 @@
             });
             document.getElementById('previewLeftLogo').src = logoSrc;
             document.getElementById('previewRightLogo').src = logoSrc;
-            
+
             refreshResultCardPreview();
         }
 

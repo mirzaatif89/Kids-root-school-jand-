@@ -11,30 +11,90 @@
         .header { margin-bottom: 0.9rem; }
         .header h1 { font-size: 1.5rem; }
         .header p { font-size: 0.95rem; }
-        .attendance-toolbar { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)) minmax(240px, 320px); gap: 0.8rem; margin-bottom: 1rem; align-items: end; }
-        .attendance-toolbar .search-bar { max-width: 273px; min-height: 38px; }
-        .attendance-filter { width: 100%; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 0.8rem; box-shadow: var(--shadow-sm); }
+        .attendance-toolbar { width: 100%; display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; align-items: flex-end; }
+        .attendance-toolbar .search-bar { width: 100%; max-width: 100%; min-height: 40px; }
+        .attendance-filter { width: 145px; background: var(--surface-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.65rem 0.75rem; box-shadow: var(--shadow-sm); }
+        .attendance-filter.campus-filter { width: 180px; padding-left: 0.75rem; padding-right: 0.75rem; }
+        .attendance-filter.wide { width: 200px; }
+        .attendance-filter.status-filter { width: 180px; }
         .attendance-filter label { display:block; margin-bottom:0.3rem; font-size:0.8rem; font-weight:600; color:var(--text-secondary); }
         .attendance-filter input,
-        .attendance-filter select { width:100%; min-height:38px; padding:0.5rem 0.7rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; }
-        .attendance-chip { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.45rem 0.8rem; border-radius: 999px; font-size: 0.82rem; font-weight: 700; }
+        .attendance-filter select { width:100%; min-height:40px; padding:0.55rem 1.9rem 0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; }
+        .attendance-filter input { width:100%; min-height:40px; padding:0.55rem 0.75rem; border:1px solid var(--border-color); border-radius:8px; background:#fff; }
+        .attendance-dropdown { position: relative; }
+        .attendance-dropdown-btn { width: 100%; min-height: 40px; display: flex; align-items: center; justify-content: space-between; gap: 0.65rem; padding: 0.55rem 0.7rem; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; color: #0f172a; font: inherit; text-align: left; cursor: pointer; }
+        .attendance-dropdown-btn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .attendance-dropdown-btn i { flex: 0 0 auto; color: var(--text-secondary); }
+        .attendance-dropdown-panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; width: 100%; min-width: 210px; display: none; padding: 0.45rem; border: 1px solid var(--border-color); border-radius: 8px; background: #fff; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16); }
+        .attendance-dropdown.open .attendance-dropdown-panel { display: block; }
+        .attendance-checkbox-list { display: grid; gap: 0.3rem; max-height: 180px; overflow-y: auto; }
+        .attendance-checkbox-list.compact { max-height: none; }
+        .attendance-check { display: flex; align-items: center; gap: 0.42rem; min-height: 30px; padding: 0.32rem 0.38rem; border-radius: 6px; color: #0f172a; font-size: 0.82rem; line-height: 1.15; cursor: pointer; }
+        .attendance-check:hover { background: #f1f5f9; }
+        .attendance-check input { width: 15px; height: 15px; min-height: 0; margin: 0; padding: 0; accent-color: var(--primary-color); flex: 0 0 auto; }
+        .attendance-check span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .attendance-bulk-actions { display: flex; align-items: stretch; }
+        .attendance-bulk-actions .btn { min-width: 145px; min-height: 40px; justify-content: center; white-space: nowrap; }
+        .attendance-action-stack { width: 330px; max-width: 100%; display: grid; gap: 0.7rem; margin-left: auto; }
+        .attendance-action-stack .attendance-action-row { display: flex; gap: 0.75rem; justify-content: flex-end; }
+        .attendance-action-stack .attendance-bulk-actions { flex: 1 1 0; }
+        .attendance-action-stack .attendance-bulk-actions .btn { width: 100%; min-width: 0; }
+        .attendance-row-break { flex-basis: 100%; height: 0; order: 20; }
+        .attendance-print-action { order: 21; }
+        .attendance-save-message { margin: -0.35rem 0 0.8rem; min-height: 1.2rem; color: var(--text-secondary); font-size: 0.86rem; }
+        .attendance-save-message.success { color: #166534; font-weight: 700; }
+        .attendance-save-message.error { color: #991b1b; font-weight: 700; }
+        .table-container { overflow-x: auto; }
+        .table-container table { width: 100%; min-width: 0; table-layout: fixed; }
+        .table-container th,
+        .table-container td { padding: 0.62rem 0.65rem; vertical-align: middle; overflow-wrap: anywhere; }
+        .table-container th:nth-child(1),
+        .table-container td:nth-child(1) { width: 24%; }
+        .table-container th:nth-child(2),
+        .table-container td:nth-child(2) { width: 14%; }
+        .table-container th:nth-child(3),
+        .table-container td:nth-child(3) { width: 17%; }
+        .table-container th:nth-child(4),
+        .table-container td:nth-child(4) { width: 17%; }
+        .table-container th:nth-child(5),
+        .table-container td:nth-child(5) { width: 28%; }
+        .attendance-chip { display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.4rem 0.72rem; border-radius: 999px; font-size: 0.8rem; font-weight: 700; white-space: nowrap; }
         .chip-present { background: #dcfce7; color: #166534; }
         .chip-absent { background: #fee2e2; color: #991b1b; }
         .chip-late { background: #fef3c7; color: #92400e; }
         .chip-leave { background: #dbeafe; color: #1d4ed8; }
         .chip-empty { background: #e2e8f0; color: #475569; }
-        .attendance-actions { display: flex; gap: 0.35rem; justify-content: flex-end; flex-wrap: nowrap; }
+        .attendance-actions { display: flex; gap: 0.3rem; justify-content: flex-end; flex-wrap: wrap; }
         .dashboard-container .attendance-actions .btn {
             min-height: 32px;
-            padding: 0.28rem 0.58rem;
-            font-size: 0.78rem;
+            padding: 0.28rem 0.5rem;
+            font-size: 0.74rem;
             line-height: 1;
             white-space: nowrap;
+            flex: 1 1 64px;
+            max-width: 86px;
         }
         .attendance-empty { text-align: center; color: var(--text-secondary); padding: 1.25rem; }
+        @media (max-width: 1180px) {
+            .attendance-filter,
+            .attendance-filter.campus-filter,
+            .attendance-filter.wide,
+            .attendance-filter.status-filter { width: calc(50% - 0.4rem); margin-left: 0; }
+            .attendance-action-stack { width: 100%; margin-left: 0; }
+            .attendance-row-break { display: none; }
+            .attendance-bulk-actions { flex: 1 1 145px; }
+            .attendance-bulk-actions .btn { width: 100%; }
+            .table-container table { min-width: 720px; }
+        }
         @media (max-width: 720px) {
-            .attendance-toolbar { grid-template-columns: 1fr; }
-            .attendance-toolbar .search-bar { max-width: 100%; justify-self: stretch; }
+            .attendance-filter,
+            .attendance-filter.campus-filter,
+            .attendance-filter.wide,
+            .attendance-filter.status-filter,
+            .attendance-action-stack,
+            .attendance-bulk-actions { width: 100%; flex-basis: 100%; }
+            .attendance-action-stack .attendance-action-row { flex-direction: column; }
+            .table-container table { min-width: 660px; }
         }
     </style>
 </head>
@@ -73,23 +133,60 @@
                     <label for="studentAttendanceDate">Attendance Date</label>
                     <input type="date" id="studentAttendanceDate">
                 </div>
-                <div class="attendance-filter">
+                <div class="attendance-filter campus-filter">
                     <label for="studentAttendanceCampus">Campus</label>
                     <select id="studentAttendanceCampus">
                         <option value="">Select Campus</option>
                     </select>
                 </div>
-                <div class="attendance-filter">
+                <div class="attendance-filter wide">
                     <label for="studentAttendanceClass">Class</label>
-                    <select id="studentAttendanceClass">
-                        <option value="">Select Class</option>
-                    </select>
+                    <div class="attendance-dropdown" data-attendance-dropdown>
+                        <button class="attendance-dropdown-btn" type="button" data-attendance-dropdown-toggle aria-expanded="false">
+                            <span id="studentAttendanceClassSummary">Select Class</span>
+                            <i data-lucide="chevron-down" size="16"></i>
+                        </button>
+                        <div class="attendance-dropdown-panel">
+                            <div class="attendance-checkbox-list" id="studentAttendanceClassOptions" role="group" aria-label="Class"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="search-bar">
-                    <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
-                    <input type="text" id="studentAttendanceSearch" placeholder="Search students...">
+                <div class="attendance-filter status-filter">
+                    <label for="studentAttendancePrintStatusOptions">Print Status</label>
+                    <div class="attendance-dropdown" data-attendance-dropdown>
+                        <button class="attendance-dropdown-btn" type="button" data-attendance-dropdown-toggle aria-expanded="false">
+                            <span id="studentAttendanceStatusSummary">All Status</span>
+                            <i data-lucide="chevron-down" size="16"></i>
+                        </button>
+                        <div class="attendance-dropdown-panel">
+                            <div class="attendance-checkbox-list compact" id="studentAttendancePrintStatusOptions" role="group" aria-label="Print Status">
+                                <label class="attendance-check"><input type="checkbox" value="Present"><span>Present</span></label>
+                                <label class="attendance-check"><input type="checkbox" value="Leave"><span>Leave</span></label>
+                                <label class="attendance-check"><input type="checkbox" value="Absent"><span>Absent</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="attendance-action-stack">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="studentAttendanceSearch" placeholder="Search">
+                    </div>
+                    <div class="attendance-action-row">
+                        <div class="attendance-bulk-actions">
+                            <button class="btn btn-primary" type="button" id="markAllStudentsPresentBtn"><i data-lucide="check-check"></i> Mark All Present</button>
+                        </div>
+                        <div class="attendance-bulk-actions">
+                            <button class="btn btn-primary" type="button" id="saveStudentAttendanceBtn"><i data-lucide="save"></i> Save Attendance</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="attendance-row-break" aria-hidden="true"></div>
+                <div class="attendance-bulk-actions attendance-print-action">
+                    <button class="btn btn-outline" type="button" id="printStudentAttendanceBtn"><i data-lucide="printer"></i> Print List</button>
                 </div>
             </div>
+            <div class="attendance-save-message" id="studentAttendanceSaveMessage"></div>
             <div class="table-container">
                 <table>
                     <thead><tr><th>Student</th><th>Class</th><th>Campus</th><th>Selected Date Status</th><th style="text-align:right;">Actions</th></tr></thead>
@@ -99,36 +196,133 @@
         </main>
     </div>
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="script.js?v=20260705-global-campus-filter"></script>
     <script>
         const STORAGE_KEY_STUDENT_ATTENDANCE = 'eduCore_student_attendance';
+        const DEFAULT_STUDENT_ATTENDANCE_STATUS = 'Pending';
         document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('studentAttendanceDate').value = new Date().toISOString().slice(0, 10);
             await loadStudentAttendanceFromSQL();
             populateStudentAttendanceFilters();
+            setupAttendanceDropdowns();
             renderStudentAttendancePage();
             document.getElementById('studentAttendanceSearch').addEventListener('input', renderStudentAttendancePage);
+            document.getElementById('markAllStudentsPresentBtn').addEventListener('click', markAllSelectedStudentsPresent);
+            document.getElementById('saveStudentAttendanceBtn').addEventListener('click', saveSelectedStudentAttendance);
+            document.getElementById('printStudentAttendanceBtn').addEventListener('click', printStudentAttendanceList);
+            document.getElementById('studentAttendancePrintStatusOptions').addEventListener('change', () => {
+                updateAttendanceFilterSummaries();
+                renderStudentAttendancePage();
+            });
             document.getElementById('studentAttendanceDate').addEventListener('change', async () => {
                 await loadStudentAttendanceFromSQL();
                 renderStudentAttendancePage();
             });
-            document.getElementById('studentAttendanceCampus').addEventListener('change', () => {
+            document.getElementById('studentAttendanceCampus').addEventListener('change', async () => {
+                setStudentAttendanceGlobalCampus(document.getElementById('studentAttendanceCampus').value || 'all');
                 populateStudentAttendanceClassFilter();
                 renderStudentAttendancePage();
             });
-            document.getElementById('studentAttendanceClass').addEventListener('change', renderStudentAttendancePage);
+            document.getElementById('studentAttendanceClassOptions').addEventListener('change', async () => {
+                updateAttendanceFilterSummaries();
+                renderStudentAttendancePage();
+            });
             if (window.lucide) window.lucide.createIcons();
         });
         function getStudentAttendanceStore() { return JSON.parse(localStorage.getItem(STORAGE_KEY_STUDENT_ATTENDANCE) || '{}'); }
         function saveStudentAttendanceStore(store) { localStorage.setItem(STORAGE_KEY_STUDENT_ATTENDANCE, JSON.stringify(store)); }
         function getSelectedStudentDateKey() { return document.getElementById('studentAttendanceDate').value || new Date().toISOString().slice(0, 10); }
         function normalizeAttendanceFilterValue(value) { return String(value || '').trim().toLowerCase(); }
+        function setStudentAttendanceMessage(message = '', type = '') {
+            const messageEl = document.getElementById('studentAttendanceSaveMessage');
+            if (!messageEl) return;
+            messageEl.textContent = message;
+            messageEl.className = `attendance-save-message ${type || ''}`.trim();
+        }
+        function getStudentAttendanceGlobalCampus() {
+            if (typeof getGlobalCampusFilterForCurrentUser === 'function') return getGlobalCampusFilterForCurrentUser();
+            return localStorage.getItem('eduCore_dashboard_campus_filter') || 'all';
+        }
+        function setStudentAttendanceGlobalCampus(value) {
+            if (typeof setSavedGlobalCampusFilter === 'function') {
+                setSavedGlobalCampusFilter(value || 'all');
+            } else {
+                localStorage.setItem('eduCore_dashboard_campus_filter', value || 'all');
+            }
+        }
         function getStudentAttendanceStudents() { return Array.isArray(getData(STORAGE_KEY_STUDENTS)) ? getData(STORAGE_KEY_STUDENTS) : []; }
         function addAttendanceSelectOption(select, value, label = value) {
             const option = document.createElement('option');
             option.value = value;
             option.textContent = label;
             select.appendChild(option);
+        }
+        function addAttendanceCheckboxOption(container, value, label = value) {
+            const item = document.createElement('label');
+            item.className = 'attendance-check';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = value;
+            const text = document.createElement('span');
+            text.textContent = label;
+            item.appendChild(checkbox);
+            item.appendChild(text);
+            container.appendChild(item);
+        }
+        function getSelectedAttendanceValues(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return [];
+            return Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+                .map((checkbox) => checkbox.value)
+                .filter(Boolean);
+        }
+        function setSelectedAttendanceValues(containerId, values = []) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const normalizedValues = values.map(normalizeAttendanceFilterValue);
+            Array.from(container.querySelectorAll('input[type="checkbox"]')).forEach((checkbox) => {
+                checkbox.checked = normalizedValues.includes(normalizeAttendanceFilterValue(checkbox.value));
+            });
+        }
+        function getAttendanceFilterLabel(values = [], fallback = 'All') {
+            return values.length ? values.join(', ') : fallback;
+        }
+        function getAttendanceSummary(values = [], fallback = 'Select') {
+            if (!values.length) return fallback;
+            if (values.length === 1) return values[0];
+            return `${values.length} selected`;
+        }
+        function updateAttendanceFilterSummaries() {
+            const classValues = getSelectedAttendanceValues('studentAttendanceClassOptions');
+            const statusValues = getSelectedAttendanceValues('studentAttendancePrintStatusOptions');
+            const classSummary = document.getElementById('studentAttendanceClassSummary');
+            const statusSummary = document.getElementById('studentAttendanceStatusSummary');
+            if (classSummary) classSummary.textContent = getAttendanceSummary(classValues, 'Select Class');
+            if (statusSummary) statusSummary.textContent = getAttendanceSummary(statusValues, 'All Status');
+        }
+        function setupAttendanceDropdowns() {
+            document.querySelectorAll('[data-attendance-dropdown-toggle]').forEach((button) => {
+                button.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    const dropdown = button.closest('[data-attendance-dropdown]');
+                    const willOpen = !dropdown?.classList.contains('open');
+                    document.querySelectorAll('[data-attendance-dropdown].open').forEach((item) => {
+                        item.classList.remove('open');
+                        item.querySelector('[data-attendance-dropdown-toggle]')?.setAttribute('aria-expanded', 'false');
+                    });
+                    if (dropdown && willOpen) {
+                        dropdown.classList.add('open');
+                        button.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+            document.addEventListener('click', (event) => {
+                if (event.target.closest('[data-attendance-dropdown]')) return;
+                document.querySelectorAll('[data-attendance-dropdown].open').forEach((item) => {
+                    item.classList.remove('open');
+                    item.querySelector('[data-attendance-dropdown-toggle]')?.setAttribute('aria-expanded', 'false');
+                });
+            });
         }
         function populateStudentAttendanceFilters() {
             const campusSelect = document.getElementById('studentAttendanceCampus');
@@ -152,13 +346,18 @@
             const campuses = Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
             campusSelect.innerHTML = '<option value="">Select Campus</option>';
             campuses.forEach((campusName) => addAttendanceSelectOption(campusSelect, campusName));
-            if (campuses.length === 1) campusSelect.value = campuses[0];
+            const globalCampus = getStudentAttendanceGlobalCampus();
+            if (globalCampus && globalCampus !== 'all' && campuses.some((campusName) => normalizeAttendanceFilterValue(campusName) === normalizeAttendanceFilterValue(globalCampus))) {
+                campusSelect.value = globalCampus;
+            } else if (campuses.length === 1) {
+                campusSelect.value = campuses[0];
+            }
             populateStudentAttendanceClassFilter();
         }
         function populateStudentAttendanceClassFilter() {
-            const classSelect = document.getElementById('studentAttendanceClass');
+            const classOptions = document.getElementById('studentAttendanceClassOptions');
             const selectedCampus = document.getElementById('studentAttendanceCampus').value;
-            const previousValue = classSelect.value;
+            const previousValues = getSelectedAttendanceValues('studentAttendanceClassOptions');
             const classMap = new Map();
             const students = getStudentAttendanceStudents();
 
@@ -185,56 +384,267 @@
                 return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
             });
 
-            classSelect.innerHTML = '<option value="">Select Class</option>';
-            classes.forEach((className) => addAttendanceSelectOption(classSelect, className, typeof getStudentQuickFilterClassLabel === 'function' ? getStudentQuickFilterClassLabel(className) : className));
-            if (previousValue && classes.some((className) => normalizeAttendanceFilterValue(className) === normalizeAttendanceFilterValue(previousValue))) {
-                classSelect.value = previousValue;
-            } else {
-                classSelect.value = '';
+            classOptions.innerHTML = '';
+            classes.forEach((className) => addAttendanceCheckboxOption(classOptions, className, typeof getStudentQuickFilterClassLabel === 'function' ? getStudentQuickFilterClassLabel(className) : className));
+            if (!classes.length) {
+                classOptions.innerHTML = '<div class="attendance-empty" style="padding:.35rem;text-align:left;">No class found</div>';
+                updateAttendanceFilterSummaries();
+                return;
             }
+            setSelectedAttendanceValues('studentAttendanceClassOptions', previousValues.filter((value) => classes.some((className) => normalizeAttendanceFilterValue(className) === normalizeAttendanceFilterValue(value))));
+            updateAttendanceFilterSummaries();
         }
         function getStudentStatusForDate(studentId, dateKey) {
             const records = Array.isArray(getStudentAttendanceStore()[studentId]) ? getStudentAttendanceStore()[studentId] : [];
             const record = records.find(item => item.date === dateKey);
-            return record ? record.status : 'Not Marked';
+            return record ? record.status : DEFAULT_STUDENT_ATTENDANCE_STATUS;
         }
-        async function setStudentAttendance(studentId, status) {
+        function getStudentsForAttendanceSelection() {
+            const selectedCampus = document.getElementById('studentAttendanceCampus').value;
+            const selectedClasses = getSelectedAttendanceValues('studentAttendanceClassOptions');
+            if (!selectedCampus || !selectedClasses.length) return [];
+            return getStudentAttendanceStudents().filter(student => {
+                const campusName = student.campusName || 'Main Campus';
+                return normalizeAttendanceFilterValue(campusName) === normalizeAttendanceFilterValue(selectedCampus) &&
+                    selectedClasses.some((className) => normalizeAttendanceFilterValue(student.classGrade) === normalizeAttendanceFilterValue(className));
+            });
+        }
+        function getFilteredStudentAttendanceRows({ includeSearch = true, statusFilter = [] } = {}) {
+            const dateKey = getSelectedStudentDateKey();
+            const term = includeSearch ? document.getElementById('studentAttendanceSearch').value.trim().toLowerCase() : '';
+            const selectedCampus = document.getElementById('studentAttendanceCampus').value;
+            const selectedClasses = getSelectedAttendanceValues('studentAttendanceClassOptions');
+            const selectedStatuses = Array.isArray(statusFilter) ? statusFilter : [statusFilter].filter(Boolean);
+            if (!dateKey || !selectedCampus || !selectedClasses.length) return [];
+
+            return getStudentAttendanceStudents().filter(student => {
+                const campusName = student.campusName || 'Main Campus';
+                const status = getStudentStatusForDate(student.id, dateKey);
+                const matchesStatus = !selectedStatuses.length || selectedStatuses.includes(status);
+                return normalizeAttendanceFilterValue(campusName) === normalizeAttendanceFilterValue(selectedCampus) &&
+                    selectedClasses.some((className) => normalizeAttendanceFilterValue(student.classGrade) === normalizeAttendanceFilterValue(className)) &&
+                    (`${student.fullName || ''} ${student.fatherName || ''} ${student.studentCode || ''} ${student.rollNo || ''} ${student.classGrade || ''} ${campusName}`).toLowerCase().includes(term) &&
+                    matchesStatus;
+            });
+        }
+
+        function markAllSelectedStudentsPresent() {
+            const dateKey = getSelectedStudentDateKey();
+            const students = getStudentsForAttendanceSelection();
+            if (!dateKey || !students.length) {
+                alert('Please select date, campus, and class first.');
+                return;
+            }
+
+            const store = getStudentAttendanceStore();
+
+            students.forEach((student) => {
+                const studentId = String(student.id || '').trim();
+                if (!studentId) return;
+                const records = Array.isArray(store[studentId]) ? store[studentId] : [];
+                store[studentId] = records.filter(item => item.date !== dateKey).concat({ date: dateKey, status: 'Present' });
+            });
+
+            saveStudentAttendanceStore(store);
+            setStudentAttendanceMessage('Marked present on this page. Click Save Attendance to show it in the portal.', '');
+            renderStudentAttendancePage();
+        }
+        function setStudentAttendance(studentId, status) {
             const dateKey = getSelectedStudentDateKey();
             const store = getStudentAttendanceStore();
             const records = Array.isArray(store[studentId]) ? store[studentId] : [];
             store[studentId] = records.filter(item => item.date !== dateKey).concat({ date: dateKey, status });
             saveStudentAttendanceStore(store);
-            const syncResult = await saveStudentAttendanceToSQLRecord(studentId, dateKey, status);
-            if (!syncResult.success) {
+            setStudentAttendanceMessage('Attendance updated on this page. Click Save Attendance to show it in the portal.', '');
+            renderStudentAttendancePage();
+        }
+        async function saveSelectedStudentAttendance() {
+            const dateKey = getSelectedStudentDateKey();
+            const students = getStudentsForAttendanceSelection();
+            if (!dateKey || !students.length) {
+                alert('Please select date, campus, and class first.');
+                return;
+            }
+
+            const records = students.map((student) => {
+                const studentId = String(student.id || '').trim();
+                const status = getStudentStatusForDate(studentId, dateKey);
+                return studentId && status !== DEFAULT_STUDENT_ATTENDANCE_STATUS
+                    ? { studentId, date: dateKey, status }
+                    : null;
+            }).filter(Boolean);
+
+            if (!records.length) {
+                alert('Please mark at least one student Present, Leave, or Absent before saving.');
+                return;
+            }
+
+            const saveButton = document.getElementById('saveStudentAttendanceBtn');
+            saveButton.disabled = true;
+            setStudentAttendanceMessage('Saving attendance...', '');
+            const syncResult = await syncToSQLDetailed('student-attendance', records);
+            saveButton.disabled = false;
+
+            if (syncResult.success && syncResult.result?.attendance) {
+                saveStudentAttendanceStore(normalizeStudentAttendanceStore(syncResult.result.attendance));
+                const leaveRecords = records.filter(item => item.status === 'Leave');
+                if (leaveRecords.length && typeof approveMatchingLeaveRequestFromAttendance === 'function') {
+                    await Promise.all(leaveRecords.map(item => approveMatchingLeaveRequestFromAttendance('Student', item.studentId, item.date)));
+                }
+                setStudentAttendanceMessage(`Attendance saved for ${records.length} student(s). Portal will show the saved record.`, 'success');
+                renderStudentAttendancePage();
+            } else {
+                setStudentAttendanceMessage(syncResult.error || 'Student attendance could not be saved to the database.', 'error');
                 alert(syncResult.error || 'Student attendance could not be saved to the database.');
             }
-            if (status === 'Leave' && typeof approveMatchingLeaveRequestFromAttendance === 'function') {
-                await approveMatchingLeaveRequestFromAttendance('Student', studentId, dateKey);
+        }
+        function getStudentDisplayId(student) {
+            return student.studentCode || student.admissionNo || student.rollNo || student.id || '-';
+        }
+        function printStudentAttendanceList() {
+            const dateKey = getSelectedStudentDateKey();
+            const selectedCampus = document.getElementById('studentAttendanceCampus').value;
+            const selectedClasses = getSelectedAttendanceValues('studentAttendanceClassOptions');
+            const statusFilter = getSelectedAttendanceValues('studentAttendancePrintStatusOptions');
+            if (!dateKey || !selectedCampus || !selectedClasses.length) {
+                alert('Please select date, campus, and class first.');
+                return;
             }
-            renderStudentAttendancePage();
+
+            const rows = getFilteredStudentAttendanceRows({ statusFilter });
+            if (!rows.length) {
+                alert('No attendance records found for selected filters.');
+                return;
+            }
+
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const schoolName = branding.schoolName || branding.schoolTitle || 'Kids Roots Jand';
+            const logoSrc = branding.logoDataUrl || 'images/logo.png';
+            const printedAt = new Date().toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' });
+            const formattedDate = typeof formatDateForDisplay === 'function' ? formatDateForDisplay(dateKey) : dateKey;
+            const classLabel = getAttendanceFilterLabel(selectedClasses, 'All Classes');
+            const statusLabel = getAttendanceFilterLabel(statusFilter, 'All Status');
+            const statusTotals = rows.reduce((totals, student) => {
+                const status = getStudentStatusForDate(student.id, dateKey);
+                if (status === 'Present') totals.present += 1;
+                if (status === 'Leave') totals.leave += 1;
+                if (status === 'Absent') totals.absent += 1;
+                return totals;
+            }, { present: 0, leave: 0, absent: 0 });
+            const rowsHtml = rows.map((student, index) => {
+                const status = getStudentStatusForDate(student.id, dateKey);
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${escapeHtml(getStudentDisplayId(student))}</td>
+                        <td>${escapeHtml(student.fullName || '-')}</td>
+                        <td>${escapeHtml(student.fatherName || '-')}</td>
+                        <td>${escapeHtml(student.classGrade || '-')}</td>
+                        <td>${escapeHtml(status)}</td>
+                        <td>${escapeHtml(student.campusName || 'Main Campus')}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            const printWindow = window.open('', '_blank', 'width=1100,height=800');
+            if (!printWindow) {
+                alert('Please allow popups to print attendance list.');
+                return;
+            }
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${escapeHtml(schoolName)} - Student Attendance</title>
+                    <style>
+                        * { box-sizing: border-box; }
+                        body { margin: 0; padding: 28px; color: #111827; font-family: Arial, sans-serif; background: #fff; }
+                        .print-header { display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 2px solid #111827; }
+                        .print-header img { width: 64px; height: 64px; object-fit: contain; }
+                        h1 { margin: 0; font-size: 24px; }
+                        .subtitle { margin-top: 4px; color: #4b5563; font-size: 13px; }
+                        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 16px 0; font-size: 13px; }
+                        .meta div { border: 1px solid #d1d5db; padding: 8px; border-radius: 6px; }
+                        .meta strong { display: block; margin-bottom: 3px; color: #374151; font-size: 11px; text-transform: uppercase; }
+                        .status-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 16px; }
+                        .status-card { border: 1px solid #d1d5db; border-radius: 6px; padding: 9px 10px; background: #f9fafb; }
+                        .status-card strong { display: block; color: #374151; font-size: 11px; text-transform: uppercase; }
+                        .status-card span { display: block; margin-top: 4px; font-size: 18px; font-weight: 700; color: #111827; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #d1d5db; padding: 8px; text-align: left; }
+                        th { background: #f3f4f6; font-size: 11px; text-transform: uppercase; }
+                        @media print {
+                            body { padding: 16px; }
+                            .no-print { display: none; }
+                            .meta { grid-template-columns: repeat(4, 1fr); }
+                            .status-summary { grid-template-columns: repeat(4, 1fr); }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-header">
+                        <img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(schoolName)} logo">
+                        <div>
+                            <h1>${escapeHtml(schoolName)}</h1>
+                            <div class="subtitle">Student Attendance List</div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div><strong>Date</strong>${escapeHtml(formattedDate)}</div>
+                        <div><strong>Campus</strong>${escapeHtml(selectedCampus)}</div>
+                        <div><strong>Class</strong>${escapeHtml(classLabel)}</div>
+                        <div><strong>Status</strong>${escapeHtml(statusLabel)}</div>
+                        <div><strong>Total</strong>${rows.length}</div>
+                        <div><strong>Printed</strong>${escapeHtml(printedAt)}</div>
+                    </div>
+                    <div class="status-summary">
+                        <div class="status-card"><strong>Total Students</strong><span>${rows.length}</span></div>
+                        <div class="status-card"><strong>Present</strong><span>${statusTotals.present}</span></div>
+                        <div class="status-card"><strong>Leave</strong><span>${statusTotals.leave}</span></div>
+                        <div class="status-card"><strong>Absent</strong><span>${statusTotals.absent}</span></div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Std ID</th>
+                                <th>Name</th>
+                                <th>Father Name</th>
+                                <th>Class</th>
+                                <th>Status</th>
+                                <th>Campus</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+                    <script>
+                        window.onload = function () {
+                            window.print();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         }
         function renderStudentAttendancePage() {
             const tbody = document.getElementById('studentAttendanceTableBody');
-            const term = document.getElementById('studentAttendanceSearch').value.trim().toLowerCase();
             const dateKey = getSelectedStudentDateKey();
             const selectedCampus = document.getElementById('studentAttendanceCampus').value;
-            const selectedClass = document.getElementById('studentAttendanceClass').value;
+            const selectedClasses = getSelectedAttendanceValues('studentAttendanceClassOptions');
+            const printStatusFilter = getSelectedAttendanceValues('studentAttendancePrintStatusOptions');
             tbody.innerHTML = '';
 
-            if (!dateKey || !selectedCampus || !selectedClass) {
+            if (!dateKey || !selectedCampus || !selectedClasses.length) {
                 tbody.innerHTML = '<tr><td colspan="5" class="attendance-empty">Please select date, campus, and class to show students for attendance.</td></tr>';
                 return;
             }
 
-            const students = getStudentAttendanceStudents().filter(student => {
-                const campusName = student.campusName || 'Main Campus';
-                return normalizeAttendanceFilterValue(campusName) === normalizeAttendanceFilterValue(selectedCampus) &&
-                    normalizeAttendanceFilterValue(student.classGrade) === normalizeAttendanceFilterValue(selectedClass) &&
-                    (`${student.fullName || ''} ${student.classGrade || ''} ${campusName}`).toLowerCase().includes(term);
-            });
+            const students = getFilteredStudentAttendanceRows({ statusFilter: printStatusFilter });
 
             if (!students.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="attendance-empty">No students found for the selected campus and class.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="attendance-empty">No students found for the selected filters.</td></tr>';
                 return;
             }
 
@@ -250,7 +660,6 @@
                     <td><span class="attendance-chip ${statusClass}">${status}</span></td>
                     <td><div class="attendance-actions">
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Present')">Present</button>
-                        <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Late')">Late</button>
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Leave')">Leave</button>
                         <button class="btn btn-outline" onclick="setStudentAttendance(${studentIdArg}, 'Absent')">Absent</button>
                     </div></td>`;

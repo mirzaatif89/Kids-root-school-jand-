@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Kids Roots Jand</title>
     <link rel="icon" type="image/png" href="images/logo.png">
-    <link rel="stylesheet" href="style.css?v=20260603-kids-roots-jand-brand">
+    <link rel="stylesheet" href="style.css?v=20260627-welcome-logo">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -144,19 +144,21 @@
             display: grid;
             grid-template-columns: minmax(150px, 200px) minmax(150px, 200px) 34px;
             align-items: center;
+            justify-content: end;
             gap: 0.55rem;
+            margin-left: auto;
         }
 
-        .dashboard-header-actions .search-bar {
-            width: min(100%, 200px) !important;
-            max-width: 200px !important;
+        .dashboard-campus-select {
+            width: min(100%, 200px);
             min-height: 34px;
-            padding: 0.00rem 0.65rem;
+            border: 1px solid var(--border-color);
             border-radius: 8px;
-        }
-
-        .dashboard-header-actions .search-bar input {
+            background: #fff;
+            color: var(--text-primary);
+            padding: 0.38rem 0.65rem;
             font-size: 0.82rem;
+            font-weight: 650;
         }
 
         .dashboard-header-actions .notification-bell {
@@ -225,7 +227,7 @@
             }
 
             .dashboard-email-btn,
-            .dashboard-header-actions .search-bar {
+            .dashboard-campus-select {
                 width: 100% !important;
                 max-width: none !important;
             }
@@ -292,6 +294,10 @@
                     <i data-lucide="clipboard-list"></i>
                     <span>Exams</span>
                 </a>
+                <a href="messages.html" class="nav-item">
+                    <i data-lucide="message-circle"></i>
+                    <span>Messages</span>
+                </a>
                 <a href="revenue.html" class="nav-item">
                     <i data-lucide="trending-up"></i>
                     <span>Revenue</span>
@@ -328,10 +334,9 @@
                         <i data-lucide="mail-check" size="18"></i>
                         Execute All Emails
                     </button>
-                    <div class="search-bar">
-                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
-                        <input type="text" id="dashSearch" placeholder="Search students...">
-                    </div>
+                    <select id="dashboardCampusFilter" class="dashboard-campus-select" aria-label="Select campus">
+                        <option value="all">All Campuses</option>
+                    </select>
                     <div class="notification-bell" id="notificationBell" style="position: relative; margin-top: 1rem;">
                         <i data-lucide="bell" size="24"></i>
                         <span class="notification-badge" id="notifBadge" style="background-color: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: bold;">0</span>
@@ -463,8 +468,8 @@
         </div>
     </div>
 
-    <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-requested-order"></script>
+    <script src="auth.js?v=20260627-welcome-logo"></script>
+    <script src="script.js?v=20260705-global-campus-filter"></script>
     <script>
         async function executeAllDashboardEmails() {
             const button = document.getElementById('dashboardExecuteEmailsBtn');

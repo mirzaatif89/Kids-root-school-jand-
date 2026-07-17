@@ -33,7 +33,7 @@
     gap: 0.9rem;
     min-height: 112px;
     padding: 1rem;
-    border: 1px solid #cfe8e5;
+    border: 1px solid #c9e6e2;
     border-radius: 12px;
     background: #ffffff;
     color: #0f172a;
@@ -43,7 +43,7 @@
 }
 
 .schedule-hub-card:hover {
-    border-color: #14b8a6;
+    border-color: #20b0a4;
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
     transform: translateY(-2px);
 }
@@ -82,7 +82,7 @@
 
 .schedule-panel {
     background: #ffffff;
-    border: 1px solid #cfe8e5;
+    border: 1px solid #c9e6e2;
     border-radius: 12px;
     padding: 1.35rem;
     margin-bottom: 1.5rem;
@@ -126,8 +126,8 @@
 .schedule-panel input:focus,
 .schedule-panel select:focus,
 .schedule-panel textarea:focus {
-    border-color: #14b8a6;
-    box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14);
+    border-color: #20b0a4;
+    box-shadow: 0 0 0 3px rgba(32, 176, 164, 0.14);
 }
 
 .schedule-textarea {
@@ -189,8 +189,8 @@
 }
 
 .schedule-action-btn.edit {
-    background: #dbeafe;
-    color: #1d4ed8;
+    background: #ccfbf1;
+    color: #0f766e;
 }
 
 .schedule-action-btn.delete {

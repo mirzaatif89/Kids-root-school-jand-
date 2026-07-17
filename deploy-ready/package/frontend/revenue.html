@@ -134,6 +134,105 @@
             font-weight: 800;
         }
 
+        .revenue-date-picker {
+            min-height: var(--app-control-height);
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background: #fff;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .daily-revenue-panel {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: var(--shadow-sm);
+            margin-top: 1.5rem;
+        }
+
+        .daily-revenue-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .daily-revenue-head h3 {
+            margin: 0;
+        }
+
+        .daily-revenue-meta {
+            color: var(--text-secondary);
+            font-size: 0.86rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+        }
+
+        .daily-revenue-actions {
+            display: inline-flex;
+            align-items: end;
+            justify-content: flex-end;
+            gap: 0.7rem;
+            flex-wrap: wrap;
+        }
+
+        .daily-revenue-date-field {
+            display: grid;
+            gap: 0.25rem;
+        }
+
+        .daily-revenue-date-field label {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            font-weight: 800;
+        }
+
+        .daily-revenue-table-wrap {
+            overflow-x: auto;
+        }
+
+        .daily-revenue-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 620px;
+        }
+
+        .daily-revenue-table th,
+        .daily-revenue-table td {
+            padding: 0.85rem 0.8rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .daily-revenue-table th {
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0;
+            background: #f8fafc;
+        }
+
+        .daily-revenue-table td:last-child,
+        .daily-revenue-table th:last-child {
+            text-align: right;
+            font-weight: 800;
+        }
+
+        .daily-revenue-total {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            align-items: center;
+            margin-top: 1rem;
+            font-weight: 800;
+        }
+
         .revenue-summary-grid {
             display: grid;
             grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
@@ -274,6 +373,10 @@
                     </p>
                 </div>
                 <div class="revenue-toolbar">
+                    <label for="revenueCampusFilter">Campus</label>
+                    <select class="month-picker" id="revenueCampusFilter" aria-label="Select revenue campus">
+                        <option value="all">All Campuses</option>
+                    </select>
                     <label for="revenueMonthPicker">Month</label>
                     <input class="month-picker" id="revenueMonthPicker" type="month" aria-label="Select revenue month">
                 </div>
@@ -418,6 +521,45 @@
                 </div>
             </div>
 
+            <section class="daily-revenue-panel">
+                <div class="daily-revenue-head">
+                    <div>
+                        <h3>Daily Fee Collection by Class</h3>
+                        <div class="daily-revenue-meta" id="dailyRevenueMeta">Select a date to view fee collection.</div>
+                    </div>
+                    <div class="daily-revenue-actions">
+                        <div class="daily-revenue-date-field">
+                            <label for="revenueDatePicker">Date</label>
+                            <input class="revenue-date-picker" id="revenueDatePicker" type="date" aria-label="Select revenue print date">
+                        </div>
+                        <button class="btn btn-outline" type="button" onclick="printDailyRevenueReport()">
+                            <i data-lucide="printer"></i> Print
+                        </button>
+                    </div>
+                </div>
+                <div class="daily-revenue-table-wrap">
+                    <table class="daily-revenue-table">
+                        <thead>
+                            <tr>
+                                <th>Class</th>
+                                <th>Students Paid</th>
+                                <th>Payments</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dailyRevenueTableBody">
+                            <tr>
+                                <td colspan="4" style="text-align:center; color:var(--text-secondary);">No date selected.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="daily-revenue-total">
+                    <span>Total:</span>
+                    <strong id="dailyRevenueTotal">PKR 0</strong>
+                </div>
+            </section>
+
         </main>
     </div>
 
@@ -433,12 +575,22 @@
 
         let revenueRefreshTimer = null;
         let selectedRevenueMonthKey = '';
+        let selectedRevenueDateKey = '';
+        let dailyRevenueRows = [];
+        let dailyRevenueTotalAmount = 0;
 
         document.addEventListener('DOMContentLoaded', () => {
             selectedRevenueMonthKey = getCurrentMonthMeta().monthKey;
+            selectedRevenueDateKey = getTodayDateKey();
             initRevenueMonthPicker();
+            initRevenueDatePicker();
+            initRevenueCampusFilter();
             document.getElementById('revenueMonthPicker')?.addEventListener('change', (event) => {
                 selectedRevenueMonthKey = String(event.target.value || getCurrentMonthMeta().monthKey);
+                updateRevenueReport();
+            });
+            document.getElementById('revenueDatePicker')?.addEventListener('change', (event) => {
+                selectedRevenueDateKey = String(event.target.value || getTodayDateKey());
                 updateRevenueReport();
             });
 
@@ -447,6 +599,56 @@
             setTimeout(updateRevenueReport, 400);
             setTimeout(updateRevenueReport, 1200);
         });
+
+        async function initRevenueCampusFilter() {
+            const select = document.getElementById('revenueCampusFilter');
+            if (!select) return;
+
+            const user = typeof getLoggedInUser === 'function' ? getLoggedInUser() : null;
+            const branchCampus = user?.role === 'Branch' && user.campusName ? String(user.campusName).trim() : '';
+            const savedValue = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+
+            let campuses = [];
+            try {
+                campuses = typeof loadRegisteredCampusNames === 'function' ? await loadRegisteredCampusNames() : [];
+            } catch (_error) {
+                campuses = [];
+            }
+
+            if (branchCampus && !campuses.includes(branchCampus)) campuses.unshift(branchCampus);
+            select.innerHTML = '<option value="all">All Campuses</option>';
+            campuses.forEach((campusName) => {
+                const option = document.createElement('option');
+                option.value = campusName;
+                option.textContent = campusName;
+                select.appendChild(option);
+            });
+
+            if (branchCampus) {
+                select.value = branchCampus;
+                select.disabled = true;
+                if (typeof setSavedGlobalCampusFilter === 'function') setSavedGlobalCampusFilter(branchCampus);
+            } else {
+                select.value = Array.from(select.options).some((option) => option.value === savedValue) ? savedValue : 'all';
+                if (typeof setSavedGlobalCampusFilter === 'function') setSavedGlobalCampusFilter(select.value || 'all');
+            }
+
+            if (!select.dataset.revenueCampusBound) {
+                select.dataset.revenueCampusBound = 'true';
+                select.addEventListener('change', () => {
+                    if (typeof setSavedGlobalCampusFilter === 'function') {
+                        setSavedGlobalCampusFilter(select.value || 'all');
+                    } else {
+                        localStorage.setItem('eduCore_dashboard_campus_filter', select.value || 'all');
+                    }
+                    updateRevenueReport();
+                });
+            }
+
+            updateRevenueReport();
+        }
 
         function scheduleRevenueRefresh(delay = 150) {
             clearTimeout(revenueRefreshTimer);
@@ -521,8 +723,34 @@
             picker.value = selectedRevenueMonthKey || getCurrentMonthMeta().monthKey;
         }
 
+        function getTodayDateKey() {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+
+        function initRevenueDatePicker() {
+            const picker = document.getElementById('revenueDatePicker');
+            if (!picker) return;
+            picker.value = selectedRevenueDateKey || getTodayDateKey();
+        }
+
         function formatRevenueMoney(value) {
             return 'PKR ' + Math.round(Number(value || 0)).toLocaleString('en-PK');
+        }
+
+        function normalizeRevenueDateKey(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const parsed = new Date(raw);
+            if (Number.isNaN(parsed.getTime())) return '';
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+        }
+
+        function formatRevenueDateLabel(dateKey = '') {
+            const parsed = new Date(`${dateKey || getTodayDateKey()}T00:00:00`);
+            if (Number.isNaN(parsed.getTime())) return dateKey || '-';
+            return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
         function normalizeFeeMonthToKey(value) {
@@ -579,6 +807,43 @@
             }
         }
 
+        function revenueMatchesSelectedCampus(record = {}) {
+            return typeof recordMatchesGlobalCampus === 'function' ? recordMatchesGlobalCampus(record) : true;
+        }
+
+        function getRevenueScopedStudents() {
+            const students = getData(STORAGE_KEY_STUDENTS);
+            return typeof getGlobalCampusFilteredRecords === 'function' ? getGlobalCampusFilteredRecords(students) : students;
+        }
+
+        function attachRevenuePaymentCampus(payments = [], students = getData(STORAGE_KEY_STUDENTS)) {
+            const studentList = Array.isArray(students) ? students : [];
+            const studentMap = new Map(studentList.map((student) => [String(student.id || ''), student]));
+            const rollMap = new Map(studentList
+                .filter((student) => String(student?.rollNo || '').trim())
+                .map((student) => [String(student.rollNo).trim().toLowerCase(), student]));
+            const nameRollMap = new Map(studentList
+                .filter((student) => String(student?.fullName || '').trim() || String(student?.rollNo || '').trim())
+                .map((student) => [
+                    `${String(student.fullName || '').trim().toLowerCase()}|${String(student.rollNo || '').trim().toLowerCase()}|${String(student.classGrade || '').trim().toLowerCase()}`,
+                    student
+                ]));
+            return (Array.isArray(payments) ? payments : []).map((payment) => {
+                const student = studentMap.get(String(payment?.studentId || '')) ||
+                    rollMap.get(String(payment?.rollNo || '').trim().toLowerCase()) ||
+                    nameRollMap.get(`${String(payment?.studentName || '').trim().toLowerCase()}|${String(payment?.rollNo || '').trim().toLowerCase()}|${String(payment?.classGrade || '').trim().toLowerCase()}`) ||
+                    {};
+                return {
+                    ...payment,
+                    campusName: payment?.campusName || student.campusName || student.branchName || student.campus || ''
+                };
+            });
+        }
+
+        function getRevenueScopedPayments(payments = [], students = getData(STORAGE_KEY_STUDENTS)) {
+            return attachRevenuePaymentCampus(payments, students).filter(revenueMatchesSelectedCampus);
+        }
+
         function normalizeRevenueBillMonthKey(bill) {
             const dateValue = bill?.billDate || bill?.date || bill?.paidAt || bill?.createdAt || '';
             const parsed = new Date(dateValue);
@@ -588,6 +853,7 @@
 
         function getPaidBillsAmount(monthKey = '') {
             return readRevenueBills()
+                .filter(revenueMatchesSelectedCampus)
                 .filter((bill) => String(bill.status || '').toLowerCase() === 'paid')
                 .filter((bill) => !monthKey || normalizeRevenueBillMonthKey(bill) === monthKey)
                 .reduce((total, bill) => total + Math.max(Number(bill.amount || 0), 0), 0);
@@ -595,8 +861,15 @@
 
         function getAllSalaryTransfers() {
             const salaries = typeof getTeacherSalaries === 'function' ? getTeacherSalaries() : {};
+            const roster = typeof buildSalaryRoster === 'function' ? buildSalaryRoster() : [];
+            const allowedKeys = new Set();
+            roster.forEach((entry) => {
+                allowedKeys.add(`${entry.entityType}_${entry.id}_`);
+                if (entry.entityType === 'teacher') allowedKeys.add(`${entry.id}_`);
+            });
             return Object.entries(salaries || {}).reduce((total, [key, payment]) => {
                 if (!/20\d{2}-\d{2}$/.test(String(key || ''))) return total;
+                if (allowedKeys.size && !Array.from(allowedKeys).some((prefix) => String(key).startsWith(prefix))) return total;
                 return total + Math.max(Number(payment?.amount || 0), 0);
             }, 0);
         }
@@ -633,10 +906,12 @@
 
         async function updateRevenueReport() {
             const currentMonthMeta = getMonthMetaFromKey(selectedRevenueMonthKey || getCurrentMonthMeta().monthKey);
-            const students = getData(STORAGE_KEY_STUDENTS);
+            const allStudents = getData(STORAGE_KEY_STUDENTS);
+            const students = getRevenueScopedStudents();
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
-            const feePayments = await fetchCollectedFeePayments();
+            const feePayments = getRevenueScopedPayments(await fetchCollectedFeePayments(), allStudents);
+            renderDailyFeeCollection(feePayments);
             const monthDisplay = document.getElementById('currentMonthDisplay');
             if (monthDisplay) monthDisplay.innerText = `${currentMonthMeta.monthName} ${currentMonthMeta.year}`;
 
@@ -661,7 +936,9 @@
 
             students.filter((student) => studentAppliesToRevenueMonth(student, currentMonthMeta)).forEach(s => {
                 const standardClass = getStandardClassName(s.classGrade);
-                const fee = parseInt(s.monthlyFee) || 0;
+                const fee = (s?.freeStudy === true || s?.freeStudy === 'true' || String(s?.zeroFeeReason || s?.freeStudyReason || '').trim())
+                    ? 0
+                    : (parseInt(s.monthlyFee) || 0);
                 const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
                 const collectedAmount = backendCollectedMap.has(s.id)
                     ? backendCollectedMap.get(s.id)
@@ -743,6 +1020,149 @@
             }
 
             if (window.lucide) lucide.createIcons();
+        }
+
+        function renderDailyFeeCollection(feePayments = []) {
+            const tbody = document.getElementById('dailyRevenueTableBody');
+            const meta = document.getElementById('dailyRevenueMeta');
+            const totalEl = document.getElementById('dailyRevenueTotal');
+            if (!tbody) return;
+
+            const dateKey = selectedRevenueDateKey || getTodayDateKey();
+            const classMap = new Map();
+
+            feePayments.forEach((payment) => {
+                if (!payment) return;
+                const status = String(payment.status || '').toLowerCase();
+                if (!['paid', 'partial'].includes(status)) return;
+                if (normalizeRevenueDateKey(payment.paidAt || payment.paymentDateLabel || payment.createdAt) !== dateKey) return;
+                const amount = Number(payment.amount || 0);
+                if (!(amount > 0)) return;
+                const className = getStandardClassName(payment.classGrade || 'Unassigned');
+                const previous = classMap.get(className) || { className, amount: 0, payments: 0, studentIds: new Set() };
+                previous.amount += amount;
+                previous.payments += 1;
+                if (payment.studentId) previous.studentIds.add(String(payment.studentId));
+                classMap.set(className, previous);
+            });
+
+            const sortedClasses = feeClasses
+                .map((item) => item.name)
+                .filter((className) => classMap.has(className));
+            const customClasses = Array.from(classMap.keys())
+                .filter((className) => !sortedClasses.includes(className))
+                .sort((a, b) => a.localeCompare(b));
+            dailyRevenueRows = [...sortedClasses, ...customClasses].map((className) => {
+                const row = classMap.get(className);
+                return {
+                    className,
+                    studentsPaid: row.studentIds.size,
+                    payments: row.payments,
+                    amount: row.amount
+                };
+            });
+            dailyRevenueTotalAmount = dailyRevenueRows.reduce((sum, row) => sum + row.amount, 0);
+
+            if (meta) {
+                meta.textContent = `Date: ${formatRevenueDateLabel(dateKey)} | Classes: ${dailyRevenueRows.length}`;
+            }
+            if (totalEl) totalEl.textContent = formatRevenueMoney(dailyRevenueTotalAmount);
+
+            if (!dailyRevenueRows.length) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">No fee collection found for ${formatRevenueDateLabel(dateKey)}.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = dailyRevenueRows.map((row) => `
+                <tr>
+                    <td><strong>${escapeHtml(row.className)}</strong></td>
+                    <td>${row.studentsPaid}</td>
+                    <td>${row.payments}</td>
+                    <td>${formatRevenueMoney(row.amount)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function printDailyRevenueReport() {
+            const dateKey = selectedRevenueDateKey || getTodayDateKey();
+            const schoolName = (() => {
+                try {
+                    const settings = JSON.parse(localStorage.getItem('eduCore_settings') || '{}') || {};
+                    return String(settings.schoolName || settings.schoolTitle || 'Kids Roots Jand').trim() || 'Kids Roots Jand';
+                } catch (_error) {
+                    return 'Kids Roots Jand';
+                }
+            })();
+            const printedAt = new Date().toLocaleString();
+            const rowsMarkup = dailyRevenueRows.length ? dailyRevenueRows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(row.className)}</td>
+                    <td>${row.studentsPaid}</td>
+                    <td>${row.payments}</td>
+                    <td>${formatRevenueMoney(row.amount)}</td>
+                </tr>
+            `).join('') : `<tr><td colspan="5" class="empty">No fee collection found for ${formatRevenueDateLabel(dateKey)}.</td></tr>`;
+
+            const html = `
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>${escapeHtml(schoolName)} - Daily Revenue</title>
+                    <style>
+                        @page { size: A4; margin: 12mm; }
+                        body { font-family: Arial, sans-serif; color: #111827; margin: 0; }
+                        .head { display: flex; justify-content: space-between; gap: 16px; align-items: center; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 16px; }
+                        h1 { margin: 0; font-size: 22px; }
+                        p { margin: 4px 0 0; color: #475569; font-size: 12px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #94a3b8; padding: 8px; text-align: left; }
+                        th { background: #f1f5f9; text-transform: uppercase; font-size: 11px; }
+                        td:last-child, th:last-child { text-align: right; font-weight: 700; }
+                        .total { margin-top: 14px; text-align: right; font-size: 15px; font-weight: 800; }
+                        .empty { text-align: center; color: #64748b; }
+                    </style>
+                </head>
+                <body>
+                    <section class="head">
+                        <div>
+                            <h1>${escapeHtml(schoolName)}</h1>
+                            <p>Daily Fee Collection by Class</p>
+                            <p>Date: ${escapeHtml(formatRevenueDateLabel(dateKey))}</p>
+                        </div>
+                        <p>Printed: ${escapeHtml(printedAt)}</p>
+                    </section>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Class</th>
+                                <th>Students Paid</th>
+                                <th>Payments</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsMarkup}</tbody>
+                    </table>
+                    <div class="total">Total: ${formatRevenueMoney(dailyRevenueTotalAmount)}</div>
+                    <script>
+                        window.focus();
+                        window.print();
+                        window.onafterprint = () => window.close();
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            const printWindow = window.open('', 'eduCoreDailyRevenuePrint', 'width=1000,height=720');
+            if (!printWindow) {
+                alert('Popup blocked. Please allow popups to print the revenue report.');
+                return;
+            }
+            printWindow.document.open();
+            printWindow.document.write(html);
+            printWindow.document.close();
         }
     </script>
 </body>

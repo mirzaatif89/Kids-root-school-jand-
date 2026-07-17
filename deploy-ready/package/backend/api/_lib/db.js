@@ -22,6 +22,7 @@ function defineStudentModel(db) {
         gender: DataTypes.STRING,
         parentPhone: DataTypes.STRING,
         email: { type: DataTypes.STRING, unique: true, allowNull: true },
+        address: DataTypes.TEXT,
         rollNo: DataTypes.STRING,
         formB: DataTypes.STRING,
         familyId: DataTypes.STRING,
@@ -29,6 +30,10 @@ function defineStudentModel(db) {
         familyNo: DataTypes.STRING,
         familyContact: DataTypes.STRING,
         monthlyFee: DataTypes.STRING,
+        monthlyFeeCustom: DataTypes.BOOLEAN,
+        freeStudy: DataTypes.BOOLEAN,
+        zeroFeeReason: DataTypes.TEXT,
+        remainingAmount: DataTypes.STRING,
         feeFrequency: DataTypes.STRING,
         feesStatus: { type: DataTypes.STRING, defaultValue: 'Pending' },
         paymentDate: DataTypes.STRING,
@@ -202,6 +207,9 @@ function defineLeaveRequestModel(db) {
         fromDate: { type: DataTypes.STRING, allowNull: false },
         toDate: { type: DataTypes.STRING, allowNull: false },
         reason: { type: DataTypes.TEXT, allowNull: false },
+        fileName: DataTypes.STRING,
+        fileType: DataTypes.STRING,
+        fileData: DataTypes.TEXT('long'),
         status: { type: DataTypes.STRING, defaultValue: 'Pending' },
         reviewReason: DataTypes.TEXT,
         reviewedAt: DataTypes.STRING,
@@ -354,6 +362,7 @@ async function ensureLegacySchema(db) {
         gender: { type: DataTypes.STRING, allowNull: true },
         parentPhone: { type: DataTypes.STRING, allowNull: true },
         email: { type: DataTypes.STRING, allowNull: true },
+        address: { type: DataTypes.TEXT, allowNull: true },
         rollNo: { type: DataTypes.STRING, allowNull: true },
         formB: { type: DataTypes.STRING, allowNull: true },
         familyId: { type: DataTypes.STRING, allowNull: true },
@@ -361,6 +370,10 @@ async function ensureLegacySchema(db) {
         familyNo: { type: DataTypes.STRING, allowNull: true },
         familyContact: { type: DataTypes.STRING, allowNull: true },
         monthlyFee: { type: DataTypes.STRING, allowNull: true },
+        monthlyFeeCustom: { type: DataTypes.BOOLEAN, allowNull: true },
+        freeStudy: { type: DataTypes.BOOLEAN, allowNull: true },
+        zeroFeeReason: { type: DataTypes.TEXT, allowNull: true },
+        remainingAmount: { type: DataTypes.STRING, allowNull: true },
         feeFrequency: { type: DataTypes.STRING, allowNull: true },
         feesStatus: { type: DataTypes.STRING, allowNull: true },
         paymentDate: { type: DataTypes.STRING, allowNull: true },
@@ -463,7 +476,10 @@ async function ensureLegacySchema(db) {
     });
 
     await ensureTableColumns(db, 'LeaveRequests', {
-        reviewReason: { type: DataTypes.TEXT, allowNull: true }
+        reviewReason: { type: DataTypes.TEXT, allowNull: true },
+        fileName: { type: DataTypes.STRING, allowNull: true },
+        fileType: { type: DataTypes.STRING, allowNull: true },
+        fileData: { type: DataTypes.TEXT('long'), allowNull: true }
     });
 }
 

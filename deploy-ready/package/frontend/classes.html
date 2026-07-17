@@ -313,7 +313,7 @@
     </div>
 
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
-    <script src="script.js?v=20260520-sidebar-classes-restore"></script>
+    <script src="script.js?v=20260705-search-fix"></script>
     <script>
         lucide.createIcons();
 
@@ -328,6 +328,14 @@
                     const currentClass = document.getElementById('studentsListView').dataset.currentClass;
                     if (currentClass) {
                         renderClassStudents(currentClass, e.target.value.toLowerCase());
+                    }
+                });
+                searchInput.addEventListener('keydown', (event) => {
+                    if (event.key !== 'Enter') return;
+                    event.preventDefault();
+                    const currentClass = document.getElementById('studentsListView').dataset.currentClass;
+                    if (currentClass) {
+                        renderClassStudents(currentClass, searchInput.value.toLowerCase());
                     }
                 });
             }
@@ -352,7 +360,12 @@
 
         function renderClassesGrid() {
             const grid = document.getElementById('classesGrid');
-            const students = getData(STORAGE_KEY_STUDENTS);
+            const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+            const campusMatches = (student) => !selectedCampus || selectedCampus === 'all' ||
+                String(student.campusName || student.branchName || student.campus || 'Main Campus').trim().toLowerCase() === String(selectedCampus).trim().toLowerCase();
+            const students = getData(STORAGE_KEY_STUDENTS).filter(campusMatches);
 
             grid.innerHTML = '';
 
@@ -396,7 +409,12 @@
         function renderClassStudents(classId, searchTerm = '') {
             const tbody = document.getElementById('classStudentTableBody');
             const noDataMsg = document.getElementById('noClassStudentsMessage');
-            const students = getData(STORAGE_KEY_STUDENTS);
+            const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+            const campusMatches = (student) => !selectedCampus || selectedCampus === 'all' ||
+                String(student.campusName || student.branchName || student.campus || 'Main Campus').trim().toLowerCase() === String(selectedCampus).trim().toLowerCase();
+            const students = getData(STORAGE_KEY_STUDENTS).filter(campusMatches);
             const selectAllCheckbox = document.getElementById('selectAllStudents');
 
             const cls = classList.find(c => c.id === classId);
@@ -408,9 +426,14 @@
             });
 
             if (searchTerm) {
+                const term = String(searchTerm || '').toLowerCase().trim();
                 classStudents = classStudents.filter(s =>
-                    s.fullName.toLowerCase().includes(searchTerm) ||
-                    s.rollNo.toLowerCase().includes(searchTerm)
+                    String(s.fullName || '').toLowerCase().includes(term) ||
+                    String(s.rollNo || '').toLowerCase().includes(term) ||
+                    String(s.studentCode || '').toLowerCase().includes(term) ||
+                    String(s.fatherName || '').toLowerCase().includes(term) ||
+                    String(s.campusName || '').toLowerCase().includes(term) ||
+                    String(s.parentPhone || '').toLowerCase().includes(term)
                 );
             }
 
@@ -418,6 +441,7 @@
             if (selectAllCheckbox) selectAllCheckbox.checked = false;
 
             if (classStudents.length === 0) {
+                noDataMsg.textContent = searchTerm ? 'No record found.' : 'No students found in this class.';
                 noDataMsg.style.display = 'block';
                 document.getElementById('classStudentsTable').style.display = 'none';
                 updateSelectedPromotionState();

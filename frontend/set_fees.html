@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set Fees - Kids Roots Jand System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .fee-settings-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .fee-settings-toolbar .search-bar {
+            max-width: 360px;
+            width: 100%;
+        }
+
+        .fee-settings-note {
+            margin-bottom: 1.5rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid var(--border-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .fee-settings-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .fee-settings-form,
+        .fee-settings-table {
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            padding: 1.5rem;
+        }
+
+        .fee-settings-form h2,
+        .fee-settings-table h2 {
+            margin: 0 0 1rem;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+
+        .fee-settings-empty {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .fee-actions {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            min-width: 128px;
+        }
+
+        .fee-action-btn {
+            border: 0;
+            border-radius: 0.45rem;
+            min-height: 34px;
+            padding: 0.45rem 0.7rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.35rem;
+            font-size: 0.78rem;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+        }
+
+        .fee-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .fee-action-edit {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .fee-action-edit:hover {
+            background: #bae6fd;
+        }
+
+        .fee-action-delete {
+            width: 34px;
+            padding: 0;
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .fee-action-delete:hover {
+            background: #fecaca;
+        }
+
+        .fee-action-btn svg {
+            width: 15px;
+            height: 15px;
+            flex: 0 0 auto;
+        }
+
+        .fee-settings-table th:last-child,
+        .fee-settings-table td:last-child {
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .fee-settings-table table {
+            min-width: 680px;
+        }
+
+        .fee-settings-table .table-container {
+            overflow-x: auto !important;
+        }
+
+        @media (max-width: 1200px) {
+            .fee-settings-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 900px) {
+            .fee-settings-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="logo-section">
+                <i data-lucide="graduation-cap" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
+                    <span style="font-size: 1rem; line-height: 1.2;">Kids Roots Jand</span>
+                    <span style="font-size: 1rem; line-height: 1.2;">System</span>
+                </div>
+            </div>
+
+            <nav class="nav-links">
+                <a href="dashboard.html" class="nav-item">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="students.html" class="nav-item">
+                    <i data-lucide="users"></i>
+                    <span>Students</span>
+                </a>
+                <a href="teachers.html" class="nav-item">
+                    <i data-lucide="book-open"></i>
+                    <span>Teachers</span>
+                </a>
+                <a href="staff.html" class="nav-item">
+                    <i data-lucide="briefcase"></i>
+                    <span>Staff</span>
+                </a>
+                <a href="classes.html" class="nav-item">
+                    <i data-lucide="school"></i>
+                    <span>Classes</span>
+                </a>
+                <a href="fees.html" class="nav-item">
+                    <i data-lucide="credit-card"></i>
+                    <span>Fees</span>
+                </a>
+                <a href="set_fees.html" class="nav-item active">
+                    <i data-lucide="settings-2"></i>
+                    <span>Set Fees</span>
+                </a>
+                <a href="fee_challan.html" class="nav-item">
+                    <i data-lucide="file-text"></i>
+                    <span>Fee Challan</span>
+                </a>
+                <a href="teacher_salaries.html" class="nav-item">
+                    <i data-lucide="wallet"></i>
+                    <span>Salaries</span>
+                </a>
+                <a href="exams.html" class="nav-item">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Exams</span>
+                </a>
+                <a href="revenue.html" class="nav-item">
+                    <i data-lucide="trending-up"></i>
+                    <span>Revenue</span>
+                </a>
+                <a href="permissions.html" class="nav-item">
+                    <i data-lucide="shield"></i>
+                    <span>Permissions</span>
+                </a>
+                <a href="aboutme.html" class="nav-item">
+                    <i data-lucide="info"></i>
+                    <span>About Us</span>
+                </a>
+                <a href="#" class="nav-item" onclick="logoutUser(event)">
+                    <i data-lucide="log-out"></i>
+                    <span>Logout</span>
+                </a>
+            </nav>
+
+            <a href="settings.html" class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>Principal</p>
+                </div>
+            </a>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h1>Set Fees</h1>
+                <div class="header-actions">
+                    <div class="search-bar">
+                        <i data-lucide="search" size="18" style="color: var(--text-secondary);"></i>
+                        <input type="text" id="classFeeSearchInput" placeholder="Search class...">
+                    </div>
+                </div>
+            </header>
+
+            <div class="fee-settings-note">
+                Set each class fee here. When you add a student and select the class, the monthly fee fills automatically.
+            </div>
+
+            <div class="fee-settings-layout">
+                <section class="fee-settings-form">
+                    <h2>Class Fee</h2>
+                    <form id="classFeeForm">
+                        <div class="input-group">
+                            <label for="classFeeClassName">Class</label>
+                            <select id="classFeeClassName"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #ffffff;">
+                                <option value="">Select Class</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="classFeeCustomClassName">New Class Name</label>
+                            <input type="text" id="classFeeCustomClassName" placeholder="Use only if class is not listed">
+                        </div>
+                        <div class="input-group">
+                            <label for="classFeeMonthlyFee">Monthly Fee (PKR)</label>
+                            <input type="number" id="classFeeMonthlyFee" min="0" placeholder="e.g. 5000" required>
+                        </div>
+                        <div class="input-group">
+                            <label for="classFeeFrequency">Fee Frequency</label>
+                            <select id="classFeeFrequency"
+                                style="width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: #ffffff;">
+                                <option value="Monthly">Monthly</option>
+                                <option value="Yearly">Yearly</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            <i data-lucide="save"></i> Save Fee
+                        </button>
+                    </form>
+                </section>
+
+                <section class="fee-settings-table">
+                    <div class="fee-settings-toolbar">
+                        <h2>Saved Class Fees</h2>
+                    </div>
+                    <div class="table-container" style="box-shadow: none; border: 0; padding: 0;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Class</th>
+                                    <th>Monthly Fee</th>
+                                    <th>Frequency</th>
+                                    <th>Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classFeeTableBody"></tbody>
+                        </table>
+                        <div id="classFeeEmptyState" class="fee-settings-empty">
+                            No class fee settings found.
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>
