@@ -4457,7 +4457,16 @@ function getCurrentDashboardFeeMonthKey() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function getDashboardPaymentMonthKeys(value = '') {
+function getDashboardPaymentFallbackYear(fallbackDate = '') {
+    const raw = String(fallbackDate || '').trim();
+    const slashDate = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (slashDate) return Number(slashDate[3]);
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed.getFullYear();
+    return new Date().getFullYear();
+}
+
+function getDashboardPaymentMonthKeys(value = '', fallbackDate = '') {
     const raw = String(value || '').trim();
     if (!raw) return [];
 
@@ -4475,11 +4484,27 @@ function getDashboardPaymentMonthKeys(value = '') {
     ];
     const lowered = raw.toLowerCase();
     const yearMatch = lowered.match(/\b(20\d{2})\b/);
-    const fallbackYear = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+    const fallbackYear = yearMatch ? Number(yearMatch[1]) : getDashboardPaymentFallbackYear(fallbackDate);
     return monthNames
         .map((month, index) => ({ month, index }))
         .filter(({ month }) => lowered.includes(month.toLowerCase()) || lowered.includes(month.slice(0, 3).toLowerCase()))
         .map(({ index }) => `${fallbackYear}-${String(index + 1).padStart(2, '0')}`);
+}
+
+function isDashboardFeeCollectionPayment(payment = {}) {
+    const status = String(payment?.status || '').toLowerCase();
+    const source = String(payment?.paymentSource || payment?.paymentMode || '').toLowerCase();
+    return ['paid', 'partial'].includes(status) && !['fine', 'fine correction', 'correction'].includes(source);
+}
+
+function getDashboardPaymentAmountForMonth(payment = {}, monthKey = getCurrentDashboardFeeMonthKey()) {
+    if (!isDashboardFeeCollectionPayment(payment)) return 0;
+    const amount = Math.max(Number(payment?.amount || 0), 0);
+    if (!(amount > 0)) return 0;
+    const monthKeys = getDashboardPaymentMonthKeys(payment?.feeMonth || '', payment?.paidAt || payment?.paymentDateLabel || payment?.createdAt);
+    if (!monthKeys.length) return 0;
+    if (!monthKeys.includes(monthKey)) return 0;
+    return amount / Math.max(monthKeys.length, 1);
 }
 
 function getDashboardFeeStatusRevenue(students = []) {
@@ -4548,18 +4573,15 @@ async function getDashboardBackendFeeStatusRevenue(students = []) {
         const payments = Array.isArray(result?.payments) ? result.payments : [];
 
         payments.forEach((payment) => {
-            const status = String(payment?.status || '').toLowerCase();
-            if (!['paid', 'partial'].includes(status)) return;
+            if (!isDashboardFeeCollectionPayment(payment)) return;
             const studentId = String(payment?.studentId || '');
             const matchedStudent = studentMap.get(studentId) ||
                 rollMap.get(String(payment?.rollNo || '').trim().toLowerCase()) ||
                 nameRollMap.get(`${String(payment?.studentName || '').trim().toLowerCase()}|${String(payment?.rollNo || '').trim().toLowerCase()}|${String(payment?.classGrade || '').trim().toLowerCase()}`);
             if (!matchedStudent) return;
-            const monthKeys = getDashboardPaymentMonthKeys(payment?.feeMonth || '');
-            if (monthKeys.length && !monthKeys.includes(currentMonthKey)) return;
-            const amount = Math.max(Number(payment?.amount || 0), 0);
+            const amount = getDashboardPaymentAmountForMonth(payment, currentMonthKey);
             if (!(amount > 0)) return;
-            summary.total += amount / Math.max(monthKeys.length || 1, 1);
+            summary.total += amount;
             paidStudentIds.add(String(matchedStudent.id || studentId || `${payment?.studentName || ''}|${payment?.rollNo || ''}`));
         });
 
