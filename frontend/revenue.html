@@ -564,7 +564,7 @@
     </div>
 
     <script src="auth.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260718-finance-summary-sync"></script>
     <script>
         const STORAGE_KEY_MONTHLY_FEES = 'eduCore_monthly_fees';
         const STORAGE_KEY_REVENUE_BILLS = 'eduCore_bills';
@@ -907,82 +907,42 @@
         async function updateRevenueReport() {
             const currentMonthMeta = getMonthMetaFromKey(selectedRevenueMonthKey || getCurrentMonthMeta().monthKey);
             const allStudents = getData(STORAGE_KEY_STUDENTS);
-            const students = getRevenueScopedStudents();
-            const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
-            const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
             const feePayments = getRevenueScopedPayments(await fetchCollectedFeePayments(), allStudents);
             renderDailyFeeCollection(feePayments);
             const monthDisplay = document.getElementById('currentMonthDisplay');
             if (monthDisplay) monthDisplay.innerText = `${currentMonthMeta.monthName} ${currentMonthMeta.year}`;
 
-            const backendCollectedMap = new Map();
-            let allMonthsCollected = 0;
-            feePayments.forEach(payment => {
-                if (!payment || !payment.studentId) return;
-                const paidAmount = Number(payment.amount || 0);
-                if (!(paidAmount > 0)) return;
-                allMonthsCollected += paidAmount;
-                const paymentMonths = getPaymentMonthKeys(payment.feeMonth);
-                if (!paymentMonths.includes(currentMonthMeta.monthKey)) return;
-                const amountForMonth = paidAmount / Math.max(paymentMonths.length, 1);
-                const previousAmount = backendCollectedMap.get(payment.studentId) || 0;
-                backendCollectedMap.set(payment.studentId, previousAmount + amountForMonth);
-            });
-
-            let totalExpected = 0;
-            let totalCollected = 0;
-
-            const classCollection = {}; // { className: { expected: 0, collected: 0 } }
-
-            students.filter((student) => studentAppliesToRevenueMonth(student, currentMonthMeta)).forEach(s => {
-                const standardClass = getStandardClassName(s.classGrade);
-                const fee = (s?.freeStudy === true || s?.freeStudy === 'true' || String(s?.zeroFeeReason || s?.freeStudyReason || '').trim())
-                    ? 0
-                    : (parseInt(s.monthlyFee) || 0);
-                const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
-                const collectedAmount = backendCollectedMap.has(s.id)
-                    ? backendCollectedMap.get(s.id)
-                    : (isPaidLocally ? fee : 0);
-
-                totalExpected += fee;
-                if (collectedAmount > 0) {
-                    totalCollected += collectedAmount;
-                }
-
-                if (!classCollection[standardClass]) {
-                    classCollection[standardClass] = { expected: 0, collected: 0 };
-                }
-                classCollection[standardClass].expected += fee;
-                if (collectedAmount > 0) classCollection[standardClass].collected += collectedAmount;
-            });
+            const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
+                ? getGlobalCampusFilterForCurrentUser()
+                : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
+            const summary = typeof calculateFinanceSummary === 'function'
+                ? calculateFinanceSummary({
+                    students: allStudents,
+                    payments: feePayments,
+                    monthKey: currentMonthMeta.monthKey,
+                    selectedCampus,
+                    classNameResolver: getStandardClassName
+                })
+                : null;
+            if (!summary) return;
 
             // Update UI Stats
-            const netExpected = totalExpected - salarySummary.expected;
-            const netCollected = totalCollected - salarySummary.transferred;
-            const remainingBalance = netCollected + salarySummary.pending;
-            const paidBills = getPaidBillsAmount(currentMonthMeta.monthKey);
-            const paidExpenses = salarySummary.transferred + paidBills;
-            const profitLoss = totalCollected - paidExpenses;
-            const allMonthsSalaries = getAllSalaryTransfers();
-            const allMonthsBills = getPaidBillsAmount();
-            const allMonthsProfitLoss = allMonthsCollected - allMonthsSalaries - allMonthsBills;
-
-            document.getElementById('expectedRevenue').innerText = formatRevenueMoney(totalExpected);
-            document.getElementById('collectedRevenue').innerText = formatRevenueMoney(totalCollected);
-            document.getElementById('pendingRevenue').innerText = formatRevenueMoney(Math.max(totalExpected - totalCollected, 0));
-            document.getElementById('salaryBudget').innerText = formatRevenueMoney(salarySummary.expected);
-            document.getElementById('transferredSalaries').innerText = formatRevenueMoney(salarySummary.transferred);
-            document.getElementById('pendingSalaries').innerText = formatRevenueMoney(salarySummary.pending);
-            document.getElementById('netExpectedRevenue').innerText = formatRevenueMoney(netExpected);
-            document.getElementById('netCollectedRevenue').innerText = formatRevenueMoney(netCollected);
-            document.getElementById('netPendingRevenue').innerText = formatRevenueMoney(remainingBalance);
-            document.getElementById('paidBillsExpense').innerText = formatRevenueMoney(paidBills);
-            document.getElementById('paidExpensesTotal').innerText = formatRevenueMoney(paidExpenses);
-            document.getElementById('allMonthsRevenue').innerText = formatRevenueMoney(allMonthsCollected);
-            document.getElementById('allMonthsSalaries').innerText = formatRevenueMoney(allMonthsSalaries);
-            document.getElementById('allMonthsBills').innerText = formatRevenueMoney(allMonthsBills);
-            setProfitLossValue('profitLossRevenue', profitLoss);
-            setProfitLossValue('allMonthsProfitLoss', allMonthsProfitLoss);
+            document.getElementById('expectedRevenue').innerText = formatRevenueMoney(summary.expected);
+            document.getElementById('collectedRevenue').innerText = formatRevenueMoney(summary.collected);
+            document.getElementById('pendingRevenue').innerText = formatRevenueMoney(summary.pending);
+            document.getElementById('salaryBudget').innerText = formatRevenueMoney(summary.salarySummary.expected);
+            document.getElementById('transferredSalaries').innerText = formatRevenueMoney(summary.salarySummary.transferred);
+            document.getElementById('pendingSalaries').innerText = formatRevenueMoney(summary.salarySummary.pending);
+            document.getElementById('netExpectedRevenue').innerText = formatRevenueMoney(summary.netExpected);
+            document.getElementById('netCollectedRevenue').innerText = formatRevenueMoney(summary.netCollected);
+            document.getElementById('netPendingRevenue').innerText = formatRevenueMoney(summary.remainingBalance);
+            document.getElementById('paidBillsExpense').innerText = formatRevenueMoney(summary.paidBills);
+            document.getElementById('paidExpensesTotal').innerText = formatRevenueMoney(summary.paidExpenses);
+            document.getElementById('allMonthsRevenue').innerText = formatRevenueMoney(summary.allMonthsCollected);
+            document.getElementById('allMonthsSalaries').innerText = formatRevenueMoney(summary.allMonthsSalaries);
+            document.getElementById('allMonthsBills').innerText = formatRevenueMoney(summary.allMonthsBills);
+            setProfitLossValue('profitLossRevenue', summary.profitLoss);
+            setProfitLossValue('allMonthsProfitLoss', summary.allMonthsProfitLoss);
 
             // Render Class Bars (sorted by class order)
             const barContainer = document.getElementById('classBreakdownContainer');
@@ -991,9 +951,9 @@
             // Sort classes in proper order (Play Group -> Class Ten)
             const sortedClasses = feeClasses
                 .map(c => c.name)
-                .filter(name => classCollection[name] && classCollection[name].expected > 0);
-            const customClasses = Object.keys(classCollection)
-                .filter(name => !sortedClasses.includes(name) && classCollection[name].expected > 0)
+                .filter(name => summary.classCollection[name] && summary.classCollection[name].expected > 0);
+            const customClasses = Object.keys(summary.classCollection)
+                .filter(name => !sortedClasses.includes(name) && summary.classCollection[name].expected > 0)
                 .sort((a, b) => a.localeCompare(b));
             const displayClasses = [...sortedClasses, ...customClasses];
 
@@ -1001,7 +961,7 @@
                 barContainer.innerHTML = '<p style="text-align: center; padding: 2rem; color: var(--text-secondary);">No revenue data available for this month.</p>';
             } else {
                 displayClasses.forEach(className => {
-                    const data = classCollection[className];
+                    const data = summary.classCollection[className];
                     const pct = data.expected > 0 ? (data.collected / data.expected) * 100 : 0;
 
                     const row = document.createElement('div');
@@ -1033,8 +993,13 @@
 
             feePayments.forEach((payment) => {
                 if (!payment) return;
-                const status = String(payment.status || '').toLowerCase();
-                if (!['paid', 'partial'].includes(status)) return;
+                if (typeof isDashboardFeeCollectionPayment === 'function') {
+                    if (!isDashboardFeeCollectionPayment(payment)) return;
+                } else {
+                    const status = String(payment.status || '').toLowerCase();
+                    const source = String(payment.paymentSource || payment.paymentMode || '').toLowerCase();
+                    if (!['paid', 'partial'].includes(status) || ['fine', 'fine correction', 'correction'].includes(source)) return;
+                }
                 if (normalizeRevenueDateKey(payment.paidAt || payment.paymentDateLabel || payment.createdAt) !== dateKey) return;
                 const amount = Number(payment.amount || 0);
                 if (!(amount > 0)) return;

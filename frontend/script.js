@@ -4507,6 +4507,260 @@ function getDashboardPaymentAmountForMonth(payment = {}, monthKey = getCurrentDa
     return amount / Math.max(monthKeys.length, 1);
 }
 
+function getFinanceMonthMeta(monthKey = getCurrentDashboardFeeMonthKey()) {
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const now = new Date();
+    const match = String(monthKey || '').match(/^(\d{4})-(\d{2})$/);
+    const year = match ? Number(match[1]) : now.getFullYear();
+    const monthIndex = match ? Math.min(Math.max(Number(match[2]) - 1, 0), 11) : now.getMonth();
+    return {
+        year,
+        monthIndex,
+        monthName: monthNames[monthIndex],
+        monthShort: monthNames[monthIndex].slice(0, 3),
+        monthKey: `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+    };
+}
+
+function getFinanceRecordCampus(record = {}) {
+    return record?.campusName || record?.branchName || record?.campus || '';
+}
+
+function financeRecordMatchesCampus(record = {}, selectedCampus = getSelectedDashboardCampus()) {
+    if (!selectedCampus || selectedCampus === 'all') return true;
+    return getDashboardCampusKey(getFinanceRecordCampus(record)) === getDashboardCampusKey(selectedCampus);
+}
+
+function financeStudentAppliesToMonth(student = {}, monthKey = getCurrentDashboardFeeMonthKey()) {
+    const rawStart = student?.admissionDate || student?.createdAt || '';
+    if (!rawStart) return true;
+    const parsed = new Date(rawStart);
+    if (Number.isNaN(parsed.getTime())) return true;
+    const startKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+    return startKey <= monthKey;
+}
+
+function buildFinanceStudentIndexes(students = []) {
+    const studentList = Array.isArray(students) ? students : [];
+    const byId = new Map(studentList.map((student) => [String(student?.id || ''), student]));
+    const byRoll = new Map(studentList
+        .filter((student) => String(student?.rollNo || '').trim())
+        .map((student) => [String(student.rollNo).trim().toLowerCase(), student]));
+    const byNameRollClass = new Map(studentList
+        .filter((student) => String(student?.fullName || '').trim() || String(student?.rollNo || '').trim())
+        .map((student) => [
+            `${String(student.fullName || '').trim().toLowerCase()}|${String(student.rollNo || '').trim().toLowerCase()}|${String(student.classGrade || '').trim().toLowerCase()}`,
+            student
+        ]));
+    return { byId, byRoll, byNameRollClass };
+}
+
+function resolveFinancePaymentStudent(payment = {}, indexes = buildFinanceStudentIndexes()) {
+    return indexes.byId.get(String(payment?.studentId || '')) ||
+        indexes.byRoll.get(String(payment?.rollNo || '').trim().toLowerCase()) ||
+        indexes.byNameRollClass.get(`${String(payment?.studentName || '').trim().toLowerCase()}|${String(payment?.rollNo || '').trim().toLowerCase()}|${String(payment?.classGrade || '').trim().toLowerCase()}`) ||
+        null;
+}
+
+function normalizeFinancePayments(payments = [], students = []) {
+    const indexes = buildFinanceStudentIndexes(students);
+    return (Array.isArray(payments) ? payments : [])
+        .filter(isDashboardFeeCollectionPayment)
+        .map((payment) => {
+            const student = resolveFinancePaymentStudent(payment, indexes) || {};
+            return {
+                ...payment,
+                studentId: String(payment?.studentId || student?.id || ''),
+                classGrade: payment?.classGrade || student?.classGrade || '',
+                campusName: payment?.campusName || getFinanceRecordCampus(student)
+            };
+        });
+}
+
+function getLocalMonthlyFeePaymentMap(monthMeta = getFinanceMonthMeta()) {
+    let monthlyFeesData = {};
+    let paymentDetails = {};
+    try {
+        monthlyFeesData = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}') || {};
+    } catch (_error) {
+        monthlyFeesData = {};
+    }
+    try {
+        paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}') || {};
+    } catch (_error) {
+        paymentDetails = {};
+    }
+
+    return { monthlyFeesData, paymentDetails, monthName: monthMeta.monthName };
+}
+
+function getFinanceStudentLocalCollected(student = {}, monthMeta = getFinanceMonthMeta()) {
+    const studentId = String(student?.id || '').trim();
+    if (!studentId) return 0;
+    const feeAmount = getDashboardStudentFee(student);
+    if (!(feeAmount > 0)) return 0;
+
+    const { monthlyFeesData, paymentDetails, monthName } = getLocalMonthlyFeePaymentMap(monthMeta);
+    const paidRecordAmount = Number(paymentDetails?.[studentId]?.[monthName]?.amount || 0) || 0;
+    if (paidRecordAmount > 0) return Math.min(paidRecordAmount, feeAmount);
+    if (monthlyFeesData?.[studentId]?.[monthName] === 'Paid') return feeAmount;
+    if (String(student?.feesStatus || '').trim().toLowerCase() === 'paid' && monthMeta.monthKey === getCurrentDashboardFeeMonthKey()) return feeAmount;
+    return 0;
+}
+
+function readFinanceBills() {
+    try {
+        const bills = JSON.parse(localStorage.getItem(STORAGE_KEY_BILLS) || '[]');
+        return Array.isArray(bills) ? bills : [];
+    } catch (_error) {
+        return [];
+    }
+}
+
+function normalizeFinanceBill(bill = {}) {
+    const dateValue = bill.billDate || bill.date || bill.paymentConfirmedDate || bill.paidAt || bill.createdAt || '';
+    const parsedDate = new Date(dateValue);
+    const monthKey = Number.isNaN(parsedDate.getTime())
+        ? ''
+        : `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}`;
+    return {
+        ...bill,
+        amount: Math.max(Number(bill.amount || 0), 0),
+        status: String(bill.status || 'Pending').trim(),
+        monthKey,
+        campusName: bill.campusName || bill.branchName || bill.campus || ''
+    };
+}
+
+function getFinancePaidBillsAmount(monthKey = '', selectedCampus = getSelectedDashboardCampus()) {
+    return readFinanceBills()
+        .map(normalizeFinanceBill)
+        .filter((bill) => financeRecordMatchesCampus(bill, selectedCampus))
+        .filter((bill) => String(bill.status || '').toLowerCase() === 'paid')
+        .filter((bill) => !monthKey || bill.monthKey === monthKey)
+        .reduce((sum, bill) => sum + bill.amount, 0);
+}
+
+function getAllFinanceSalaryTransfers(selectedCampus = getSelectedDashboardCampus()) {
+    const salaries = typeof getTeacherSalaries === 'function' ? getTeacherSalaries() : {};
+    const roster = typeof buildSalaryRoster === 'function' ? buildSalaryRoster() : [];
+    const scopedRoster = roster.filter((entry) => financeRecordMatchesCampus(entry, selectedCampus));
+    const allowedKeys = new Set();
+    scopedRoster.forEach((entry) => {
+        allowedKeys.add(`${entry.entityType}_${entry.id}_`);
+        if (entry.entityType === 'teacher') allowedKeys.add(`${entry.id}_`);
+    });
+
+    return Object.entries(salaries || {}).reduce((total, [key, payment]) => {
+        if (!/20\d{2}-\d{2}$/.test(String(key || ''))) return total;
+        if (allowedKeys.size && !Array.from(allowedKeys).some((prefix) => String(key).startsWith(prefix))) return total;
+        return total + Math.max(Number(payment?.amount || 0), 0);
+    }, 0);
+}
+
+function calculateFinanceSummary({
+    students = getArrayData(STORAGE_KEY_STUDENTS),
+    payments = [],
+    monthKey = getCurrentDashboardFeeMonthKey(),
+    selectedCampus = getSelectedDashboardCampus(),
+    classNameResolver = (value) => String(value || 'Unassigned Class').trim() || 'Unassigned Class'
+} = {}) {
+    const monthMeta = getFinanceMonthMeta(monthKey);
+    const allStudents = Array.isArray(students) ? students : [];
+    const scopedStudents = allStudents
+        .filter((student) => financeRecordMatchesCampus(student, selectedCampus))
+        .filter((student) => financeStudentAppliesToMonth(student, monthMeta.monthKey));
+    const normalizedPayments = normalizeFinancePayments(payments, allStudents)
+        .filter((payment) => financeRecordMatchesCampus(payment, selectedCampus));
+
+    const backendCollectedByStudent = new Map();
+    let allMonthsCollected = 0;
+    normalizedPayments.forEach((payment) => {
+        const amount = Math.max(Number(payment.amount || 0), 0);
+        if (!(amount > 0)) return;
+        allMonthsCollected += amount;
+        const monthAmount = getDashboardPaymentAmountForMonth(payment, monthMeta.monthKey);
+        if (!(monthAmount > 0)) return;
+        const studentId = String(payment.studentId || '').trim();
+        if (!studentId) return;
+        backendCollectedByStudent.set(studentId, (backendCollectedByStudent.get(studentId) || 0) + monthAmount);
+    });
+
+    const classCollection = {};
+    let expected = 0;
+    let collected = 0;
+    let paidStudents = 0;
+
+    scopedStudents.forEach((student) => {
+        const studentId = String(student?.id || '').trim();
+        const feeAmount = getDashboardStudentFee(student);
+        expected += feeAmount;
+
+        const backendAmount = studentId ? backendCollectedByStudent.get(studentId) : undefined;
+        const collectedAmount = backendAmount !== undefined
+            ? backendAmount
+            : getFinanceStudentLocalCollected(student, monthMeta);
+
+        if (collectedAmount > 0) {
+            collected += collectedAmount;
+            paidStudents += 1;
+        }
+
+        const className = classNameResolver(student.classGrade || 'Unassigned Class');
+        if (!classCollection[className]) classCollection[className] = { expected: 0, collected: 0 };
+        classCollection[className].expected += feeAmount;
+        classCollection[className].collected += Math.max(collectedAmount || 0, 0);
+    });
+
+    const salarySummary = typeof getMonthlySalarySummary === 'function'
+        ? getMonthlySalarySummary(monthMeta.monthKey)
+        : { expected: 0, transferred: 0, pending: 0, roster: [] };
+    const paidBills = getFinancePaidBillsAmount(monthMeta.monthKey, selectedCampus);
+    const paidExpenses = Number(salarySummary.transferred || 0) + paidBills;
+    const allMonthsSalaries = getAllFinanceSalaryTransfers(selectedCampus);
+    const allMonthsBills = getFinancePaidBillsAmount('', selectedCampus);
+
+    return {
+        month: monthMeta.monthName,
+        monthKey: monthMeta.monthKey,
+        monthMeta,
+        expected,
+        collected,
+        pending: Math.max(expected - collected, 0),
+        paidStudents,
+        salarySummary,
+        paidBills,
+        paidExpenses,
+        profitLoss: collected - paidExpenses,
+        netExpected: expected - Number(salarySummary.expected || 0),
+        netCollected: collected - Number(salarySummary.transferred || 0),
+        remainingBalance: collected - paidExpenses,
+        allMonthsCollected,
+        allMonthsSalaries,
+        allMonthsBills,
+        allMonthsProfitLoss: allMonthsCollected - allMonthsSalaries - allMonthsBills,
+        classCollection
+    };
+}
+
+async function fetchFinanceFeePayments() {
+    const endpoints = [`${API_BASE_URL}/fees/payments`, `${API_BASE_URL}/fees`];
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint);
+            const result = await parseJsonResponse(response, 'Fee payments could not be loaded.');
+            if (!response.ok || result?.success === false) throw new Error(result?.message || 'Fee payments could not be loaded.');
+            return Array.isArray(result?.payments) ? result.payments : [];
+        } catch (error) {
+            console.warn(`Fee payments could not be loaded from ${endpoint}:`, error.message);
+        }
+    }
+    return [];
+}
+
 function getDashboardFeeStatusRevenue(students = []) {
     const currentMonth = getCurrentDashboardFeeMonth();
     let monthlyFeesData = {};
@@ -4657,18 +4911,20 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     const detailEl = document.getElementById('dashRevenueDetail');
     if (!amountEl && !detailEl) return;
 
-    const students = Array.isArray(studentsForDashboard)
-        ? studentsForDashboard
-        : getDashboardCampusFilteredRecords(getArrayData(STORAGE_KEY_STUDENTS));
-    const localSummary = getDashboardFeeStatusRevenue(students);
-    const backendSummary = await getDashboardBackendFeeStatusRevenue(students);
-    const feeSummary = backendSummary && backendSummary.total > 0 ? backendSummary : localSummary;
+    const allStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    const payments = await fetchFinanceFeePayments();
+    const feeSummary = calculateFinanceSummary({
+        students: allStudents,
+        payments,
+        monthKey: getCurrentDashboardFeeMonthKey(),
+        selectedCampus: getSelectedDashboardCampus()
+    });
     const selectedCampus = getSelectedDashboardCampus();
     const campusLabel = selectedCampus === 'all' ? '' : ` in ${selectedCampus}`;
 
-    if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.total);
+    if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.collected);
     if (detailEl) {
-        detailEl.textContent = `${feeSummary.paidStudents} ${feeSummary.paidStudents === 1 ? 'student' : 'students'} paid for ${feeSummary.month}${campusLabel}`;
+        detailEl.textContent = `${feeSummary.paidStudents} ${feeSummary.paidStudents === 1 ? 'student' : 'students'} paid for ${feeSummary.month}${campusLabel} | Pending ${formatDashboardCurrency(feeSummary.pending)}`;
         if (window.lucide) window.lucide.createIcons();
     }
 }
