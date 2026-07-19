@@ -1260,6 +1260,71 @@ app.post('/api/class-fees', authenticateToken, async (req, res) => {
     }
 });
 
+function normalizeFinanceBillPayload(input = {}) {
+    const id = String(input.id || '').trim() || `BILL-${Date.now()}`;
+    const status = String(input.status || 'Pending').trim();
+    const amount = Math.max(Number(input.amount || 0), 0);
+
+    return {
+        id,
+        category: String(input.category || '').trim(),
+        amount,
+        date: String(input.date || input.billDate || '').trim(),
+        status: status || 'Pending',
+        note: String(input.note || '').trim(),
+        campusName: String(input.campusName || input.branchName || input.campus || '').trim(),
+        invoice: input.invoice || null,
+        receipt: input.receipt || null,
+        paymentConfirmedDate: input.paymentConfirmedDate || null
+    };
+}
+
+app.get('/api/finance-bills', async (_req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const bills = await sequelize.models.FinanceBill.findAll({ order: [['date', 'DESC'], ['createdAt', 'DESC']] });
+        res.json({ success: true, bills });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message || 'Finance bills could not be loaded.' });
+    }
+});
+
+app.post('/api/finance-bills', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const bill = normalizeFinanceBillPayload(req.body || {});
+        if (!bill.category) {
+            return res.status(400).json({ success: false, message: 'Bill category is required.' });
+        }
+
+        await sequelize.models.FinanceBill.upsert(bill);
+        const saved = await sequelize.models.FinanceBill.findByPk(bill.id);
+        io.emit('finance_bills_update', { bill: saved });
+        res.json({ success: true, bill: saved });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message || 'Finance bill could not be saved.' });
+    }
+});
+
+app.delete('/api/finance-bills', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const id = String(req.query?.id || req.body?.id || '').trim();
+        if (!id) {
+            return res.status(400).json({ success: false, message: 'Bill id is required.' });
+        }
+
+        const deleted = await sequelize.models.FinanceBill.destroy({ where: { id } });
+        io.emit('finance_bills_update', { id, deleted: true });
+        res.json({ success: true, deleted });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message || 'Finance bill could not be deleted.' });
+    }
+});
+
 function normalizeMessageRole(value) {
     const role = String(value || '').trim().toLowerCase();
     if (role === 'student') return 'Student';
@@ -2863,6 +2928,21 @@ function defineClassFeeModel(db) {
     });
 }
 
+function defineFinanceBillModel(db) {
+    return db.define('FinanceBill', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        category: { type: DataTypes.STRING, allowNull: false },
+        amount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+        date: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        note: DataTypes.TEXT,
+        campusName: DataTypes.STRING,
+        invoice: DataTypes.TEXT('long'),
+        receipt: DataTypes.TEXT('long'),
+        paymentConfirmedDate: DataTypes.DATE
+    });
+}
+
 function defineStudentAttendanceModel(db) {
     return db.define('StudentAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -3282,6 +3362,7 @@ async function startServer() {
         defineFeePaymentModel(sequelize);
         defineFeeDueBalanceModel(sequelize);
         defineClassFeeModel(sequelize);
+        defineFinanceBillModel(sequelize);
         defineStudentAttendanceModel(sequelize);
         defineTeacherAttendanceModel(sequelize);
         defineSpecialNoticeModel(sequelize);

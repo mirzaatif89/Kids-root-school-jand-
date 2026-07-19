@@ -1137,6 +1137,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const financeTable = document.getElementById('financeTable');
     if (financeTable) {
         renderFinance();
+        loadFinanceBillsFromServer().then(() => renderFinance()).catch((error) => {
+            console.warn('Finance bills could not be loaded from server:', error.message);
+        });
         const fSearch = document.getElementById('financeSearchInput');
         if (fSearch) {
             fSearch.addEventListener('input', (e) => renderFinance(e.target.value.toLowerCase()));
@@ -4045,14 +4048,85 @@ function renderDashboardTable(term = '') {
 // =======================================================
 const STORAGE_KEY_BILLS = 'eduCore_bills';
 let currentCategory = null;
+let financeBillsLoadedFromServer = false;
+let financeBillsLoadPromise = null;
 
 function getBills() {
-    const data = localStorage.getItem(STORAGE_KEY_BILLS);
-    return data ? JSON.parse(data) : [];
+    try {
+        const data = localStorage.getItem(STORAGE_KEY_BILLS);
+        const bills = data ? JSON.parse(data) : [];
+        return Array.isArray(bills) ? bills : [];
+    } catch (_error) {
+        return [];
+    }
 }
 
 function saveBills(bills) {
     localStorage.setItem(STORAGE_KEY_BILLS, JSON.stringify(bills));
+}
+
+function normalizeBillForStorage(bill = {}) {
+    return {
+        id: String(bill.id || '').trim() || generateUniqueRecordId('BILL'),
+        category: String(bill.category || '').trim(),
+        amount: Math.max(Number(bill.amount || 0), 0),
+        date: String(bill.date || bill.billDate || '').trim(),
+        status: String(bill.status || 'Pending').trim() || 'Pending',
+        note: String(bill.note || '').trim(),
+        campusName: String(bill.campusName || bill.branchName || bill.campus || '').trim(),
+        invoice: bill.invoice || null,
+        receipt: bill.receipt || null,
+        paymentConfirmedDate: bill.paymentConfirmedDate || null
+    };
+}
+
+async function loadFinanceBillsFromServer({ force = false } = {}) {
+    if (financeBillsLoadedFromServer && !force) return getBills();
+    if (financeBillsLoadPromise && !force) return financeBillsLoadPromise;
+
+    financeBillsLoadPromise = fetch(`${API_BASE_URL}/finance-bills`)
+        .then(async (response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            const serverBills = Array.isArray(result?.bills) ? result.bills.map(normalizeBillForStorage) : [];
+
+            if (serverBills.length) {
+                saveBills(serverBills);
+            } else {
+                const localBills = getBills().map(normalizeBillForStorage);
+                if (localBills.length) {
+                    await Promise.allSettled(localBills.map((bill) => saveFinanceBillToServer(bill)));
+                }
+                saveBills(localBills);
+            }
+
+            financeBillsLoadedFromServer = true;
+            return getBills();
+        })
+        .finally(() => {
+            financeBillsLoadPromise = null;
+        });
+
+    return financeBillsLoadPromise;
+}
+
+async function saveFinanceBillToServer(bill = {}) {
+    const response = await fetch(`${API_BASE_URL}/finance-bills`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(normalizeBillForStorage(bill))
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    return result?.bill ? normalizeBillForStorage(result.bill) : normalizeBillForStorage(bill);
+}
+
+async function deleteFinanceBillFromServer(id) {
+    const response = await fetch(`${API_BASE_URL}/finance-bills?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
 }
 
 function getScopedBills() {
@@ -4142,6 +4216,12 @@ function renderFinance(term = '') {
     const tbody = document.getElementById('financeTableBody');
     if (!tbody) return;
     term = String(term || '').toLowerCase().trim();
+
+    if (!financeBillsLoadedFromServer && !financeBillsLoadPromise) {
+        loadFinanceBillsFromServer().then(() => renderFinance(term)).catch((error) => {
+            console.warn('Finance bills sync failed:', error.message);
+        });
+    }
 
     // If no category selected yet, do nothing or clear
     if (!currentCategory) {
@@ -4286,7 +4366,7 @@ function toggleBillForm(editMode = false) {
 }
 
 // Global listener for the Bill Form
-document.addEventListener('submit', function (e) {
+document.addEventListener('submit', async function (e) {
     if (e.target && e.target.id === 'billForm') {
         e.preventDefault();
         const idField = document.getElementById('billId');
@@ -4317,6 +4397,17 @@ document.addEventListener('submit', function (e) {
             bills.push(newBill);
         }
         saveBills(bills);
+        try {
+            const savedBill = await saveFinanceBillToServer(newBill);
+            bills = getBills();
+            const savedIndex = bills.findIndex(b => b.id === savedBill.id);
+            if (savedIndex !== -1) bills[savedIndex] = savedBill;
+            else bills.push(savedBill);
+            saveBills(bills);
+        } catch (error) {
+            console.warn('Finance bill saved locally but server sync failed:', error.message);
+            pushNotification('Finance Sync Pending', 'Bill saved on this device. Server sync failed.', 'alert-circle');
+        }
         toggleBillForm();
         renderFinance();
         pushNotification('Expense Updated', `Bill for ${newBill.category} recorded.`, 'trending-up');
@@ -4367,6 +4458,12 @@ async function deleteBill(id) {
     let bills = getBills();
     bills = bills.filter(b => b.id !== id);
     saveBills(bills);
+    try {
+        await deleteFinanceBillFromServer(id);
+    } catch (error) {
+        console.warn('Finance bill deleted locally but server sync failed:', error.message);
+        pushNotification('Finance Sync Pending', 'Bill deleted on this device. Server sync failed.', 'alert-circle');
+    }
     renderFinance();
 }
 
@@ -4457,7 +4554,16 @@ function getCurrentDashboardFeeMonthKey() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 }
 
-function getDashboardPaymentMonthKeys(value = '') {
+function getDashboardPaymentFallbackYear(fallbackDate = '') {
+    const raw = String(fallbackDate || '').trim();
+    const slashDate = raw.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (slashDate) return Number(slashDate[3]);
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) return parsed.getFullYear();
+    return new Date().getFullYear();
+}
+
+function getDashboardPaymentMonthKeys(value = '', fallbackDate = '') {
     const raw = String(value || '').trim();
     if (!raw) return [];
 
@@ -4475,11 +4581,281 @@ function getDashboardPaymentMonthKeys(value = '') {
     ];
     const lowered = raw.toLowerCase();
     const yearMatch = lowered.match(/\b(20\d{2})\b/);
-    const fallbackYear = yearMatch ? Number(yearMatch[1]) : new Date().getFullYear();
+    const fallbackYear = yearMatch ? Number(yearMatch[1]) : getDashboardPaymentFallbackYear(fallbackDate);
     return monthNames
         .map((month, index) => ({ month, index }))
         .filter(({ month }) => lowered.includes(month.toLowerCase()) || lowered.includes(month.slice(0, 3).toLowerCase()))
         .map(({ index }) => `${fallbackYear}-${String(index + 1).padStart(2, '0')}`);
+}
+
+function isDashboardFeeCollectionPayment(payment = {}) {
+    const status = String(payment?.status || '').toLowerCase();
+    const source = String(payment?.paymentSource || payment?.paymentMode || '').toLowerCase();
+    return ['paid', 'partial'].includes(status) && !['fine', 'fine correction', 'correction'].includes(source);
+}
+
+function getDashboardPaymentAmountForMonth(payment = {}, monthKey = getCurrentDashboardFeeMonthKey()) {
+    if (!isDashboardFeeCollectionPayment(payment)) return 0;
+    const amount = Math.max(Number(payment?.amount || 0), 0);
+    if (!(amount > 0)) return 0;
+    const monthKeys = getDashboardPaymentMonthKeys(payment?.feeMonth || '', payment?.paidAt || payment?.paymentDateLabel || payment?.createdAt);
+    if (!monthKeys.length) return 0;
+    if (!monthKeys.includes(monthKey)) return 0;
+    return amount / Math.max(monthKeys.length, 1);
+}
+
+function getFinanceMonthMeta(monthKey = getCurrentDashboardFeeMonthKey()) {
+    const monthNames = [
+        'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const now = new Date();
+    const match = String(monthKey || '').match(/^(\d{4})-(\d{2})$/);
+    const year = match ? Number(match[1]) : now.getFullYear();
+    const monthIndex = match ? Math.min(Math.max(Number(match[2]) - 1, 0), 11) : now.getMonth();
+    return {
+        year,
+        monthIndex,
+        monthName: monthNames[monthIndex],
+        monthShort: monthNames[monthIndex].slice(0, 3),
+        monthKey: `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+    };
+}
+
+function getFinanceRecordCampus(record = {}) {
+    return record?.campusName || record?.branchName || record?.campus || '';
+}
+
+function financeRecordMatchesCampus(record = {}, selectedCampus = getSelectedDashboardCampus()) {
+    if (!selectedCampus || selectedCampus === 'all') return true;
+    return getDashboardCampusKey(getFinanceRecordCampus(record)) === getDashboardCampusKey(selectedCampus);
+}
+
+function financeStudentAppliesToMonth(student = {}, monthKey = getCurrentDashboardFeeMonthKey()) {
+    const rawStart = student?.admissionDate || student?.createdAt || '';
+    if (!rawStart) return true;
+    const parsed = new Date(rawStart);
+    if (Number.isNaN(parsed.getTime())) return true;
+    const startKey = `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+    return startKey <= monthKey;
+}
+
+function buildFinanceStudentIndexes(students = []) {
+    const studentList = Array.isArray(students) ? students : [];
+    const byId = new Map(studentList.map((student) => [String(student?.id || ''), student]));
+    const byRoll = new Map(studentList
+        .filter((student) => String(student?.rollNo || '').trim())
+        .map((student) => [String(student.rollNo).trim().toLowerCase(), student]));
+    const byNameRollClass = new Map(studentList
+        .filter((student) => String(student?.fullName || '').trim() || String(student?.rollNo || '').trim())
+        .map((student) => [
+            `${String(student.fullName || '').trim().toLowerCase()}|${String(student.rollNo || '').trim().toLowerCase()}|${String(student.classGrade || '').trim().toLowerCase()}`,
+            student
+        ]));
+    return { byId, byRoll, byNameRollClass };
+}
+
+function resolveFinancePaymentStudent(payment = {}, indexes = buildFinanceStudentIndexes()) {
+    return indexes.byId.get(String(payment?.studentId || '')) ||
+        indexes.byRoll.get(String(payment?.rollNo || '').trim().toLowerCase()) ||
+        indexes.byNameRollClass.get(`${String(payment?.studentName || '').trim().toLowerCase()}|${String(payment?.rollNo || '').trim().toLowerCase()}|${String(payment?.classGrade || '').trim().toLowerCase()}`) ||
+        null;
+}
+
+function normalizeFinancePayments(payments = [], students = []) {
+    const indexes = buildFinanceStudentIndexes(students);
+    return (Array.isArray(payments) ? payments : [])
+        .filter(isDashboardFeeCollectionPayment)
+        .map((payment) => {
+            const student = resolveFinancePaymentStudent(payment, indexes) || {};
+            return {
+                ...payment,
+                studentId: String(payment?.studentId || student?.id || ''),
+                classGrade: payment?.classGrade || student?.classGrade || '',
+                campusName: payment?.campusName || getFinanceRecordCampus(student)
+            };
+        });
+}
+
+function getLocalMonthlyFeePaymentMap(monthMeta = getFinanceMonthMeta()) {
+    let monthlyFeesData = {};
+    let paymentDetails = {};
+    try {
+        monthlyFeesData = JSON.parse(localStorage.getItem('eduCore_monthly_fees') || '{}') || {};
+    } catch (_error) {
+        monthlyFeesData = {};
+    }
+    try {
+        paymentDetails = JSON.parse(localStorage.getItem('eduCore_payment_details') || '{}') || {};
+    } catch (_error) {
+        paymentDetails = {};
+    }
+
+    return { monthlyFeesData, paymentDetails, monthName: monthMeta.monthName };
+}
+
+function getFinanceStudentLocalCollected(student = {}, monthMeta = getFinanceMonthMeta()) {
+    const studentId = String(student?.id || '').trim();
+    if (!studentId) return 0;
+    const feeAmount = getDashboardStudentFee(student);
+    if (!(feeAmount > 0)) return 0;
+
+    const { monthlyFeesData, paymentDetails, monthName } = getLocalMonthlyFeePaymentMap(monthMeta);
+    const paidRecordAmount = Number(paymentDetails?.[studentId]?.[monthName]?.amount || 0) || 0;
+    if (paidRecordAmount > 0) return Math.min(paidRecordAmount, feeAmount);
+    if (monthlyFeesData?.[studentId]?.[monthName] === 'Paid') return feeAmount;
+    if (String(student?.feesStatus || '').trim().toLowerCase() === 'paid' && monthMeta.monthKey === getCurrentDashboardFeeMonthKey()) return feeAmount;
+    return 0;
+}
+
+function readFinanceBills() {
+    try {
+        const bills = JSON.parse(localStorage.getItem(STORAGE_KEY_BILLS) || '[]');
+        return Array.isArray(bills) ? bills : [];
+    } catch (_error) {
+        return [];
+    }
+}
+
+function normalizeFinanceBill(bill = {}) {
+    const dateValue = bill.billDate || bill.date || bill.paymentConfirmedDate || bill.paidAt || bill.createdAt || '';
+    const parsedDate = new Date(dateValue);
+    const monthKey = Number.isNaN(parsedDate.getTime())
+        ? ''
+        : `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}`;
+    return {
+        ...bill,
+        amount: Math.max(Number(bill.amount || 0), 0),
+        status: String(bill.status || 'Pending').trim(),
+        monthKey,
+        campusName: bill.campusName || bill.branchName || bill.campus || ''
+    };
+}
+
+function getFinancePaidBillsAmount(monthKey = '', selectedCampus = getSelectedDashboardCampus()) {
+    return readFinanceBills()
+        .map(normalizeFinanceBill)
+        .filter((bill) => financeRecordMatchesCampus(bill, selectedCampus))
+        .filter((bill) => String(bill.status || '').toLowerCase() === 'paid')
+        .filter((bill) => !monthKey || bill.monthKey === monthKey)
+        .reduce((sum, bill) => sum + bill.amount, 0);
+}
+
+function getAllFinanceSalaryTransfers(selectedCampus = getSelectedDashboardCampus()) {
+    const salaries = typeof getTeacherSalaries === 'function' ? getTeacherSalaries() : {};
+    const roster = typeof buildSalaryRoster === 'function' ? buildSalaryRoster() : [];
+    const scopedRoster = roster.filter((entry) => financeRecordMatchesCampus(entry, selectedCampus));
+    const allowedKeys = new Set();
+    scopedRoster.forEach((entry) => {
+        allowedKeys.add(`${entry.entityType}_${entry.id}_`);
+        if (entry.entityType === 'teacher') allowedKeys.add(`${entry.id}_`);
+    });
+
+    return Object.entries(salaries || {}).reduce((total, [key, payment]) => {
+        if (!/20\d{2}-\d{2}$/.test(String(key || ''))) return total;
+        if (allowedKeys.size && !Array.from(allowedKeys).some((prefix) => String(key).startsWith(prefix))) return total;
+        return total + Math.max(Number(payment?.amount || 0), 0);
+    }, 0);
+}
+
+function calculateFinanceSummary({
+    students = getArrayData(STORAGE_KEY_STUDENTS),
+    payments = [],
+    monthKey = getCurrentDashboardFeeMonthKey(),
+    selectedCampus = getSelectedDashboardCampus(),
+    classNameResolver = (value) => String(value || 'Unassigned Class').trim() || 'Unassigned Class'
+} = {}) {
+    const monthMeta = getFinanceMonthMeta(monthKey);
+    const allStudents = Array.isArray(students) ? students : [];
+    const scopedStudents = allStudents
+        .filter((student) => financeRecordMatchesCampus(student, selectedCampus))
+        .filter((student) => financeStudentAppliesToMonth(student, monthMeta.monthKey));
+    const normalizedPayments = normalizeFinancePayments(payments, allStudents)
+        .filter((payment) => financeRecordMatchesCampus(payment, selectedCampus));
+
+    const backendCollectedByStudent = new Map();
+    let allMonthsCollected = 0;
+    normalizedPayments.forEach((payment) => {
+        const amount = Math.max(Number(payment.amount || 0), 0);
+        if (!(amount > 0)) return;
+        allMonthsCollected += amount;
+        const monthAmount = getDashboardPaymentAmountForMonth(payment, monthMeta.monthKey);
+        if (!(monthAmount > 0)) return;
+        const studentId = String(payment.studentId || '').trim();
+        if (!studentId) return;
+        backendCollectedByStudent.set(studentId, (backendCollectedByStudent.get(studentId) || 0) + monthAmount);
+    });
+
+    const classCollection = {};
+    let expected = 0;
+    let collected = 0;
+    let paidStudents = 0;
+
+    scopedStudents.forEach((student) => {
+        const studentId = String(student?.id || '').trim();
+        const feeAmount = getDashboardStudentFee(student);
+        expected += feeAmount;
+
+        const backendAmount = studentId ? backendCollectedByStudent.get(studentId) : undefined;
+        const collectedAmount = backendAmount !== undefined
+            ? backendAmount
+            : getFinanceStudentLocalCollected(student, monthMeta);
+
+        if (collectedAmount > 0) {
+            collected += collectedAmount;
+            paidStudents += 1;
+        }
+
+        const className = classNameResolver(student.classGrade || 'Unassigned Class');
+        if (!classCollection[className]) classCollection[className] = { expected: 0, collected: 0 };
+        classCollection[className].expected += feeAmount;
+        classCollection[className].collected += Math.max(collectedAmount || 0, 0);
+    });
+
+    const salarySummary = typeof getMonthlySalarySummary === 'function'
+        ? getMonthlySalarySummary(monthMeta.monthKey)
+        : { expected: 0, transferred: 0, pending: 0, roster: [] };
+    const paidBills = getFinancePaidBillsAmount(monthMeta.monthKey, selectedCampus);
+    const paidExpenses = Number(salarySummary.transferred || 0) + paidBills;
+    const allMonthsSalaries = getAllFinanceSalaryTransfers(selectedCampus);
+    const allMonthsBills = getFinancePaidBillsAmount('', selectedCampus);
+
+    return {
+        month: monthMeta.monthName,
+        monthKey: monthMeta.monthKey,
+        monthMeta,
+        expected,
+        collected,
+        pending: Math.max(expected - collected, 0),
+        paidStudents,
+        salarySummary,
+        paidBills,
+        paidExpenses,
+        profitLoss: collected - paidExpenses,
+        netExpected: expected - Number(salarySummary.expected || 0),
+        netCollected: collected - Number(salarySummary.transferred || 0),
+        remainingBalance: collected - paidExpenses,
+        allMonthsCollected,
+        allMonthsSalaries,
+        allMonthsBills,
+        allMonthsProfitLoss: allMonthsCollected - allMonthsSalaries - allMonthsBills,
+        classCollection
+    };
+}
+
+async function fetchFinanceFeePayments() {
+    const endpoints = [`${API_BASE_URL}/fees/payments`, `${API_BASE_URL}/fees`];
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint);
+            const result = await parseJsonResponse(response, 'Fee payments could not be loaded.');
+            if (!response.ok || result?.success === false) throw new Error(result?.message || 'Fee payments could not be loaded.');
+            return Array.isArray(result?.payments) ? result.payments : [];
+        } catch (error) {
+            console.warn(`Fee payments could not be loaded from ${endpoint}:`, error.message);
+        }
+    }
+    return [];
 }
 
 function getDashboardFeeStatusRevenue(students = []) {
@@ -4548,18 +4924,15 @@ async function getDashboardBackendFeeStatusRevenue(students = []) {
         const payments = Array.isArray(result?.payments) ? result.payments : [];
 
         payments.forEach((payment) => {
-            const status = String(payment?.status || '').toLowerCase();
-            if (!['paid', 'partial'].includes(status)) return;
+            if (!isDashboardFeeCollectionPayment(payment)) return;
             const studentId = String(payment?.studentId || '');
             const matchedStudent = studentMap.get(studentId) ||
                 rollMap.get(String(payment?.rollNo || '').trim().toLowerCase()) ||
                 nameRollMap.get(`${String(payment?.studentName || '').trim().toLowerCase()}|${String(payment?.rollNo || '').trim().toLowerCase()}|${String(payment?.classGrade || '').trim().toLowerCase()}`);
             if (!matchedStudent) return;
-            const monthKeys = getDashboardPaymentMonthKeys(payment?.feeMonth || '');
-            if (monthKeys.length && !monthKeys.includes(currentMonthKey)) return;
-            const amount = Math.max(Number(payment?.amount || 0), 0);
+            const amount = getDashboardPaymentAmountForMonth(payment, currentMonthKey);
             if (!(amount > 0)) return;
-            summary.total += amount / Math.max(monthKeys.length || 1, 1);
+            summary.total += amount;
             paidStudentIds.add(String(matchedStudent.id || studentId || `${payment?.studentName || ''}|${payment?.rollNo || ''}`));
         });
 
@@ -4635,18 +5008,23 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     const detailEl = document.getElementById('dashRevenueDetail');
     if (!amountEl && !detailEl) return;
 
-    const students = Array.isArray(studentsForDashboard)
-        ? studentsForDashboard
-        : getDashboardCampusFilteredRecords(getArrayData(STORAGE_KEY_STUDENTS));
-    const localSummary = getDashboardFeeStatusRevenue(students);
-    const backendSummary = await getDashboardBackendFeeStatusRevenue(students);
-    const feeSummary = backendSummary && backendSummary.total > 0 ? backendSummary : localSummary;
+    await loadFinanceBillsFromServer().catch((error) => {
+        console.warn('Finance bills could not be synced for dashboard:', error.message);
+    });
+    const allStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    const payments = await fetchFinanceFeePayments();
+    const feeSummary = calculateFinanceSummary({
+        students: allStudents,
+        payments,
+        monthKey: getCurrentDashboardFeeMonthKey(),
+        selectedCampus: getSelectedDashboardCampus()
+    });
     const selectedCampus = getSelectedDashboardCampus();
     const campusLabel = selectedCampus === 'all' ? '' : ` in ${selectedCampus}`;
 
-    if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.total);
+    if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.collected);
     if (detailEl) {
-        detailEl.textContent = `${feeSummary.paidStudents} ${feeSummary.paidStudents === 1 ? 'student' : 'students'} paid for ${feeSummary.month}${campusLabel}`;
+        detailEl.textContent = `${feeSummary.paidStudents} ${feeSummary.paidStudents === 1 ? 'student' : 'students'} paid for ${feeSummary.month}${campusLabel} | Pending ${formatDashboardCurrency(feeSummary.pending)}`;
         if (window.lucide) window.lucide.createIcons();
     }
 }
@@ -4667,7 +5045,7 @@ document.addEventListener('change', (e) => {
 });
 
 // Submit Payment Confirmation
-document.addEventListener('submit', (e) => {
+document.addEventListener('submit', async (e) => {
     if (e.target && e.target.id === 'paymentConfirmForm') {
         e.preventDefault();
         const bId = document.getElementById('pBillId').value;
@@ -4682,6 +5060,14 @@ document.addEventListener('submit', (e) => {
             bills[index].receipt = receiptSrc;
 
             saveBills(bills);
+            try {
+                const savedBill = await saveFinanceBillToServer(bills[index]);
+                bills[index] = savedBill;
+                saveBills(bills);
+            } catch (error) {
+                console.warn('Finance payment saved locally but server sync failed:', error.message);
+                pushNotification('Finance Sync Pending', 'Payment saved on this device. Server sync failed.', 'alert-circle');
+            }
             closePaymentModal();
             renderFinance();
             pushNotification('Payment Confirmed', `Bill payment for ${bills[index].category} has been recorded.`, 'trending-up');

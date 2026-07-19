@@ -155,6 +155,21 @@ function defineFeeDueBalanceModel(db) {
     });
 }
 
+function defineFinanceBillModel(db) {
+    return db.define('FinanceBill', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        category: { type: DataTypes.STRING, allowNull: false },
+        amount: { type: DataTypes.DECIMAL(10, 2), defaultValue: 0 },
+        date: DataTypes.STRING,
+        status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        note: DataTypes.TEXT,
+        campusName: DataTypes.STRING,
+        invoice: DataTypes.TEXT('long'),
+        receipt: DataTypes.TEXT('long'),
+        paymentConfirmedDate: DataTypes.DATE
+    });
+}
+
 function defineStudentAttendanceModel(db) {
     return db.define('StudentAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -510,6 +525,7 @@ async function getDb() {
             defineStaffModel(db);
             defineFeePaymentModel(db);
             defineFeeDueBalanceModel(db);
+            defineFinanceBillModel(db);
             defineStudentAttendanceModel(db);
             defineStudentAssignmentSubmissionModel(db);
             defineTeacherAttendanceModel(db);

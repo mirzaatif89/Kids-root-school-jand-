@@ -1137,6 +1137,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const financeTable = document.getElementById('financeTable');
     if (financeTable) {
         renderFinance();
+        loadFinanceBillsFromServer().then(() => renderFinance()).catch((error) => {
+            console.warn('Finance bills could not be loaded from server:', error.message);
+        });
         const fSearch = document.getElementById('financeSearchInput');
         if (fSearch) {
             fSearch.addEventListener('input', (e) => renderFinance(e.target.value.toLowerCase()));
@@ -4045,14 +4048,85 @@ function renderDashboardTable(term = '') {
 // =======================================================
 const STORAGE_KEY_BILLS = 'eduCore_bills';
 let currentCategory = null;
+let financeBillsLoadedFromServer = false;
+let financeBillsLoadPromise = null;
 
 function getBills() {
-    const data = localStorage.getItem(STORAGE_KEY_BILLS);
-    return data ? JSON.parse(data) : [];
+    try {
+        const data = localStorage.getItem(STORAGE_KEY_BILLS);
+        const bills = data ? JSON.parse(data) : [];
+        return Array.isArray(bills) ? bills : [];
+    } catch (_error) {
+        return [];
+    }
 }
 
 function saveBills(bills) {
     localStorage.setItem(STORAGE_KEY_BILLS, JSON.stringify(bills));
+}
+
+function normalizeBillForStorage(bill = {}) {
+    return {
+        id: String(bill.id || '').trim() || generateUniqueRecordId('BILL'),
+        category: String(bill.category || '').trim(),
+        amount: Math.max(Number(bill.amount || 0), 0),
+        date: String(bill.date || bill.billDate || '').trim(),
+        status: String(bill.status || 'Pending').trim() || 'Pending',
+        note: String(bill.note || '').trim(),
+        campusName: String(bill.campusName || bill.branchName || bill.campus || '').trim(),
+        invoice: bill.invoice || null,
+        receipt: bill.receipt || null,
+        paymentConfirmedDate: bill.paymentConfirmedDate || null
+    };
+}
+
+async function loadFinanceBillsFromServer({ force = false } = {}) {
+    if (financeBillsLoadedFromServer && !force) return getBills();
+    if (financeBillsLoadPromise && !force) return financeBillsLoadPromise;
+
+    financeBillsLoadPromise = fetch(`${API_BASE_URL}/finance-bills`)
+        .then(async (response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const result = await response.json();
+            const serverBills = Array.isArray(result?.bills) ? result.bills.map(normalizeBillForStorage) : [];
+
+            if (serverBills.length) {
+                saveBills(serverBills);
+            } else {
+                const localBills = getBills().map(normalizeBillForStorage);
+                if (localBills.length) {
+                    await Promise.allSettled(localBills.map((bill) => saveFinanceBillToServer(bill)));
+                }
+                saveBills(localBills);
+            }
+
+            financeBillsLoadedFromServer = true;
+            return getBills();
+        })
+        .finally(() => {
+            financeBillsLoadPromise = null;
+        });
+
+    return financeBillsLoadPromise;
+}
+
+async function saveFinanceBillToServer(bill = {}) {
+    const response = await fetch(`${API_BASE_URL}/finance-bills`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(normalizeBillForStorage(bill))
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const result = await response.json();
+    return result?.bill ? normalizeBillForStorage(result.bill) : normalizeBillForStorage(bill);
+}
+
+async function deleteFinanceBillFromServer(id) {
+    const response = await fetch(`${API_BASE_URL}/finance-bills?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
 }
 
 function getScopedBills() {
@@ -4142,6 +4216,12 @@ function renderFinance(term = '') {
     const tbody = document.getElementById('financeTableBody');
     if (!tbody) return;
     term = String(term || '').toLowerCase().trim();
+
+    if (!financeBillsLoadedFromServer && !financeBillsLoadPromise) {
+        loadFinanceBillsFromServer().then(() => renderFinance(term)).catch((error) => {
+            console.warn('Finance bills sync failed:', error.message);
+        });
+    }
 
     // If no category selected yet, do nothing or clear
     if (!currentCategory) {
@@ -4286,7 +4366,7 @@ function toggleBillForm(editMode = false) {
 }
 
 // Global listener for the Bill Form
-document.addEventListener('submit', function (e) {
+document.addEventListener('submit', async function (e) {
     if (e.target && e.target.id === 'billForm') {
         e.preventDefault();
         const idField = document.getElementById('billId');
@@ -4317,6 +4397,17 @@ document.addEventListener('submit', function (e) {
             bills.push(newBill);
         }
         saveBills(bills);
+        try {
+            const savedBill = await saveFinanceBillToServer(newBill);
+            bills = getBills();
+            const savedIndex = bills.findIndex(b => b.id === savedBill.id);
+            if (savedIndex !== -1) bills[savedIndex] = savedBill;
+            else bills.push(savedBill);
+            saveBills(bills);
+        } catch (error) {
+            console.warn('Finance bill saved locally but server sync failed:', error.message);
+            pushNotification('Finance Sync Pending', 'Bill saved on this device. Server sync failed.', 'alert-circle');
+        }
         toggleBillForm();
         renderFinance();
         pushNotification('Expense Updated', `Bill for ${newBill.category} recorded.`, 'trending-up');
@@ -4367,6 +4458,12 @@ async function deleteBill(id) {
     let bills = getBills();
     bills = bills.filter(b => b.id !== id);
     saveBills(bills);
+    try {
+        await deleteFinanceBillFromServer(id);
+    } catch (error) {
+        console.warn('Finance bill deleted locally but server sync failed:', error.message);
+        pushNotification('Finance Sync Pending', 'Bill deleted on this device. Server sync failed.', 'alert-circle');
+    }
     renderFinance();
 }
 
@@ -4911,6 +5008,9 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     const detailEl = document.getElementById('dashRevenueDetail');
     if (!amountEl && !detailEl) return;
 
+    await loadFinanceBillsFromServer().catch((error) => {
+        console.warn('Finance bills could not be synced for dashboard:', error.message);
+    });
     const allStudents = getArrayData(STORAGE_KEY_STUDENTS);
     const payments = await fetchFinanceFeePayments();
     const feeSummary = calculateFinanceSummary({
@@ -4945,7 +5045,7 @@ document.addEventListener('change', (e) => {
 });
 
 // Submit Payment Confirmation
-document.addEventListener('submit', (e) => {
+document.addEventListener('submit', async (e) => {
     if (e.target && e.target.id === 'paymentConfirmForm') {
         e.preventDefault();
         const bId = document.getElementById('pBillId').value;
@@ -4960,6 +5060,14 @@ document.addEventListener('submit', (e) => {
             bills[index].receipt = receiptSrc;
 
             saveBills(bills);
+            try {
+                const savedBill = await saveFinanceBillToServer(bills[index]);
+                bills[index] = savedBill;
+                saveBills(bills);
+            } catch (error) {
+                console.warn('Finance payment saved locally but server sync failed:', error.message);
+                pushNotification('Finance Sync Pending', 'Payment saved on this device. Server sync failed.', 'alert-circle');
+            }
             closePaymentModal();
             renderFinance();
             pushNotification('Payment Confirmed', `Bill payment for ${bills[index].category} has been recorded.`, 'trending-up');
