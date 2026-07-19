@@ -10,6 +10,10 @@
       "destination": "/frontend/index.html"
     },
     {
+      "source": "/:page((?!.*\\.).*)",
+      "destination": "/frontend/:page.html"
+    },
+    {
       "source": "/:path*",
       "destination": "/frontend/:path*"
     }

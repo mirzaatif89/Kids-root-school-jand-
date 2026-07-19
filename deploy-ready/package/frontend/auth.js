@@ -139,6 +139,7 @@
         'payment_history.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Payment Statement', icon: 'receipt-text' },
         'fee_logos.html': { moduleKey: 'fees', defaultHome: 'dashboard.html', label: 'Logos', icon: 'image' },
         'bills.html': { moduleKey: 'bills', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
+        'finance.html': { moduleKey: 'bills', defaultHome: 'dashboard.html', label: 'Bills', icon: 'receipt' },
         'library.html': { moduleKey: 'library', defaultHome: 'dashboard.html', label: 'Library', icon: 'library' },
         'cafe.html': { moduleKey: 'cafe', defaultHome: 'dashboard.html', label: 'Cafe', icon: 'coffee' },
         'transport.html': { moduleKey: 'transport', defaultHome: 'dashboard.html', label: 'Transport', icon: 'bus' },
