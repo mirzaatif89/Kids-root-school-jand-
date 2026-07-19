@@ -248,9 +248,41 @@
                 String(student?.enrollmentStatus || '').trim().toLowerCase() === 'terminated';
         }
 
+        function getRemainingAuthHeaders() {
+            const token = sessionStorage.getItem('eduCore_token') || '';
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        }
+
+        function normalizeRemainingStudentList(value) {
+            const list = Array.isArray(value) ? value : (Array.isArray(value?.students) ? value.students : []);
+            return list.filter((student) => student && student.id);
+        }
+
+        function mergeRemainingStudents(serverStudents = []) {
+            const localStudents = typeof getArrayData === 'function'
+                ? getArrayData('eduCore_students')
+                : readJsonStorage('eduCore_students', []);
+            if (typeof mergeStudentRecords === 'function') {
+                return mergeStudentRecords(serverStudents, { preserveLocalOnly: true });
+            }
+
+            const byId = new Map();
+            localStudents.forEach((student) => {
+                if (student?.id) byId.set(String(student.id), student);
+            });
+            serverStudents.forEach((student) => {
+                if (!student?.id) return;
+                const existing = byId.get(String(student.id)) || {};
+                byId.set(String(student.id), { ...existing, ...student });
+            });
+            return Array.from(byId.values());
+        }
+
         async function fetchRemainingData(endpoint, fallback) {
             try {
-                const response = await fetch(`${remainingApiBaseUrl()}/${endpoint}`);
+                const response = await fetch(`${remainingApiBaseUrl()}/${endpoint}`, {
+                    headers: getRemainingAuthHeaders()
+                });
                 if (!response.ok) throw new Error(endpoint);
                 return await response.json();
             } catch (_error) {
@@ -259,13 +291,17 @@
         }
 
         async function hydrateRemainingCaches() {
-            const [studentsResult, paymentsResult] = await Promise.all([
+            const [studentsResult, paymentsResult, dueBalanceResult] = await Promise.all([
                 fetchRemainingData('students', readJsonStorage('eduCore_students', [])),
-                fetchRemainingData('fees/payments', { payments: [] })
+                fetchRemainingData('fees/payments', { payments: [] }),
+                fetchRemainingData('fees/due-balances', { balances: {} })
             ]);
 
-            const students = Array.isArray(studentsResult) ? studentsResult : (studentsResult.students || []);
+            const students = mergeRemainingStudents(normalizeRemainingStudentList(studentsResult));
             if (students.length) localStorage.setItem('eduCore_students', JSON.stringify(students));
+            const dueBalances = dueBalanceResult?.balances && typeof dueBalanceResult.balances === 'object'
+                ? dueBalanceResult.balances
+                : {};
 
             const payments = Array.isArray(paymentsResult?.payments) ? paymentsResult.payments : [];
             if (payments.length) {
@@ -295,11 +331,12 @@
             }
 
             return {
-                students: students.length ? students : readJsonStorage('eduCore_students', [])
+                students: students.length ? students : readJsonStorage('eduCore_students', []),
+                dueBalances
             };
         }
 
-        function buildRemainingRows(students) {
+        function buildRemainingRows(students, dueBalances = {}) {
             const selectedCampus = typeof getGlobalCampusFilterForCurrentUser === 'function'
                 ? getGlobalCampusFilterForCurrentUser()
                 : (localStorage.getItem('eduCore_dashboard_campus_filter') || 'all');
@@ -319,7 +356,9 @@
                         items.push({ type: 'Monthly Fee', label: `${month} fee`, amount: remainingAmount });
                     }
                 });
-                const directRemaining = Number(String(student.remainingAmount || 0).replace(/,/g, '')) || 0;
+                const savedRemaining = Number(String(student.remainingAmount || 0).replace(/,/g, '')) || 0;
+                const backendBalance = Number(String(dueBalances?.[student.id] || 0).replace(/,/g, '')) || 0;
+                const directRemaining = Math.max(savedRemaining, backendBalance, 0);
                 if (directRemaining > 0) items.push({ type: 'Remaining Amount', label: 'Student remaining amount', amount: directRemaining });
 
                 const total = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -411,8 +450,8 @@
         async function loadRemainingCharges() {
             const tbody = document.getElementById('remainingChargesBody');
             tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Loading remaining charges...</td></tr>';
-            const { students } = await hydrateRemainingCaches();
-            remainingRows = buildRemainingRows(students);
+            const { students, dueBalances } = await hydrateRemainingCaches();
+            remainingRows = buildRemainingRows(students, dueBalances);
             populateRemainingFilters();
             renderRemainingRows();
             if (window.lucide) window.lucide.createIcons();
@@ -434,6 +473,10 @@
             if (event.key === 'Escape') closeRemainingRecordModal();
         });
         document.addEventListener('DOMContentLoaded', loadRemainingCharges);
+        if (typeof socket !== 'undefined' && socket && typeof socket.on === 'function') {
+            socket.on('students_update', loadRemainingCharges);
+            socket.on('fee_payment_update', loadRemainingCharges);
+        }
         if (window.lucide) window.lucide.createIcons();
     </script>
 </body>
