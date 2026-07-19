@@ -2388,13 +2388,14 @@
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[selectedStudent?.id] || {};
             const baseFee = Number.isFinite(monthlyFee) ? monthlyFee : 0;
+            const directRemainingAmount = Math.max(Number(summary?.studentRemainingAmount || getChallanStudentRemainingAmount(selectedStudent) || 0), 0);
             const baseAmountValue = safeSelected.reduce((total, month) => {
                 const monthKey = String(month || '').trim();
                 if (!monthKey) return total;
                 const alreadyPaid = Number(studentPayments[monthKey]?.amount || 0);
                 const remainingForMonth = Math.max(baseFee - alreadyPaid, 0);
                 return total + remainingForMonth;
-            }, 0);
+            }, 0) + directRemainingAmount;
 
             const feeMonthInput = document.getElementById('feeMonth');
             if (feeMonthInput) {
@@ -2650,6 +2651,10 @@
             }
         }
 
+        function getChallanStudentRemainingAmount(student) {
+            return Math.max(Number(String(student?.remainingAmount || 0).replace(/,/g, '')) || 0, 0);
+        }
+
         function getChallanStudentFeeSummary(student) {
             const challanMonthLabel = String(document.getElementById('challanMonth')?.value || '').trim();
             let effectiveNow = new Date();
@@ -2692,6 +2697,7 @@
             }
 
             const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
+            const studentRemainingAmount = getChallanStudentRemainingAmount(student);
             const paidMonths = [];
             const pendingMonths = [];
             let pendingAmount = 0;
@@ -2706,12 +2712,14 @@
                 }
             });
 
-            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid') {
+            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid' && (monthlyFee > 0 || studentRemainingAmount > 0)) {
                 pendingMonths.push(CHALLAN_MONTHS[currentMonthIndex]);
             }
+            pendingAmount += studentRemainingAmount;
 
             return {
                 monthlyFee,
+                studentRemainingAmount,
                 admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
                 paidMonths,
                 pendingMonths,
@@ -2771,6 +2779,7 @@
             const studentPayments = paymentDetails[student.id] || {};
             let totalPaidAmount = 0;
             const totalPendingAmount = Number(summary?.pendingAmount || 0);
+            const directRemainingAmount = Number(summary?.studentRemainingAmount || getChallanStudentRemainingAmount(student) || 0);
 
             summary.paidMonths.forEach(month => {
                 const payment = studentPayments[month];
@@ -2788,6 +2797,9 @@
                     return `${m} (Due PKR ${formatCurrency(dueAmount)})`;
                 }).join(', ')
                 : 'None';
+            const remainingDetails = directRemainingAmount > 0
+                ? ` | Previous Remaining: PKR ${formatCurrency(directRemainingAmount)}`
+                : '';
 
             const paidDetails = summary.paidMonths.length > 0
                 ? summary.paidMonths.map((m) => {
@@ -2804,7 +2816,7 @@
                 <div>Admission Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
                 <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
                 <div>Paid Months: ${escapeHtml(paidDetails)} | <strong>Amount: PKR ${totalPaidAmount.toLocaleString('en-PK')}</strong></div>
-                <div>Pending Months: <strong>${pendingDetails}</strong></div>
+                <div>Pending Months: <strong>${pendingDetails}${remainingDetails}</strong></div>
                 <div>Pending Amount: <strong>PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
                 <div>Total Due: <strong style="color: #dc2626;">PKR ${totalPendingAmount.toLocaleString('en-PK')}</strong></div>
             `;
@@ -3665,7 +3677,7 @@
                         const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
                         const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
                         return total + (dueForThisMonth || 0);
-                    }, 0) || (monthlyFee || baseAmountFallback);
+                    }, 0) + getChallanStudentRemainingAmount(student) || (monthlyFee || baseAmountFallback);
 
                 const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
@@ -3909,7 +3921,7 @@
                         const paidForThisMonth = Number(studentPayments[month]?.amount || 0);
                         const dueForThisMonth = Math.max(monthlyFee - paidForThisMonth, 0);
                         return total + (dueForThisMonth || 0);
-                    }, 0) || (monthlyFee || baseAmountFallback);
+                    }, 0) + getChallanStudentRemainingAmount(student) || (monthlyFee || baseAmountFallback);
 
                     const totalDue = Math.max(baseAmount + additionalCharges - discountAmount, 0);
 
