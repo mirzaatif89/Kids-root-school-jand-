@@ -419,11 +419,10 @@ ul {
 }
 
 .logo-section {
-    display: grid;
-    grid-template-columns: 38px minmax(0, 1fr);
+    display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.55rem;
+    justify-content: flex-start;
+    gap: 0.75rem;
     width: 100%;
     min-height: 62px;
     padding: 0.6rem 0.72rem;
@@ -437,16 +436,7 @@ ul {
 }
 
 .sidebar .logo-section::before {
-    content: "";
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    background-color: #ecfdf5;
-    background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M8 15.5L20 9L32 15.5L20 22L8 15.5Z' fill='%230f766e'/%3E%3Cpath d='M13 19V25.5C13 27.8 16.1 30 20 30C23.9 30 27 27.8 27 25.5V19' stroke='%23115e59' stroke-width='2.2' stroke-linecap='round'/%3E%3Cpath d='M32 16V24' stroke='%2320b0a4' stroke-width='2.2' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='26.5' r='2.4' fill='%2320b0a4'/%3E%3C/svg%3E");
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: 31px 31px;
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+    content: none;
 }
 
 .sidebar .logo-section::after {
@@ -456,15 +446,29 @@ ul {
     font-weight: 800;
     line-height: 1.18;
     letter-spacing: 0;
-    white-space: pre-line;
-    text-align: center;
+    white-space: normal;
+    text-align: left;
     text-transform: none;
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .sidebar .sidebar-logo-img {
-    display: none;
+    display: block;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 8px;
+    background-color: #ecfdf5;
+    padding: 4px;
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar .logo-section > :not(.sidebar-logo-img) {
+    display: none !important;
 }
 
 .nav-links {

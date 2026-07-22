@@ -39,7 +39,7 @@ let dashboardActiveSessionsInterval = null;
 let activeSessionsModalEventsBound = false;
 const DASHBOARD_CAMPUS_FILTER_KEY = 'eduCore_dashboard_campus_filter';
 const GLOBAL_CAMPUS_FILTER_KEY = DASHBOARD_CAMPUS_FILTER_KEY;
-const DEFAULT_CAMPUS_NAMES = ['Main Campus'];
+const DEFAULT_CAMPUS_NAMES = ['Jand Campus', 'Langar Campus', 'Main Campus'];
 const DEFAULT_STUDENT_CLASS_ORDER = [
     'Play Group', 'Nursery', 'Prep',
     'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
@@ -1184,7 +1184,11 @@ function getUniqueCampusNames(extraCampuses = []) {
     getArrayData(STORAGE_KEY_TEACHERS).forEach((teacher) => addCampus(teacher.campusName || teacher.bankBranch));
     getData(STORAGE_KEY_STAFF).forEach((staff) => addCampus(staff.campusName || staff.bankBranch));
 
-    return Array.from(campusMap.values()).sort((a, b) => a.localeCompare(b));
+    const defaultKeys = new Set(DEFAULT_CAMPUS_NAMES.map((campusName) => campusName.toLowerCase()));
+    const addedCampuses = Array.from(campusMap.values())
+        .filter((campusName) => !defaultKeys.has(campusName.toLowerCase()))
+        .sort((a, b) => a.localeCompare(b));
+    return [...DEFAULT_CAMPUS_NAMES, ...addedCampuses];
 }
 
 function populateCampusSelect(selectId, campuses, placeholder, selectedValue = '') {

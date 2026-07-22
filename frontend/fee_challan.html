@@ -1123,11 +1123,7 @@
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="logo-section">
-                <i data-lucide="graduation-cap" style="font-size: 2.5rem; margin-bottom: 0.5rem;"></i>
-                <div style="display: flex; flex-direction: column; align-items: center; gap: 0;">
-                    <span style="font-size: 1rem; line-height: 1.2;">Kids Roots Jand</span>
-                    <span style="font-size: 1rem; line-height: 1.2;">System</span>
-                </div>
+                <img class="sidebar-logo-img" src="images/logo.png" alt="Kids Roots Jand logo">
             </div>
             <nav class="nav-links">
                 <a href="dashboard.html" class="nav-item"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></a>
@@ -1174,44 +1170,30 @@
                                     <label for="challanNumber">Challan Number</label>
                                     <input type="text" id="challanNumber" placeholder="CH-26-822">
                                 </div>
-                                <div class="field-block full">
-                                    <label for="challanFilterTrigger">Filters</label>
-                                    <div class="challan-filter-dropdown" id="challanFilterDropdown">
-                                        <button type="button" class="challan-filter-trigger" id="challanFilterTrigger"
-                                            aria-haspopup="true" aria-expanded="false">
-                                            Class: All, Campus: All, Status: All
-                                        </button>
-                                        <div class="challan-filter-menu" id="challanFilterMenu">
-                                            <div class="challan-filter-grid">
-                                                <div class="challan-filter-field">
-                                                    <label for="challanClassFilter">Class</label>
-                                                    <select id="challanClassFilter">
-                                                        <option value="">All Classes</option>
-                                                    </select>
-                                                </div>
-                                                <div class="challan-filter-field">
-                                                    <label for="challanCampusFilter">Campus</label>
-                                                    <select id="challanCampusFilter">
-                                                        <option value="">All Campuses</option>
-                                                    </select>
-                                                </div>
-                                                <div class="challan-filter-field">
-                                                    <label for="challanFeeStatusFilter">Fee Status</label>
-                                                    <select id="challanFeeStatusFilter">
-                                                        <option value="all" selected>All</option>
-                                                        <option value="pending">Pending</option>
-                                                        <option value="paid">Paid</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="field-help">Select class and campus first, then enter roll number to open the student's challan.</div>
+                                <div class="field-block">
+                                    <label for="challanCampusFilter">Select Campus</label>
+                                    <select id="challanCampusFilter">
+                                        <option value="">Select Campus</option>
+                                    </select>
+                                </div>
+                                <div class="field-block">
+                                    <label for="challanClassFilter">Select Class</label>
+                                    <select id="challanClassFilter">
+                                        <option value="">Select Class</option>
+                                    </select>
                                 </div>
                                 <div class="field-block">
                                     <label for="studentLookup">Roll Number</label>
                                     <input type="text" id="studentLookup" placeholder="20233">
-                                    <div class="field-help">Roll lookup is limited to the selected class and campus.</div>
+                                    <div class="field-help">Select campus and class first, then enter roll number to open fee details.</div>
+                                </div>
+                                <div class="field-block">
+                                    <label for="challanFeeStatusFilter">Fee Status</label>
+                                    <select id="challanFeeStatusFilter">
+                                        <option value="all" selected>All</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="paid">Paid</option>
+                                    </select>
                                 </div>
                                 <div class="field-block">
                                     <label for="challanStudent">Student Name</label>
