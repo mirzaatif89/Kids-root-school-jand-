@@ -253,6 +253,13 @@
             gap: 1rem;
         }
 
+        .fee-summary-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.55rem;
+        }
+
         .month-payment-date {
             display: grid;
             gap: 0.25rem;
@@ -1380,7 +1387,7 @@
             return document.getElementById(getMonthPaymentDateInputId(studentId, month))?.value || getTodayDateInputValue();
         }
 
-        function showManualFeePaymentModal(month, remainingAmount, defaultPaymentDate = '', feeAmount = remainingAmount, studentRemainingCharges = 0, monthDetails = []) {
+        function showManualFeePaymentModal(month, remainingAmount, defaultPaymentDate = '', feeAmount = remainingAmount, studentRemainingCharges = 0, monthDetails = [], defaultTarget = '') {
             const modal = document.getElementById('manualFeePaymentModal');
             const form = document.getElementById('manualFeePaymentForm');
             const targetField = document.getElementById('manualFeePaymentTargetField');
@@ -1412,12 +1419,13 @@
                 .reduce((sum, item) => sum + Number(item.remainingAmount || 0), 0);
             const hasRemainingAmountTarget = safeStudentRemainingCharges > 0;
             const hasManualMonthTargets = payableMonthDetails.length > 0 || paidMonthDetails.length > 0 || hasRemainingAmountTarget;
-            let activeTargetMonth = '__total__';
+            const showTotalPaymentTarget = safeTotalPayment > 0;
+            let activeTargetMonth = showTotalPaymentTarget ? '__total__' : (defaultTarget || (paidMonthDetails[0] ? `__unpaid__:${paidMonthDetails[0].month}` : '__total__'));
             let activeMaxPayment = safeTotalPayment;
             let activeAction = 'pay';
             targetField.style.display = hasManualMonthTargets ? 'grid' : 'none';
             targetSelect.innerHTML = [
-                `<option value="__total__">Total Fee</option>`,
+                ...(showTotalPaymentTarget ? [`<option value="__total__">Total Fee</option>`] : []),
                 ...payableMonthDetails.map((item) => (
                     `<option value="${item.month}">${item.month} - ${item.badgeLabel} - PKR ${Number(item.remainingAmount || 0).toLocaleString('en-PK')}</option>`
                 )),
@@ -1428,9 +1436,14 @@
                     `<option value="__unpaid__:${item.month}">${item.month} - Paid - Mark Unpaid</option>`
                 ))
             ].join('');
+            if (defaultTarget && Array.from(targetSelect.options).some((option) => option.value === defaultTarget)) {
+                targetSelect.value = defaultTarget;
+            } else if (activeTargetMonth && Array.from(targetSelect.options).some((option) => option.value === activeTargetMonth)) {
+                targetSelect.value = activeTargetMonth;
+            }
 
             const renderBreakdown = () => {
-                activeTargetMonth = targetSelect.value || '__total__';
+                activeTargetMonth = targetSelect.value || activeTargetMonth || '__total__';
                 const selectedMonth = payableMonthDetails.find((item) => item.month === activeTargetMonth);
                 const unpaidMonthName = activeTargetMonth.startsWith('__unpaid__:') ? activeTargetMonth.slice('__unpaid__:'.length) : '';
                 const selectedPaidMonth = paidMonthDetails.find((item) => item.month === unpaidMonthName);
@@ -2188,6 +2201,7 @@
                 .filter((item) => item.month !== CURRENT_MONTH_NAME)
                 .reduce((sum, item) => sum + item.remainingAmount, 0);
             const totalDue = monthlyDue + studentRemainingCharges;
+            const hasPaidMonths = paidMonths.length > 0;
             const firstMonth = months[0]?.month || '';
             const lastMonth = months[months.length - 1]?.month || '';
             const monthRange = firstMonth === lastMonth ? firstMonth : `${firstMonth} - ${lastMonth}`;
@@ -2213,7 +2227,10 @@
                         <span>Total Payment</span>
                         <strong>PKR ${totalDue.toLocaleString('en-PK')}</strong>
                     </div>
-                    <button class="toggle-fee-btn btn-add-payment" onclick="addManualStudentPayment('${studentId}')" ${totalDue > 0 ? '' : 'disabled'}>Add Payment</button>
+                    <div class="fee-summary-actions">
+                        <button class="toggle-fee-btn btn-add-payment" onclick="addManualStudentPayment('${studentId}')" ${totalDue > 0 ? '' : 'disabled'}>Add Payment</button>
+                        <button class="toggle-fee-btn btn-mark-unpaid" onclick="markPaidStudentPaymentUnpaid('${studentId}')" ${hasPaidMonths ? '' : 'disabled'}>Mark Unpaid</button>
+                    </div>
                 </div>
             `;
             container.appendChild(row);
@@ -2285,6 +2302,38 @@
                     students[idx].feesStatus = 'Pending';
                     saveData(STORAGE_KEY_STUDENTS, students);
                 }
+            }
+        }
+
+        async function markPaidStudentPaymentUnpaid(studentId) {
+            const { student, months } = buildStudentFeeMonthDetails(studentId);
+            if (!student) return;
+
+            const paidMonths = months.filter((item) => item.remainingAmount <= 0 || item.isPaid || item.badgeLabel === 'Paid');
+            if (!paidMonths.length) {
+                alert('No paid month found to mark unpaid.');
+                return;
+            }
+
+            const defaultTarget = `__unpaid__:${paidMonths[0].month}`;
+            const payment = await showManualFeePaymentModal(
+                'Mark Unpaid',
+                0,
+                getTodayDateInputValue(),
+                0,
+                0,
+                paidMonths,
+                defaultTarget
+            );
+            if (!payment || payment.action !== 'mark_unpaid' || !payment.targetMonth) return;
+
+            try {
+                await markStudentMonthUnpaid(studentId, payment.targetMonth);
+                renderMonthlyFeeRecord(studentId);
+                refreshVisibleFeeView();
+                alert(`${payment.targetMonth} fee marked unpaid.`);
+            } catch (error) {
+                alert(error?.message || 'Fee could not be marked unpaid.');
             }
         }
 
