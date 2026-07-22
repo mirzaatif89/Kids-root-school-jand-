@@ -2697,63 +2697,29 @@
             }
 
             const currentMonthIndex = effectiveNow.getMonth();
-            const currentYear = effectiveNow.getFullYear();
+            const currentMonth = CHALLAN_MONTHS[currentMonthIndex];
             const paymentDetails = JSON.parse(localStorage.getItem(CHALLAN_PAYMENT_DETAILS_KEY) || '{}');
             const studentPayments = paymentDetails[student.id] || {};
-            
-            // Get admission month and year
-            let admissionMonthIndex = 0;
-            let admissionYear = currentYear;
-            
-            if (student?.admissionDate) {
-                const admissionDate = new Date(student.admissionDate);
-                admissionMonthIndex = admissionDate.getMonth();
-                admissionYear = admissionDate.getFullYear();
-            } else {
-                // Fallback: try to get from first recorded payment month
-                const firstPaidMonthIndex = CHALLAN_MONTHS.findIndex(month => Number(studentPayments[month]?.amount || 0) > 0);
-                if (firstPaidMonthIndex >= 0) {
-                    admissionMonthIndex = firstPaidMonthIndex;
-                    admissionYear = currentYear;
-                }
-            }
-
-            // Generate all months from admission date to current month
-            const applicableMonths = [];
-            for (let year = admissionYear; year <= currentYear; year++) {
-                const startMonth = year === admissionYear ? admissionMonthIndex : 0;
-                const endMonth = year === currentYear ? currentMonthIndex : 11;
-
-                for (let i = startMonth; i <= endMonth; i++) {
-                    applicableMonths.push(CHALLAN_MONTHS[i]);
-                }
-            }
 
             const monthlyFee = parseInt(student.monthlyFee || 0, 10) || 0;
             const studentRemainingAmount = getChallanStudentRemainingAmount(student);
             const paidMonths = [];
             const pendingMonths = [];
             let pendingAmount = 0;
+            const paidAmount = Number(studentPayments[currentMonth]?.amount || 0);
 
-            applicableMonths.forEach((month) => {
-                const paidAmount = Number(studentPayments[month]?.amount || 0);
-                if (monthlyFee > 0 && paidAmount >= monthlyFee) {
-                    paidMonths.push(month);
-                } else {
-                    pendingMonths.push(month);
-                    pendingAmount += Math.max(monthlyFee - paidAmount, 0);
-                }
-            });
-
-            if (!pendingMonths.length && (student.feesStatus || '').toLowerCase() !== 'paid' && (monthlyFee > 0 || studentRemainingAmount > 0)) {
-                pendingMonths.push(CHALLAN_MONTHS[currentMonthIndex]);
+            if (monthlyFee > 0 && paidAmount >= monthlyFee) {
+                paidMonths.push(currentMonth);
+            } else if ((student.feesStatus || '').toLowerCase() !== 'paid' || studentRemainingAmount > 0 || monthlyFee > 0) {
+                pendingMonths.push(currentMonth);
+                pendingAmount += Math.max(monthlyFee - paidAmount, 0);
             }
             pendingAmount += studentRemainingAmount;
 
             return {
                 monthlyFee,
                 studentRemainingAmount,
-                admissionMonth: CHALLAN_MONTHS[admissionMonthIndex],
+                admissionMonth: currentMonth,
                 paidMonths,
                 pendingMonths,
                 pendingAmount
@@ -2846,7 +2812,7 @@
                 <div>Status: <strong>${escapeHtml(statusLabel)}</strong></div>
                 ${payingMonths ? `<div>Paying Month(s): <strong>${escapeHtml(payingMonths)}</strong></div>` : ''}
                 ${impactLine ? `<div>${impactLine}</div>` : ''}
-                <div>Admission Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
+                <div>Current Month: <strong>${escapeHtml(summary.admissionMonth || '-')}</strong></div>
                 <div>Monthly Fee: <strong>PKR ${summary.monthlyFee.toLocaleString('en-PK')}</strong></div>
                 <div>Paid Months: ${escapeHtml(paidDetails)} | <strong>Amount: PKR ${totalPaidAmount.toLocaleString('en-PK')}</strong></div>
                 <div>Pending Months: <strong>${pendingDetails}${remainingDetails}</strong></div>
