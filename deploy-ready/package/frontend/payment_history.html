@@ -229,14 +229,6 @@
                     <label for="statementMonthFilter">Payment For</label>
                     <select id="statementMonthFilter"><option value="">All Months</option></select>
                 </div>
-                <div class="statement-field">
-                    <label for="statementDateFromFilter">Start Date</label>
-                    <input type="date" id="statementDateFromFilter">
-                </div>
-                <div class="statement-field">
-                    <label for="statementDateToFilter">End Date</label>
-                    <input type="date" id="statementDateToFilter">
-                </div>
             </div>
 
             <div class="history-table-wrap">
@@ -272,14 +264,6 @@
             </div>
             <div class="statement-modal-body">
                 <div class="statement-modal-filters">
-                    <div class="statement-field">
-                        <label for="historyDateFromFilter">Start Date</label>
-                        <input type="date" id="historyDateFromFilter">
-                    </div>
-                    <div class="statement-field">
-                        <label for="historyDateToFilter">End Date</label>
-                        <input type="date" id="historyDateToFilter">
-                    </div>
                     <button class="btn btn-primary" type="button" onclick="printSelectedStudentStatement()"><i data-lucide="printer"></i> Print Statement</button>
                 </div>
                 <div class="history-table-wrap">
@@ -505,17 +489,13 @@
             const selectedStudent = document.getElementById('statementStudentFilter').value;
             const selectedClass = document.getElementById('statementClassFilter').value;
             const selectedMonth = document.getElementById('statementMonthFilter').value;
-            const selectedDateFrom = document.getElementById('statementDateFromFilter').value;
-            const selectedDateTo = document.getElementById('statementDateToFilter').value;
 
             return paymentStatementRows.filter((row) => {
                 const searchText = `${row.student} ${row.fatherName} ${row.classGrade} ${row.rollNo} ${row.month} ${row.date} ${row.displayChallanNumber} ${row.source} ${row.status}`.toLowerCase();
                 return (!term || searchText.includes(term)) &&
                     (!selectedStudent || String(row.studentId || row.student) === selectedStudent) &&
                     (!selectedClass || normalizedFilterValue(row.classGrade) === normalizedFilterValue(selectedClass)) &&
-                    (!selectedMonth || normalizedFilterValue(row.month) === normalizedFilterValue(selectedMonth)) &&
-                    (!selectedDateFrom || row.dateKey >= selectedDateFrom) &&
-                    (!selectedDateTo || row.dateKey <= selectedDateTo);
+                    (!selectedMonth || normalizedFilterValue(row.month) === normalizedFilterValue(selectedMonth));
             });
         }
 
@@ -592,8 +572,7 @@
             const filterText = [
                 document.getElementById('statementStudentFilter').selectedOptions[0]?.textContent || 'All Students',
                 document.getElementById('statementClassFilter').value || 'All Classes',
-                document.getElementById('statementMonthFilter').value || 'All Months',
-                `${document.getElementById('statementDateFromFilter').value || 'Start'} to ${document.getElementById('statementDateToFilter').value || 'End'}`
+                document.getElementById('statementMonthFilter').value || 'All Months'
             ].join(' | ');
             const total = rows.reduce((sum, row) => sum + row.total, 0);
             const rowsHtml = rows.map((row, index) => `
@@ -678,11 +657,6 @@
         function getCurrentStudentStatementRows() {
             return paymentStatementRows
                 .filter((row) => getStatementStudentKey(row) === currentStatementStudentKey)
-                .filter((row) => {
-                    const from = document.getElementById('historyDateFromFilter').value;
-                    const to = document.getElementById('historyDateToFilter').value;
-                    return (!from || row.dateKey >= from) && (!to || row.dateKey <= to);
-                })
                 .sort((a, b) => b.sortTime - a.sortTime);
         }
 
@@ -811,10 +785,6 @@
 
         function openStatementHistory(encodedKey) {
             currentStatementStudentKey = decodeURIComponent(encodedKey || '');
-            const rows = paymentStatementRows.filter((row) => getStatementStudentKey(row) === currentStatementStudentKey);
-            const dates = rows.map((row) => row.dateKey).filter(Boolean).sort();
-            document.getElementById('historyDateFromFilter').value = dates[0] || '';
-            document.getElementById('historyDateToFilter').value = dates[dates.length - 1] || '';
             document.getElementById('statementHistoryModal').classList.add('active');
             document.getElementById('statementHistoryModal').setAttribute('aria-hidden', 'false');
             renderStatementHistoryModal();
@@ -838,7 +808,6 @@
             const firstRow = rows[0];
             const total = rows.reduce((sum, row) => sum + row.amount, 0);
             const printedAt = new Date().toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' });
-            const dateRange = `${document.getElementById('historyDateFromFilter').value || 'Start'} to ${document.getElementById('historyDateToFilter').value || 'End'}`;
             const rowsHtml = rows.map((row, index) => `
                 <tr>
                     <td>${index + 1}</td>
@@ -889,7 +858,6 @@
                         <div><strong>Student</strong>${escHistory(firstRow.student)}</div>
                         <div><strong>Father Name</strong>${escHistory(firstRow.fatherName)}</div>
                         <div><strong>Class / Roll No</strong>${escHistory(firstRow.classGrade)} / ${escHistory(firstRow.rollNo)}</div>
-                        <div><strong>Date Range</strong>${escHistory(dateRange)}</div>
                         <div><strong>Total Records</strong>${rows.length}</div>
                         <div><strong>Total Amount</strong>${moneyHistory(total)}</div>
                         <div><strong>Printed</strong>${escHistory(printedAt)}</div>
@@ -915,15 +883,11 @@
             printWindow.document.close();
         }
 
-        ['statementSearchInput', 'statementStudentFilter', 'statementClassFilter', 'statementMonthFilter', 'statementDateFromFilter', 'statementDateToFilter']
+        ['statementSearchInput', 'statementStudentFilter', 'statementClassFilter', 'statementMonthFilter']
             .forEach((id) => {
                 document.getElementById(id).addEventListener('input', renderPaymentStatement);
                 document.getElementById(id).addEventListener('change', renderPaymentStatement);
             });
-        ['historyDateFromFilter', 'historyDateToFilter'].forEach((id) => {
-            document.getElementById(id).addEventListener('input', renderStatementHistoryModal);
-            document.getElementById(id).addEventListener('change', renderStatementHistoryModal);
-        });
         document.getElementById('statementHistoryModal').addEventListener('mousedown', (event) => {
             if (event.target.id === 'statementHistoryModal') closeStatementHistoryModal();
         });

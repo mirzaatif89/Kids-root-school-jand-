@@ -1005,9 +1005,30 @@
 
         function getFeeStudentMonthlyAmount(student = {}) {
             if (typeof getDashboardStudentFee === 'function') {
-                return getDashboardStudentFee(student);
+                const resolvedFee = getDashboardStudentFee(student);
+                if (resolvedFee > 0 || isFeeZeroFeeStudent(student)) return resolvedFee;
             }
-            return parseInt(student?.monthlyFee || student?.fee || 0, 10) || 0;
+            if (typeof getClassFeeDefault === 'function') {
+                const classFee = getClassFeeDefault(student?.classGrade || '');
+                const classAmount = Number(classFee?.monthlyFee || classFee?.fee || 0) || 0;
+                if (classAmount > 0) return classAmount;
+            }
+            const directFee = parseInt(student?.monthlyFee || student?.fee || 0, 10) || 0;
+            if (directFee > 0 || isFeeZeroFeeStudent(student)) return directFee;
+
+            const normalizeClass = (value) => String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+            const studentClass = normalizeClass(student?.classGrade || '');
+            if (studentClass && typeof getData === 'function') {
+                const classmate = getData(STORAGE_KEY_STUDENTS).find((item) =>
+                    String(item?.id || '') !== String(student?.id || '') &&
+                    normalizeClass(item?.classGrade || '') === studentClass &&
+                    !isFeeZeroFeeStudent(item) &&
+                    (Number(item?.monthlyFee || item?.fee || 0) || 0) > 0
+                );
+                const classmateFee = Number(classmate?.monthlyFee || classmate?.fee || 0) || 0;
+                if (classmateFee > 0) return classmateFee;
+            }
+            return directFee;
         }
 
         function isFeeZeroFeeStudent(student = {}) {
@@ -1289,15 +1310,24 @@
             const monthlyFees = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const studentMonthly = monthlyFees[student.id] || {};
             const applicableMonths = getApplicableStudentFeeMonths(student);
-            const paidMonths = applicableMonths.filter(month => studentMonthly[month] === 'Paid');
-            const pendingMonths = applicableMonths.filter(month => studentMonthly[month] !== 'Paid');
             const monthlyFee = getFeeStudentMonthlyAmount(student);
-            const fineAmount = pendingMonths.reduce((sum, month) => sum + getStudentMonthFineAmount(student, month, studentMonthly[month]), 0);
+            const monthDetails = applicableMonths.map((month) => {
+                const status = studentMonthly[month];
+                const fineAmount = getStudentMonthFineAmount(student, month, status);
+                const paidAmount = getFeeMonthPaymentAmount(student.id, month);
+                const dueAmount = monthlyFee + fineAmount;
+                const pendingAmount = status === 'Paid' ? 0 : Math.max(dueAmount - paidAmount, 0);
+                return { month, status, fineAmount, paidAmount, dueAmount, pendingAmount };
+            });
+            const paidMonths = monthDetails.filter((item) => item.status === 'Paid' || item.pendingAmount <= 0);
+            const pendingMonths = monthDetails.filter((item) => item.pendingAmount > 0);
+            const fineAmount = pendingMonths.reduce((sum, item) => sum + item.fineAmount, 0);
+            const studentRemainingCharges = Math.max(Number(String(student.remainingAmount || 0).replace(/,/g, '')) || 0, 0);
             return {
                 paidCount: paidMonths.length,
                 pendingCount: pendingMonths.length,
                 fineAmount,
-                pendingAmount: (pendingMonths.length * monthlyFee) + fineAmount
+                pendingAmount: pendingMonths.reduce((sum, item) => sum + item.pendingAmount, 0) + studentRemainingCharges
             };
         }
 
