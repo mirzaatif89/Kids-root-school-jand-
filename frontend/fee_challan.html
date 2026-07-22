@@ -89,6 +89,8 @@
         .field-block {
             display: grid;
             gap: 0.32rem;
+            align-content: start;
+            align-self: start;
         }
 
         .field-block.full {
@@ -105,6 +107,7 @@
         .field-block select,
         .field-block textarea {
             width: 100%;
+            height: 38px;
             min-height: 38px;
             border: 1px solid #d8e0e8;
             border-radius: 0.45rem;
@@ -112,10 +115,17 @@
             color: var(--challan-text);
             padding: 0.52rem 0.7rem;
             font: inherit;
+            line-height: 1.15;
             transition: 0.2s ease;
         }
 
+        .field-block select {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+
         .field-block textarea {
+            height: auto;
             min-height: 82px;
             resize: vertical;
         }
