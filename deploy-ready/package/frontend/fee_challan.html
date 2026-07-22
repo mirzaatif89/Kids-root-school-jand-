@@ -1174,30 +1174,25 @@
                                     <label for="challanNumber">Challan Number</label>
                                     <input type="text" id="challanNumber" placeholder="CH-26-822">
                                 </div>
-                                <div class="field-block">
-                                    <label for="studentLookup">Student ID / Roll No</label>
-                                    <input type="text" id="studentLookup" placeholder="STD-0001 or 20233">
-                                    <div class="field-help">Enter a student ID or roll number to auto-fill the form.</div>
-                                </div>
                                 <div class="field-block full">
                                     <label for="challanFilterTrigger">Filters</label>
                                     <div class="challan-filter-dropdown" id="challanFilterDropdown">
                                         <button type="button" class="challan-filter-trigger" id="challanFilterTrigger"
                                             aria-haspopup="true" aria-expanded="false">
-                                            Campus: All, Class: All, Status: All
+                                            Class: All, Campus: All, Status: All
                                         </button>
                                         <div class="challan-filter-menu" id="challanFilterMenu">
                                             <div class="challan-filter-grid">
                                                 <div class="challan-filter-field">
-                                                    <label for="challanCampusFilter">Campus</label>
-                                                    <select id="challanCampusFilter">
-                                                        <option value="">All Campuses</option>
-                                                    </select>
-                                                </div>
-                                                <div class="challan-filter-field">
                                                     <label for="challanClassFilter">Class</label>
                                                     <select id="challanClassFilter">
                                                         <option value="">All Classes</option>
+                                                    </select>
+                                                </div>
+                                                <div class="challan-filter-field">
+                                                    <label for="challanCampusFilter">Campus</label>
+                                                    <select id="challanCampusFilter">
+                                                        <option value="">All Campuses</option>
                                                     </select>
                                                 </div>
                                                 <div class="challan-filter-field">
@@ -1211,7 +1206,12 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="field-help">Tip: Select a campus to print challans for all students in that campus (class optional). Use Fee Status for paid/unpaid.</div>
+                                    <div class="field-help">Select class and campus first, then enter roll number to open the student's challan.</div>
+                                </div>
+                                <div class="field-block">
+                                    <label for="studentLookup">Roll Number</label>
+                                    <input type="text" id="studentLookup" placeholder="20233">
+                                    <div class="field-help">Roll lookup is limited to the selected class and campus.</div>
                                 </div>
                                 <div class="field-block">
                                     <label for="challanStudent">Student Name</label>
@@ -1717,7 +1717,7 @@
             const classLabel = String(document.getElementById('challanClassFilter')?.value || '').trim() || 'All';
             const statusLabel = String(document.getElementById('challanFeeStatusFilter')?.value || 'all').toLowerCase();
             const statusPretty = statusLabel === 'pending' ? 'Pending' : (statusLabel === 'paid' ? 'Paid' : 'All');
-            trigger.textContent = `Campus: ${campus}, Class: ${classLabel}, Status: ${statusPretty}`;
+            trigger.textContent = `Class: ${classLabel}, Campus: ${campus}, Status: ${statusPretty}`;
         }
 
         function handleCampusFilterChange() {
@@ -1741,6 +1741,9 @@
                 hideClassStudentsPopup();
             }
 
+            if (document.getElementById('studentLookup')?.value.trim()) {
+                handleStudentLookup();
+            }
             triggerChallanRefresh();
         }
 
@@ -2017,6 +2020,9 @@
                 hideClassStudentsPopup();
             }
 
+            if (document.getElementById('studentLookup')?.value.trim()) {
+                handleStudentLookup();
+            }
             triggerChallanRefresh();
         }
 
@@ -2219,29 +2225,64 @@
         }
 
         function handleStudentLookup() {
-            const lookupValue = document.getElementById('studentLookup').value.trim().toLowerCase();
+            const lookupInput = document.getElementById('studentLookup');
+            const lookupValue = lookupInput.value.trim().toLowerCase();
             if (!lookupValue) {
                 triggerChallanRefresh();
                 return;
             }
 
-            const student = challanStudents.find(item =>
+            const selectedCampus = getSelectedChallanCampus();
+            const selectedClass = normalizeClassLabel(document.getElementById('challanClassFilter')?.value || '');
+            const isPlainRollLookup = /^[\w-]+$/.test(lookupValue);
+            const exactIdMatch = challanStudents.find(item =>
                 String(item.studentCode || '').toLowerCase() === lookupValue ||
-                String(item.rollNo || '').toLowerCase() === lookupValue ||
-                String(item.id || '').toLowerCase() === lookupValue ||
-                String(item.fullName || '').toLowerCase() === lookupValue
+                String(item.id || '').toLowerCase() === lookupValue
             );
 
-            if (!student) {
+            if (!exactIdMatch && isPlainRollLookup && (!selectedClass || !selectedCampus)) {
+                writeChallanLookupMessage('Select class and campus first, then enter roll number.');
                 triggerChallanRefresh();
                 return;
             }
 
-            populateClassFilter(student.classGrade || '');
+            const scopedStudents = getFilteredChallanStudentsBySelectedClass();
+            const matches = scopedStudents.filter(item =>
+                String(item.rollNo || '').toLowerCase() === lookupValue ||
+                String(item.studentCode || '').toLowerCase() === lookupValue ||
+                String(item.id || '').toLowerCase() === lookupValue ||
+                String(item.fullName || '').toLowerCase() === lookupValue
+            );
+            const student = matches.length === 1 ? matches[0] : (matches.length ? null : exactIdMatch);
+
+            if (!student) {
+                const scopeText = `${selectedClass || 'selected class'} / ${selectedCampus || 'selected campus'}`;
+                const message = matches.length > 1
+                    ? `More than one student found for this roll in ${scopeText}. Select the student from the list.`
+                    : `No student found for this roll number in ${scopeText}.`;
+                writeChallanLookupMessage(message);
+                triggerChallanRefresh();
+                return;
+            }
+
+            if (!selectedCampus && student.campusName) {
+                const campusFilter = document.getElementById('challanCampusFilter');
+                if (campusFilter) campusFilter.value = student.campusName;
+            }
+            if (!selectedClass) {
+                populateClassFilter(student.classGrade || '');
+            }
             populateStudents();
             document.getElementById('challanStudent').value = student.id;
+            writeChallanLookupMessage('');
             applyStudentToChallan(student, true);
             triggerChallanRefresh();
+        }
+
+        function writeChallanLookupMessage(message = '') {
+            const snapshot = document.getElementById('studentFeeSnapshot');
+            if (!snapshot || !message) return;
+            snapshot.innerHTML = `<strong>${escapeHtml(message)}</strong>`;
         }
 
         function applyStudentToChallan(student, syncLookup = false) {
