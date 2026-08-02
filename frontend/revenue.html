@@ -528,6 +528,10 @@
                         <div class="daily-revenue-meta" id="dailyRevenueMeta">Select a date to view fee collection.</div>
                     </div>
                     <div class="daily-revenue-actions">
+                        <label style="display:flex; align-items:center; gap:.45rem; font-size:.82rem; font-weight:700; color:var(--text-secondary);">
+                            <input type="checkbox" id="revenueDetailedPrintToggle" checked>
+                            Student details
+                        </label>
                         <div class="daily-revenue-date-field">
                             <label for="revenueDatePicker">Date</label>
                             <input class="revenue-date-picker" id="revenueDatePicker" type="date" aria-label="Select revenue print date">
@@ -577,6 +581,7 @@
         let selectedRevenueMonthKey = '';
         let selectedRevenueDateKey = '';
         let dailyRevenueRows = [];
+        let dailyRevenueStudentRows = [];
         let dailyRevenueTotalAmount = 0;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -742,6 +747,10 @@
             const raw = String(value || '').trim();
             if (!raw) return '';
             if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+            const slashDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+            if (slashDate) {
+                return `${slashDate[3]}-${slashDate[2].padStart(2, '0')}-${slashDate[1].padStart(2, '0')}`;
+            }
             const parsed = new Date(raw);
             if (Number.isNaN(parsed.getTime())) return '';
             return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
@@ -990,6 +999,8 @@
 
             const dateKey = selectedRevenueDateKey || getTodayDateKey();
             const classMap = new Map();
+            const detailRows = [];
+            const studentMap = new Map((getData(STORAGE_KEY_STUDENTS) || []).map((student) => [String(student.id || ''), student]));
 
             feePayments.forEach((payment) => {
                 if (!payment) return;
@@ -1000,7 +1011,8 @@
                     const source = String(payment.paymentSource || payment.paymentMode || '').toLowerCase();
                     if (!['paid', 'partial'].includes(status) || ['fine', 'fine correction', 'correction'].includes(source)) return;
                 }
-                if (normalizeRevenueDateKey(payment.paidAt || payment.paymentDateLabel || payment.createdAt) !== dateKey) return;
+                const paymentDateKey = normalizeRevenueDateKey(payment.paidAt || payment.paymentDateLabel || payment.createdAt);
+                if (paymentDateKey !== dateKey) return;
                 const amount = Number(payment.amount || 0);
                 if (!(amount > 0)) return;
                 const className = getStandardClassName(payment.classGrade || 'Unassigned');
@@ -1009,6 +1021,19 @@
                 previous.payments += 1;
                 if (payment.studentId) previous.studentIds.add(String(payment.studentId));
                 classMap.set(className, previous);
+
+                const student = studentMap.get(String(payment.studentId || '')) || {};
+                detailRows.push({
+                    studentName: payment.studentName || student.fullName || '-',
+                    fatherName: payment.fatherName || student.fatherName || student.parentName || '-',
+                    className,
+                    campusName: payment.campusName || student.campusName || student.branchName || student.campus || 'Main Campus',
+                    rollNo: payment.rollNo || student.rollNo || '-',
+                    challanNumber: payment.challanNumber || '-',
+                    paymentDate: payment.paymentDateLabel || paymentDateKey || '-',
+                    amount,
+                    sortKey: `${className}|${String(payment.studentName || student.fullName || '').toLowerCase()}`
+                });
             });
 
             const sortedClasses = feeClasses
@@ -1026,6 +1051,7 @@
                     amount: row.amount
                 };
             });
+            dailyRevenueStudentRows = detailRows.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
             dailyRevenueTotalAmount = dailyRevenueRows.reduce((sum, row) => sum + row.amount, 0);
 
             if (meta) {
@@ -1034,6 +1060,8 @@
             if (totalEl) totalEl.textContent = formatRevenueMoney(dailyRevenueTotalAmount);
 
             if (!dailyRevenueRows.length) {
+                dailyRevenueStudentRows = [];
+                dailyRevenueTotalAmount = 0;
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-secondary);">No fee collection found for ${formatRevenueDateLabel(dateKey)}.</td></tr>`;
                 return;
             }
@@ -1050,6 +1078,7 @@
 
         function printDailyRevenueReport() {
             const dateKey = selectedRevenueDateKey || getTodayDateKey();
+            const includeStudentDetails = document.getElementById('revenueDetailedPrintToggle')?.checked !== false;
             const schoolName = (() => {
                 try {
                     const settings = JSON.parse(localStorage.getItem('eduCore_settings') || '{}') || {};
@@ -1059,7 +1088,20 @@
                 }
             })();
             const printedAt = new Date().toLocaleString();
-            const rowsMarkup = dailyRevenueRows.length ? dailyRevenueRows.map((row, index) => `
+            const detailedRowsMarkup = dailyRevenueStudentRows.length ? dailyRevenueStudentRows.map((row, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${escapeHtml(row.studentName)}</td>
+                    <td>${escapeHtml(row.fatherName)}</td>
+                    <td>${escapeHtml(row.className)}</td>
+                    <td>${escapeHtml(row.campusName)}</td>
+                    <td>${escapeHtml(row.rollNo)}</td>
+                    <td>${escapeHtml(row.challanNumber)}</td>
+                    <td>${escapeHtml(row.paymentDate)}</td>
+                    <td>${formatRevenueMoney(row.amount)}</td>
+                </tr>
+            `).join('') : `<tr><td colspan="9" class="empty">No fee collection found for ${formatRevenueDateLabel(dateKey)}.</td></tr>`;
+            const summaryRowsMarkup = dailyRevenueRows.length ? dailyRevenueRows.map((row, index) => `
                 <tr>
                     <td>${index + 1}</td>
                     <td>${escapeHtml(row.className)}</td>
@@ -1068,6 +1110,40 @@
                     <td>${formatRevenueMoney(row.amount)}</td>
                 </tr>
             `).join('') : `<tr><td colspan="5" class="empty">No fee collection found for ${formatRevenueDateLabel(dateKey)}.</td></tr>`;
+            const tableMarkup = includeStudentDetails
+                ? `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Student</th>
+                                <th>Father</th>
+                                <th>Class</th>
+                                <th>Campus</th>
+                                <th>Roll No</th>
+                                <th>Challan No</th>
+                                <th>Payment Date</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${detailedRowsMarkup}</tbody>
+                    </table>
+                `
+                : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Class</th>
+                                <th>Students Paid</th>
+                                <th>Payments</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>${summaryRowsMarkup}</tbody>
+                    </table>
+                `;
+            const totalLabel = includeStudentDetails ? `Total Paid by ${dailyRevenueStudentRows.length} student(s)` : `Total Classes: ${dailyRevenueRows.length}`;
 
             const html = `
                 <!doctype html>
@@ -1093,24 +1169,13 @@
                     <section class="head">
                         <div>
                             <h1>${escapeHtml(schoolName)}</h1>
-                            <p>Daily Fee Collection by Class</p>
+                            <p>${includeStudentDetails ? 'Daily Fee Collection by Student' : 'Daily Fee Collection by Class'}</p>
                             <p>Date: ${escapeHtml(formatRevenueDateLabel(dateKey))}</p>
                         </div>
                         <p>Printed: ${escapeHtml(printedAt)}</p>
                     </section>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Class</th>
-                                <th>Students Paid</th>
-                                <th>Payments</th>
-                                <th>Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>${rowsMarkup}</tbody>
-                    </table>
-                    <div class="total">Total: ${formatRevenueMoney(dailyRevenueTotalAmount)}</div>
+                    ${tableMarkup}
+                    <div class="total">${escapeHtml(totalLabel)} | Total: ${formatRevenueMoney(dailyRevenueTotalAmount)}</div>
                     <script>
                         window.focus();
                         window.print();

@@ -1266,6 +1266,10 @@
                                     <input type="date" id="dueDate">
                                 </div>
                                 <div class="field-block">
+                                    <label for="paymentDate">Payment Date</label>
+                                    <input type="date" id="paymentDate">
+                                </div>
+                                <div class="field-block">
                                     <label for="baseAmount">Base Amount (PKR)</label>
                                     <input type="number" id="baseAmount" min="0" placeholder="1500">
                                 </div>
@@ -1433,7 +1437,7 @@
                 addressLine: 'Address: Nai Abadi. Phone: 03085259900'
             }
         };
-        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'discountValue', 'particulars', 'schoolName', 'schoolAddress', 'urduNote', 'challanNotes'];
+        const challanFormFields = ['challanNumber', 'challanStudent', 'studentSid', 'studentAdmNo', 'studentClass', 'studentRollNo', 'fatherName', 'fatherMobile', 'challanSession', 'challanMonth', 'feeMonth', 'dueDate', 'paymentDate', 'baseAmount', 'payNowAmount', 'additionalCharges', 'discountValue', 'particulars', 'schoolName', 'schoolAddress', 'urduNote', 'challanNotes'];
         const printCopies = ['Parents Copy', 'School Copy', 'Information Copy'];
         const CHALLAN_MONTHLY_FEES_KEY = 'eduCore_monthly_fees';
         const CHALLAN_PAYMENT_DETAILS_KEY = 'eduCore_payment_details';
@@ -2194,6 +2198,7 @@
             const currentYear = now.getFullYear();
             document.getElementById('challanNumber').value = `CH-${String(currentYear).slice(-2)}-${String(Date.now()).slice(-3)}`;
             document.getElementById('dueDate').value = new Date(currentYear, now.getMonth(), 7).toISOString().split('T')[0];
+            document.getElementById('paymentDate').value = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString().split('T')[0];
             document.getElementById('challanSession').value = `${currentYear}-${currentYear + 1}`;
             document.getElementById('challanMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
             document.getElementById('feeMonth').value = now.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }).replace(' ', ', ');
@@ -2522,6 +2527,7 @@
 
             const btn = document.querySelector('.challan-paynow-calc');
             const prevLabel = btn ? btn.textContent : '';
+            const receiptWindow = window.open('', '_blank', 'width=420,height=720');
 
             try {
                 if (btn) {
@@ -2542,7 +2548,10 @@
                         session: data.session,
                         amount: data.payNowAmount,
                         fullAmount: data.totalDue,
-                        challanNumber: data.challanNumber
+                        challanNumber: data.challanNumber,
+                        paymentDate: data.paymentDate,
+                        campusName: data.campusName,
+                        fatherName: data.fatherName
                     })
                 });
 
@@ -2580,6 +2589,7 @@
                 renderStudentFeeSnapshot(selectedStudent, summary);
                 updatePayNowStatusLine();
                 triggerChallanRefresh();
+                printFeePaymentReceipt(result?.payment || {}, data, selectedStudent, receiptWindow);
 
                 if (result?.alreadyRecorded) {
                     alert('This challan was already recorded earlier.');
@@ -2587,6 +2597,9 @@
                     alert('Payment saved successfully.');
                 }
             } catch (error) {
+                if (receiptWindow && !receiptWindow.closed) {
+                    receiptWindow.close();
+                }
                 alert(error?.message || 'Payment could not be saved.');
             } finally {
                 if (btn) {
@@ -2594,6 +2607,138 @@
                     btn.textContent = prevLabel || 'Paid';
                 }
             }
+        }
+
+        function printFeePaymentReceipt(payment = {}, data = {}, student = null, receiptWindow = null) {
+            const branding = typeof getBrandingSettings === 'function' ? getBrandingSettings() : {};
+            const schoolName = branding.schoolName || branding.schoolTitle || data.schoolName || 'Kids Roots Jand';
+            const logoSrc = branding.logoDataUrl || 'images/logo.png';
+            const paidAtText = payment.paymentDateLabel
+                || (payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-GB') : '')
+                || (data.paymentDate ? new Date(`${data.paymentDate}T00:00:00`).toLocaleDateString('en-GB') : '')
+                || new Date().toLocaleDateString('en-GB');
+            const paidTimeText = payment.paidAt
+                ? new Date(payment.paidAt).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })
+                : new Date().toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
+            const receiptStudent = student?.fullName || data.studentName || payment.studentName || '-';
+            const receiptFather = student?.fatherName || data.fatherName || payment.fatherName || '-';
+            const receiptClass = student?.classGrade || data.classSection || payment.classGrade || '-';
+            const receiptCampus = student?.campusName || data.campusName || payment.campusName || 'Main Campus';
+            const receiptRoll = student?.rollNo || data.rollNo || payment.rollNo || '-';
+            const receiptMonth = String(payment.feeMonth || data.feeMonth || '-').trim();
+            const receiptChallan = String(payment.challanNumber || data.challanNumber || '-').trim();
+            const receiptMode = String(payment.paymentSource || payment.paymentMode || 'Manual').trim();
+            const receiptAmount = Number(payment.amount || data.payNowAmount || 0);
+
+            const printWindow = receiptWindow || window.open('', '_blank', 'width=420,height=720');
+            if (!printWindow) {
+                alert('Popup blocked. Please allow popups to print the receipt.');
+                return;
+            }
+
+            printWindow.document.open();
+            printWindow.document.write(`
+                <!doctype html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>${escapeHtml(schoolName)} - Receipt</title>
+                    <style>
+                        @page { size: 80mm auto; margin: 4mm; }
+                        body {
+                            margin: 0;
+                            width: 72mm;
+                            font-family: Arial, sans-serif;
+                            color: #111827;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .receipt {
+                            border: 1px solid #111827;
+                            padding: 6px;
+                        }
+                        .receipt-head {
+                            text-align: center;
+                            border-bottom: 1px dashed #111827;
+                            padding-bottom: 6px;
+                            margin-bottom: 6px;
+                        }
+                        .receipt-head img {
+                            width: 42px;
+                            height: 42px;
+                            object-fit: contain;
+                            display: block;
+                            margin: 0 auto 4px;
+                        }
+                        .receipt-head h1 {
+                            margin: 0;
+                            font-size: 13px;
+                            line-height: 1.2;
+                        }
+                        .receipt-head p {
+                            margin: 2px 0 0;
+                            font-size: 9px;
+                        }
+                        .row {
+                            display: flex;
+                            justify-content: space-between;
+                            gap: 8px;
+                            font-size: 9.5px;
+                            line-height: 1.35;
+                            margin: 2px 0;
+                        }
+                        .row strong {
+                            flex: 0 0 auto;
+                            min-width: 26mm;
+                        }
+                        .amount {
+                            margin: 8px 0 4px;
+                            padding: 6px 0;
+                            border-top: 1px dashed #111827;
+                            border-bottom: 1px dashed #111827;
+                            text-align: center;
+                            font-size: 15px;
+                            font-weight: 800;
+                        }
+                        .footer {
+                            margin-top: 6px;
+                            font-size: 8px;
+                            text-align: center;
+                            color: #374151;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt">
+                        <div class="receipt-head">
+                            <img src="${escapeHtml(logoSrc)}" alt="${escapeHtml(schoolName)} logo">
+                            <h1>${escapeHtml(schoolName)}</h1>
+                            <p>Fee Payment Receipt</p>
+                        </div>
+                        <div class="row"><strong>Student</strong><span>${escapeHtml(receiptStudent)}</span></div>
+                        <div class="row"><strong>Father</strong><span>${escapeHtml(receiptFather)}</span></div>
+                        <div class="row"><strong>Class</strong><span>${escapeHtml(receiptClass)}</span></div>
+                        <div class="row"><strong>Campus</strong><span>${escapeHtml(receiptCampus)}</span></div>
+                        <div class="row"><strong>Roll No</strong><span>${escapeHtml(receiptRoll)}</span></div>
+                        <div class="row"><strong>Fee Month</strong><span>${escapeHtml(receiptMonth)}</span></div>
+                        <div class="row"><strong>Receipt Date</strong><span>${escapeHtml(paidAtText)}</span></div>
+                        <div class="row"><strong>Receipt Time</strong><span>${escapeHtml(paidTimeText)}</span></div>
+                        <div class="row"><strong>Challan No</strong><span>${escapeHtml(receiptChallan)}</span></div>
+                        <div class="row"><strong>Mode</strong><span>${escapeHtml(receiptMode)}</span></div>
+                        <div class="amount">PKR ${formatCurrency(receiptAmount)}</div>
+                        <div class="footer">Thank you for your payment</div>
+                    </div>
+                    <script>
+                        window.onload = function () {
+                            window.focus();
+                            window.print();
+                            window.onafterprint = () => window.close();
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
         }
 
         function selectAllFeeMonthsToPay() {
@@ -3155,6 +3300,7 @@
                 feeMonth: feeMonthLabel,
                 feeMonths,
                 dueDate: formatDate(document.getElementById('dueDate').value),
+                paymentDate: document.getElementById('paymentDate').value || '',
                 baseAmount,
                 additionalCharges,
                 discountLabel: discountInput || '0',
@@ -3164,6 +3310,7 @@
                 schoolAddress: document.getElementById('schoolAddress').value.trim() || `${CHALLAN_BRANCH_CONTACTS.main.campusLabel} - ${CHALLAN_BRANCH_CONTACTS.main.addressLine}`,
                 urduNote: document.getElementById('urduNote').value.trim() || '',
                 notes: document.getElementById('challanNotes').value.trim() || 'No additional instructions.',
+                campusName: selectedStudent?.campusName || selectedStudent?.branchName || selectedStudent?.campus || 'Main Campus',
                 totalDue,
                 payNowAmount,
                 remainingDue

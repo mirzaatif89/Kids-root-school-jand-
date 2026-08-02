@@ -19,6 +19,8 @@ module.exports = createHandler({
             fineAmount,
             paymentMode,
             paymentDate,
+            campusName,
+            fatherName,
             challanNumber
         } = body || {};
 
@@ -87,7 +89,7 @@ module.exports = createHandler({
             const parsed = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
             return Number.isNaN(parsed.getTime()) ? null : parsed;
         };
-        const paidAt = existingPayment?.paidAt || parsePaymentDate(paymentDate) || new Date();
+        const paidAt = parsePaymentDate(paymentDate) || existingPayment?.paidAt || new Date();
         const paymentDateLabel = new Date(paidAt).toLocaleDateString('en-GB');
 
         const paymentRow = !fineOnly && paymentAmount > 0 ? {
@@ -96,6 +98,8 @@ module.exports = createHandler({
             studentName: studentName || student.fullName || '',
             rollNo: rollNo || student.rollNo || '',
             classGrade: classGrade || student.classGrade || '',
+            campusName: campusName || student.campusName || student.branchName || student.campus || '',
+            fatherName: fatherName || student.fatherName || student.parentName || '',
             session: session || '',
             feeMonth: feeMonthRecorded,
             amount: paymentAmount,
@@ -118,6 +122,8 @@ module.exports = createHandler({
                 studentName: studentName || student.fullName || '',
                 rollNo: rollNo || student.rollNo || '',
                 classGrade: classGrade || student.classGrade || '',
+                campusName: campusName || student.campusName || student.branchName || student.campus || '',
+                fatherName: fatherName || student.fatherName || student.parentName || '',
                 session: session || '',
                 feeMonth: `Fine - ${feeMonthRecorded}`,
                 amount: safeFineAmount,

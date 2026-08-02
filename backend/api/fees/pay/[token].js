@@ -33,7 +33,18 @@ module.exports = createHandler({
 
         const existingPayment = await FeePayment.findByPk(payload.challanNumber);
         const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
-        const paidAt = existingPayment?.paidAt || new Date();
+        const parsePaymentDate = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            const slashDate = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+            if (slashDate) {
+                const parsed = new Date(Number(slashDate[3]), Number(slashDate[2]) - 1, Number(slashDate[1]));
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        };
+        const paidAt = parsePaymentDate(payload.paymentDate) || existingPayment?.paidAt || new Date();
         const paymentDateLabel = new Date(paidAt).toLocaleDateString('en-GB');
 
         const paymentAmount = Number(payload.amount || student.monthlyFee || 0);
@@ -67,6 +78,8 @@ module.exports = createHandler({
             studentName: payload.studentName || student.fullName || '',
             rollNo: payload.rollNo || student.rollNo || '',
             classGrade: payload.classGrade || student.classGrade || '',
+            campusName: payload.campusName || student.campusName || student.branchName || student.campus || '',
+            fatherName: payload.fatherName || student.fatherName || student.parentName || '',
             session: payload.session || '',
             feeMonth: feeMonthRecorded,
             amount: paymentAmount,
