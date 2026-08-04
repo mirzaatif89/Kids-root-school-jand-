@@ -3675,6 +3675,23 @@
             }
         }
 
+        async function loadStudentUploadedAssignmentRecords() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/uploaded-assignments`, { cache: 'no-store' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'uploaded-assignments unavailable.');
+                }
+                const assignments = Array.isArray(result?.assignments) ? result.assignments : [];
+                if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                    window.__eduCoreServerCollectionCache.set(STUDENT_UPLOADED_ASSIGNMENT_KEY, assignments);
+                }
+                return assignments;
+            } catch (_error) {
+                return getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY);
+            }
+        }
+
         function getClassWiseItems(key, student = {}) {
             const studentClass = normalizeClassName(student.classGrade);
             return getPortalData(key)
@@ -3839,12 +3856,24 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        function renderStudentUploadedAssignments(student = {}) {
+        async function renderStudentUploadedAssignments(student = {}) {
             const list = document.getElementById('studentAssignedAssignmentList');
             const empty = document.getElementById('studentAssignedAssignmentEmpty');
             if (!list || !empty) return;
 
-            const assignments = getClassWiseItems(STUDENT_UPLOADED_ASSIGNMENT_KEY, student);
+            const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
+            const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
+            const liveAssignments = await loadStudentUploadedAssignmentRecords();
+            const assignments = (Array.isArray(liveAssignments) ? liveAssignments : getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY))
+                .filter((item) => {
+                    const itemClass = normalizeCourseClassKey(item.classGrade);
+                    const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
+                    const classMatches = !studentClass || !itemClass || itemClass === studentClass;
+                    const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
+                    return classMatches && campusMatches;
+                })
+                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+
             if (!assignments.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
@@ -3868,7 +3897,7 @@
         }
 
         function openStudentAssignmentSubmission(assignmentId) {
-            const assignment = getClassWiseItems(STUDENT_UPLOADED_ASSIGNMENT_KEY, getCurrentPortalStudent())
+            const assignment = getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY)
                 .find((item) => String(item.id || '') === String(assignmentId || ''));
             if (!assignment) {
                 showAppAlert('Assignment was not found.', 'Submit Assignment');
@@ -6111,7 +6140,16 @@
                 } catch (_error) {
                     // Keep showing cached data if live re-hydration fails.
                 }
-                applyStudentCourse(getCurrentPortalStudent());
+                await applyStudentCourse(getCurrentPortalStudent());
+            }
+
+            if (target.id === 'studentAssignmentSection') {
+                try {
+                    await hydrateStudentPortalCollections();
+                } catch (_error) {
+                    // Keep showing cached data if live re-hydration fails.
+                }
+                await renderStudentUploadedAssignments(getCurrentPortalStudent());
             }
 
             const backButton = document.createElement('button');
