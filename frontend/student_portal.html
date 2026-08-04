@@ -3076,6 +3076,33 @@
             }
         }
 
+        async function hydrateStudentPortalCollections() {
+            const collections = [
+                [STUDENT_UPLOADED_ASSIGNMENT_KEY, 'uploaded-assignments', 'assignments'],
+                [STUDENT_COURSE_KEY, 'student-courses', 'courses'],
+                [STUDENT_DIARY_KEY, 'student-diaries', 'diaries'],
+                [STUDENT_QUIZ_KEY, 'student-quizzes', 'quizzes'],
+                [STUDENT_UPLOADED_LECTURE_KEY, 'uploaded-lectures', 'lectures'],
+                [STUDENT_SCHEDULE_KEY, 'student-schedules', 'schedules']
+            ];
+
+            await Promise.all(collections.map(async ([storageKey, routeName, recordsKey]) => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/${routeName}`);
+                    const result = await response.json().catch(() => ({}));
+                    if (!response.ok || result?.success === false) {
+                        throw new Error(result?.message || `${routeName} unavailable.`);
+                    }
+                    const records = Array.isArray(result?.[recordsKey])
+                        ? result[recordsKey]
+                        : (Array.isArray(result) ? result : []);
+                    localStorage.setItem(storageKey, JSON.stringify(records));
+                } catch (_error) {
+                    // Keep any cached local copy when the API is offline.
+                }
+            }));
+        }
+
         function getPortalBrandingSettings() {
             try {
                 return {
@@ -5722,6 +5749,7 @@
                 }
 
                 const student = await response.json();
+                await hydrateStudentPortalCollections();
                 await loadStudentAttendanceForPortal();
                 await loadExecutedDateSheet();
                 await mergeStudentFeePaymentsIntoMonthlyStore();
@@ -5734,6 +5762,7 @@
                     JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null');
 
                 if (fallbackStudent) {
+                    await hydrateStudentPortalCollections();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     await mergeStudentFeePaymentsIntoMonthlyStore();

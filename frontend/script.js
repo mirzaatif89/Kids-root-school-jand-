@@ -1800,6 +1800,79 @@ function saveData(key, data, options = {}) {
     if (key === STORAGE_KEY_STAFF) syncToSQL('staff', data);
 }
 
+const PORTAL_COLLECTION_API_MAP = {
+    [STORAGE_KEY_STUDENTS]: { route: 'students', recordsKey: 'students' },
+    [STORAGE_KEY_TEACHERS]: { route: 'teachers', recordsKey: 'teachers' },
+    [STORAGE_KEY_STAFF]: { route: 'staff', recordsKey: 'staff' },
+    eduCore_student_assignment_submissions: { route: 'student-assignments', recordsKey: 'assignments' },
+    eduCore_uploaded_assignments: { route: 'uploaded-assignments', recordsKey: 'assignments' },
+    eduCore_student_courses: { route: 'student-courses', recordsKey: 'courses' },
+    eduCore_student_diaries: { route: 'student-diaries', recordsKey: 'diaries' },
+    eduCore_student_quizzes: { route: 'student-quizzes', recordsKey: 'quizzes' },
+    eduCore_uploaded_lectures: { route: 'uploaded-lectures', recordsKey: 'lectures' },
+    eduCore_student_schedules: { route: 'student-schedules', recordsKey: 'schedules' }
+};
+
+async function loadCollectionFromApi(storageKey, fallbackValue = []) {
+    const config = PORTAL_COLLECTION_API_MAP[storageKey];
+    const fallback = Array.isArray(fallbackValue)
+        ? fallbackValue
+        : (Array.isArray(getData(storageKey)) ? getData(storageKey) : []);
+
+    if (!config) return fallback;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/${config.route}`, { cache: 'no-store' });
+        const result = await parseJsonResponse(response, `${config.route} could not be loaded.`);
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || result?.error || `${config.route} could not be loaded.`);
+        }
+
+        const records = Array.isArray(result?.[config.recordsKey])
+            ? result[config.recordsKey]
+            : (Array.isArray(result) ? result : []);
+
+        localStorage.setItem(storageKey, JSON.stringify(records));
+        return records;
+    } catch (error) {
+        return fallback;
+    }
+}
+
+async function saveCollectionToApi(storageKey, records) {
+    const config = PORTAL_COLLECTION_API_MAP[storageKey];
+    const normalized = Array.isArray(records) ? records : [];
+    localStorage.setItem(storageKey, JSON.stringify(normalized));
+
+    if (!config) {
+        return { success: true, records: normalized };
+    }
+
+    try {
+        const token = sessionStorage.getItem('eduCore_token') || '';
+        const response = await fetch(`${API_BASE_URL}/${config.route}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify(normalized)
+        });
+        const result = await parseJsonResponse(response, `${config.route} could not be saved.`);
+        if (!response.ok || result?.success === false) {
+            throw new Error(result?.message || result?.error || `${config.route} could not be saved.`);
+        }
+        return { success: true, result };
+    } catch (error) {
+        return { success: false, error: error.message || 'Save failed.' };
+    }
+}
+
+window.eduCoreCollectionApi = {
+    load: loadCollectionFromApi,
+    save: saveCollectionToApi
+};
+
 function getPromotionHistory() {
     return getData(STORAGE_KEY_PROMOTION_HISTORY);
 }

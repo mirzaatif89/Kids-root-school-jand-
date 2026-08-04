@@ -2763,6 +2763,69 @@ registerMobileCollectionRoutes({
     socketEvent: 'banners_update'
 });
 
+registerMobileCollectionRoutes({
+    route: 'student-assignments',
+    storeName: 'student_assignments',
+    recordsKey: 'assignments',
+    itemKey: 'assignment',
+    prefix: 'STUDENT-ASG',
+    socketEvent: 'student_assignments_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'uploaded-assignments',
+    storeName: 'uploaded_assignments',
+    recordsKey: 'assignments',
+    itemKey: 'assignment',
+    prefix: 'UPLOADED-ASG',
+    socketEvent: 'uploaded_assignments_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'student-courses',
+    storeName: 'student_courses',
+    recordsKey: 'courses',
+    itemKey: 'course',
+    prefix: 'COURSE',
+    socketEvent: 'student_courses_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'student-diaries',
+    storeName: 'student_diaries',
+    recordsKey: 'diaries',
+    itemKey: 'diary',
+    prefix: 'DIARY',
+    socketEvent: 'student_diaries_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'student-quizzes',
+    storeName: 'student_quizzes',
+    recordsKey: 'quizzes',
+    itemKey: 'quiz',
+    prefix: 'QUIZ',
+    socketEvent: 'student_quizzes_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'uploaded-lectures',
+    storeName: 'uploaded_lectures',
+    recordsKey: 'lectures',
+    itemKey: 'lecture',
+    prefix: 'LECTURE',
+    socketEvent: 'uploaded_lectures_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'student-schedules',
+    storeName: 'student_schedules',
+    recordsKey: 'schedules',
+    itemKey: 'schedule',
+    prefix: 'SCHEDULE',
+    socketEvent: 'student_schedules_update'
+});
+
 app.all('/api', (req, res) => {
     res.status(404).json({
         success: false,

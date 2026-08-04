@@ -53,9 +53,17 @@
         const STUDENT_UPLOADED_ASSIGNMENT_KEY = 'eduCore_uploaded_assignments';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_error) { return []; } }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
-        function save(items) {
-            try { localStorage.setItem(STUDENT_UPLOADED_ASSIGNMENT_KEY, JSON.stringify(items)); return true; }
-            catch (_error) { showAppAlert('Assignment file is too large to save.', 'Storage Full'); return false; }
+        async function save(items) {
+            try {
+                const result = await window.eduCoreCollectionApi.save(STUDENT_UPLOADED_ASSIGNMENT_KEY, items);
+                if (!result.success) {
+                    showAppAlert('Assignment saved locally, but server sync failed.', 'Saved Locally');
+                }
+                return true;
+            } catch (_error) {
+                showAppAlert('Assignment file is too large to save.', 'Storage Full');
+                return false;
+            }
         }
         function populateClasses() {
             const students = data('eduCore_students');
@@ -79,8 +87,9 @@
             assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             if (window.lucide) window.lucide.createIcons();
         }
-        function deleteAssignment(id) {
-            save(data(STUDENT_UPLOADED_ASSIGNMENT_KEY).filter((item) => item.id !== id));
+        async function deleteAssignment(id) {
+            const nextItems = data(STUDENT_UPLOADED_ASSIGNMENT_KEY).filter((item) => item.id !== id);
+            await save(nextItems);
             render();
         }
         assignmentUploadForm.addEventListener('submit', async (event) => {
@@ -100,12 +109,17 @@
             if (item.dueDate < item.startDate) { showAppAlert('Due date cannot be before start date.', 'Date Error'); return; }
             const items = data(STUDENT_UPLOADED_ASSIGNMENT_KEY);
             items.unshift(item);
-            if (!save(items)) return;
+            if (!(await save(items))) return;
             event.target.reset();
             render();
             showSuccessModal('Assignment Submitted!', 'Students in the selected class can download this assignment in their portal.');
         });
-        populateClasses(); render(); if (window.lucide) window.lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(STUDENT_UPLOADED_ASSIGNMENT_KEY, data(STUDENT_UPLOADED_ASSIGNMENT_KEY));
+            populateClasses();
+            render();
+            if (window.lucide) window.lucide.createIcons();
+        })();
     </script>
 </body>
 

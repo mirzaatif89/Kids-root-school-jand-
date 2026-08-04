@@ -246,7 +246,15 @@
         let lastAutoOpenedKey = '';
 
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
-        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('Diary data is too large to save.', 'Storage Full'); return false; } }
+        async function save(key, value) {
+            try {
+                const result = await window.eduCoreCollectionApi.save(key, value);
+                if (!result.success) {
+                    showAppAlert('Diary saved locally, but server sync failed.', 'Saved Locally');
+                }
+                return true;
+            } catch (_e) { showAppAlert('Diary data is too large to save.', 'Storage Full'); return false; }
+        }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
 
         function populateClasses() {
@@ -361,8 +369,8 @@
             openDiaryBuilder(true);
         }
 
-        function deleteDiary(id) {
-            save(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY).filter((item) => item.id !== id));
+        async function deleteDiary(id) {
+            await save(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY).filter((item) => item.id !== id));
             render();
         }
 
@@ -428,7 +436,7 @@
                 });
             }
 
-            if (!save(STUDENT_DIARY_KEY, items)) return;
+            if (!(await save(STUDENT_DIARY_KEY, items))) return;
             diaryDrafts = [];
             diaryEditId = '';
             studentDiaryId.value = '';
@@ -449,9 +457,12 @@
             if (event.target === diaryBuilderModal) closeDiaryBuilder();
         });
 
-        populateClasses();
-        render();
-        if (window.lucide) window.lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY));
+            populateClasses();
+            render();
+            if (window.lucide) window.lucide.createIcons();
+        })();
     </script>
 </body>
 

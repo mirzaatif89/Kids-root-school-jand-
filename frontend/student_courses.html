@@ -65,7 +65,15 @@
     <script>
         const STUDENT_COURSE_KEY = 'eduCore_student_courses';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
-        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
+        async function save(key, value) {
+            try {
+                const result = await window.eduCoreCollectionApi.save(key, value);
+                if (!result.success) {
+                    showAppAlert('Course saved locally, but server sync failed.', 'Saved Locally');
+                }
+                return true;
+            } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
+        }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function populateClasses() {
             const students = data('eduCore_students');
@@ -91,7 +99,7 @@
             document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Update Course';
             studentCourseForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); lucide.createIcons();
         }
-        function deleteCourse(id) { save(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY).filter((item) => item.id !== id)); render(); }
+        async function deleteCourse(id) { await save(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY).filter((item) => item.id !== id)); render(); }
         studentCourseForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const editId = studentCourseId.value;
@@ -102,10 +110,13 @@
             const items = data(STUDENT_COURSE_KEY);
             const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
-            if (!save(STUDENT_COURSE_KEY, items)) return;
+            if (!(await save(STUDENT_COURSE_KEY, items))) return;
             event.target.reset(); studentCourseId.value = ''; document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Course'; render(); showSuccessModal(editId ? 'Course Updated!' : 'Course Saved!', 'Class course is visible in student portal.');
         });
-        populateClasses(); render(); lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY));
+            populateClasses(); render(); lucide.createIcons();
+        })();
     </script>
 </body>
 

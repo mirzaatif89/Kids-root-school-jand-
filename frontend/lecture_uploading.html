@@ -64,7 +64,15 @@
     <script>
         const LECTURE_KEY = 'eduCore_uploaded_lectures';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
-        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
+        async function save(key, value) {
+            try {
+                const result = await window.eduCoreCollectionApi.save(key, value);
+                if (!result.success) {
+                    showAppAlert('Lecture saved locally, but server sync failed.', 'Saved Locally');
+                }
+                return true;
+            } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
+        }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function populateClasses() {
             const students = data('eduCore_students');
@@ -90,7 +98,7 @@
             lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Update Lecture';
             lectureUploadForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (window.lucide) lucide.createIcons();
         }
-        function deleteItem(id) { save(LECTURE_KEY, data(LECTURE_KEY).filter((item) => item.id !== id)); render(); }
+        async function deleteItem(id) { await save(LECTURE_KEY, data(LECTURE_KEY).filter((item) => item.id !== id)); render(); }
         lectureUploadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const editId = lectureUploadId.value;
@@ -100,10 +108,13 @@
             if (!item.classGrade || !item.title || !item.details) { showAppAlert('Class, title, and notes are required.', 'Missing Lecture'); return; }
             const items = data(LECTURE_KEY); const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
-            if (!save(LECTURE_KEY, items)) return;
+            if (!(await save(LECTURE_KEY, items))) return;
             event.target.reset(); lectureUploadId.value = ''; lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Save Lecture'; render(); showSuccessModal(editId ? 'Lecture Updated!' : 'Lecture Uploaded!', 'Lecture is visible in student portal.');
         });
-        populateClasses(); render(); if (window.lucide) lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(LECTURE_KEY, data(LECTURE_KEY));
+            populateClasses(); render(); if (window.lucide) lucide.createIcons();
+        })();
     </script>
 </body>
 

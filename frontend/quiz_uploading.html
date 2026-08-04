@@ -156,7 +156,15 @@
         const QUIZ_KEY = 'eduCore_student_quizzes';
         const QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
-        function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; } }
+        async function save(key, value) {
+            try {
+                const result = await window.eduCoreCollectionApi.save(key, value);
+                if (!result.success) {
+                    showAppAlert('Quiz saved locally, but server sync failed.', 'Saved Locally');
+                }
+                return true;
+            } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
+        }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         let questionDrafts = [];
         function normalizeQuizFilterValue(value) { return String(value || '').trim().toLowerCase(); }
@@ -527,7 +535,7 @@
             openQuestionModal();
             if (window.lucide) lucide.createIcons();
         }
-        function deleteItem(id) { save(QUIZ_KEY, data(QUIZ_KEY).filter((item) => item.id !== id)); render(); renderSubmissions(); }
+        async function deleteItem(id) { await save(QUIZ_KEY, data(QUIZ_KEY).filter((item) => item.id !== id)); render(); renderSubmissions(); }
         quizUploadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             openQuestionModal();
@@ -543,7 +551,7 @@
             if (!item.questions.length && !item.file?.dataUrl) { showAppAlert('Add at least one complete typed question or attach a quiz file.', 'Missing Quiz Questions'); return; }
             const items = data(QUIZ_KEY); const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
-            if (!save(QUIZ_KEY, items)) return;
+            if (!(await save(QUIZ_KEY, items))) return;
             quizUploadForm.reset(); quizUploadId.value = ''; questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); closeQuestionModal(); quizSaveBtn.innerHTML = '<i data-lucide="arrow-right"></i> Enter Quiz Questions'; render(); showSuccessModal(editId ? 'Quiz Updated!' : 'Quiz Uploaded!', 'Quiz is visible in student portal.');
         }
         document.getElementById('quizResultCampusFilter')?.addEventListener('change', renderSubmissions);
@@ -553,7 +561,10 @@
             renderSubmissions();
         });
         document.getElementById('printQuizResultsBtn')?.addEventListener('click', printQuizResultsList);
-        setupQuizResultDropdowns(); updateQuizResultStatusSummary(); populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
+            setupQuizResultDropdowns(); updateQuizResultStatusSummary(); populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
+        })();
     </script>
 </body>
 

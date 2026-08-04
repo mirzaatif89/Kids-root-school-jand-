@@ -132,9 +132,12 @@
             }
         }
 
-        function setScheduleData(key, data) {
+        async function setScheduleData(key, data) {
             try {
-                localStorage.setItem(key, JSON.stringify(data));
+                const result = await window.eduCoreCollectionApi.save(key, data);
+                if (!result.success) {
+                    showAppAlert('Schedule saved locally, but server sync failed.', 'Saved Locally');
+                }
                 return true;
             } catch (_error) {
                 showAppAlert('File/data is too large to save in browser storage. Please use a smaller file.', 'Storage Full');
@@ -198,8 +201,8 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        function deleteStudentSchedule(id) {
-            setScheduleData(STUDENT_SCHEDULE_KEY, getScheduleData(STUDENT_SCHEDULE_KEY).filter((item) => item.id !== id));
+        async function deleteStudentSchedule(id) {
+            await setScheduleData(STUDENT_SCHEDULE_KEY, getScheduleData(STUDENT_SCHEDULE_KEY).filter((item) => item.id !== id));
             renderStudentSchedules();
         }
 
@@ -221,7 +224,7 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        document.getElementById('studentScheduleForm').addEventListener('submit', (event) => {
+        document.getElementById('studentScheduleForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const editId = document.getElementById('studentScheduleId').value;
             const schedule = {
@@ -246,7 +249,7 @@
             } else {
                 schedules.push(schedule);
             }
-            if (!setScheduleData(STUDENT_SCHEDULE_KEY, schedules)) return;
+            if (!(await setScheduleData(STUDENT_SCHEDULE_KEY, schedules))) return;
             event.target.reset();
             document.getElementById('studentScheduleId').value = '';
             document.querySelector('#studentScheduleForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';
@@ -255,9 +258,12 @@
             showSuccessModal(editId ? 'Schedule Updated!' : 'Schedule Saved!', editId ? 'Student class schedule has been updated successfully.' : 'Student class schedule has been saved successfully.');
         });
 
-        populateStudentSchedulingOptions();
-        renderStudentSchedules();
-        if (window.lucide) window.lucide.createIcons();
+        (async () => {
+            await window.eduCoreCollectionApi.load(STUDENT_SCHEDULE_KEY, getScheduleData(STUDENT_SCHEDULE_KEY));
+            populateStudentSchedulingOptions();
+            renderStudentSchedules();
+            if (window.lucide) window.lucide.createIcons();
+        })();
     </script>
 </body>
 
