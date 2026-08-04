@@ -3151,6 +3151,7 @@
             const diaryItems = Array.isArray(items) ? items : [items].filter(Boolean);
             const firstItem = diaryItems[0] || {};
             const studentName = escapeHtml(student.fullName || loggedInUser?.fullName || 'Student');
+            const campusName = escapeHtml(firstItem.campusName || getPortalStudentCampusName(student) || '-');
             const className = escapeHtml(firstItem.classGrade || '-');
             const date = escapeHtml(firstItem.date || '-');
             const subjectBlocks = diaryItems.map((item, index) => `
@@ -3178,7 +3179,7 @@
         .logo-fallback { width: 108px; font-weight: 800; color: #0f766e; }
         h1 { margin: 0; font-size: 25px; color: #0f766e; }
         .subtitle { margin-top: 5px; color: #475569; font-size: 13px; }
-        .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; font-size: 14px; }
+        .meta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; font-size: 14px; }
         .meta strong { display: block; color: #475569; font-size: 12px; margin-bottom: 4px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px 8px; border-bottom: 1px solid #d9ece9; text-align: left; vertical-align: top; line-height: 1.5; }
@@ -3200,6 +3201,7 @@
         <\/header>
         <section class="meta">
             <div><strong>Student Name<\/strong>${studentName}<\/div>
+            <div><strong>Campus<\/strong>${campusName}<\/div>
             <div><strong>Class<\/strong>${className}<\/div>
             <div><strong>Date<\/strong>${date}<\/div>
         <\/section>
@@ -3234,7 +3236,7 @@
 
         async function downloadPortalDiaryGroup(encodedGroupKey) {
             const groupKey = decodeURIComponent(encodedGroupKey || '');
-            const items = getPortalData(STUDENT_DIARY_KEY).filter((entry) => `${entry.classGrade || '-'}|${entry.date || '-'}` === groupKey);
+            const items = getPortalData(STUDENT_DIARY_KEY).filter((entry) => getPortalDiaryGroupKey(entry) === groupKey);
             if (!items.length) {
                 showAppAlert('Diary entry was not found.', 'Download Failed');
                 return;
@@ -3263,6 +3265,40 @@
 
         function normalizeClassName(value = '') {
             return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function normalizeCampusName(value = '') {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function getPortalStudentCampusName(student = {}) {
+            return String(student?.campusName || student?.branchName || student?.campus || '').trim();
+        }
+
+        function getPortalDiaryGroupKey(item = {}) {
+            const campusKey = normalizeCampusName(getPortalStudentCampusName(item) || '-');
+            const classKey = normalizeClassName(item.classGrade) || '-';
+            const dateKey = String(item.date || '-').trim() || '-';
+            return `${campusKey}|${classKey}|${dateKey}`;
+        }
+
+        function diaryMatchesStudent(student = {}, diary = {}) {
+            const studentClass = normalizeClassName(student.classGrade);
+            const diaryClass = normalizeClassName(diary.classGrade);
+            if (studentClass && diaryClass && studentClass !== diaryClass) return false;
+
+            const diaryCampus = getPortalStudentCampusName(diary);
+            if (!diaryCampus) return true;
+
+            const studentCampus = getPortalStudentCampusName(student);
+            if (!studentCampus) return false;
+            return normalizeCampusName(diaryCampus) === normalizeCampusName(studentCampus);
+        }
+
+        function getStudentDiaryItems(student = {}) {
+            return getPortalData(STUDENT_DIARY_KEY)
+                .filter((item) => diaryMatchesStudent(student, item))
+                .sort((a, b) => `${b.campusName || ''}${b.classGrade || ''}${b.date || ''}${b.updatedAt || b.createdAt || ''}`.localeCompare(`${a.campusName || ''}${a.classGrade || ''}${a.date || ''}${a.updatedAt || a.createdAt || ''}`));
         }
 
         function getStudentClassSchedules(student = {}) {
@@ -3500,10 +3536,11 @@
         function groupPortalDiaryItems(items = []) {
             const groups = new Map();
             items.forEach((item) => {
-                const key = `${item.classGrade || '-'}|${item.date || '-'}`;
+                const key = getPortalDiaryGroupKey(item);
                 if (!groups.has(key)) {
                     groups.set(key, {
                         key,
+                        campusName: item.campusName || '-',
                         classGrade: item.classGrade || '-',
                         date: item.date || '-',
                         items: []
@@ -3519,7 +3556,7 @@
             const empty = document.getElementById('studentDiaryEmpty');
             if (!list || !empty) return;
 
-            const groups = groupPortalDiaryItems(getClassWiseItems(STUDENT_DIARY_KEY, student));
+            const groups = groupPortalDiaryItems(getStudentDiaryItems(student));
             if (!groups.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
@@ -3529,7 +3566,7 @@
             empty.style.display = 'none';
             list.innerHTML = groups.map((group) => `
                 <article class="portal-content-card">
-                    <h4>${escapeHtml(group.classGrade)} Class Diary</h4>
+                    <h4>${escapeHtml(group.campusName)} - ${escapeHtml(group.classGrade)} Class Diary</h4>
                     <div class="portal-content-meta">${escapeHtml(group.date)} - ${group.items.length} subject${group.items.length === 1 ? '' : 's'}</div>
                     <div class="portal-diary-subjects">
                         ${group.items.map((item) => `
@@ -4551,7 +4588,7 @@
                 });
             }
 
-            const latestDiary = getLatestByDate(getClassWiseItems(STUDENT_DIARY_KEY, student), ['date', 'updatedAt', 'createdAt']);
+            const latestDiary = getLatestByDate(getStudentDiaryItems(student), ['date', 'updatedAt', 'createdAt']);
             if (latestDiary) {
                 addStudentNotification(items, {
                     id: `diary-${latestDiary.id || latestDiary.date || latestDiary.title}`,
