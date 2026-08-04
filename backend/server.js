@@ -10,6 +10,15 @@ const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
 const QRCode = require('qrcode');
 const { getSmtpConfig, sendSmtpEmail } = require('../api/_lib/mailer');
+const {
+    canReviewLeaves,
+    createOwnLeaveRequest,
+    formatLeaveRequest,
+    ownLeaveWhere,
+    readReviewStatus,
+    throwHttp
+} = require('./api/_lib/leave-requests');
+const { sendLeaveReviewEmail } = require('./api/_lib/leave-emails');
 
 require('dotenv').config();
 
@@ -1685,6 +1694,123 @@ app.post('/api/messages', authenticateToken, async (req, res) => {
         res.json({ success: true, message: formatMessageRecord(message), messages });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.get('/api/leave-requests', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const role = String(req.query?.role || '').trim();
+        const where = ownLeaveWhere(req.user);
+        if (canReviewLeaves(req.user) && ['Student', 'Teacher'].includes(role)) {
+            where.applicantRole = role;
+        }
+
+        const records = await sequelize.models.LeaveRequest.findAll({
+            where,
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json({ success: true, leaveRequests: records.map(formatLeaveRequest) });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/leave-requests', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const leaveRequest = await createOwnLeaveRequest(sequelize, req.user, req.body || {});
+        res.json({ success: true, leaveRequest });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ success: false, message: err.message });
+    }
+});
+
+app.post('/api/leave-requests/:id', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        if (!canReviewLeaves(req.user)) {
+            return res.status(403).json({ success: false, message: 'Admin or staff access required.' });
+        }
+
+        const id = String(req.params.id || '').trim();
+        if (!id) {
+            throwHttp(400, 'Leave request id is required.');
+        }
+
+        const status = readReviewStatus(req.body?.status);
+        if (!status) {
+            throwHttp(400, 'Review status must be Approved or Rejected.');
+        }
+
+        const reviewReason = String(req.body?.reviewReason || '').trim();
+        if (status === 'Rejected' && !reviewReason) {
+            throwHttp(400, 'Rejection reason is required.');
+        }
+
+        const record = await sequelize.models.LeaveRequest.findByPk(id);
+        if (!record) {
+            throwHttp(404, 'Leave request not found.');
+        }
+
+        await record.update({
+            status,
+            reviewReason: status === 'Rejected' ? reviewReason : '',
+            reviewedAt: new Date().toISOString()
+        });
+
+        const leaveRequest = formatLeaveRequest(record);
+        let emailResult = null;
+        try {
+            emailResult = await sendLeaveReviewEmail(leaveRequest);
+            if (!emailResult?.skipped) {
+                await record.update({ reviewEmailSentAt: new Date().toISOString() });
+            }
+        } catch (error) {
+            emailResult = { success: false, message: error.message || 'Leave status email could not be sent.' };
+        }
+
+        res.json({
+            success: true,
+            leaveRequest: formatLeaveRequest(record),
+            emailResult
+        });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ success: false, message: err.message });
+    }
+});
+
+app.delete('/api/leave-requests/:id', authenticateToken, async (req, res) => {
+    if (!sequelize) return res.status(503).json({ success: false, message: 'Database offline' });
+
+    try {
+        const id = String(req.params.id || '').trim();
+        if (!id) {
+            throwHttp(400, 'Leave request id is required.');
+        }
+
+        const record = await sequelize.models.LeaveRequest.findByPk(id);
+        if (!record) {
+            return res.json({ success: true, deleted: false });
+        }
+
+        const ownPendingRequest = ['Student', 'Teacher'].includes(String(req.user?.role || ''))
+            && record.applicantRole === req.user.role
+            && String(record.applicantId) === String(req.user.id)
+            && String(record.status || 'Pending') === 'Pending';
+
+        if (!canReviewLeaves(req.user) && !ownPendingRequest) {
+            throwHttp(403, 'Only pending portal leave requests can be deleted.');
+        }
+
+        await record.destroy();
+        res.json({ success: true, deleted: true });
+    } catch (err) {
+        res.status(err.statusCode || 500).json({ success: false, message: err.message });
     }
 });
 
