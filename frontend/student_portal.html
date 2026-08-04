@@ -2758,25 +2758,19 @@
         </section>
 
         <section class="panel-card student-portal-section" id="studentDateSheetSection" style="display:none; margin-bottom: 1.25rem;">
-            <div class="portal-action-row">
-                <h3 style="margin:0;">Date Sheet</h3>
-                <button type="button" class="btn btn-primary" id="downloadDateSheetBtn">
-                    <i data-lucide="download"></i> Download
-                </button>
+            <h3 style="margin:0;">Date Sheet</h3>
+            <div class="portal-content-card" style="margin-top: 1rem; padding: 1rem 1.1rem;">
+                <div class="portal-action-row" style="align-items: center; margin-bottom: 0.6rem;">
+                    <div>
+                        <div style="font-weight: 800; color: #0f172a;" id="studentDateSheetStatus">No date sheet has been published for your class yet.</div>
+                        <p class="portal-content-meta" id="studentDateSheetDate" style="margin: 0.35rem 0 0;"></p>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="downloadDateSheetBtn">
+                        <i data-lucide="download"></i> Download
+                    </button>
+                </div>
+                <p class="portal-content-meta" id="studentDateSheetFileNote" style="margin: 0;"></p>
             </div>
-            <p class="portal-content-meta" id="studentDateSheetFileNote"></p>
-            <table class="panel-table" id="studentDateSheetTable">
-                <thead>
-                    <tr>
-                        <th>Subject</th>
-                        <th>Class</th>
-                        <th>Date</th>
-                        <th>Timing</th>
-                    </tr>
-                </thead>
-                <tbody id="studentDateSheetBody"></tbody>
-            </table>
-            <div class="empty-note" id="studentDateSheetEmpty">No date sheet has been published for your class yet.</div>
         </section>
 
         <section class="panel-card student-portal-section" id="studentQuizSection" style="display:none; margin-bottom: 1.25rem;">
@@ -5648,10 +5642,10 @@
 
         function applyDateSheet(student) {
             const state = loadDateSheetState();
-            const tbody = document.getElementById('studentDateSheetBody');
-            const emptyState = document.getElementById('studentDateSheetEmpty');
-            const table = document.getElementById('studentDateSheetTable');
+            const statusEl = document.getElementById('studentDateSheetStatus');
+            const dateEl = document.getElementById('studentDateSheetDate');
             const fileNote = document.getElementById('studentDateSheetFileNote');
+            const downloadBtn = document.getElementById('downloadDateSheetBtn');
             const className = String(student.classGrade || '').trim().toLowerCase();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
             const uploadedFile = state.uploadedDateSheetFile || {};
@@ -5659,26 +5653,30 @@
             const filteredRows = state.status === 'executed'
                 ? rows.filter((row) => !className || String(row.className || '').trim().toLowerCase().includes(className))
                 : [];
+            const availableDate = formatScheduleDate(state.executedAt || state.updatedAt || filteredRows[0]?.examDate || rows[0]?.examDate || '');
 
-            if (!filteredRows.length) {
-                tbody.innerHTML = '';
-                table.style.display = 'none';
-            } else {
-                tbody.innerHTML = filteredRows.map((row) => `
-                    <tr>
-                        <td>${row.subject || '-'}</td>
-                        <td>${row.className || '-'}</td>
-                        <td>${formatScheduleDate(row.examDate)}</td>
-                        <td>${formatScheduleTime(row.startTime)} - ${formatScheduleTime(row.endTime)}</td>
-                    </tr>
-                `).join('');
-                table.style.display = '';
+            if (statusEl) {
+                statusEl.textContent = filteredRows.length || hasUploadedFile
+                    ? 'Date sheet available'
+                    : 'No date sheet has been published for your class yet.';
             }
 
-            fileNote.textContent = hasUploadedFile
-                ? `Published file: ${uploadedFile.name}`
-                : '';
-            emptyState.style.display = filteredRows.length || hasUploadedFile ? 'none' : 'block';
+            if (dateEl) {
+                dateEl.textContent = filteredRows.length || hasUploadedFile
+                    ? `Date: ${availableDate || '-'}`
+                    : '';
+            }
+
+            if (fileNote) {
+                fileNote.textContent = hasUploadedFile
+                    ? `Published file: ${uploadedFile.name}`
+                    : '';
+            }
+
+            if (downloadBtn) {
+                downloadBtn.style.display = filteredRows.length || hasUploadedFile ? '' : 'none';
+                downloadBtn.disabled = !(filteredRows.length || hasUploadedFile);
+            }
         }
 
         function downloadDateSheet() {
