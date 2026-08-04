@@ -2534,17 +2534,8 @@
             <button type="button" class="student-action-btn" data-student-action-target="studentLeaveSection">
                 <i data-lucide="calendar-minus"></i> Leave
             </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentCourseSection">
-                <i data-lucide="book-marked"></i> Course
-            </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentTimeTableSection">
-                <i data-lucide="clock"></i> Time Table
-            </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentDateSheetSection">
                 <i data-lucide="calendar-days"></i> Date Sheet
-            </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentPerformanceSection">
-                <i data-lucide="trending-up"></i> Performance
             </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentSyllabusSection">
                 <i data-lucide="file-text"></i> Syllabus
@@ -2769,12 +2760,6 @@
             <div class="empty-note" id="studentLeaveEmpty">You have not applied for leave yet.</div>
         </section>
 
-        <section class="panel-card student-portal-section" id="studentCourseSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Class Course</h3>
-            <div class="portal-content-list" id="studentCourseList"></div>
-            <div class="empty-note" id="studentCourseEmpty">No course has been added for your class yet.</div>
-        </section>
-
         <section class="panel-card student-portal-section" id="studentDateSheetSection" style="display:none; margin-bottom: 1.25rem;">
             <div class="portal-action-row">
                 <h3 style="margin:0;">Date Sheet</h3>
@@ -2889,44 +2874,6 @@
             <div class="empty-note" id="studentComplaintEmpty">You have not submitted any complaint yet.</div>
         </section>
 
-        <section class="panel-card student-portal-section" id="studentTimeTableSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Class Time Table</h3>
-            <table class="panel-table">
-                <thead>
-                    <tr>
-                        <th>Day</th>
-                        <th>Lecture</th>
-                        <th>Teacher</th>
-                        <th>Time</th>
-                        <th>Room</th>
-                    </tr>
-                </thead>
-                <tbody id="studentTimeTableBody"></tbody>
-            </table>
-            <div class="empty-note" id="studentTimeTableEmpty">No timetable has been added for your class yet.</div>
-        </section>
-
-        <section class="panel-card student-portal-section" id="studentPerformanceSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Performance</h3>
-            <div class="mini-grid">
-                <div class="mini-stat">
-                    <div class="mini-stat-label">Attendance</div>
-                    <div class="mini-stat-value" id="performanceAttendance">-</div>
-                </div>
-                <div class="mini-stat">
-                    <div class="mini-stat-label">Latest Result</div>
-                    <div class="mini-stat-value" id="performanceResult">-</div>
-                </div>
-                <div class="mini-stat">
-                    <div class="mini-stat-label">Academic Status</div>
-                    <div class="mini-stat-value" id="performanceStatus">-</div>
-                </div>
-                <div class="mini-stat">
-                    <div class="mini-stat-label">Latest Term</div>
-                    <div class="mini-stat-value" id="performanceTerm">-</div>
-                </div>
-            </div>
-        </section>
     </div>
 
     <script src="auth.js?v=20260627-welcome-logo"></script>
@@ -4828,7 +4775,6 @@
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     applyStudentAttendance(student);
-                    applyStudentPerformance(student);
                     updateStudentNotifications(student);
                 } catch (_error) {
                     updateStudentNotifications(student);
@@ -5623,9 +5569,7 @@
             feeStatusBadge.className = `status-badge ${getStatusClass(student.feesStatus)}`;
 
             applyStudentFees(student);
-            applyStudentTimeTable(student);
             applyStudentDiary(student);
-            applyStudentCourse(student);
             renderStudentAssignmentSubmissions(student);
             renderStudentUploadedAssignments(student);
             applyStudentQuizzes(student);
@@ -5635,7 +5579,6 @@
             renderStudentLeaveHistory(student);
             applyStudentAttendance(student);
             initializeStudentResultLookup(student);
-            applyStudentPerformance(student);
 
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
             updateStudentNotifications(student);
@@ -5854,7 +5797,6 @@
                 const cachedStudent = JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback();
                 if (cachedStudent) {
                     applyStudentAttendance(cachedStudent);
-                    applyStudentPerformance(cachedStudent);
                 }
             });
             document.getElementById('studentResultRollFilter')?.addEventListener('keydown', (event) => {
