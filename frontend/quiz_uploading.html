@@ -77,6 +77,7 @@
                 <form id="quizUploadForm">
                     <input type="hidden" id="quizUploadId">
                     <div class="upload-grid">
+                        <div><label>Campus</label><select id="quizCampus" required></select></div>
                         <div><label>Class</label><select id="quizClass" required></select></div>
                         <div><label>Quiz Title</label><input type="text" id="quizTitle" required placeholder="e.g. Algebra Quiz"></div>
                         <div><label>Total Marks</label><input type="number" id="quizTotalMarks" min="1" required placeholder="e.g. 20"></div>
@@ -156,11 +157,33 @@
         const QUIZ_KEY = 'eduCore_student_quizzes';
         const QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
         function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        const QUIZ_SAVE_ROUTE_MAP = {
+            [QUIZ_KEY]: 'student-quizzes',
+            [QUIZ_SUBMISSION_KEY]: 'student-quiz-submissions'
+        };
         async function save(key, value) {
             try {
-                const result = await window.eduCoreCollectionApi.save(key, value);
-                if (!result.success) {
-                    showAppAlert('Quiz saved locally, but server sync failed.', 'Saved Locally');
+                if (window.eduCoreCollectionApi?.save) {
+                    const result = await window.eduCoreCollectionApi.save(key, value);
+                    if (!result.success) {
+                        showAppAlert('Quiz saved locally, but server sync failed.', 'Saved Locally');
+                    }
+                    return true;
+                }
+                const route = QUIZ_SAVE_ROUTE_MAP[key];
+                if (!route) throw new Error('Save API is unavailable.');
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                const response = await fetch(`${API_BASE_URL}/${route}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify(value)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || result?.error || 'Save failed.');
                 }
                 return true;
             } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
@@ -168,6 +191,24 @@
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         let questionDrafts = [];
         function normalizeQuizFilterValue(value) { return String(value || '').trim().toLowerCase(); }
+        async function populateCampuses() {
+            const select = document.getElementById('quizCampus');
+            if (!select) return;
+            const selectedValue = select.value;
+            const campuses = typeof window.loadRegisteredCampusNames === 'function'
+                ? await window.loadRegisteredCampusNames()
+                : (typeof window.getUniqueCampusNames === 'function'
+                    ? window.getUniqueCampusNames()
+                    : [...new Set([
+                        ...data('eduCore_students').map((student) => student?.campusName),
+                        ...data('eduCore_teachers').map((teacher) => teacher?.campusName || teacher?.bankBranch),
+                        ...data('eduCore_staff').map((staff) => staff?.campusName || staff?.bankBranch)
+                    ].map((value) => String(value || '').trim()).filter(Boolean))]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            select.innerHTML = '<option value="">Select Campus</option>' + campuses.map((campus) => `<option value="${esc(campus)}">${esc(campus)}</option>`).join('');
+            if (selectedValue && campuses.some((campus) => normalizeQuizFilterValue(campus) === normalizeQuizFilterValue(selectedValue))) {
+                select.value = selectedValue;
+            }
+        }
         function getQuizStudents() { return data('eduCore_students'); }
         function findQuizStudentForSubmission(item = {}) {
             const students = getQuizStudents();
@@ -409,6 +450,7 @@
             const passMarks = Math.min(totalMarks, Math.max(1, Number(quizPassMarks.value || Math.ceil(totalMarks / 2))));
             return {
                 id: quizUploadId.value,
+                campusName: quizCampus.value,
                 classGrade: quizClass.value,
                 title: quizTitle.value.trim(),
                 totalMarks,
@@ -419,8 +461,8 @@
         }
         function validateQuizMeta() {
             const meta = getQuizMeta();
-            if (!meta.classGrade || !meta.title || !meta.totalMarks || !meta.passMarks) {
-                showAppAlert('Select class, enter quiz title, total marks, and pass marks first.', 'Missing Quiz Details');
+            if (!meta.campusName || !meta.classGrade || !meta.title || !meta.totalMarks || !meta.passMarks) {
+                showAppAlert('Select campus, class, enter quiz title, total marks, and pass marks first.', 'Missing Quiz Details');
                 return null;
             }
             return meta;
@@ -443,7 +485,7 @@
         function render() {
             const items = data(QUIZ_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
             if (!items.length) { quizUploadList.innerHTML = '<div class="empty-note">No quiz uploaded yet.</div>'; renderSubmissions(); return; }
-            quizUploadList.innerHTML = `<table class="upload-table"><thead><tr><th>Class</th><th>Quiz</th><th>Marks</th><th>Pass Marks</th><th>Questions</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade)}</td><td><strong>${esc(item.title)}</strong><br>${esc(item.details || '-')}</td><td>${esc(item.totalMarks || '-')}</td><td>${esc(item.passMarks || '-')}</td><td>${esc(Array.isArray(item.questions) ? item.questions.length : 0)}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'quiz-file')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="action-row"><button class="mini-btn edit" onclick="editItem('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteItem('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            quizUploadList.innerHTML = `<table class="upload-table"><thead><tr><th>Campus</th><th>Class</th><th>Quiz</th><th>Marks</th><th>Pass Marks</th><th>Questions</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.campusName || '-')}</td><td>${esc(item.classGrade)}</td><td><strong>${esc(item.title)}</strong><br>${esc(item.details || '-')}</td><td>${esc(item.totalMarks || '-')}</td><td>${esc(item.passMarks || '-')}</td><td>${esc(Array.isArray(item.questions) ? item.questions.length : 0)}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'quiz-file')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="action-row"><button class="mini-btn edit" onclick="editItem('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteItem('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             renderSubmissions();
             if (window.lucide) lucide.createIcons();
         }
@@ -530,7 +572,7 @@
         function editItem(id) {
             const item = data(QUIZ_KEY).find((entry) => entry.id === id);
             if (!item) return;
-            quizUploadId.value = item.id; quizClass.value = item.classGrade || ''; quizTitle.value = item.title || ''; quizTotalMarks.value = item.totalMarks || ''; quizPassMarks.value = item.passMarks || ''; quizDueDate.value = item.dueDate || ''; quizDetails.value = item.details || '';
+            quizUploadId.value = item.id; quizCampus.value = item.campusName || ''; quizClass.value = item.classGrade || ''; quizTitle.value = item.title || ''; quizTotalMarks.value = item.totalMarks || ''; quizPassMarks.value = item.passMarks || ''; quizDueDate.value = item.dueDate || ''; quizDetails.value = item.details || '';
             questionDrafts = Array.isArray(item.questions) && item.questions.length ? item.questions.map((question) => ({ text: question.text || '', options: Array.isArray(question.options) ? [...question.options, '', '', '', ''].slice(0, 4) : ['', '', '', ''], correctIndex: Number(question.correctIndex || 0), marks: Math.max(1, Number(question.marks || 1)) })) : [createEmptyQuestion()];
             renderQuestionBuilder();
             quizSaveBtn.innerHTML = '<i data-lucide="arrow-right"></i> Update Questions';
@@ -550,7 +592,7 @@
             const existing = data(QUIZ_KEY).find((item) => item.id === editId);
             const file = await readFile(quizFile);
             const questions = getValidQuestions();
-            const item = { id: editId || `QUIZ-${Date.now()}`, classGrade: meta.classGrade, title: meta.title, totalMarks: meta.totalMarks, passMarks: meta.passMarks, dueDate: meta.dueDate, details: meta.details, questions, file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+            const item = { id: editId || `QUIZ-${Date.now()}`, campusName: meta.campusName, classGrade: meta.classGrade, title: meta.title, totalMarks: meta.totalMarks, passMarks: meta.passMarks, dueDate: meta.dueDate, details: meta.details, questions, file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
             if (!item.questions.length && !item.file?.dataUrl) { showAppAlert('Add at least one complete typed question or attach a quiz file.', 'Missing Quiz Questions'); return; }
             const items = data(QUIZ_KEY); const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
@@ -565,8 +607,22 @@
         });
         document.getElementById('printQuizResultsBtn')?.addEventListener('click', printQuizResultsList);
         (async () => {
-            await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
-            setupQuizResultDropdowns(); updateQuizResultStatusSummary(); await populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
+            try {
+                if (window.eduCoreCollectionApi?.load) {
+                    await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
+                }
+            } catch (_error) {
+                // keep local fallback
+            }
+            setupQuizResultDropdowns();
+            updateQuizResultStatusSummary();
+            await populateCampuses();
+            await populateClasses();
+            questionDrafts = [createEmptyQuestion()];
+            renderQuestionBuilder();
+            render();
+            renderSubmissions();
+            if (window.lucide) lucide.createIcons();
         })();
     </script>
 </body>

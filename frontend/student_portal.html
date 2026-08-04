@@ -4087,11 +4087,12 @@
                 const questionMarksTotal = questions.reduce((sum, question) => sum + Math.max(1, Number(question.marks || 1)), 0);
                 const totalMarks = Math.max(1, Number(item.totalMarks || questionMarksTotal || 1));
                 const passMarks = Math.min(totalMarks, Math.max(1, Number(item.passMarks || Math.ceil(totalMarks / 2))));
+                const campusName = item.campusName || getPortalStudentCampusName(student) || '-';
                 return `
                     <article class="portal-content-card">
                         <h4>${escapeHtml(item.title || 'Quiz')}</h4>
                         <div class="portal-content-meta">
-                            ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(totalMarks)} Marks - Pass Marks: ${escapeHtml(passMarks)}
+                            Campus: ${escapeHtml(campusName)} | ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(totalMarks)} Marks - Pass Marks: ${escapeHtml(passMarks)}
                         </div>
                         <p>${escapeHtml(item.details || '-')}</p>
                         ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "Quiz File")})'><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
