@@ -5572,6 +5572,14 @@
             return wordsToNumbers[normalized] || normalized;
         }
 
+        function matchesDateSheetClass(studentClass = '', rowClass = '') {
+            const studentKey = normalizeClassName(studentClass);
+            const rowKey = normalizeClassName(rowClass);
+            if (!studentKey) return true;
+            if (!rowKey) return false;
+            return rowKey === studentKey || rowKey.includes(studentKey) || studentKey.includes(rowKey);
+        }
+
         function compareLectureRows(a, b) {
             const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
@@ -5646,12 +5654,12 @@
             const dateEl = document.getElementById('studentDateSheetDate');
             const fileNote = document.getElementById('studentDateSheetFileNote');
             const downloadBtn = document.getElementById('downloadDateSheetBtn');
-            const className = String(student.classGrade || '').trim().toLowerCase();
+            const className = String(student.classGrade || '').trim();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
             const uploadedFile = state.uploadedDateSheetFile || {};
             const hasUploadedFile = Boolean(state.status === 'executed' && uploadedFile.name && uploadedFile.dataUrl);
             const filteredRows = state.status === 'executed'
-                ? rows.filter((row) => !className || String(row.className || '').trim().toLowerCase().includes(className))
+                ? rows.filter((row) => matchesDateSheetClass(className, row.className))
                 : [];
             const availableDate = formatScheduleDate(state.executedAt || state.updatedAt || filteredRows[0]?.examDate || rows[0]?.examDate || '');
 
