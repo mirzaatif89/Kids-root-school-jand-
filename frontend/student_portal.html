@@ -4280,12 +4280,22 @@
             showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}. Pass marks: ${passMarks}. Result: ${passed ? 'Pass' : 'Fail'}`, 'Quiz Result');
         }
 
-        function applyStudentUploadedLectures(student = {}) {
+        async function applyStudentUploadedLectures(student = {}) {
             const list = document.getElementById('studentUploadedLectureList');
             const empty = document.getElementById('studentUploadedLectureEmpty');
             if (!list || !empty) return;
 
-            const items = getClassWiseItems(STUDENT_UPLOADED_LECTURE_KEY, student);
+            const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
+            const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
+            const items = (await loadPortalCollectionRecords(STUDENT_UPLOADED_LECTURE_KEY, 'uploaded-lectures', 'lectures'))
+                .filter((item) => {
+                    const itemClass = normalizeCourseClassKey(item.classGrade);
+                    const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
+                    const classMatches = !studentClass || !itemClass || itemClass === studentClass;
+                    const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
+                    return classMatches && campusMatches;
+                })
+                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
             if (!items.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
@@ -6023,7 +6033,7 @@
             renderStudentAssignmentSubmissions(student);
             renderStudentUploadedAssignments(student);
             void applyStudentQuizzes(student);
-            applyStudentUploadedLectures(student);
+            void applyStudentUploadedLectures(student);
             applyStudentLectures(student);
             applyDateSheet(student);
             renderStudentComplaints(student);

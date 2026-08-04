@@ -46,6 +46,7 @@
                 <form id="lectureUploadForm">
                     <input type="hidden" id="lectureUploadId">
                     <div class="upload-grid">
+                        <div><label>Campus</label><select id="lectureCampus" required></select></div>
                         <div><label>Class</label><select id="lectureClass" required></select></div>
                         <div><label>Lecture Title</label><input type="text" id="lectureTitle" required placeholder="e.g. Chapter 3 Lecture"></div>
                         <div><label>Subject</label><input type="text" id="lectureSubject" placeholder="e.g. Science"></div>
@@ -63,10 +64,36 @@
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         const LECTURE_KEY = 'eduCore_uploaded_lectures';
-        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        let lectureRecords = [];
+        function data(key) {
+            if (key === LECTURE_KEY) return lectureRecords;
+            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; }
+        }
+        const LECTURE_SAVE_ROUTE = 'uploaded-lectures';
         async function save(key, value) {
             try {
-                const result = await window.eduCoreCollectionApi.save(key, value);
+                if (window.eduCoreCollectionApi?.save) {
+                    const result = await window.eduCoreCollectionApi.save(key, value);
+                    if (!result.success) {
+                        showAppAlert('Lecture saved locally, but server sync failed.', 'Saved Locally');
+                    }
+                    if (key === LECTURE_KEY) lectureRecords = Array.isArray(value) ? value : [];
+                    return true;
+                }
+                const token = sessionStorage.getItem('eduCore_token') || '';
+                const response = await fetch(`${API_BASE_URL}/${LECTURE_SAVE_ROUTE}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
+                    body: JSON.stringify(value)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || result?.error || 'Save failed.');
+                }
+                if (key === LECTURE_KEY) lectureRecords = Array.isArray(value) ? value : [];
                 if (!result.success) {
                     showAppAlert('Lecture saved locally, but server sync failed.', 'Saved Locally');
                 }
@@ -74,6 +101,24 @@
             } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
         }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
+        async function populateCampuses() {
+            const campusSelect = document.getElementById('lectureCampus');
+            if (!campusSelect) return;
+            const selectedValue = campusSelect.value;
+            const campuses = typeof window.loadRegisteredCampusNames === 'function'
+                ? await window.loadRegisteredCampusNames()
+                : (typeof window.getUniqueCampusNames === 'function'
+                    ? window.getUniqueCampusNames()
+                    : [...new Set([
+                        ...data('eduCore_students').map((student) => student?.campusName),
+                        ...data('eduCore_teachers').map((teacher) => teacher?.campusName || teacher?.bankBranch),
+                        ...data('eduCore_staff').map((staff) => staff?.campusName || staff?.bankBranch)
+                    ].map((value) => String(value || '').trim()).filter(Boolean))]).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+            campusSelect.innerHTML = '<option value="">Select Campus</option>' + campuses.map((campus) => `<option value="${esc(campus)}">${esc(campus)}</option>`).join('');
+            if (selectedValue && campuses.some((campus) => String(campus || '').trim().toLowerCase() === String(selectedValue || '').trim().toLowerCase())) {
+                campusSelect.value = selectedValue;
+            }
+        }
         async function populateClasses() {
             const names = typeof window.eduCoreGetClassOptions === 'function'
                 ? await window.eduCoreGetClassOptions()
@@ -91,13 +136,13 @@
         function render() {
             const items = data(LECTURE_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
             if (!items.length) { lectureUploadList.innerHTML = '<div class="empty-note">No lecture uploaded yet.</div>'; return; }
-            lectureUploadList.innerHTML = `<table class="upload-table"><thead><tr><th>Class</th><th>Lecture</th><th>Link / File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade)}</td><td><strong>${esc(item.title)}</strong><br>${esc(item.subject || '-')}<br>${esc(item.details)}</td><td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open Link</a><br>` : ''}${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'lecture-file')}">${esc(item.file.name || 'Download')}</a>` : (!item.url ? '-' : '')}</td><td><div class="action-row"><button class="mini-btn edit" onclick="editItem('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteItem('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            lectureUploadList.innerHTML = `<table class="upload-table"><thead><tr><th>Campus</th><th>Class</th><th>Lecture</th><th>Link / File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.campusName || '-')}</td><td>${esc(item.classGrade)}</td><td><strong>${esc(item.title)}</strong><br>${esc(item.subject || '-')}<br>${esc(item.details)}</td><td>${item.url ? `<a href="${esc(item.url)}" target="_blank" rel="noopener">Open Link</a><br>` : ''}${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'lecture-file')}">${esc(item.file.name || 'Download')}</a>` : (!item.url ? '-' : '')}</td><td><div class="action-row"><button class="mini-btn edit" onclick="editItem('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="mini-btn delete" onclick="deleteItem('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             if (window.lucide) lucide.createIcons();
         }
         function editItem(id) {
             const item = data(LECTURE_KEY).find((entry) => entry.id === id);
             if (!item) return;
-            lectureUploadId.value = item.id; lectureClass.value = item.classGrade || ''; lectureTitle.value = item.title || ''; lectureSubject.value = item.subject || ''; lectureUrl.value = item.url || ''; lectureDetails.value = item.details || '';
+            lectureUploadId.value = item.id; lectureCampus.value = item.campusName || ''; lectureClass.value = item.classGrade || ''; lectureTitle.value = item.title || ''; lectureSubject.value = item.subject || ''; lectureUrl.value = item.url || ''; lectureDetails.value = item.details || '';
             lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Update Lecture';
             lectureUploadForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (window.lucide) lucide.createIcons();
         }
@@ -107,16 +152,31 @@
             const editId = lectureUploadId.value;
             const existing = data(LECTURE_KEY).find((item) => item.id === editId);
             const file = await readFile(lectureFile);
-            const item = { id: editId || `LECTURE-${Date.now()}`, classGrade: lectureClass.value, title: lectureTitle.value.trim(), subject: lectureSubject.value.trim(), url: lectureUrl.value.trim(), details: lectureDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
-            if (!item.classGrade || !item.title || !item.details) { showAppAlert('Class, title, and notes are required.', 'Missing Lecture'); return; }
+            const item = { id: editId || `LECTURE-${Date.now()}`, campusName: lectureCampus.value, classGrade: lectureClass.value, title: lectureTitle.value.trim(), subject: lectureSubject.value.trim(), url: lectureUrl.value.trim(), details: lectureDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+            if (!item.campusName || !item.classGrade || !item.title || !item.details) { showAppAlert('Campus, class, title, and notes are required.', 'Missing Lecture'); return; }
             const items = data(LECTURE_KEY); const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
             if (!(await save(LECTURE_KEY, items))) return;
             event.target.reset(); lectureUploadId.value = ''; lectureSaveBtn.innerHTML = '<i data-lucide="save"></i> Save Lecture'; render(); showSuccessModal(editId ? 'Lecture Updated!' : 'Lecture Uploaded!', 'Lecture is visible in student portal.');
         });
         (async () => {
-            await window.eduCoreCollectionApi.load(LECTURE_KEY, data(LECTURE_KEY));
-            await populateClasses(); render(); if (window.lucide) lucide.createIcons();
+            try {
+                if (window.eduCoreCollectionApi?.load) {
+                    lectureRecords = await window.eduCoreCollectionApi.load(LECTURE_KEY, data(LECTURE_KEY));
+                } else {
+                    const response = await fetch(`${API_BASE_URL}/${LECTURE_SAVE_ROUTE}`, { cache: 'no-store' });
+                    const result = await response.json().catch(() => ({}));
+                    if (response.ok && result?.success !== false) {
+                        lectureRecords = Array.isArray(result?.lectures) ? result.lectures : [];
+                    }
+                }
+            } catch (_error) {
+                lectureRecords = data(LECTURE_KEY);
+            }
+            await populateCampuses();
+            await populateClasses();
+            render();
+            if (window.lucide) lucide.createIcons();
         })();
     </script>
 </body>
