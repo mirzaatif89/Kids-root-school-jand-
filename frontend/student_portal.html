@@ -3030,9 +3030,11 @@
         async function hydrateStudentPortalCollections() {
             const collections = [
                 [STUDENT_UPLOADED_ASSIGNMENT_KEY, 'uploaded-assignments', 'assignments'],
+                [COMPLAINT_KEY, 'complaints', 'complaints'],
                 [STUDENT_COURSE_KEY, 'student-courses', 'courses'],
                 [STUDENT_DIARY_KEY, 'student-diaries', 'diaries'],
                 [STUDENT_QUIZ_KEY, 'student-quizzes', 'quizzes'],
+                [STUDENT_QUIZ_SUBMISSION_KEY, 'student-quiz-submissions', 'submissions'],
                 [STUDENT_UPLOADED_LECTURE_KEY, 'uploaded-lectures', 'lectures'],
                 [STUDENT_SCHEDULE_KEY, 'student-schedules', 'schedules']
             ];
@@ -3929,7 +3931,7 @@
             form.querySelector('input[type="radio"]')?.focus();
         }
 
-        function submitStudentQuiz(event) {
+        async function submitStudentQuiz(event) {
             const form = event.target.closest('[data-student-quiz-form]');
             if (!form) return;
             event.preventDefault();
@@ -3986,7 +3988,15 @@
                 submittedAt: new Date().toISOString()
             };
             if (duplicateIndex >= 0) submissions[duplicateIndex] = submission; else submissions.push(submission);
-            localStorage.setItem(STUDENT_QUIZ_SUBMISSION_KEY, JSON.stringify(submissions));
+            try {
+                const result = await window.eduCoreCollectionApi.save(STUDENT_QUIZ_SUBMISSION_KEY, submissions);
+                if (!result.success) {
+                    showAppAlert('Quiz saved locally, but server sync failed.', 'Saved Locally');
+                }
+            } catch (_error) {
+                showAppAlert('Quiz submission could not be saved.', 'Save Failed');
+                return;
+            }
             applyStudentQuizzes(student);
             updateStudentNotifications(student);
             showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}. Pass marks: ${passMarks}. Result: ${passed ? 'Pass' : 'Fail'}`, 'Quiz Result');
@@ -4082,9 +4092,17 @@
             const thread = getComplaintThread(complaints[index]);
             thread.push({ role: 'Student', name: student.fullName || loggedInUser?.fullName || 'Student', message: reply, createdAt: now });
             complaints[index] = { ...complaints[index], thread, status: 'Pending', updatedAt: now };
-            localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
-            renderStudentComplaints(student);
-            showAppAlert('Your reply has been sent.', 'Reply Sent');
+            window.eduCoreCollectionApi.save(COMPLAINT_KEY, complaints)
+                .then((result) => {
+                    if (!result.success) {
+                        showAppAlert('Reply saved locally, but server sync failed.', 'Saved Locally');
+                    }
+                    renderStudentComplaints(student);
+                    showAppAlert('Your reply has been sent.', 'Reply Sent');
+                })
+                .catch(() => {
+                    showAppAlert('Your reply could not be saved.', 'Save Failed');
+                });
         }
 
         function readPortalFile(input) {
@@ -4152,9 +4170,12 @@
                 createdAt: new Date().toISOString()
             });
             try {
-                localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
+                const result = await window.eduCoreCollectionApi.save(COMPLAINT_KEY, complaints);
+                if (!result.success) {
+                    showAppAlert('Complaint saved locally, but server sync failed.', 'Saved Locally');
+                }
             } catch (_error) {
-                showAppAlert('Complaint could not be saved. The attached file may be too large.', 'Storage Full');
+                showAppAlert('Complaint could not be saved.', 'Save Failed');
                 return;
             }
             event.target.reset();

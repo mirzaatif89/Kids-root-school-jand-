@@ -1817,10 +1817,12 @@ const PORTAL_COLLECTION_API_MAP = {
     [STORAGE_KEY_STAFF]: { route: 'staff', recordsKey: 'staff' },
     [STORAGE_KEY_CLASSES]: { route: 'classes', recordsKey: 'classes' },
     eduCore_student_assignment_submissions: { route: 'student-assignments', recordsKey: 'assignments' },
+    eduCore_complaints: { route: 'complaints', recordsKey: 'complaints' },
     eduCore_uploaded_assignments: { route: 'uploaded-assignments', recordsKey: 'assignments' },
     eduCore_student_courses: { route: 'student-courses', recordsKey: 'courses' },
     eduCore_student_diaries: { route: 'student-diaries', recordsKey: 'diaries' },
     eduCore_student_quizzes: { route: 'student-quizzes', recordsKey: 'quizzes' },
+    eduCore_student_quiz_submissions: { route: 'student-quiz-submissions', recordsKey: 'submissions' },
     eduCore_uploaded_lectures: { route: 'uploaded-lectures', recordsKey: 'lectures' },
     eduCore_student_schedules: { route: 'student-schedules', recordsKey: 'schedules' }
 };
@@ -1854,9 +1856,9 @@ async function loadCollectionFromApi(storageKey, fallbackValue = []) {
 async function saveCollectionToApi(storageKey, records) {
     const config = PORTAL_COLLECTION_API_MAP[storageKey];
     const normalized = Array.isArray(records) ? records : [];
-    localStorage.setItem(storageKey, JSON.stringify(normalized));
 
     if (!config) {
+        localStorage.setItem(storageKey, JSON.stringify(normalized));
         return { success: true, records: normalized };
     }
 
@@ -1874,6 +1876,7 @@ async function saveCollectionToApi(storageKey, records) {
         if (!response.ok || result?.success === false) {
             throw new Error(result?.message || result?.error || `${config.route} could not be saved.`);
         }
+        localStorage.setItem(storageKey, JSON.stringify(normalized));
         return { success: true, result };
     } catch (error) {
         return { success: false, error: error.message || 'Save failed.' };

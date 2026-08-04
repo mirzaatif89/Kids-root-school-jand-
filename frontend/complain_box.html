@@ -112,7 +112,9 @@
             '#family': 'Family'
         };
         function readComplaints() { try { return JSON.parse(localStorage.getItem(COMPLAINT_KEY) || '[]'); } catch (_e) { return []; } }
-        function saveComplaints(items) { localStorage.setItem(COMPLAINT_KEY, JSON.stringify(items)); }
+        async function saveComplaints(items) {
+            await window.eduCoreCollectionApi?.save(COMPLAINT_KEY, items);
+        }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
         function sanitizeFileName(fileName) {
             return String(fileName || 'complaint-file').trim().replace(/[\\/:*?"<>|]+/g, '-') || 'complaint-file';
@@ -195,7 +197,7 @@
             }).join('');
             if (window.lucide) window.lucide.createIcons();
         }
-        function updateComplaint(id) {
+        async function updateComplaint(id) {
             const items = readComplaints();
             const index = items.findIndex((item) => item.id === id);
             if (index < 0) return;
@@ -224,14 +226,14 @@
                 status: selectedStatus,
                 updatedAt: now
             };
-            saveComplaints(items);
+            await saveComplaints(items);
             renderComplaints();
             showAppAlert('Complaint update saved.', 'Update Saved');
         }
         async function deleteComplaint(id) {
             const confirmed = await showAppConfirm('Delete this complaint?', 'Delete Complaint');
             if (!confirmed) return;
-            saveComplaints(readComplaints().filter((item) => item.id !== id));
+            await saveComplaints(readComplaints().filter((item) => item.id !== id));
             renderComplaints();
         }
         function applyComplaintFilter(filter) {
@@ -251,7 +253,7 @@
                 applyComplaintFilter(card.dataset.complaintFilter || 'Student');
             });
         });
-        document.getElementById('familyComplaintForm').addEventListener('submit', (event) => {
+        document.getElementById('familyComplaintForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const items = readComplaints();
             items.push({
@@ -266,13 +268,17 @@
                 actionTaken: '',
                 createdAt: new Date().toISOString()
             });
-            saveComplaints(items);
+            await saveComplaints(items);
             event.target.reset();
             renderComplaints();
             showAppAlert('Family complaint saved.', 'Complaint Saved');
         });
         applyComplaintHashFilter();
-        if (!complaintHashFilters[String(window.location.hash || '').toLowerCase()]) renderComplaints();
+        (async () => {
+            await window.eduCoreCollectionApi?.load(COMPLAINT_KEY, readComplaints());
+            if (!complaintHashFilters[String(window.location.hash || '').toLowerCase()]) renderComplaints();
+            else applyComplaintHashFilter();
+        })();
         window.addEventListener('hashchange', applyComplaintHashFilter);
         if (window.lucide) window.lucide.createIcons();
     </script>

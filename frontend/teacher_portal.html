@@ -1979,9 +1979,12 @@
                 createdAt: new Date().toISOString()
             });
             try {
-                localStorage.setItem(COMPLAINT_KEY, JSON.stringify(complaints));
+                const result = await window.eduCoreCollectionApi.save(COMPLAINT_KEY, complaints);
+                if (!result.success) {
+                    showAppAlert('Complaint saved locally, but server sync failed.', 'Saved Locally');
+                }
             } catch (_error) {
-                showAppAlert('Complaint could not be saved. The attached file may be too large.', 'Storage Full');
+                showAppAlert('Complaint could not be saved.', 'Save Failed');
                 return;
             }
             event.target.reset();
@@ -2101,12 +2104,16 @@
                 applyTeacherData(teacher);
                 await loadTeacherMessages();
                 await loadTeacherLeaveRequests();
+                await window.eduCoreCollectionApi.load(COMPLAINT_KEY, readLocal(COMPLAINT_KEY));
+                renderTeacherComplaints();
             } catch (_error) {
                 const fallback = getTeacherFallback();
                 if (fallback) {
                     applyTeacherData(fallback);
                     await loadTeacherMessages();
                     await loadTeacherLeaveRequests();
+                    await window.eduCoreCollectionApi.load(COMPLAINT_KEY, readLocal(COMPLAINT_KEY));
+                    renderTeacherComplaints();
                     return;
                 }
                 await showAppAlert('The teacher profile could not be loaded. Please sign in again.');

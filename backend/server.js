@@ -2782,6 +2782,15 @@ registerMobileCollectionRoutes({
 });
 
 registerMobileCollectionRoutes({
+    route: 'complaints',
+    storeName: 'complaints',
+    recordsKey: 'complaints',
+    itemKey: 'complaint',
+    prefix: 'COMP',
+    socketEvent: 'complaints_update'
+});
+
+registerMobileCollectionRoutes({
     route: 'uploaded-assignments',
     storeName: 'uploaded_assignments',
     recordsKey: 'assignments',
@@ -2815,6 +2824,15 @@ registerMobileCollectionRoutes({
     itemKey: 'quiz',
     prefix: 'QUIZ',
     socketEvent: 'student_quizzes_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'student-quiz-submissions',
+    storeName: 'student_quiz_submissions',
+    recordsKey: 'submissions',
+    itemKey: 'submission',
+    prefix: 'QSUB',
+    socketEvent: 'student_quiz_submissions_update'
 });
 
 registerMobileCollectionRoutes({
