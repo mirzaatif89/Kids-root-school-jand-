@@ -2759,18 +2759,23 @@
 
         <section class="panel-card student-portal-section" id="studentDateSheetSection" style="display:none; margin-bottom: 1.25rem;">
             <h3 style="margin:0;">Date Sheet</h3>
-            <div class="portal-content-card" style="margin-top: 1rem; padding: 1rem 1.1rem;">
-                <div class="portal-action-row" style="align-items: center; margin-bottom: 0.6rem;">
-                    <div>
-                        <div style="font-weight: 800; color: #0f172a;" id="studentDateSheetStatus">No date sheet has been published for your class yet.</div>
-                        <p class="portal-content-meta" id="studentDateSheetDate" style="margin: 0.35rem 0 0;"></p>
-                    </div>
-                    <button type="button" class="btn btn-primary" id="downloadDateSheetBtn">
-                        <i data-lucide="download"></i> Download
-                    </button>
-                </div>
-                <p class="portal-content-meta" id="studentDateSheetFileNote" style="margin: 0;"></p>
+            <div class="portal-action-row" style="margin-top: 1rem; margin-bottom: 0.75rem;">
+                <div></div>
+                <button type="button" class="btn btn-primary" id="downloadDateSheetBtn">
+                    <i data-lucide="download"></i> Download
+                </button>
             </div>
+            <table class="panel-table" id="studentDateSheetTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Timing</th>
+                    </tr>
+                </thead>
+                <tbody id="studentDateSheetBody"></tbody>
+            </table>
         </section>
 
         <section class="panel-card student-portal-section" id="studentQuizSection" style="display:none; margin-bottom: 1.25rem;">
@@ -2883,7 +2888,6 @@
         const STORAGE_KEY_SPECIAL_NOTICES = 'eduCore_special_notices';
         const RESULT_ARCHIVE_KEY = 'APEXIUMS_RESULT_CARD_ARCHIVE_V2';
         const RESULT_PUBLISH_SCHEDULE_KEY = 'APEXIUMS_RESULT_PUBLISH_SCHEDULE_V1';
-        const DATE_SHEET_KEY = 'APEXIUMS_DATE_SHEET_V1';
         let loadedDateSheetRecord = null;
         const STUDENT_ATTENDANCE_KEY = 'eduCore_student_attendance';
         const STUDENT_PROFILE_CACHE_KEY = 'eduCore_student_profile';
@@ -4964,7 +4968,6 @@
                     STUDENT_LEAVE_KEY,
                     COMPLAINT_KEY,
                     STORAGE_KEY_SPECIAL_NOTICES,
-                    DATE_SHEET_KEY,
                     RESULT_ARCHIVE_KEY
                 ];
                 if (refreshKeys.includes(event.key)) {
@@ -4994,6 +4997,7 @@
                     await loadExecutedDateSheet();
                     applyStudentAttendance(student);
                     applyStudentDiary(student);
+                    applyDateSheet(student);
                     updateStudentNotifications(student);
                 } catch (_error) {
                     updateStudentNotifications(student);
@@ -5480,12 +5484,7 @@
             if (loadedDateSheetRecord && typeof loadedDateSheetRecord === 'object') {
                 return loadedDateSheetRecord;
             }
-            try {
-                const saved = JSON.parse(localStorage.getItem(DATE_SHEET_KEY) || '{}');
-                return saved && typeof saved === 'object' ? saved : {};
-            } catch (error) {
-                return {};
-            }
+            return {};
         }
 
         async function loadExecutedDateSheet() {
@@ -5495,21 +5494,13 @@
                 const result = await response.json();
                 if (result.dateSheet && result.dateSheet.status === 'executed') {
                     loadedDateSheetRecord = result.dateSheet;
-                    try {
-                        localStorage.setItem(DATE_SHEET_KEY, JSON.stringify(result.dateSheet));
-                    } catch (error) {
-                        localStorage.removeItem(DATE_SHEET_KEY);
-                    }
                     return result.dateSheet;
                 }
                 loadedDateSheetRecord = null;
-                localStorage.removeItem(DATE_SHEET_KEY);
                 return {};
             } catch (error) {
-                return loadDateSheetState();
+                return {};
             }
-
-            return loadDateSheetState();
         }
 
         function formatScheduleDate(value) {
@@ -5670,9 +5661,8 @@
 
         function applyDateSheet(student) {
             const state = loadDateSheetState();
-            const statusEl = document.getElementById('studentDateSheetStatus');
-            const dateEl = document.getElementById('studentDateSheetDate');
-            const fileNote = document.getElementById('studentDateSheetFileNote');
+            const table = document.getElementById('studentDateSheetTable');
+            const body = document.getElementById('studentDateSheetBody');
             const downloadBtn = document.getElementById('downloadDateSheetBtn');
             const className = String(student.classGrade || '').trim();
             const campusName = getPortalStudentCampusName(student);
@@ -5688,26 +5678,40 @@
             const classMatches = matchesDateSheetClass(className, recordClass) || rows.some((row) => matchesDateSheetClass(className, row.className));
             const campusMatches = matchesDateSheetCampus(campusName, recordCampus);
             const visible = Boolean(state.status === 'executed' && (hasUploadedFile || (classMatches && campusMatches && monthFilteredRows.length)));
-            const availableDate = formatMonthYearLabel(state.executedAt || state.updatedAt || monthFilteredRows[0]?.examDate || rows[0]?.examDate || '');
-            const examTitle = String(state.dateSheetExamTitle || '').trim() || 'Date Sheet';
-            const downloadHint = hasUploadedFile ? `Download: ${uploadedFile.name}` : 'Download the published date sheet';
+            const visibleRows = hasUploadedFile && !monthFilteredRows.length
+                ? [{
+                    subject: String(state.dateSheetExamTitle || 'Date Sheet').trim(),
+                    className: String(state.dateSheetClassGroup || className || '-').trim() || '-',
+                    examDate: state.executedAt || state.updatedAt || '',
+                    startTime: '',
+                    endTime: ''
+                }]
+                : monthFilteredRows;
 
-            if (statusEl) {
-                statusEl.textContent = visible
-                    ? examTitle
-                    : 'No date sheet has been published for your class yet.';
-            }
-
-            if (dateEl) {
-                dateEl.textContent = visible
-                    ? `Month: ${availableDate || '-'}`
-                    : '';
-            }
-
-            if (fileNote) {
-                fileNote.textContent = visible
-                    ? downloadHint
-                    : '';
+            if (table && body) {
+                if (visible && visibleRows.length) {
+                    body.innerHTML = visibleRows.map((row) => {
+                        const timing = row.startTime || row.endTime
+                            ? `${formatScheduleTime(row.startTime)} - ${formatScheduleTime(row.endTime)}`
+                            : '-';
+                        return `
+                            <tr>
+                                <td>${escapeHtml(row.subject || '-')}</td>
+                                <td>${escapeHtml(row.className || '-')}</td>
+                                <td>${escapeHtml(formatScheduleDate(row.examDate))}</td>
+                                <td>${escapeHtml(timing)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    table.style.display = '';
+                } else {
+                    body.innerHTML = `
+                        <tr>
+                            <td colspan="4" style="text-align:center; color:#6b7280;">No date sheet has been published for your class yet.</td>
+                        </tr>
+                    `;
+                    table.style.display = '';
+                }
             }
 
             if (downloadBtn) {
@@ -5839,6 +5843,7 @@
             applyStudentQuizzes(student);
             applyStudentUploadedLectures(student);
             applyStudentLectures(student);
+            applyDateSheet(student);
             renderStudentComplaints(student);
             renderStudentLeaveHistory(student);
             applyStudentAttendance(student);
