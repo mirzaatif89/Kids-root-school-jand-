@@ -5580,6 +5580,14 @@
             return rowKey === studentKey || rowKey.includes(studentKey) || studentKey.includes(rowKey);
         }
 
+        function matchesDateSheetCampus(studentCampus = '', recordCampus = '') {
+            const studentKey = normalizeDiaryCampusKey(studentCampus);
+            const recordKey = normalizeDiaryCampusKey(recordCampus);
+            if (!studentKey) return true;
+            if (!recordKey) return true;
+            return recordKey === studentKey || recordKey.includes(studentKey) || studentKey.includes(recordKey);
+        }
+
         function compareLectureRows(a, b) {
             const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
@@ -5655,35 +5663,38 @@
             const fileNote = document.getElementById('studentDateSheetFileNote');
             const downloadBtn = document.getElementById('downloadDateSheetBtn');
             const className = String(student.classGrade || '').trim();
+            const campusName = getPortalStudentCampusName(student);
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
             const uploadedFile = state.uploadedDateSheetFile || {};
             const hasUploadedFile = Boolean(state.status === 'executed' && uploadedFile.name && uploadedFile.dataUrl);
-            const filteredRows = state.status === 'executed'
-                ? rows.filter((row) => matchesDateSheetClass(className, row.className))
-                : [];
-            const availableDate = formatScheduleDate(state.executedAt || state.updatedAt || filteredRows[0]?.examDate || rows[0]?.examDate || '');
+            const recordClass = state.dateSheetClassGroup || rows[0]?.className || '';
+            const recordCampus = state.dateSheetCampus || '';
+            const classMatches = matchesDateSheetClass(className, recordClass) || rows.some((row) => matchesDateSheetClass(className, row.className));
+            const campusMatches = matchesDateSheetCampus(campusName, recordCampus);
+            const visible = Boolean(state.status === 'executed' && (hasUploadedFile || (classMatches && campusMatches)));
+            const availableDate = formatScheduleDate(state.executedAt || state.updatedAt || rows[0]?.examDate || '');
 
             if (statusEl) {
-                statusEl.textContent = filteredRows.length || hasUploadedFile
+                statusEl.textContent = visible
                     ? 'Date sheet available'
                     : 'No date sheet has been published for your class yet.';
             }
 
             if (dateEl) {
-                dateEl.textContent = filteredRows.length || hasUploadedFile
+                dateEl.textContent = visible
                     ? `Date: ${availableDate || '-'}`
                     : '';
             }
 
             if (fileNote) {
-                fileNote.textContent = hasUploadedFile
+                fileNote.textContent = visible && hasUploadedFile
                     ? `Published file: ${uploadedFile.name}`
                     : '';
             }
 
             if (downloadBtn) {
-                downloadBtn.style.display = filteredRows.length || hasUploadedFile ? '' : 'none';
-                downloadBtn.disabled = !(filteredRows.length || hasUploadedFile);
+                downloadBtn.style.display = visible ? '' : 'none';
+                downloadBtn.disabled = !visible;
             }
         }
 
