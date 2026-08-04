@@ -3792,7 +3792,7 @@
                     <h4>${escapeHtml(item.title || '-')}</h4>
                     <div class="portal-content-meta">${escapeHtml(item.date || item.classGrade || '-')}</div>
                     <p>${escapeHtml(item.details || '-')}</p>
-                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(storageKey)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "File")})'><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
                 </article>
             `).join('');
             if (window.lucide) window.lucide.createIcons();
@@ -3822,7 +3822,7 @@
                         ${escapeHtml(item.campusName || item.campus || '-')} | ${escapeHtml(item.classGrade || '-')}
                     </div>
                     <p>${escapeHtml(item.details || '-')}</p>
-                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_COURSE_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "File")})'><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
                 </article>
             `).join('');
             if (window.lucide) window.lucide.createIcons();
@@ -4062,7 +4062,7 @@
                             ${escapeHtml(item.dueDate ? `Due Date: ${item.dueDate}` : item.classGrade || '-')} - ${escapeHtml(totalMarks)} Marks - Pass Marks: ${escapeHtml(passMarks)}
                         </div>
                         <p>${escapeHtml(item.details || '-')}</p>
-                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_QUIZ_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
+                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "Quiz File")})'><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'Quiz File')}</button>` : ''}
                         ${questions.length ? `
                             <div class="portal-quiz-start-row">
                                 <span>${escapeHtml(questions.length)} question${questions.length === 1 ? '' : 's'} available. Start when you are ready.</span>
@@ -4232,7 +4232,7 @@
                     <p>${escapeHtml(item.details || '-')}</p>
                     <div class="portal-action-row">
                         ${item.url ? `<a class="portal-download-btn" href="${escapeHtml(item.url)}" target="_blank" rel="noopener"><i data-lucide="external-link" width="16"></i> Open Link</a>` : ''}
-                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_UPLOADED_LECTURE_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "File")})'><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
                     </div>
                 </article>
             `).join('');
