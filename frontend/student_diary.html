@@ -246,14 +246,24 @@
         let diaryDrafts = [];
         let diaryEditId = '';
         let lastAutoOpenedKey = '';
+        let diaryCache = [];
 
-        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        function data(key) {
+            if (key === STUDENT_DIARY_KEY) return diaryCache;
+            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; }
+        }
         async function save(key, value) {
             try {
                 const result = await window.eduCoreCollectionApi.save(key, value);
                 if (!result.success) {
                     showAppAlert('Diary could not be saved on the server.', 'Save Failed');
                     return false;
+                }
+                if (key === STUDENT_DIARY_KEY) {
+                    diaryCache = Array.isArray(result?.result?.diaries)
+                        ? result.result.diaries
+                        : (Array.isArray(value) ? value : []);
+                    localStorage.removeItem(STUDENT_DIARY_KEY);
                 }
                 return true;
             } catch (_e) {
@@ -390,7 +400,8 @@
         }
 
         async function deleteDiary(id) {
-            await save(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY).filter((item) => item.id !== id));
+            diaryCache = data(STUDENT_DIARY_KEY).filter((item) => item.id !== id);
+            await save(STUDENT_DIARY_KEY, diaryCache);
             render();
         }
 
@@ -482,7 +493,8 @@
         });
 
         (async () => {
-            await window.eduCoreCollectionApi.load(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY));
+            diaryCache = await window.eduCoreCollectionApi.load(STUDENT_DIARY_KEY, []);
+            localStorage.removeItem(STUDENT_DIARY_KEY);
             await populateCampuses();
             await populateClasses();
             render();

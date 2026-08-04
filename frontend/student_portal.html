@@ -3043,9 +3043,14 @@
                     const records = Array.isArray(result?.[recordsKey])
                         ? result[recordsKey]
                         : (Array.isArray(result) ? result : []);
-                    localStorage.setItem(storageKey, JSON.stringify(records));
+                    if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                        window.__eduCoreServerCollectionCache.set(storageKey, records);
+                    }
+                    localStorage.removeItem(storageKey);
                 } catch (_error) {
-                    // Keep any cached local copy when the API is offline.
+                    if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.get === 'function' && window.__eduCoreServerCollectionCache.has(storageKey)) {
+                        return window.__eduCoreServerCollectionCache.get(storageKey);
+                    }
                 }
             }));
         }
@@ -3058,7 +3063,10 @@
                     throw new Error(result?.message || 'student-diaries unavailable.');
                 }
                 const diaries = Array.isArray(result?.diaries) ? result.diaries : [];
-                localStorage.setItem(STUDENT_DIARY_KEY, JSON.stringify(diaries));
+                if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                    window.__eduCoreServerCollectionCache.set(STUDENT_DIARY_KEY, diaries);
+                }
+                localStorage.removeItem(STUDENT_DIARY_KEY);
                 return diaries;
             } catch (_error) {
                 return getPortalData(STUDENT_DIARY_KEY);
@@ -3535,6 +3543,9 @@
         }
 
         function getPortalData(key) {
+            if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.has === 'function' && window.__eduCoreServerCollectionCache.has(key)) {
+                return window.__eduCoreServerCollectionCache.get(key);
+            }
             try {
                 return JSON.parse(localStorage.getItem(key) || '[]');
             } catch (_error) {
@@ -3780,27 +3791,13 @@
             const submissions = getPortalData(STUDENT_ASSIGNMENT_SUBMISSION_KEY);
             submissions.unshift(payload);
             try {
-                localStorage.setItem(STUDENT_ASSIGNMENT_SUBMISSION_KEY, JSON.stringify(submissions));
-            } catch (_error) {
-                showAppAlert('Assignment file is too large to save in browser storage.', 'Storage Full');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/student-assignments`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify(payload)
-                });
-                const result = await response.json().catch(() => null);
-                if (!response.ok || result?.success === false) {
-                    throw new Error(result?.message || 'Database sync failed.');
+                const result = await window.eduCoreCollectionApi.save(STUDENT_ASSIGNMENT_SUBMISSION_KEY, submissions);
+                if (!result.success) {
+                    throw new Error(result.error || 'Database sync failed.');
                 }
             } catch (error) {
-                showAppAlert(`Assignment saved locally, but database sync failed: ${error.message}`, 'Saved Locally');
+                showAppAlert(`Assignment could not be saved on the server: ${error.message}`, 'Save Failed');
+                return;
             }
 
             document.getElementById('studentAssignmentForm').reset();

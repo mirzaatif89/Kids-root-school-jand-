@@ -1164,6 +1164,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // =======================================================
 
 function getData(key) {
+    const cachedCollection = window.__eduCoreServerCollectionCache;
+    if (cachedCollection && typeof cachedCollection.get === 'function' && cachedCollection.has(key)) {
+        return cachedCollection.get(key);
+    }
+
     const data = localStorage.getItem(key);
     if (!data) return [];
     try {
@@ -1827,11 +1832,26 @@ const PORTAL_COLLECTION_API_MAP = {
     eduCore_student_schedules: { route: 'student-schedules', recordsKey: 'schedules' }
 };
 
+window.__eduCoreServerCollectionCache = window.__eduCoreServerCollectionCache || new Map();
+
+function setServerCollectionCache(key, value) {
+    const cache = window.__eduCoreServerCollectionCache;
+    if (cache && typeof cache.set === 'function') {
+        cache.set(key, value);
+    }
+}
+
+function getServerCollectionCache(key) {
+    const cache = window.__eduCoreServerCollectionCache;
+    if (cache && typeof cache.get === 'function' && cache.has(key)) {
+        return cache.get(key);
+    }
+    return undefined;
+}
+
 async function loadCollectionFromApi(storageKey, fallbackValue = []) {
     const config = PORTAL_COLLECTION_API_MAP[storageKey];
-    const fallback = Array.isArray(fallbackValue)
-        ? fallbackValue
-        : (Array.isArray(getData(storageKey)) ? getData(storageKey) : []);
+    const fallback = Array.isArray(fallbackValue) ? fallbackValue : [];
 
     if (!config) return fallback;
 
@@ -1846,10 +1866,12 @@ async function loadCollectionFromApi(storageKey, fallbackValue = []) {
             ? result[config.recordsKey]
             : (Array.isArray(result) ? result : []);
 
-        localStorage.setItem(storageKey, JSON.stringify(records));
+        setServerCollectionCache(storageKey, records);
+        localStorage.removeItem(storageKey);
         return records;
     } catch (error) {
-        return fallback;
+        const cached = getServerCollectionCache(storageKey);
+        return Array.isArray(cached) ? cached : fallback;
     }
 }
 
@@ -1858,7 +1880,8 @@ async function saveCollectionToApi(storageKey, records) {
     const normalized = Array.isArray(records) ? records : [];
 
     if (!config) {
-        localStorage.setItem(storageKey, JSON.stringify(normalized));
+        setServerCollectionCache(storageKey, normalized);
+        localStorage.removeItem(storageKey);
         return { success: true, records: normalized };
     }
 
@@ -1876,7 +1899,8 @@ async function saveCollectionToApi(storageKey, records) {
         if (!response.ok || result?.success === false) {
             throw new Error(result?.message || result?.error || `${config.route} could not be saved.`);
         }
-        localStorage.setItem(storageKey, JSON.stringify(normalized));
+        setServerCollectionCache(storageKey, normalized);
+        localStorage.removeItem(storageKey);
         return { success: true, result };
     } catch (error) {
         return { success: false, error: error.message || 'Save failed.' };
