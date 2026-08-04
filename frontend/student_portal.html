@@ -3035,7 +3035,7 @@
 
             await Promise.all(collections.map(async ([storageKey, routeName, recordsKey]) => {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/${routeName}`);
+                    const response = await fetch(`${API_BASE_URL}/${routeName}`, { cache: 'no-store' });
                     const result = await response.json().catch(() => ({}));
                     if (!response.ok || result?.success === false) {
                         throw new Error(result?.message || `${routeName} unavailable.`);
@@ -5894,8 +5894,10 @@
                     throw new Error('Unable to load student profile.');
                 }
 
-                const student = await response.json();
+                const studentResult = await response.json();
+                const student = studentResult?.student || studentResult;
                 await hydrateStudentPortalCollections();
+                await refreshStudentDiaryCollection();
                 await loadStudentAttendanceForPortal();
                 await loadExecutedDateSheet();
                 await mergeStudentFeePaymentsIntoMonthlyStore();
@@ -5909,6 +5911,7 @@
 
                 if (fallbackStudent) {
                     await hydrateStudentPortalCollections();
+                    await refreshStudentDiaryCollection();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     await mergeStudentFeePaymentsIntoMonthlyStore();
