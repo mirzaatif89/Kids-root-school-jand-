@@ -598,6 +598,107 @@ function normalizeMobileRecord(payload = {}, prefix = 'REC') {
     };
 }
 
+function getPortalCollectionModel() {
+    return sequelize?.models?.PortalCollectionRecord || null;
+}
+
+function normalizePortalCollectionItem(payload = {}, prefix = 'REC') {
+    const raw = payload && typeof payload === 'object' ? payload : {};
+    const id = String(raw.id || `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`).trim();
+    const now = new Date().toISOString();
+    return {
+        ...raw,
+        id,
+        createdAt: raw.createdAt || now,
+        updatedAt: now
+    };
+}
+
+function formatPortalCollectionRow(row) {
+    const raw = row && typeof row.toJSON === 'function' ? row.toJSON() : (row || {});
+    let payload = {};
+    try {
+        payload = raw.payloadJson ? JSON.parse(raw.payloadJson) : {};
+    } catch (_error) {
+        payload = {};
+    }
+
+    return {
+        ...payload,
+        id: String(raw.id || payload.id || '').trim(),
+        createdAt: String(raw.createdAt || payload.createdAt || '').trim(),
+        updatedAt: String(raw.updatedAt || payload.updatedAt || '').trim()
+    };
+}
+
+async function readPortalCollectionRecords(collectionKey) {
+    const model = getPortalCollectionModel();
+    if (!model) return [];
+
+    const rows = await model.findAll({
+        where: { collectionKey },
+        order: [['updatedAt', 'DESC'], ['createdAt', 'DESC']]
+    });
+
+    return rows.map(formatPortalCollectionRow).filter((item) => item.id);
+}
+
+async function upsertPortalCollectionRecords(collectionKey, payload, prefix) {
+    const model = getPortalCollectionModel();
+    if (!model) {
+        throw new Error('Portal collection database is not available.');
+    }
+
+    const incoming = Array.isArray(payload) ? payload : [payload];
+    const normalized = incoming.map((item) => normalizePortalCollectionItem(item, prefix));
+    const existingRows = await model.findAll({ where: { collectionKey } });
+    const existingMap = new Map(existingRows.map((row) => [String(row.id), row]));
+
+    if (Array.isArray(payload)) {
+        const incomingIds = normalized.map((item) => String(item.id || '').trim()).filter(Boolean);
+        if (incomingIds.length) {
+            await model.destroy({
+                where: {
+                    collectionKey,
+                    id: { [Op.notIn]: incomingIds }
+                }
+            });
+        } else {
+            await model.destroy({ where: { collectionKey } });
+        }
+    }
+
+    const savedRecords = [];
+    for (const item of normalized) {
+        if (!item.id) continue;
+        const existing = existingMap.get(String(item.id));
+        const merged = {
+            ...(existing ? formatPortalCollectionRow(existing) : {}),
+            ...item,
+            collectionKey
+        };
+        await model.upsert({
+            id: item.id,
+            collectionKey,
+            payloadJson: JSON.stringify(merged)
+        });
+        savedRecords.push(merged);
+    }
+
+    const records = await readPortalCollectionRecords(collectionKey);
+    return { record: savedRecords[0] || null, records };
+}
+
+async function deletePortalCollectionRecord(collectionKey, id) {
+    const model = getPortalCollectionModel();
+    if (!model) {
+        throw new Error('Portal collection database is not available.');
+    }
+
+    await model.destroy({ where: { collectionKey, id } });
+    return readPortalCollectionRecords(collectionKey);
+}
+
 function normalizeStudentDiaryRecord(payload = {}) {
     const raw = payload && typeof payload === 'object' ? payload : {};
     return {
@@ -703,20 +804,33 @@ function deleteMobileRecord(storeName, id) {
 }
 
 function registerMobileCollectionRoutes({ route, storeName, recordsKey, itemKey, prefix, socketEvent }) {
-    app.get(`/api/${route}`, (_req, res) => {
-        res.json({ success: true, [recordsKey]: readMobileStore(storeName) });
+    app.get(`/api/${route}`, async (_req, res) => {
+        try {
+            const records = await readPortalCollectionRecords(storeName);
+            res.json({ success: true, [recordsKey]: records });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message || `${route} could not be loaded.` });
+        }
     });
 
-    app.post(`/api/${route}`, (req, res) => {
-        const { record, records } = upsertMobileRecord(storeName, req.body || {}, prefix);
-        if (socketEvent) io.emit(socketEvent, records);
-        res.json({ success: true, [itemKey]: record, [recordsKey]: records });
+    app.post(`/api/${route}`, async (req, res) => {
+        try {
+            const { record, records } = await upsertPortalCollectionRecords(storeName, req.body || {}, prefix);
+            if (socketEvent) io.emit(socketEvent, records);
+            res.json({ success: true, [itemKey]: record || null, [recordsKey]: records });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message || `${route} could not be saved.` });
+        }
     });
 
-    app.delete(`/api/${route}/:id`, (req, res) => {
-        const records = deleteMobileRecord(storeName, req.params.id);
-        if (socketEvent) io.emit(socketEvent, records);
-        res.json({ success: true, deleted: true, [recordsKey]: records });
+    app.delete(`/api/${route}/:id`, async (req, res) => {
+        try {
+            const records = await deletePortalCollectionRecord(storeName, req.params.id);
+            if (socketEvent) io.emit(socketEvent, records);
+            res.json({ success: true, deleted: true, [recordsKey]: records });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message || `${route} could not be deleted.` });
+        }
     });
 }
 
@@ -2895,20 +3009,13 @@ registerMobileCollectionRoutes({
     socketEvent: 'student_courses_update'
 });
 
-app.get('/api/student-diaries', (_req, res) => {
-    res.json({ success: true, diaries: readStudentDiaryStore() });
-});
-
-app.post('/api/student-diaries', (req, res) => {
-    const { diaries, diary, records } = upsertStudentDiaryRecords(req.body || {});
-    io.emit('student_diaries_update', records);
-    res.json({ success: true, diary: diary || null, diaries: diaries || records });
-});
-
-app.delete('/api/student-diaries/:id', (req, res) => {
-    const records = deleteStudentDiaryRecord(req.params.id);
-    io.emit('student_diaries_update', records);
-    res.json({ success: true, deleted: true, diaries: records });
+registerMobileCollectionRoutes({
+    route: 'student-diaries',
+    storeName: 'student_diaries',
+    recordsKey: 'diaries',
+    itemKey: 'diary',
+    prefix: 'DIARY',
+    socketEvent: 'student_diaries_update'
 });
 
 registerMobileCollectionRoutes({
@@ -3191,6 +3298,18 @@ function defineMessageModel(db) {
         recipientName: { type: DataTypes.STRING, allowNull: true },
         senderName: { type: DataTypes.STRING, allowNull: true },
         createdAtLabel: DataTypes.STRING
+    });
+}
+
+function definePortalCollectionRecordModel(db) {
+    return db.define('PortalCollectionRecord', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        collectionKey: { type: DataTypes.STRING, allowNull: false },
+        payloadJson: { type: DataTypes.TEXT('long'), allowNull: false }
+    }, {
+        indexes: [
+            { fields: ['collectionKey'] }
+        ]
     });
 }
 
@@ -3589,6 +3708,7 @@ async function startServer() {
         defineTeacherAttendanceModel(sequelize);
         defineSpecialNoticeModel(sequelize);
         defineMessageModel(sequelize);
+        definePortalCollectionRecordModel(sequelize);
 
         // Avoid Sequelize's repeated ALTER-based index churn on MySQL.
         // Missing legacy columns are handled separately in ensureLegacySchema().
