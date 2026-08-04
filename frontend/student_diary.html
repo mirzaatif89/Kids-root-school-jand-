@@ -257,10 +257,13 @@
         }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
 
-        function populateClasses() {
-            const students = data('eduCore_students');
-            const classes = data('eduCore_classes');
-            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+        async function populateClasses() {
+            const names = typeof window.eduCoreGetClassOptions === 'function'
+                ? await window.eduCoreGetClassOptions()
+                : [...new Set([
+                    ...data('eduCore_classes').map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                    ...data('eduCore_students').map((student) => student?.classGrade)
+                ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
             studentDiaryClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
         }
 
@@ -396,7 +399,7 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        function saveDiaryDrafts() {
+        async function saveDiaryDrafts() {
             if (!studentDiaryClass.value || !studentDiaryDate.value) {
                 showAppAlert('Please select class and diary date first.', 'Missing Diary Info');
                 return;
@@ -459,7 +462,7 @@
 
         (async () => {
             await window.eduCoreCollectionApi.load(STUDENT_DIARY_KEY, data(STUDENT_DIARY_KEY));
-            populateClasses();
+            await populateClasses();
             render();
             if (window.lucide) window.lucide.createIcons();
         })();

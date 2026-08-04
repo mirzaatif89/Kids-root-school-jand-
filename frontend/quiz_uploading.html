@@ -321,10 +321,13 @@
                 .filter((row) => !selectedClass || normalizeQuizFilterValue(row.classGrade) === normalizeQuizFilterValue(selectedClass))
                 .filter((row) => !selectedStatuses.length || selectedStatuses.includes(row.submissionStatus) || selectedStatuses.includes(row.resultStatus));
         }
-        function populateClasses() {
-            const students = data('eduCore_students');
-            const classes = data('eduCore_classes');
-            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+        async function populateClasses() {
+            const names = typeof window.eduCoreGetClassOptions === 'function'
+                ? await window.eduCoreGetClassOptions()
+                : [...new Set([
+                    ...data('eduCore_classes').map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                    ...data('eduCore_students').map((student) => student?.classGrade)
+                ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
             quizClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
         }
         function readFile(input) {
@@ -563,7 +566,7 @@
         document.getElementById('printQuizResultsBtn')?.addEventListener('click', printQuizResultsList);
         (async () => {
             await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
-            setupQuizResultDropdowns(); updateQuizResultStatusSummary(); populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
+            setupQuizResultDropdowns(); updateQuizResultStatusSummary(); await populateClasses(); questionDrafts = [createEmptyQuestion()]; renderQuestionBuilder(); render(); renderSubmissions(); if (window.lucide) lucide.createIcons();
         })();
     </script>
 </body>

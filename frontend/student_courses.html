@@ -75,10 +75,13 @@
             } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
         }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
-        function populateClasses() {
-            const students = data('eduCore_students');
-            const classes = data('eduCore_classes');
-            const names = [...new Set([...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name), ...students.map((student) => student?.classGrade)].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+        async function populateClasses() {
+            const names = typeof window.eduCoreGetClassOptions === 'function'
+                ? await window.eduCoreGetClassOptions()
+                : [...new Set([
+                    ...data('eduCore_classes').map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                    ...data('eduCore_students').map((student) => student?.classGrade)
+                ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
             studentCourseClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
         }
         function readFile(input) {
@@ -115,7 +118,7 @@
         });
         (async () => {
             await window.eduCoreCollectionApi.load(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY));
-            populateClasses(); render(); lucide.createIcons();
+            await populateClasses(); render(); lucide.createIcons();
         })();
     </script>
 </body>

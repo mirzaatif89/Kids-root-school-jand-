@@ -145,16 +145,16 @@
             }
         }
 
-        function populateStudentSchedulingOptions() {
+        async function populateStudentSchedulingOptions() {
             const classSelect = document.getElementById('studentScheduleClass');
             const teacherSelect = document.getElementById('studentScheduleTeacher');
-            const students = getScheduleData('eduCore_students');
-            const classes = getScheduleData('eduCore_classes');
             const teachers = getScheduleData('eduCore_teachers');
-            const classNames = [...new Set([
-                ...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
-                ...students.map((student) => student?.classGrade)
-            ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+            const classNames = typeof window.eduCoreGetClassOptions === 'function'
+                ? await window.eduCoreGetClassOptions()
+                : [...new Set([
+                    ...getScheduleData('eduCore_classes').map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                    ...getScheduleData('eduCore_students').map((student) => student?.classGrade)
+                ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
 
             classSelect.innerHTML = '<option value="">Select Class</option>' + classNames.map((name) => `<option value="${escapeLocalHtml(name)}">${escapeLocalHtml(name)}</option>`).join('');
             teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => {
@@ -260,7 +260,7 @@
 
         (async () => {
             await window.eduCoreCollectionApi.load(STUDENT_SCHEDULE_KEY, getScheduleData(STUDENT_SCHEDULE_KEY));
-            populateStudentSchedulingOptions();
+            await populateStudentSchedulingOptions();
             renderStudentSchedules();
             if (window.lucide) window.lucide.createIcons();
         })();

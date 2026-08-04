@@ -2764,6 +2764,15 @@ registerMobileCollectionRoutes({
 });
 
 registerMobileCollectionRoutes({
+    route: 'classes',
+    storeName: 'classes',
+    recordsKey: 'classes',
+    itemKey: 'classRecord',
+    prefix: 'CLASS',
+    socketEvent: 'classes_update'
+});
+
+registerMobileCollectionRoutes({
     route: 'student-assignments',
     storeName: 'student_assignments',
     recordsKey: 'assignments',

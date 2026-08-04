@@ -455,6 +455,16 @@ async function initialSQLSync() {
             if (typeof updateDashboardStats === 'function' && isCurrentPage('dashboard.html')) updateDashboardStats();
         }
 
+        const cRes = await fetch(`${API_BASE_URL}/classes`, { headers: authHeaders });
+        if (cRes.ok) {
+            const data = await cRes.json();
+            const mergedClasses = Array.isArray(data?.classes)
+                ? data.classes
+                : (Array.isArray(data) ? data : []);
+            localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(mergedClasses));
+            if (typeof renderClasses === 'function') renderClasses();
+        }
+
         const staffRes = await fetch(`${API_BASE_URL}/staff`, { headers: authHeaders });
         if (staffRes.ok) {
             const data = await staffRes.json();
@@ -1798,12 +1808,14 @@ function saveData(key, data, options = {}) {
     if (key === STORAGE_KEY_STUDENTS) syncToSQL('students', data);
     if (key === STORAGE_KEY_TEACHERS) syncToSQL('teachers', data);
     if (key === STORAGE_KEY_STAFF) syncToSQL('staff', data);
+    if (key === STORAGE_KEY_CLASSES) syncToSQL('classes', data);
 }
 
 const PORTAL_COLLECTION_API_MAP = {
     [STORAGE_KEY_STUDENTS]: { route: 'students', recordsKey: 'students' },
     [STORAGE_KEY_TEACHERS]: { route: 'teachers', recordsKey: 'teachers' },
     [STORAGE_KEY_STAFF]: { route: 'staff', recordsKey: 'staff' },
+    [STORAGE_KEY_CLASSES]: { route: 'classes', recordsKey: 'classes' },
     eduCore_student_assignment_submissions: { route: 'student-assignments', recordsKey: 'assignments' },
     eduCore_uploaded_assignments: { route: 'uploaded-assignments', recordsKey: 'assignments' },
     eduCore_student_courses: { route: 'student-courses', recordsKey: 'courses' },
@@ -1872,6 +1884,32 @@ window.eduCoreCollectionApi = {
     load: loadCollectionFromApi,
     save: saveCollectionToApi
 };
+
+async function loadPortalClassOptions() {
+    const [classRecords, studentRecords] = await Promise.all([
+        loadCollectionFromApi(STORAGE_KEY_CLASSES, getData(STORAGE_KEY_CLASSES)),
+        loadCollectionFromApi(STORAGE_KEY_STUDENTS, getData(STORAGE_KEY_STUDENTS))
+    ]);
+
+    const names = new Set();
+    (Array.isArray(classRecords) ? classRecords : []).forEach((item) => {
+        const className = String(item?.name || item?.className || '').trim();
+        const section = String(item?.section || '').trim();
+        if (className) names.add(section ? `${className} (${section})` : className);
+    });
+    (Array.isArray(studentRecords) ? studentRecords : []).forEach((student) => {
+        const classGrade = String(student?.classGrade || '').trim();
+        if (classGrade) names.add(classGrade);
+    });
+
+    if (!names.size && Array.isArray(DEFAULT_STUDENT_CLASS_ORDER)) {
+        DEFAULT_STUDENT_CLASS_ORDER.forEach((name) => names.add(name));
+    }
+
+    return Array.from(names).filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+}
+
+window.eduCoreGetClassOptions = loadPortalClassOptions;
 
 function getPromotionHistory() {
     return getData(STORAGE_KEY_PROMOTION_HISTORY);
