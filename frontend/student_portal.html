@@ -3073,6 +3073,24 @@
             }
         }
 
+        async function fetchStudentDiaryRecords() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/student-diaries`, { cache: 'no-store' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'student-diaries unavailable.');
+                }
+                const diaries = Array.isArray(result?.diaries) ? result.diaries : [];
+                if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                    window.__eduCoreServerCollectionCache.set(STUDENT_DIARY_KEY, diaries);
+                }
+                localStorage.removeItem(STUDENT_DIARY_KEY);
+                return diaries;
+            } catch (_error) {
+                return getPortalData(STUDENT_DIARY_KEY);
+            }
+        }
+
         function getPortalBrandingSettings() {
             try {
                 return {
@@ -3259,7 +3277,7 @@
 
         async function downloadPortalDiaryGroup(encodedGroupKey) {
             const groupKey = decodeURIComponent(encodedGroupKey || '');
-            const items = getPortalData(STUDENT_DIARY_KEY).filter((entry) => getPortalDiaryGroupKey(entry) === groupKey);
+            const items = (await fetchStudentDiaryRecords()).filter((entry) => getPortalDiaryGroupKey(entry) === groupKey);
             if (!items.length) {
                 showAppAlert('Diary entry was not found.', 'Download Failed');
                 return;
@@ -3366,8 +3384,8 @@
             return diaryCampus === studentCampus || diaryCampus.includes(studentCampus) || studentCampus.includes(diaryCampus);
         }
 
-        function getStudentDiaryItems(student = {}) {
-            const diaries = getPortalData(STUDENT_DIARY_KEY)
+        function getStudentDiaryItems(student = {}, diarySource = null) {
+            const diaries = (Array.isArray(diarySource) ? diarySource : getPortalData(STUDENT_DIARY_KEY))
                 .filter((item) => String(item.title || '').trim() && String(item.details || '').trim() && String(item.classGrade || '').trim() && String(item.date || '').trim())
                 .sort((a, b) => `${b.campusName || ''}${b.classGrade || ''}${b.date || ''}${b.updatedAt || b.createdAt || ''}`.localeCompare(`${a.campusName || ''}${a.classGrade || ''}${a.date || ''}${a.updatedAt || a.createdAt || ''}`));
 
@@ -3651,12 +3669,16 @@
             return Array.from(groups.values());
         }
 
-        function renderPortalDiaryList(student = {}) {
+        async function renderPortalDiaryList(student = {}) {
             const list = document.getElementById('studentDiaryList');
             const empty = document.getElementById('studentDiaryEmpty');
             if (!list || !empty) return;
 
-            const groups = groupPortalDiaryItems(getStudentDiaryItems(student));
+            list.innerHTML = '<div class="empty-note">Loading diary...</div>';
+            empty.style.display = 'none';
+
+            const diarySource = await fetchStudentDiaryRecords();
+            const groups = groupPortalDiaryItems(getStudentDiaryItems(student, diarySource));
             if (!groups.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
@@ -3706,7 +3728,7 @@
         }
 
         function applyStudentDiary(student = {}) {
-            renderPortalDiaryList(student);
+            void renderPortalDiaryList(student);
         }
 
         function applyStudentCourse(student = {}) {
