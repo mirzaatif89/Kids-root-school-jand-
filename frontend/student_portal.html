@@ -3295,7 +3295,15 @@
         }
 
         function getPortalStudentCampusName(student = {}) {
-            return String(student?.campusName || student?.branchName || student?.campus || '').trim();
+            return String(
+                student?.campusName
+                || student?.branchName
+                || student?.campus
+                || loggedInUser?.campusName
+                || loggedInUser?.branchName
+                || loggedInUser?.campus
+                || ''
+            ).trim();
         }
 
         function getPortalDiaryGroupKey(item = {}) {
@@ -3306,7 +3314,7 @@
         }
 
         function diaryMatchesStudent(student = {}, diary = {}) {
-            const studentClass = normalizeClassName(student.classGrade);
+            const studentClass = normalizeClassName(student.classGrade || loggedInUser?.classGrade || loggedInUser?.grade || '');
             const diaryClass = normalizeClassName(diary.classGrade);
             if (studentClass && diaryClass && studentClass !== diaryClass) return false;
 
@@ -3314,7 +3322,7 @@
             if (!diaryCampus) return true;
 
             const studentCampus = getPortalStudentCampusName(student);
-            if (!studentCampus) return false;
+            if (!studentCampus) return true;
             return normalizeCampusName(diaryCampus) === normalizeCampusName(studentCampus);
         }
 
