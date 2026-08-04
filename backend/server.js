@@ -598,6 +598,93 @@ function normalizeMobileRecord(payload = {}, prefix = 'REC') {
     };
 }
 
+function normalizeStudentDiaryRecord(payload = {}) {
+    const raw = payload && typeof payload === 'object' ? payload : {};
+    return {
+        id: String(raw.id || '').trim(),
+        campusName: String(raw.campusName || '').trim(),
+        classGrade: String(raw.classGrade || '').trim(),
+        date: String(raw.date || '').trim(),
+        title: String(raw.title || '').trim(),
+        details: String(raw.details || '').trim(),
+        fileName: String(raw.fileName || '').trim(),
+        fileType: String(raw.fileType || '').trim(),
+        fileData: raw.fileData ? String(raw.fileData) : '',
+        createdAt: String(raw.createdAt || '').trim(),
+        updatedAt: String(raw.updatedAt || '').trim()
+    };
+}
+
+function sortStudentDiaries(records = []) {
+    return [...records].sort((a, b) => {
+        const left = `${b.updatedAt || ''}${b.createdAt || ''}${b.date || ''}${b.campusName || ''}${b.classGrade || ''}`;
+        const right = `${a.updatedAt || ''}${a.createdAt || ''}${a.date || ''}${a.campusName || ''}${a.classGrade || ''}`;
+        return left.localeCompare(right);
+    });
+}
+
+function readStudentDiaryStore() {
+    return sortStudentDiaries(
+        readMobileStore('student_diaries')
+            .map(normalizeStudentDiaryRecord)
+            .filter((item) => item.id && item.title && item.details && item.campusName && item.classGrade && item.date)
+    );
+}
+
+function writeStudentDiaryStore(records = []) {
+    return writeMobileStore('student_diaries', sortStudentDiaries(records.map(normalizeStudentDiaryRecord).filter((item) => item.id)));
+}
+
+function upsertStudentDiaryRecords(payload) {
+    const records = readStudentDiaryStore();
+    const now = new Date().toISOString();
+    const incoming = Array.isArray(payload) ? payload : [payload];
+    const diaries = incoming.map(normalizeStudentDiaryRecord).filter((item) => item.title && item.details);
+
+    if (Array.isArray(payload)) {
+        const incomingIds = diaries.map((item) => item.id).filter(Boolean);
+        const nextRecords = incomingIds.length
+            ? records.filter((item) => incomingIds.includes(String(item.id)))
+            : [];
+
+        const nextById = new Map(nextRecords.map((item) => [String(item.id), item]));
+        diaries.forEach((diary, index) => {
+            const id = diary.id || `DIARY-${Date.now()}-${index}`;
+            const existing = nextById.get(String(id));
+            const next = {
+                ...existing,
+                ...diary,
+                id: String(id),
+                createdAt: diary.createdAt || existing?.createdAt || now,
+                updatedAt: now
+            };
+            nextById.set(String(id), next);
+        });
+
+        const finalRecords = sortStudentDiaries(Array.from(nextById.values()));
+        return { records: writeStudentDiaryStore(finalRecords), diaries: finalRecords };
+    }
+
+    const diary = diaries[0] || normalizeStudentDiaryRecord(payload || {});
+    if (!diary.id) diary.id = `DIARY-${Date.now()}`;
+    diary.createdAt = diary.createdAt || now;
+    diary.updatedAt = now;
+
+    const nextRecords = [...records];
+    const index = nextRecords.findIndex((item) => String(item.id) === String(diary.id));
+    if (index >= 0) {
+        nextRecords[index] = { ...nextRecords[index], ...diary };
+    } else {
+        nextRecords.unshift(diary);
+    }
+
+    return { records: writeStudentDiaryStore(nextRecords), diary };
+}
+
+function deleteStudentDiaryRecord(id) {
+    return writeStudentDiaryStore(readStudentDiaryStore().filter((item) => String(item.id) !== String(id)));
+}
+
 function upsertMobileRecord(storeName, payload, prefix) {
     const records = readMobileStore(storeName);
     const record = normalizeMobileRecord(payload, prefix);
@@ -2808,13 +2895,20 @@ registerMobileCollectionRoutes({
     socketEvent: 'student_courses_update'
 });
 
-registerMobileCollectionRoutes({
-    route: 'student-diaries',
-    storeName: 'student_diaries',
-    recordsKey: 'diaries',
-    itemKey: 'diary',
-    prefix: 'DIARY',
-    socketEvent: 'student_diaries_update'
+app.get('/api/student-diaries', (_req, res) => {
+    res.json({ success: true, diaries: readStudentDiaryStore() });
+});
+
+app.post('/api/student-diaries', (req, res) => {
+    const { diaries, diary, records } = upsertStudentDiaryRecords(req.body || {});
+    io.emit('student_diaries_update', records);
+    res.json({ success: true, diary: diary || null, diaries: diaries || records });
+});
+
+app.delete('/api/student-diaries/:id', (req, res) => {
+    const records = deleteStudentDiaryRecord(req.params.id);
+    io.emit('student_diaries_update', records);
+    res.json({ success: true, deleted: true, diaries: records });
 });
 
 registerMobileCollectionRoutes({
