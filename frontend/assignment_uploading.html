@@ -35,6 +35,7 @@
             <section class="schedule-panel">
                 <form id="assignmentUploadForm">
                     <div class="assignment-upload-grid">
+                        <div><label>Campus</label><select id="assignmentUploadCampus" required></select></div>
                         <div><label>Class</label><select id="assignmentUploadClass" required></select></div>
                         <div><label>Start Date</label><input type="date" id="assignmentStartDate" required></div>
                         <div><label>Due Date</label><input type="date" id="assignmentDueDate" required></div>
@@ -74,6 +75,13 @@
                 ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
             assignmentUploadClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
         }
+        async function populateCampuses() {
+            const campuses = typeof window.loadRegisteredCampusNames === 'function'
+                ? await window.loadRegisteredCampusNames()
+                : (typeof window.getUniqueCampusNames === 'function' ? window.getUniqueCampusNames() : []);
+            const uniqueCampuses = [...new Set((Array.isArray(campuses) ? campuses : []).map((value) => String(value || '').trim()).filter(Boolean))];
+            assignmentUploadCampus.innerHTML = '<option value="">Select Campus</option>' + uniqueCampuses.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
         function readFile(input) {
             const file = input.files?.[0];
             if (!file) return Promise.resolve(null);
@@ -96,7 +104,7 @@
             const sortedItems = [...nextItems].sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
             const itemsToRender = sortedItems.length ? sortedItems : [];
             if (!itemsToRender.length) { assignmentUploadList.innerHTML = '<div class="empty-note">No assignment uploaded yet.</div>'; return; }
-            assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${itemsToRender.map((item) => `<tr><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Campus</th><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${itemsToRender.map((item) => `<tr><td>${esc(item.campusName || item.campus || '-')}</td><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             if (window.lucide) window.lucide.createIcons();
         }
         async function deleteAssignment(id) {
@@ -111,6 +119,7 @@
             try { file = await readFile(assignmentUploadFile); } catch (_error) { showAppAlert('Assignment file could not be attached.', 'File Error'); return; }
             const item = {
                 id: `UPLOADED-ASG-${Date.now()}`,
+                campusName: assignmentUploadCampus.value,
                 classGrade: assignmentUploadClass.value,
                 startDate: assignmentStartDate.value,
                 dueDate: assignmentDueDate.value,
@@ -118,7 +127,7 @@
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
-            if (!item.classGrade || !item.startDate || !item.dueDate || !item.file?.dataUrl) { showAppAlert('Class, dates, and assignment file are required.', 'Missing Assignment'); return; }
+            if (!item.campusName || !item.classGrade || !item.startDate || !item.dueDate || !item.file?.dataUrl) { showAppAlert('Campus, class, dates, and assignment file are required.', 'Missing Assignment'); return; }
             if (item.dueDate < item.startDate) { showAppAlert('Due date cannot be before start date.', 'Date Error'); return; }
             const items = await loadAssignments();
             items.unshift(item);
@@ -129,6 +138,7 @@
         });
         (async () => {
             const items = await loadAssignments();
+            await populateCampuses();
             await populateClasses();
             render(items);
             if (window.lucide) window.lucide.createIcons();

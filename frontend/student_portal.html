@@ -3893,10 +3893,10 @@
                 <article class="portal-content-card">
                     <h4>${escapeHtml(item.title || item.file?.name || 'Assignment File')}</h4>
                     <div class="portal-content-meta">
-                        Class: ${escapeHtml(item.classGrade || '-')} | Start: ${escapeHtml(item.startDate || '-')} | Due: ${escapeHtml(item.dueDate || '-')}
+                        Campus: ${escapeHtml(item.campusName || item.campus || '-')}${item.classGrade ? ` | Class: ${escapeHtml(item.classGrade || '-')}` : ''} | Start: ${escapeHtml(item.startDate || '-')} | Due: ${escapeHtml(item.dueDate || '-')}
                     </div>
                     <div class="portal-action-row" style="justify-content:flex-start; margin-top:0.65rem; gap:0.8rem;">
-                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${STUDENT_UPLOADED_ASSIGNMENT_KEY}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download Assignment</button>` : ''}
+                        ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick='downloadPortalDataUrl(${JSON.stringify(item.file.dataUrl)}, ${JSON.stringify(item.file.name || "assignment")})'><i data-lucide="download" width="16"></i> Download Assignment</button>` : ''}
                         <button type="button" class="btn btn-secondary" onclick="openStudentAssignmentSubmission('${escapeHtml(item.id || '')}')"><i data-lucide="upload" width="16"></i> Submit</button>
                     </div>
                 </article>
