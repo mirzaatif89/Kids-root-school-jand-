@@ -5490,7 +5490,7 @@
 
         async function loadExecutedDateSheet() {
             try {
-                const response = await fetch(`${API_BASE_URL}/date-sheet`);
+                const response = await fetch(`${API_BASE_URL}/date-sheet`, { cache: 'no-store' });
                 if (!response.ok) throw new Error('Date sheet unavailable.');
                 const result = await response.json();
                 if (result.dateSheet && result.dateSheet.status === 'executed') {

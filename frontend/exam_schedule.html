@@ -1612,7 +1612,7 @@
 
         async function loadPublishedDateSheetRecord() {
             try {
-                const response = await fetch(`${getApiBaseUrl()}/date-sheet`);
+                const response = await fetch(`${getApiBaseUrl()}/date-sheet`, { cache: 'no-store' });
                 if (!response.ok) throw new Error('Date sheet record unavailable.');
                 const result = await response.json();
                 if (result.dateSheet) {
@@ -1623,8 +1623,11 @@
                     updateDateSheetUploadNote();
                 }
                 renderDateSheetRecord(result.dateSheet || null);
+                return result.dateSheet || null;
             } catch (error) {
-                renderDateSheetRecord(loadDateSheetState());
+                const fallback = loadDateSheetState();
+                renderDateSheetRecord(fallback);
+                return fallback;
             }
         }
 
@@ -1938,7 +1941,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             applyExamBrandingDefaults(false);
             toggleExamSection('examSchedulingCard');
-            const dateSheetState = loadDateSheetState();
+            const dateSheetState = await loadPublishedDateSheetRecord() || loadDateSheetState();
             selectedDateSheetFile = hasUploadedDateSheetFile(dateSheetState.uploadedDateSheetFile)
                 ? dateSheetState.uploadedDateSheetFile
                 : null;

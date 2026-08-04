@@ -35,6 +35,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'eduCore_secret_key_2026';
 const PERMISSIONS_FILE = path.join(DATA_DIR, 'permissions.json');
 const DETAILED_PERMISSIONS_FILE = path.join(DATA_DIR, 'permissions-detailed.json');
 const DATE_SHEET_FILE = path.join(DATA_DIR, 'date_sheet.json');
+const DATE_SHEET_COLLECTION_KEY = 'date-sheet';
+const DATE_SHEET_RECORD_ID = 'date-sheet-current';
 const ADMIN_CREDENTIALS_FILE = path.join(DATA_DIR, 'admin_credentials.json');
 const MOBILE_API_STORE_DIR = path.join(DATA_DIR, 'mobile_api_store');
 fs.mkdirSync(MOBILE_API_STORE_DIR, { recursive: true });
@@ -1184,8 +1186,64 @@ function normalizeDateSheetPayload(data = {}) {
     };
 }
 
+function formatDateSheetRecord(row) {
+    if (!row) return null;
+    const raw = row && typeof row.toJSON === 'function' ? row.toJSON() : row;
+    let payload = {};
+    try {
+        payload = raw.payloadJson ? JSON.parse(raw.payloadJson) : {};
+    } catch (_error) {
+        payload = {};
+    }
+
+    const merged = normalizeDateSheetPayload({
+        ...payload,
+        ...raw
+    });
+
+    return merged && Object.keys(merged).length ? merged : null;
+}
+
+async function readDateSheetFromDb() {
+    const model = getPortalCollectionModel();
+    if (!model) return null;
+
+    const row = await model.findOne({
+        where: {
+            collectionKey: DATE_SHEET_COLLECTION_KEY,
+            id: DATE_SHEET_RECORD_ID
+        }
+    });
+
+    if (!row) return null;
+    return formatDateSheetRecord(row);
+}
+
+async function writeDateSheetToDb(data) {
+    const model = getPortalCollectionModel();
+    if (!model) {
+        throw new Error('Date sheet database is not available.');
+    }
+
+    const normalized = normalizeDateSheetPayload(data);
+    await model.upsert({
+        id: DATE_SHEET_RECORD_ID,
+        collectionKey: DATE_SHEET_COLLECTION_KEY,
+        payloadJson: JSON.stringify({
+            ...normalized,
+            id: DATE_SHEET_RECORD_ID,
+            collectionKey: DATE_SHEET_COLLECTION_KEY
+        })
+    });
+
+    return normalized;
+}
+
 function readDateSheet() {
     try {
+        if (sequelize?.models?.PortalCollectionRecord) {
+            // Synchronous fallback only reads the cached file copy.
+        }
         if (!fs.existsSync(DATE_SHEET_FILE)) return null;
         const saved = JSON.parse(fs.readFileSync(DATE_SHEET_FILE, 'utf8'));
         return normalizeDateSheetPayload(saved);
@@ -1200,13 +1258,35 @@ function writeDateSheet(data) {
     return normalized;
 }
 
-app.get('/api/date-sheet', (req, res) => {
-    res.json({ success: true, dateSheet: readDateSheet() });
+app.get('/api/date-sheet', async (_req, res) => {
+    try {
+        const fromDb = await readDateSheetFromDb();
+        if (fromDb) {
+            return res.json({ success: true, dateSheet: fromDb });
+        }
+
+        const fromFile = readDateSheet();
+        if (fromFile) {
+            try {
+                await writeDateSheetToDb(fromFile);
+            } catch (_error) {
+                // Keep file fallback working even if DB migration fails.
+            }
+        }
+        res.json({ success: true, dateSheet: fromFile });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Date sheet could not be loaded.' });
+    }
 });
 
-app.post('/api/date-sheet', (req, res) => {
+app.post('/api/date-sheet', async (req, res) => {
     try {
-        const saved = writeDateSheet(req.body || {});
+        const saved = await writeDateSheetToDb(req.body || {});
+        try {
+            fs.writeFileSync(DATE_SHEET_FILE, JSON.stringify(saved, null, 2), 'utf8');
+        } catch (_error) {
+            // File copy is only a fallback cache.
+        }
         io.emit('date_sheet_update', saved);
         res.json({ success: true, dateSheet: saved });
     } catch (error) {
