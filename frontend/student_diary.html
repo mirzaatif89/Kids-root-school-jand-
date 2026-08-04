@@ -252,10 +252,14 @@
             try {
                 const result = await window.eduCoreCollectionApi.save(key, value);
                 if (!result.success) {
-                    showAppAlert('Diary saved locally, but server sync failed.', 'Saved Locally');
+                    showAppAlert('Diary could not be saved on the server.', 'Save Failed');
+                    return false;
                 }
                 return true;
-            } catch (_e) { showAppAlert('Diary data is too large to save.', 'Storage Full'); return false; }
+            } catch (_e) {
+                showAppAlert('Diary could not be saved on the server.', 'Save Failed');
+                return false;
+            }
         }
         function esc(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char])); }
 

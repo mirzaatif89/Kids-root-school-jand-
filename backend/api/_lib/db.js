@@ -198,6 +198,22 @@ function defineStudentAssignmentSubmissionModel(db) {
     });
 }
 
+function defineStudentDiaryModel(db) {
+    return db.define('StudentDiary', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        campusName: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        date: DataTypes.STRING,
+        title: DataTypes.STRING,
+        details: DataTypes.TEXT('long'),
+        fileName: DataTypes.STRING,
+        fileType: DataTypes.STRING,
+        fileData: DataTypes.TEXT('long'),
+        createdAt: DataTypes.STRING,
+        updatedAt: DataTypes.STRING
+    });
+}
+
 function defineTeacherAttendanceModel(db) {
     return db.define('TeacherAttendance', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -490,6 +506,19 @@ async function ensureLegacySchema(db) {
         status: { type: DataTypes.STRING, allowNull: true }
     });
 
+    await ensureTableColumns(db, 'StudentDiaries', {
+        campusName: { type: DataTypes.STRING, allowNull: true },
+        classGrade: { type: DataTypes.STRING, allowNull: true },
+        date: { type: DataTypes.STRING, allowNull: true },
+        title: { type: DataTypes.STRING, allowNull: true },
+        details: { type: DataTypes.TEXT('long'), allowNull: true },
+        fileName: { type: DataTypes.STRING, allowNull: true },
+        fileType: { type: DataTypes.STRING, allowNull: true },
+        fileData: { type: DataTypes.TEXT('long'), allowNull: true },
+        createdAt: { type: DataTypes.STRING, allowNull: true },
+        updatedAt: { type: DataTypes.STRING, allowNull: true }
+    });
+
     await ensureTableColumns(db, 'LeaveRequests', {
         reviewReason: { type: DataTypes.TEXT, allowNull: true },
         fileName: { type: DataTypes.STRING, allowNull: true },
@@ -528,6 +557,7 @@ async function getDb() {
             defineFinanceBillModel(db);
             defineStudentAttendanceModel(db);
             defineStudentAssignmentSubmissionModel(db);
+            defineStudentDiaryModel(db);
             defineTeacherAttendanceModel(db);
             defineLeaveRequestModel(db);
             defineAppSettingModel(db);
