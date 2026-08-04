@@ -2778,6 +2778,12 @@
             </table>
         </section>
 
+        <section class="panel-card student-portal-section" id="studentSyllabusSection" style="display:none; margin-bottom: 1.25rem;">
+            <h3>Syllabus</h3>
+            <div class="portal-content-list" id="studentCourseList"></div>
+            <div class="empty-note" id="studentCourseEmpty">No syllabus has been published for your class yet.</div>
+        </section>
+
         <section class="panel-card student-portal-section" id="studentQuizSection" style="display:none; margin-bottom: 1.25rem;">
             <h3>Class Quiz</h3>
             <h4>Pending Quizzes</h4>
@@ -3649,6 +3655,20 @@
                 .sort((a, b) => String(b.date || b.updatedAt || b.createdAt || '').localeCompare(String(a.date || a.updatedAt || a.createdAt || '')));
         }
 
+        function getStudentCourseItems(student = {}) {
+            const studentClass = normalizeClassName(student.classGrade);
+            const studentCampus = normalizeCampusName(getPortalStudentCampusName(student));
+            return getPortalData(STUDENT_COURSE_KEY)
+                .filter((item) => {
+                    const itemClass = normalizeClassName(item.classGrade);
+                    const itemCampus = normalizeCampusName(item.campusName || item.campus || item.branchName || '');
+                    const classMatches = !studentClass || !itemClass || itemClass === studentClass;
+                    const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
+                    return classMatches && campusMatches;
+                })
+                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+        }
+
         function groupPortalDiaryItems(items = []) {
             const groups = new Map();
             items.forEach((item) => {
@@ -3730,7 +3750,29 @@
         }
 
         function applyStudentCourse(student = {}) {
-            renderPortalContentList('studentCourseList', 'studentCourseEmpty', getClassWiseItems(STUDENT_COURSE_KEY, student), STUDENT_COURSE_KEY);
+            const list = document.getElementById('studentCourseList');
+            const empty = document.getElementById('studentCourseEmpty');
+            if (!list || !empty) return;
+
+            const courses = getStudentCourseItems(student);
+            if (!courses.length) {
+                list.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = courses.map((item) => `
+                <article class="portal-content-card">
+                    <h4>${escapeHtml(item.title || 'Course')}</h4>
+                    <div class="portal-content-meta">
+                        ${escapeHtml(item.campusName || item.campus || '-')} | ${escapeHtml(item.classGrade || '-')}
+                    </div>
+                    <p>${escapeHtml(item.details || '-')}</p>
+                    ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${escapeHtml(STUDENT_COURSE_KEY)}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download ${escapeHtml(item.file.name || 'File')}</button>` : ''}
+                </article>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
         }
 
         function getStudentAssignmentSubmissions(student = {}) {
@@ -4992,14 +5034,17 @@
                 const student = getCurrentPortalStudent();
                 if (!student || !Object.keys(student).length) return;
                 try {
+                    await hydrateStudentPortalCollections();
                     await refreshStudentDiaryCollection();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     applyStudentAttendance(student);
                     applyStudentDiary(student);
+                    applyStudentCourse(student);
                     applyDateSheet(student);
                     updateStudentNotifications(student);
                 } catch (_error) {
+                    applyStudentCourse(student);
                     updateStudentNotifications(student);
                 }
             }, 45000);
@@ -5838,6 +5883,7 @@
 
             applyStudentFees(student);
             applyStudentDiary(student);
+            applyStudentCourse(student);
             renderStudentAssignmentSubmissions(student);
             renderStudentUploadedAssignments(student);
             applyStudentQuizzes(student);

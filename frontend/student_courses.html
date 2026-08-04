@@ -49,6 +49,7 @@
                     <input type="hidden" id="studentCourseId">
                     <div class="schedule-grid">
                         <div><label>Class</label><select id="studentCourseClass" required></select></div>
+                        <div><label>Campus</label><select id="studentCourseCampus" required></select></div>
                         <div><label>Subject / Course Title</label><input type="text" id="studentCourseTitle" required placeholder="e.g. Mathematics"></div>
                         <div><label>Attach File</label><input type="file" id="studentCourseFile"></div>
                     </div>
@@ -56,7 +57,10 @@
                     <button type="submit" class="btn btn-primary" style="margin-top:1rem;"><i data-lucide="save"></i> Save Course</button>
                 </form>
             </section>
-            <section class="schedule-panel"><h3 style="margin-bottom:1rem;">Saved Courses</h3><div id="studentCourseList"></div></section>
+            <section class="schedule-panel">
+                <h3 style="margin-bottom:1rem;">Saved Courses</h3>
+                <div id="studentCourseList"></div>
+            </section>
         </main>
     </div>
     <div id="successModal" class="success-overlay"><div class="success-modal"><div class="success-icon-wrap"><i data-lucide="check-circle"></i></div><h2 id="successTitle">Success!</h2><p id="successMessage" style="color:var(--text-secondary); margin:1rem 0 2rem;"></p><button class="btn btn-primary" style="width:100%;" onclick="closeSuccessModal()">Great!</button></div></div>
@@ -64,12 +68,24 @@
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         const STUDENT_COURSE_KEY = 'eduCore_student_courses';
-        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        let currentCourses = [];
+        function data(key) {
+            const serverCache = window.__eduCoreServerCollectionCache;
+            if (serverCache && typeof serverCache.has === 'function' && serverCache.has(key)) {
+                const cached = serverCache.get(key);
+                return Array.isArray(cached) ? cached : [];
+            }
+            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; }
+        }
+        function getCourseRecords() {
+            return data(STUDENT_COURSE_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+        }
         async function save(key, value) {
             try {
                 const result = await window.eduCoreCollectionApi.save(key, value);
                 if (!result.success) {
-                    showAppAlert('Course saved locally, but server sync failed.', 'Saved Locally');
+                    showAppAlert('Course could not be saved on the server.', 'Save Failed');
+                    return false;
                 }
                 return true;
             } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
@@ -84,41 +100,58 @@
                 ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
             studentCourseClass.innerHTML = '<option value="">Select Class</option>' + names.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
         }
+        async function populateCampuses() {
+            const campuses = typeof window.getUniqueCampusNames === 'function'
+                ? window.getUniqueCampusNames()
+                : [...new Set([
+                    ...data('eduCore_students').map((student) => student?.campusName),
+                    ...data('eduCore_teachers').map((teacher) => teacher?.campusName || teacher?.bankBranch)
+                ].map((value) => String(value || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+            studentCourseCampus.innerHTML = '<option value="">Select Campus</option>' + campuses.map((name) => `<option value="${esc(name)}">${esc(name)}</option>`).join('');
+        }
         function readFile(input) {
             const file = input.files?.[0];
             if (!file) return Promise.resolve(null);
             return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve({ name: file.name, dataUrl: reader.result }); reader.onerror = reject; reader.readAsDataURL(file); });
         }
         function render() {
-            const courses = data(STUDENT_COURSE_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            const courses = currentCourses.length ? currentCourses : getCourseRecords();
             if (!courses.length) { studentCourseList.innerHTML = '<div class="empty-note">No class course added yet.</div>'; return; }
-            studentCourseList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Title</th><th>Details</th><th>File</th><th>Action</th></tr></thead><tbody>${courses.map((item) => `<tr><td>${esc(item.classGrade)}</td><td>${esc(item.title)}</td><td>${esc(item.details)}</td><td>${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'file')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="editCourse('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="schedule-action-btn delete" onclick="deleteCourse('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+            studentCourseList.innerHTML = `<table class="schedule-table"><thead><tr><th>Campus</th><th>Class</th><th>Title</th><th>Details</th><th>File</th><th>Action</th></tr></thead><tbody>${courses.map((item) => `<tr><td>${esc(item.campusName || item.campus || '-')}</td><td>${esc(item.classGrade)}</td><td>${esc(item.title)}</td><td>${esc(item.details)}</td><td>${item.file?.dataUrl ? `<a href="${item.file.dataUrl}" download="${esc(item.file.name || 'file')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button class="schedule-action-btn edit" onclick="editCourse('${item.id}')"><i data-lucide="edit-2" width="14"></i> Edit</button><button class="schedule-action-btn delete" onclick="deleteCourse('${item.id}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             lucide.createIcons();
         }
         function editCourse(id) {
-            const item = data(STUDENT_COURSE_KEY).find((entry) => entry.id === id);
+            const item = getCourseRecords().find((entry) => entry.id === id);
             if (!item) return;
-            studentCourseId.value = item.id; studentCourseClass.value = item.classGrade || ''; studentCourseTitle.value = item.title || ''; studentCourseDetails.value = item.details || '';
+            studentCourseId.value = item.id; studentCourseClass.value = item.classGrade || ''; studentCourseCampus.value = item.campusName || item.campus || ''; studentCourseTitle.value = item.title || ''; studentCourseDetails.value = item.details || '';
             document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Update Course';
             studentCourseForm.scrollIntoView({ behavior: 'smooth', block: 'start' }); lucide.createIcons();
         }
-        async function deleteCourse(id) { await save(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY).filter((item) => item.id !== id)); render(); }
+        async function deleteCourse(id) { await save(STUDENT_COURSE_KEY, getCourseRecords().filter((item) => item.id !== id)); await loadCourses(); render(); }
+        async function loadCourses() {
+            currentCourses = await window.eduCoreCollectionApi.load(STUDENT_COURSE_KEY, []);
+            if (!Array.isArray(currentCourses)) currentCourses = getCourseRecords();
+            return currentCourses;
+        }
         studentCourseForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const editId = studentCourseId.value;
-            const existing = data(STUDENT_COURSE_KEY).find((item) => item.id === editId);
+            const existing = getCourseRecords().find((item) => item.id === editId);
             const file = await readFile(studentCourseFile);
-            const item = { id: editId || `COURSE-${Date.now()}`, classGrade: studentCourseClass.value, title: studentCourseTitle.value.trim(), details: studentCourseDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
-            if (!item.classGrade || !item.title || !item.details) { showAppAlert('Class, title, and details are required.', 'Missing Course'); return; }
-            const items = data(STUDENT_COURSE_KEY);
+            const item = { id: editId || `COURSE-${Date.now()}`, classGrade: studentCourseClass.value, campusName: studentCourseCampus.value, title: studentCourseTitle.value.trim(), details: studentCourseDetails.value.trim(), file: file || existing?.file || null, createdAt: existing?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+            if (!item.classGrade || !item.campusName || !item.title || !item.details) { showAppAlert('Class, campus, title, and details are required.', 'Missing Course'); return; }
+            const items = getCourseRecords();
             const index = items.findIndex((entry) => entry.id === editId);
             if (index >= 0) items[index] = item; else items.push(item);
             if (!(await save(STUDENT_COURSE_KEY, items))) return;
-            event.target.reset(); studentCourseId.value = ''; document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Course'; render(); showSuccessModal(editId ? 'Course Updated!' : 'Course Saved!', 'Class course is visible in student portal.');
+            event.target.reset(); studentCourseId.value = ''; document.querySelector('#studentCourseForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Course'; await loadCourses(); render(); showSuccessModal(editId ? 'Course Updated!' : 'Course Saved!', 'Class course is visible in student portal.');
         });
         (async () => {
-            await window.eduCoreCollectionApi.load(STUDENT_COURSE_KEY, data(STUDENT_COURSE_KEY));
-            await populateClasses(); render(); lucide.createIcons();
+            await loadCourses();
+            await populateClasses();
+            await populateCampuses();
+            render();
+            lucide.createIcons();
         })();
     </script>
 </body>
