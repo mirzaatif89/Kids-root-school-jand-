@@ -5689,10 +5689,12 @@
             const campusMatches = matchesDateSheetCampus(campusName, recordCampus);
             const visible = Boolean(state.status === 'executed' && (hasUploadedFile || (classMatches && campusMatches && monthFilteredRows.length)));
             const availableDate = formatMonthYearLabel(state.executedAt || state.updatedAt || monthFilteredRows[0]?.examDate || rows[0]?.examDate || '');
+            const examTitle = String(state.dateSheetExamTitle || '').trim() || 'Date Sheet';
+            const downloadHint = hasUploadedFile ? `Download: ${uploadedFile.name}` : 'Download the published date sheet';
 
             if (statusEl) {
                 statusEl.textContent = visible
-                    ? 'Date sheet available'
+                    ? examTitle
                     : 'No date sheet has been published for your class yet.';
             }
 
@@ -5703,8 +5705,8 @@
             }
 
             if (fileNote) {
-                fileNote.textContent = visible && hasUploadedFile
-                    ? `Published file: ${uploadedFile.name}`
+                fileNote.textContent = visible
+                    ? downloadHint
                     : '';
             }
 
