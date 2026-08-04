@@ -5588,6 +5588,18 @@
             return recordKey === studentKey || recordKey.includes(studentKey) || studentKey.includes(recordKey);
         }
 
+        function getMonthYearKey(value = '') {
+            const parsed = parseStudentPortalDate(value);
+            if (!parsed) return '';
+            return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        function formatMonthYearLabel(value = '') {
+            const parsed = parseStudentPortalDate(value);
+            if (!parsed) return '';
+            return parsed.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        }
+
         function compareLectureRows(a, b) {
             const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
             const dayDiff = dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day);
@@ -5669,10 +5681,14 @@
             const hasUploadedFile = Boolean(state.status === 'executed' && uploadedFile.name && uploadedFile.dataUrl);
             const recordClass = state.dateSheetClassGroup || rows[0]?.className || '';
             const recordCampus = state.dateSheetCampus || '';
+            const executionMonthKey = getMonthYearKey(state.executedAt || state.updatedAt || '');
+            const monthFilteredRows = executionMonthKey
+                ? rows.filter((row) => getMonthYearKey(row.examDate) === executionMonthKey)
+                : rows;
             const classMatches = matchesDateSheetClass(className, recordClass) || rows.some((row) => matchesDateSheetClass(className, row.className));
             const campusMatches = matchesDateSheetCampus(campusName, recordCampus);
-            const visible = Boolean(state.status === 'executed' && (hasUploadedFile || (classMatches && campusMatches)));
-            const availableDate = formatScheduleDate(state.executedAt || state.updatedAt || rows[0]?.examDate || '');
+            const visible = Boolean(state.status === 'executed' && (hasUploadedFile || (classMatches && campusMatches && monthFilteredRows.length)));
+            const availableDate = formatMonthYearLabel(state.executedAt || state.updatedAt || monthFilteredRows[0]?.examDate || rows[0]?.examDate || '');
 
             if (statusEl) {
                 statusEl.textContent = visible
@@ -5682,7 +5698,7 @@
 
             if (dateEl) {
                 dateEl.textContent = visible
-                    ? `Date: ${availableDate || '-'}`
+                    ? `Month: ${availableDate || '-'}`
                     : '';
             }
 
@@ -5702,11 +5718,15 @@
             const state = loadDateSheetState();
             const rows = Array.isArray(state.scheduleRows) ? state.scheduleRows : [];
             const uploadedFile = state.uploadedDateSheetFile || {};
+            const executionMonthKey = getMonthYearKey(state.executedAt || state.updatedAt || '');
+            const monthFilteredRows = executionMonthKey
+                ? rows.filter((row) => getMonthYearKey(row.examDate) === executionMonthKey)
+                : rows;
             if (state.status === 'executed' && uploadedFile.dataUrl) {
                 downloadPortalDataUrl(uploadedFile.dataUrl, uploadedFile.name || 'date-sheet');
                 return;
             }
-            if (state.status !== 'executed' || !rows.length) {
+            if (state.status !== 'executed' || !monthFilteredRows.length) {
                 alert('No date sheet is available to download yet.');
                 return;
             }
@@ -5714,7 +5734,7 @@
             const printable = window.open('', '_blank');
             if (!printable) return;
 
-            const tableRows = rows.map((row) => `
+            const tableRows = monthFilteredRows.map((row) => `
                 <tr>
                     <td>${row.subject || '-'}</td>
                     <td>${row.className || '-'}</td>
