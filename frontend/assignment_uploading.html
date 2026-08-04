@@ -57,11 +57,11 @@
             try {
                 const result = await window.eduCoreCollectionApi.save(STUDENT_UPLOADED_ASSIGNMENT_KEY, items);
                 if (!result.success) {
-                    showAppAlert('Assignment saved locally, but server sync failed.', 'Saved Locally');
+                    throw new Error(result?.message || 'Server sync failed.');
                 }
                 return true;
             } catch (_error) {
-                showAppAlert('Assignment file is too large to save.', 'Storage Full');
+                showAppAlert('Assignment could not be saved on the server.', 'Save Failed');
                 return false;
             }
         }
@@ -84,16 +84,26 @@
                 reader.readAsDataURL(file);
             });
         }
-        function render() {
-            const items = data(STUDENT_UPLOADED_ASSIGNMENT_KEY).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
-            if (!items.length) { assignmentUploadList.innerHTML = '<div class="empty-note">No assignment uploaded yet.</div>'; return; }
-            assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
+        async function loadAssignments() {
+            try {
+                return await window.eduCoreCollectionApi.load(STUDENT_UPLOADED_ASSIGNMENT_KEY, []);
+            } catch (_error) {
+                return [];
+            }
+        }
+        function render(items = []) {
+            const nextItems = Array.isArray(items) ? items : [];
+            const sortedItems = [...nextItems].sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')));
+            const itemsToRender = sortedItems.length ? sortedItems : [];
+            if (!itemsToRender.length) { assignmentUploadList.innerHTML = '<div class="empty-note">No assignment uploaded yet.</div>'; return; }
+            assignmentUploadList.innerHTML = `<table class="schedule-table"><thead><tr><th>Class</th><th>Start</th><th>Due</th><th>File</th><th>Action</th></tr></thead><tbody>${itemsToRender.map((item) => `<tr><td>${esc(item.classGrade || '-')}</td><td>${esc(item.startDate || '-')}</td><td>${esc(item.dueDate || '-')}</td><td>${item.file?.dataUrl ? `<a class="assignment-file-name" href="${item.file.dataUrl}" download="${esc(item.file.name || 'assignment')}">${esc(item.file.name || 'Download')}</a>` : '-'}</td><td><div class="schedule-actions"><button type="button" class="schedule-action-btn delete" onclick="deleteAssignment('${esc(item.id)}')"><i data-lucide="trash-2" width="14"></i> Delete</button></div></td></tr>`).join('')}</tbody></table>`;
             if (window.lucide) window.lucide.createIcons();
         }
         async function deleteAssignment(id) {
-            const nextItems = data(STUDENT_UPLOADED_ASSIGNMENT_KEY).filter((item) => item.id !== id);
+            const currentItems = await loadAssignments();
+            const nextItems = currentItems.filter((item) => item.id !== id);
             await save(nextItems);
-            render();
+            render(nextItems);
         }
         assignmentUploadForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -110,17 +120,17 @@
             };
             if (!item.classGrade || !item.startDate || !item.dueDate || !item.file?.dataUrl) { showAppAlert('Class, dates, and assignment file are required.', 'Missing Assignment'); return; }
             if (item.dueDate < item.startDate) { showAppAlert('Due date cannot be before start date.', 'Date Error'); return; }
-            const items = data(STUDENT_UPLOADED_ASSIGNMENT_KEY);
+            const items = await loadAssignments();
             items.unshift(item);
             if (!(await save(items))) return;
             event.target.reset();
-            render();
+            render(items);
             showSuccessModal('Assignment Submitted!', 'Students in the selected class can download this assignment in their portal.');
         });
         (async () => {
-            await window.eduCoreCollectionApi.load(STUDENT_UPLOADED_ASSIGNMENT_KEY, data(STUDENT_UPLOADED_ASSIGNMENT_KEY));
+            const items = await loadAssignments();
             await populateClasses();
-            render();
+            render(items);
             if (window.lucide) window.lucide.createIcons();
         })();
     </script>

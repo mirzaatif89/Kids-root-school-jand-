@@ -3864,28 +3864,30 @@
             const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
             const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
             const liveAssignments = await loadStudentUploadedAssignmentRecords();
-            const assignments = (Array.isArray(liveAssignments) ? liveAssignments : getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY))
+            const allAssignments = (Array.isArray(liveAssignments) ? liveAssignments : getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY))
+                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+            const assignments = allAssignments
                 .filter((item) => {
                     const itemClass = normalizeCourseClassKey(item.classGrade);
                     const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
                     const classMatches = !studentClass || !itemClass || itemClass === studentClass;
                     const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
                     return classMatches && campusMatches;
-                })
-                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+                });
 
-            if (!assignments.length) {
+            const itemsToRender = assignments.length ? assignments : allAssignments;
+            if (!itemsToRender.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
                 return;
             }
 
             empty.style.display = 'none';
-            list.innerHTML = assignments.map((item) => `
+            list.innerHTML = itemsToRender.map((item) => `
                 <article class="portal-content-card">
-                    <h4>${escapeHtml(item.file?.name || 'Assignment File')}</h4>
+                    <h4>${escapeHtml(item.title || item.file?.name || 'Assignment File')}</h4>
                     <div class="portal-content-meta">
-                        Start: ${escapeHtml(item.startDate || '-')} | Due: ${escapeHtml(item.dueDate || '-')}
+                        Class: ${escapeHtml(item.classGrade || '-')} | Start: ${escapeHtml(item.startDate || '-')} | Due: ${escapeHtml(item.dueDate || '-')}
                     </div>
                     <div class="portal-action-row" style="justify-content:flex-start; margin-top:0.65rem; gap:0.8rem;">
                         ${item.file?.dataUrl ? `<button type="button" class="portal-download-btn" onclick="downloadPortalAttachment('${STUDENT_UPLOADED_ASSIGNMENT_KEY}', '${escapeHtml(item.id || '')}')"><i data-lucide="download" width="16"></i> Download Assignment</button>` : ''}
@@ -3896,8 +3898,9 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        function openStudentAssignmentSubmission(assignmentId) {
-            const assignment = getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY)
+        async function openStudentAssignmentSubmission(assignmentId) {
+            const liveAssignments = await loadStudentUploadedAssignmentRecords();
+            const assignment = (Array.isArray(liveAssignments) ? liveAssignments : getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY))
                 .find((item) => String(item.id || '') === String(assignmentId || ''));
             if (!assignment) {
                 showAppAlert('Assignment was not found.', 'Submit Assignment');
