@@ -3668,15 +3668,18 @@
         function getStudentCourseItems(student = {}) {
             const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
             const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
-            return getPortalData(STUDENT_COURSE_KEY)
+            const allCourses = getPortalData(STUDENT_COURSE_KEY)
+                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+            const matchedCourses = allCourses
                 .filter((item) => {
                     const itemClass = normalizeCourseClassKey(item.classGrade);
                     const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
                     const classMatches = !studentClass || !itemClass || itemClass === studentClass;
                     const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
                     return classMatches && campusMatches;
-                })
-                .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
+                });
+
+            return matchedCourses.length ? matchedCourses : allCourses;
         }
 
         function groupPortalDiaryItems(items = []) {
@@ -4597,7 +4600,7 @@
                     const targetId = button.getAttribute('data-student-action-target');
                     const target = document.getElementById(targetId);
                     if (target) {
-                        openStudentPortalScreen(target);
+                        await openStudentPortalScreen(target);
                         return;
                     }
                     await showAppAlert('This portal option is not available yet.', 'Coming Soon');
@@ -6070,7 +6073,7 @@
             document.querySelector('.student-action-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        function openStudentPortalScreen(target) {
+        async function openStudentPortalScreen(target) {
             const container = document.querySelector('.portal-container');
             if (!target || !container) return;
 
@@ -6084,6 +6087,15 @@
             container.classList.add('portal-screen-open');
             target.style.display = 'block';
             target.classList.add('portal-screen-active');
+
+            if (target.id === 'studentSyllabusSection') {
+                try {
+                    await hydrateStudentPortalCollections();
+                } catch (_error) {
+                    // Keep showing cached data if live re-hydration fails.
+                }
+                applyStudentCourse(getCurrentPortalStudent());
+            }
 
             const backButton = document.createElement('button');
             backButton.type = 'button';
