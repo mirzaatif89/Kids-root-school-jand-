@@ -157,7 +157,11 @@
                                     <label>School Name<input type="text" id="dateSheetSchoolName" value="Kids Roots Jand" placeholder="Enter school name"></label>
                                     <label>Exam Title<input type="text" id="dateSheetExamTitle" placeholder="Enter exam title"></label>
                                     <label>Session<input type="text" id="dateSheetSession" placeholder="Enter session"></label>
-                                    <label>Target Class / Group<input type="text" id="dateSheetClassGroup" placeholder="Enter class / group"></label>
+                                    <label>Target Class / Group
+                                        <select id="dateSheetClassGroup">
+                                            <option value="">Select Class / Group</option>
+                                        </select>
+                                    </label>
                                     <label>Campus / Branch
                                         <select id="dateSheetCampus">
                                             <option value="Main Campus">Main Campus</option>
@@ -1407,8 +1411,41 @@
             campusSelect.value = hasPrevious ? previousValue : campuses[0];
         }
 
-        function fillDateSheetForm(savedState = {}) {
+        async function populateDateSheetClassOptions(selectedClass = '') {
+            const classSelect = document.getElementById('dateSheetClassGroup');
+            if (!classSelect) return;
+
+            const previousValue = String(selectedClass || classSelect.value || '').trim();
+            let classes = [];
+            try {
+                if (typeof window.eduCoreGetClassOptions === 'function') {
+                    classes = await window.eduCoreGetClassOptions();
+                }
+            } catch (error) {
+                classes = [];
+            }
+
+            if (!Array.isArray(classes) || !classes.length) {
+                try {
+                    const storedClasses = JSON.parse(localStorage.getItem('eduCore_classes') || '[]');
+                    const storedStudents = JSON.parse(localStorage.getItem('eduCore_students') || '[]');
+                    classes = [...new Set([
+                        ...(Array.isArray(storedClasses) ? storedClasses : []).map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                        ...(Array.isArray(storedStudents) ? storedStudents : []).map((student) => student?.classGrade)
+                    ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
+                } catch (error) {
+                    classes = [];
+                }
+            }
+
+            classSelect.innerHTML = '<option value="">Select Class / Group</option>' + classes.map((className) => `<option value="${escapeHtml(className)}">${escapeHtml(className)}</option>`).join('');
+            const hasPrevious = classes.some((className) => className.toLowerCase() === previousValue.toLowerCase());
+            classSelect.value = hasPrevious ? previousValue : '';
+        }
+
+        async function fillDateSheetForm(savedState = {}) {
             populateDateSheetCampusOptions(savedState.dateSheetCampus);
+            await populateDateSheetClassOptions(savedState.dateSheetClassGroup);
             [
                 'dateSheetSchoolName',
                 'dateSheetExamTitle',
@@ -1898,7 +1935,7 @@
             refreshResultCardPreview();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             applyExamBrandingDefaults(false);
             toggleExamSection('examSchedulingCard');
             const dateSheetState = loadDateSheetState();
@@ -1907,7 +1944,7 @@
                 : null;
             const savedState = loadResultCardState();
             renderScheduleRows(dateSheetState);
-            fillDateSheetForm(dateSheetState);
+            await fillDateSheetForm(dateSheetState);
             updateDateSheetUploadNote();
             refreshDateSheetPreview();
             renderDynamicEditors(savedState);
