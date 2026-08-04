@@ -3427,6 +3427,31 @@ function defineMessageModel(db) {
     });
 }
 
+function defineLeaveRequestModel(db) {
+    return db.define('LeaveRequest', {
+        id: { type: DataTypes.STRING, primaryKey: true },
+        applicantRole: { type: DataTypes.STRING, allowNull: false },
+        applicantId: { type: DataTypes.STRING, allowNull: false },
+        applicantName: DataTypes.STRING,
+        email: DataTypes.STRING,
+        studentCode: DataTypes.STRING,
+        rollNo: DataTypes.STRING,
+        classGrade: DataTypes.STRING,
+        subject: DataTypes.STRING,
+        campusName: DataTypes.STRING,
+        fromDate: { type: DataTypes.STRING, allowNull: false },
+        toDate: { type: DataTypes.STRING, allowNull: false },
+        reason: { type: DataTypes.TEXT, allowNull: false },
+        fileName: DataTypes.STRING,
+        fileType: DataTypes.STRING,
+        fileData: DataTypes.TEXT('long'),
+        status: { type: DataTypes.STRING, defaultValue: 'Pending' },
+        reviewReason: DataTypes.TEXT,
+        reviewedAt: DataTypes.STRING,
+        reviewEmailSentAt: DataTypes.STRING
+    });
+}
+
 function definePortalCollectionRecordModel(db) {
     return db.define('PortalCollectionRecord', {
         id: { type: DataTypes.STRING, primaryKey: true },
@@ -3834,6 +3859,7 @@ async function startServer() {
         defineTeacherAttendanceModel(sequelize);
         defineSpecialNoticeModel(sequelize);
         defineMessageModel(sequelize);
+        defineLeaveRequestModel(sequelize);
         definePortalCollectionRecordModel(sequelize);
 
         // Avoid Sequelize's repeated ALTER-based index churn on MySQL.
