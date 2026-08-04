@@ -2540,7 +2540,7 @@
             <button type="button" class="student-action-btn" data-student-action-target="studentSyllabusSection">
                 <i data-lucide="file-text"></i> Syllabus
             </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentSubmitAssignmentSection">
+            <button type="button" class="student-action-btn" data-student-action-target="studentAssignmentSection">
                 <i data-lucide="pencil-line"></i> Assignment
             </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentQuizSection">
@@ -2548,9 +2548,6 @@
             </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentLecturesSection">
                 <i data-lucide="presentation"></i> Lectures
-            </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentAssignmentSection">
-                <i data-lucide="upload"></i> My Submissions
             </button>
             <button type="button" class="student-action-btn" data-student-action-target="studentMessagesSection">
                 <i data-lucide="message-circle"></i> Messages
@@ -2805,13 +2802,7 @@
         </section>
 
         <section class="panel-card student-portal-section" id="studentAssignmentSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Submitted Assignments</h3>
-            <div class="portal-content-list" id="studentAssignmentHistory"></div>
-            <div class="empty-note" id="studentAssignmentEmpty">You have not submitted any assignment yet.</div>
-        </section>
-
-        <section class="panel-card student-portal-section" id="studentSubmitAssignmentSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Submit Assignment</h3>
+            <h3>Assignment</h3>
             <div class="empty-note" id="studentAssignmentSourceInfo" style="margin-bottom:1rem;">Choose an assignment below and click Submit to open the upload form.</div>
             <input type="hidden" id="studentAssignmentSourceId">
             <input type="hidden" id="studentAssignmentSourceTitle">
@@ -2843,6 +2834,9 @@
                     <button type="submit" class="btn btn-primary">Submit Assignment</button>
                 </div>
             </form>
+            <h4 style="margin-top:1.25rem;">Submitted Assignments</h4>
+            <div class="portal-content-list" id="studentAssignmentHistory"></div>
+            <div class="empty-note" id="studentAssignmentEmpty">You have not submitted any assignment yet.</div>
         </section>
 
         <section class="panel-card student-portal-section" id="studentMessagesSection" style="display:none; margin-bottom: 1.25rem;">
@@ -3709,7 +3703,7 @@
             if (noteInput) noteInput.value = `Submitted for ${assignment.file?.name || assignment.title || 'assignment'}.`;
             updateStudentAssignmentFileLabel();
 
-            document.getElementById('studentSubmitAssignmentSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            document.getElementById('studentAssignmentSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             titleInput?.focus();
         }
 
