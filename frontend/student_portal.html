@@ -3294,6 +3294,46 @@
             return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
         }
 
+        function normalizeDiaryClassKey(value = '') {
+            const raw = String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
+            if (!raw) return '';
+
+            const wordNumbers = {
+                one: '1',
+                two: '2',
+                three: '3',
+                four: '4',
+                five: '5',
+                six: '6',
+                seven: '7',
+                eight: '8',
+                nine: '9',
+                ten: '10'
+            };
+
+            const normalized = raw
+                .replace(/\b(class|grade)\b/g, '')
+                .replace(/\b(st|nd|rd|th)\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (wordNumbers[normalized]) return wordNumbers[normalized];
+            const numericMatch = normalized.match(/^(\d+)$/);
+            if (numericMatch) return numericMatch[1];
+            const wordMatch = normalized.match(/^(one|two|three|four|five|six|seven|eight|nine|ten)$/);
+            return wordMatch ? wordNumbers[wordMatch[1]] : normalized;
+        }
+
+        function normalizeDiaryCampusKey(value = '') {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[-_]+/g, ' ')
+                .replace(/\b(campus|branch|main|center|centre)\b/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
         function getPortalStudentCampusName(student = {}) {
             return String(
                 student?.campusName
@@ -3314,16 +3354,16 @@
         }
 
         function diaryMatchesStudent(student = {}, diary = {}) {
-            const studentClass = normalizeClassName(student.classGrade || loggedInUser?.classGrade || loggedInUser?.grade || '');
-            const diaryClass = normalizeClassName(diary.classGrade);
+            const studentClass = normalizeDiaryClassKey(student.classGrade || loggedInUser?.classGrade || loggedInUser?.grade || '');
+            const diaryClass = normalizeDiaryClassKey(diary.classGrade);
             if (studentClass && diaryClass && studentClass !== diaryClass) return false;
 
-            const diaryCampus = getPortalStudentCampusName(diary);
+            const diaryCampus = normalizeDiaryCampusKey(getPortalStudentCampusName(diary));
             if (!diaryCampus) return true;
 
-            const studentCampus = getPortalStudentCampusName(student);
+            const studentCampus = normalizeDiaryCampusKey(getPortalStudentCampusName(student));
             if (!studentCampus) return true;
-            return normalizeCampusName(diaryCampus) === normalizeCampusName(studentCampus);
+            return diaryCampus === studentCampus || diaryCampus.includes(studentCampus) || studentCampus.includes(diaryCampus);
         }
 
         function getStudentDiaryItems(student = {}) {
@@ -3333,23 +3373,29 @@
 
             if (!diaries.length) return [];
 
-            const studentClass = normalizeClassName(student.classGrade || loggedInUser?.classGrade || loggedInUser?.grade || '');
-            const studentCampus = normalizeCampusName(getPortalStudentCampusName(student));
+            const studentClass = normalizeDiaryClassKey(student.classGrade || loggedInUser?.classGrade || loggedInUser?.grade || '');
+            const studentCampus = normalizeDiaryCampusKey(getPortalStudentCampusName(student));
 
             const classMatches = studentClass
-                ? diaries.filter((item) => normalizeClassName(item.classGrade) === studentClass)
+                ? diaries.filter((item) => normalizeDiaryClassKey(item.classGrade) === studentClass)
                 : diaries;
 
             if (!studentCampus) {
                 return classMatches;
             }
 
-            const campusMatches = classMatches.filter((item) => normalizeCampusName(item.campusName || '') === studentCampus);
+            const campusMatches = classMatches.filter((item) => {
+                const campusKey = normalizeDiaryCampusKey(item.campusName || '');
+                return campusKey === studentCampus || campusKey.includes(studentCampus) || studentCampus.includes(campusKey);
+            });
             if (campusMatches.length) {
                 return campusMatches;
             }
 
-            return classMatches.length ? classMatches : diaries.filter((item) => normalizeCampusName(item.campusName || '') === studentCampus);
+            return classMatches.length ? classMatches : diaries.filter((item) => {
+                const campusKey = normalizeDiaryCampusKey(item.campusName || '');
+                return campusKey === studentCampus || campusKey.includes(studentCampus) || studentCampus.includes(campusKey);
+            });
         }
 
         function getStudentClassSchedules(student = {}) {
