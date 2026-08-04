@@ -3292,14 +3292,20 @@
             openDiaryPrintWindow(html);
         }
 
-        function downloadPortalAttachment(storageKey, itemId) {
-            const item = getPortalData(storageKey).find((entry) => String(entry.id || '') === String(itemId || ''));
-            if (!item?.file?.dataUrl) {
+        async function downloadPortalAttachment(storageKey, itemId) {
+            const liveItems = window.eduCoreCollectionApi?.load
+                ? await window.eduCoreCollectionApi.load(storageKey, getPortalData(storageKey))
+                : getPortalData(storageKey);
+            const item = (Array.isArray(liveItems) ? liveItems : getPortalData(storageKey))
+                .find((entry) => String(entry.id || '') === String(itemId || ''));
+            const filePayload = item?.file?.dataUrl || item?.fileData || item?.attachment?.dataUrl || item?.attachmentData;
+            const fileName = item?.file?.name || item?.fileName || item?.attachment?.name || item?.attachmentName || 'diary-file';
+            if (!filePayload) {
                 showAppAlert('Attachment file was not found.', 'Download Failed');
                 return;
             }
 
-            downloadPortalDataUrl(item.file.dataUrl, item.file.name || 'diary-file');
+            downloadPortalDataUrl(filePayload, fileName);
         }
 
         function getStatusClass(status) {
