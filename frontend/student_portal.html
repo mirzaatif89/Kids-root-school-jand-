@@ -3316,6 +3316,16 @@
             return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
         }
 
+        function normalizeCourseClassKey(value = '') {
+            const normalized = normalizeDiaryClassKey(value);
+            return normalized || normalizeClassName(value);
+        }
+
+        function normalizeCourseCampusKey(value = '') {
+            const normalized = normalizeDiaryCampusKey(value);
+            return normalized || normalizeCampusName(value);
+        }
+
         function normalizeDiaryClassKey(value = '') {
             const raw = String(value || '').trim().toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ');
             if (!raw) return '';
@@ -3656,12 +3666,12 @@
         }
 
         function getStudentCourseItems(student = {}) {
-            const studentClass = normalizeClassName(student.classGrade);
-            const studentCampus = normalizeCampusName(getPortalStudentCampusName(student));
+            const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
+            const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
             return getPortalData(STUDENT_COURSE_KEY)
                 .filter((item) => {
-                    const itemClass = normalizeClassName(item.classGrade);
-                    const itemCampus = normalizeCampusName(item.campusName || item.campus || item.branchName || '');
+                    const itemClass = normalizeCourseClassKey(item.classGrade);
+                    const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
                     const classMatches = !studentClass || !itemClass || itemClass === studentClass;
                     const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
                     return classMatches && campusMatches;
