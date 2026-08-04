@@ -3696,6 +3696,27 @@
             }
         }
 
+        async function loadPortalCollectionRecords(storageKey, route, recordsKey) {
+            try {
+                if (window.eduCoreCollectionApi?.load) {
+                    const records = await window.eduCoreCollectionApi.load(storageKey, getPortalData(storageKey));
+                    return Array.isArray(records) ? records : [];
+                }
+                const response = await fetch(`${API_BASE_URL}/${route}`, { cache: 'no-store' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || `${route} unavailable.`);
+                }
+                const records = Array.isArray(result?.[recordsKey]) ? result[recordsKey] : [];
+                if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                    window.__eduCoreServerCollectionCache.set(storageKey, records);
+                }
+                return records;
+            } catch (_error) {
+                return getPortalData(storageKey);
+            }
+        }
+
         async function loadStudentCourseRecords() {
             try {
                 const response = await fetch(`${API_BASE_URL}/student-courses`, { cache: 'no-store' });
@@ -3728,6 +3749,14 @@
             } catch (_error) {
                 return getPortalData(STUDENT_UPLOADED_ASSIGNMENT_KEY);
             }
+        }
+
+        async function loadStudentQuizRecords() {
+            return loadPortalCollectionRecords(STUDENT_QUIZ_KEY, 'student-quizzes', 'quizzes');
+        }
+
+        async function loadStudentQuizSubmissionRecords() {
+            return loadPortalCollectionRecords(STUDENT_QUIZ_SUBMISSION_KEY, 'student-quiz-submissions', 'submissions');
         }
 
         function getClassWiseItems(key, student = {}) {
@@ -4054,21 +4083,27 @@
             return `${String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim()}|${quizId}`;
         }
 
-        function getStudentQuizSubmissions(student = {}) {
-            const studentKey = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim();
-            return getPortalData(STUDENT_QUIZ_SUBMISSION_KEY)
-                .filter((item) => String(item.studentKey || item.studentId || '').trim() === studentKey);
-        }
-
-        function applyStudentQuizzes(student = {}) {
+        async function applyStudentQuizzes(student = {}) {
             const list = document.getElementById('studentQuizList');
             const empty = document.getElementById('studentQuizEmpty');
             const historyList = document.getElementById('studentQuizHistoryList');
             const historyEmpty = document.getElementById('studentQuizHistoryEmpty');
             if (!list || !empty || !historyList || !historyEmpty) return;
 
-            const items = getClassWiseItems(STUDENT_QUIZ_KEY, student);
-            const submissions = getStudentQuizSubmissions(student);
+            const studentKey = String(student.id || student.studentCode || student.rollNo || loggedInUser?.id || '').trim();
+            const studentClass = normalizeClassName(student.classGrade || loggedInUser?.classGrade || '');
+            const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
+            const items = (await loadStudentQuizRecords())
+                .filter((item) => {
+                    const itemClass = normalizeClassName(item.classGrade);
+                    const itemCampus = normalizeCourseCampusKey(item.campusName || item.campus || item.branchName || '');
+                    const classMatches = !studentClass || !itemClass || itemClass === studentClass;
+                    const campusMatches = !studentCampus || !itemCampus || itemCampus === studentCampus;
+                    return classMatches && campusMatches;
+                })
+                .sort((a, b) => String(b.dueDate || b.updatedAt || b.createdAt || '').localeCompare(String(a.dueDate || a.updatedAt || a.createdAt || '')));
+            const submissions = (await loadStudentQuizSubmissionRecords())
+                .filter((item) => String(item.studentKey || item.studentId || '').trim() === studentKey);
             const pendingItems = items.filter((item) => !submissions.some((entry) => String(entry.quizId || '') === String(item.id || '')));
             const submittedItems = submissions
                 .map((submission) => ({
@@ -4181,7 +4216,7 @@
 
             const student = getCurrentPortalStudent();
             const quizId = form.dataset.studentQuizForm;
-            const quiz = getPortalData(STUDENT_QUIZ_KEY).find((item) => String(item.id || '') === String(quizId || ''));
+            const quiz = (await loadStudentQuizRecords()).find((item) => String(item.id || '') === String(quizId || ''));
             const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
             if (!quiz || !questions.length) return;
 
@@ -4209,7 +4244,7 @@
             const score = questionMarksTotal ? Math.round((rawScore / questionMarksTotal) * totalMarks) : 0;
             const passMarks = Math.min(totalMarks, Math.max(1, Number(quiz.passMarks || Math.ceil(totalMarks / 2))));
             const passed = score >= passMarks;
-            const submissions = getPortalData(STUDENT_QUIZ_SUBMISSION_KEY);
+            const submissions = await loadStudentQuizSubmissionRecords();
             const duplicateIndex = submissions.findIndex((item) => item.studentKey === studentKey && item.quizId === quizId);
             const submission = {
                 id: duplicateIndex >= 0 ? submissions[duplicateIndex].id : `QSUB-${Date.now()}`,
@@ -4240,7 +4275,7 @@
                 showAppAlert('Quiz submission could not be saved.', 'Save Failed');
                 return;
             }
-            applyStudentQuizzes(student);
+            await applyStudentQuizzes(student);
             updateStudentNotifications(student);
             showAppAlert(`Quiz submitted. Your marks: ${score} / ${totalMarks}. Pass marks: ${passMarks}. Result: ${passed ? 'Pass' : 'Fail'}`, 'Quiz Result');
         }
@@ -5987,7 +6022,7 @@
             applyStudentCourse(student);
             renderStudentAssignmentSubmissions(student);
             renderStudentUploadedAssignments(student);
-            applyStudentQuizzes(student);
+            void applyStudentQuizzes(student);
             applyStudentUploadedLectures(student);
             applyStudentLectures(student);
             applyDateSheet(student);

@@ -156,7 +156,13 @@
     <script>
         const QUIZ_KEY = 'eduCore_student_quizzes';
         const QUIZ_SUBMISSION_KEY = 'eduCore_student_quiz_submissions';
-        function data(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; } }
+        let quizRecords = [];
+        let quizSubmissionRecords = [];
+        function data(key) {
+            if (key === QUIZ_KEY) return quizRecords;
+            if (key === QUIZ_SUBMISSION_KEY) return quizSubmissionRecords;
+            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_e) { return []; }
+        }
         const QUIZ_SAVE_ROUTE_MAP = {
             [QUIZ_KEY]: 'student-quizzes',
             [QUIZ_SUBMISSION_KEY]: 'student-quiz-submissions'
@@ -168,6 +174,8 @@
                     if (!result.success) {
                         showAppAlert('Quiz saved locally, but server sync failed.', 'Saved Locally');
                     }
+                    if (key === QUIZ_KEY) quizRecords = Array.isArray(value) ? value : [];
+                    if (key === QUIZ_SUBMISSION_KEY) quizSubmissionRecords = Array.isArray(value) ? value : [];
                     return true;
                 }
                 const route = QUIZ_SAVE_ROUTE_MAP[key];
@@ -185,6 +193,8 @@
                 if (!response.ok || result?.success === false) {
                     throw new Error(result?.message || result?.error || 'Save failed.');
                 }
+                if (key === QUIZ_KEY) quizRecords = Array.isArray(value) ? value : [];
+                if (key === QUIZ_SUBMISSION_KEY) quizSubmissionRecords = Array.isArray(value) ? value : [];
                 return true;
             } catch (_e) { showAppAlert('File/data is too large to save.', 'Storage Full'); return false; }
         }
@@ -609,10 +619,23 @@
         (async () => {
             try {
                 if (window.eduCoreCollectionApi?.load) {
-                    await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
+                    quizRecords = await window.eduCoreCollectionApi.load(QUIZ_KEY, data(QUIZ_KEY));
+                    quizSubmissionRecords = await window.eduCoreCollectionApi.load(QUIZ_SUBMISSION_KEY, data(QUIZ_SUBMISSION_KEY));
+                } else {
+                    const quizResponse = await fetch(`${API_BASE_URL}/student-quizzes`, { cache: 'no-store' });
+                    const quizResult = await quizResponse.json().catch(() => ({}));
+                    if (quizResponse.ok && quizResult?.success !== false) {
+                        quizRecords = Array.isArray(quizResult?.quizzes) ? quizResult.quizzes : [];
+                    }
+                    const submissionResponse = await fetch(`${API_BASE_URL}/student-quiz-submissions`, { cache: 'no-store' });
+                    const submissionResult = await submissionResponse.json().catch(() => ({}));
+                    if (submissionResponse.ok && submissionResult?.success !== false) {
+                        quizSubmissionRecords = Array.isArray(submissionResult?.submissions) ? submissionResult.submissions : [];
+                    }
                 }
             } catch (_error) {
-                // keep local fallback
+                quizRecords = data(QUIZ_KEY);
+                quizSubmissionRecords = data(QUIZ_SUBMISSION_KEY);
             }
             setupQuizResultDropdowns();
             updateQuizResultStatusSummary();
