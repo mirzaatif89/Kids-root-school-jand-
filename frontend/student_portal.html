@@ -3658,6 +3658,23 @@
             }
         }
 
+        async function loadStudentCourseRecords() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/student-courses`, { cache: 'no-store' });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'student-courses unavailable.');
+                }
+                const courses = Array.isArray(result?.courses) ? result.courses : [];
+                if (window.__eduCoreServerCollectionCache && typeof window.__eduCoreServerCollectionCache.set === 'function') {
+                    window.__eduCoreServerCollectionCache.set(STUDENT_COURSE_KEY, courses);
+                }
+                return courses;
+            } catch (_error) {
+                return getPortalData(STUDENT_COURSE_KEY);
+            }
+        }
+
         function getClassWiseItems(key, student = {}) {
             const studentClass = normalizeClassName(student.classGrade);
             return getPortalData(key)
@@ -3665,10 +3682,10 @@
                 .sort((a, b) => String(b.date || b.updatedAt || b.createdAt || '').localeCompare(String(a.date || a.updatedAt || a.createdAt || '')));
         }
 
-        function getStudentCourseItems(student = {}) {
+        async function getStudentCourseItems(student = {}) {
             const studentClass = normalizeCourseClassKey(student.classGrade || loggedInUser?.classGrade || '');
             const studentCampus = normalizeCourseCampusKey(getPortalStudentCampusName(student));
-            const allCourses = getPortalData(STUDENT_COURSE_KEY)
+            const allCourses = (await loadStudentCourseRecords())
                 .sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')));
             const matchedCourses = allCourses
                 .filter((item) => {
@@ -3762,12 +3779,12 @@
             void renderPortalDiaryList(student);
         }
 
-        function applyStudentCourse(student = {}) {
+        async function applyStudentCourse(student = {}) {
             const list = document.getElementById('studentCourseList');
             const empty = document.getElementById('studentCourseEmpty');
             if (!list || !empty) return;
 
-            const courses = getStudentCourseItems(student);
+            const courses = await getStudentCourseItems(student);
             if (!courses.length) {
                 list.innerHTML = '';
                 empty.style.display = 'block';
