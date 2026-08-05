@@ -1397,6 +1397,7 @@
         let remoteTeacherLeaveRequests = null;
         let remoteTeacherSalaryPayments = null;
         let remoteTeacherClassAssignments = [];
+        let remoteTeacherLectures = [];
 
         function getServerCollectionRecords(key) {
             const cache = window.__eduCoreServerCollectionCache;
@@ -1827,14 +1828,23 @@
         }
 
         function renderAssignedLectures() {
-            const schedule = getSchedule();
-            renderPortalList('teacherAssignedLectures', schedule, 'No lectures have been assigned yet.', (item) => `
+            const teacherCampus = getTeacherLectureCampus();
+            const lectures = Array.isArray(remoteTeacherLectures)
+                ? remoteTeacherLectures.filter((lecture) => {
+                    const lectureCampus = normalizeTeacherText(lecture?.campusName || '');
+                    const campusMatch = !teacherCampus || !lectureCampus || lectureCampus === teacherCampus;
+                    return campusMatch;
+                }).sort((a, b) => String(b.updatedAt || b.createdAt || '').localeCompare(String(a.updatedAt || a.createdAt || '')))
+                : [];
+            renderPortalList('teacherAssignedLectures', lectures, 'No lectures have been assigned yet.', (item) => `
                 <div class="list-item">
                     <div class="list-item-top">
-                        <span>${escapeHtml(item.subject || 'Lecture')}</span>
-                        <span>${escapeHtml([item.startTime || item.start, item.endTime || item.end].filter(Boolean).join(' - ') || item.time || '-')}</span>
+                        <span>${escapeHtml(item.title || item.subject || 'Lecture')}</span>
+                        <span>${escapeHtml(item.campusName || item.classGrade || item.className || '-')}</span>
                     </div>
-                    <div class="muted">${escapeHtml(item.day || item.weekDay || '-')} | ${escapeHtml(item.classGrade || item.className || item.class || '-')} | ${escapeHtml(item.room || '-')}</div>
+                    <div class="muted">${escapeHtml(item.subject || '-')} | ${escapeHtml(item.classGrade || item.className || item.class || '-')} | ${escapeHtml(item.details || item.url || item.file?.name || '-')}</div>
+                    ${item.url ? `<div class="muted" style="margin-top:6px;"><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open Link</a></div>` : ''}
+                    ${item.file?.dataUrl ? `<div class="muted" style="margin-top:6px;"><a href="${item.file.dataUrl}" download="${escapeHtml(item.file.name || 'lecture-file')}">Download File</a></div>` : ''}
                 </div>
             `);
         }
@@ -2329,6 +2339,47 @@
             renderAssignedClasses();
         }
 
+        function getTeacherAssignedClassNames() {
+            const teacherCandidates = getTeacherIdentityCandidates(currentTeacherProfile || loggedInUser || {});
+            const assignedClasses = Array.isArray(remoteTeacherClassAssignments)
+                ? remoteTeacherClassAssignments.filter((assignment) => {
+                    const assignmentCandidates = [
+                        assignment?.teacherId,
+                        assignment?.teacherProfileId,
+                        assignment?.teacherUsername,
+                        assignment?.teacherEmployeeCode,
+                        assignment?.teacherName,
+                        assignment?.teacherFullName,
+                        assignment?.teacherEmail
+                    ].map(normalizeTeacherText).filter(Boolean);
+                    return assignmentCandidates.some((candidate) => teacherCandidates.includes(candidate));
+                }).map((assignment) => String(assignment.classGrade || assignment.className || assignment.class || '').trim()).filter(Boolean)
+                : [];
+
+            const fromSchedule = uniqueClasses(getSchedule());
+            return [...new Set([...assignedClasses, ...fromSchedule].map((value) => String(value || '').trim()).filter(Boolean))];
+        }
+
+        function getTeacherLectureCampus() {
+            return normalizeTeacherText(currentTeacherProfile?.campusName || loggedInUser?.campusName || '');
+        }
+
+        async function loadTeacherLectures() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/uploaded-lectures`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'Lectures could not be loaded.');
+                }
+                remoteTeacherLectures = Array.isArray(result.lectures) ? result.lectures : [];
+            } catch (_error) {
+                remoteTeacherLectures = [];
+            }
+            renderAssignedLectures();
+        }
+
         async function loadTeacherProfile() {
             if (!loggedInUser || loggedInUser.role !== 'Teacher' || !authToken) {
                 window.location.replace('/login');
@@ -2345,6 +2396,7 @@
                 await loadTeacherPortalBanners();
                 await loadTeacherMessages();
                 await loadTeacherClassAssignments();
+                await loadTeacherLectures();
                 await loadTeacherLeaveRequests();
                 await loadTeacherSalaryPayments();
                 await refreshTeacherComplaintCollection();
@@ -2357,6 +2409,7 @@
                     await loadTeacherPortalBanners();
                     await loadTeacherMessages();
                     await loadTeacherClassAssignments();
+                    await loadTeacherLectures();
                     await loadTeacherLeaveRequests();
                     await loadTeacherSalaryPayments();
                     await refreshTeacherComplaintCollection();

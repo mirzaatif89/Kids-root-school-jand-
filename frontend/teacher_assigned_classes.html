@@ -134,11 +134,22 @@
             return `${backendUrl}/api`;
         })();
         const authToken = sessionStorage.getItem('eduCore_token') || '';
+        const LEGACY_CLASS_ASSIGNMENT_KEY = 'eduCore_teacher_class_assignments';
 
         let teacherAssignments = [];
         let teacherRecords = [];
         let classRecords = [];
         let campusRecords = [];
+        const els = {
+            teacher: () => document.getElementById('classAssignmentTeacher'),
+            classGrade: () => document.getElementById('classAssignmentClass'),
+            campus: () => document.getElementById('classAssignmentCampus'),
+            note: () => document.getElementById('classAssignmentNote'),
+            editId: () => document.getElementById('classAssignmentEditId'),
+            form: () => document.getElementById('classAssignmentForm'),
+            saveBtn: () => document.getElementById('saveClassAssignmentBtn'),
+            list: () => document.getElementById('classAssignmentList')
+        };
 
         function escapeAssignmentText(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -181,6 +192,15 @@
             return String(assignment.teacherName || assignment.teacherFullName || assignment.teacherUsername || assignment.teacherEmployeeCode || '').trim();
         }
 
+        function readLegacyAssignments() {
+            try {
+                const stored = JSON.parse(localStorage.getItem(LEGACY_CLASS_ASSIGNMENT_KEY) || '[]');
+                return Array.isArray(stored) ? stored : [];
+            } catch (_error) {
+                return [];
+            }
+        }
+
         async function fetchJson(path, options = {}, errorMessage = 'Request failed.') {
             const response = await fetch(`${API_BASE_URL}${path}`, {
                 cache: 'no-store',
@@ -204,9 +224,15 @@
                 campusRecords = ['Jand Campus', 'Langar Campus', 'Main Campus'];
             }
             populateCampusSelect('classAssignmentCampus', campusRecords, campusRecords.length ? 'Select Campus' : 'Add campus in Branch Registration first');
+            const campusSelect = els.campus();
+            if (campusSelect && campusSelect.options.length && !campusSelect.value) {
+                campusSelect.value = campusSelect.options[0]?.value || '';
+            }
         }
 
         async function loadTeacherOptions() {
+            const teacherSelect = els.teacher();
+            if (!teacherSelect) return;
             try {
                 const result = await fetchJson('/teachers', {
                     headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
@@ -233,14 +259,16 @@
             } catch (_error) {
                 teacherRecords = [];
             }
-            const previous = classAssignmentTeacher.value || '';
-            classAssignmentTeacher.innerHTML = '<option value="">Select Teacher</option>' + teacherRecords.map((teacher) => (
+            const previous = teacherSelect.value || '';
+            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teacherRecords.map((teacher) => (
                 `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName)}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}${teacher.campusName ? ` (${escapeAssignmentText(teacher.campusName)})` : ''}</option>`
             )).join('');
-            if (previous) classAssignmentTeacher.value = previous;
+            if (previous) teacherSelect.value = previous;
         }
 
         async function loadClassOptions() {
+            const classSelect = els.classGrade();
+            if (!classSelect) return;
             const classes = [];
             try {
                 const result = await fetchJson('/classes', {}, 'Classes could not be loaded.');
@@ -263,11 +291,11 @@
             }
 
             classRecords = uniqueValues(classes);
-            const previous = classAssignmentClass.value || '';
-            classAssignmentClass.innerHTML = '<option value="">Select Class</option>' + classRecords.map((className) => (
+            const previous = classSelect.value || '';
+            classSelect.innerHTML = '<option value="">Select Class</option>' + classRecords.map((className) => (
                 `<option value="${escapeAssignmentText(className)}">${escapeAssignmentText(className)}</option>`
             )).join('');
-            if (previous) classAssignmentClass.value = previous;
+            if (previous) classSelect.value = previous;
         }
 
         async function loadTeacherAssignments() {
@@ -277,11 +305,27 @@
             } catch (_error) {
                 teacherAssignments = [];
             }
+            if (!teacherAssignments.length) {
+                const legacyAssignments = readLegacyAssignments();
+                if (legacyAssignments.length) {
+                    try {
+                        const result = await fetchJson('/teacher-class-assignments', {
+                            method: 'POST',
+                            headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+                            body: JSON.stringify(legacyAssignments)
+                        }, 'Legacy assignments could not be migrated.');
+                        teacherAssignments = Array.isArray(result.assignments) ? result.assignments : legacyAssignments;
+                        localStorage.removeItem(LEGACY_CLASS_ASSIGNMENT_KEY);
+                    } catch (_error) {
+                        teacherAssignments = legacyAssignments;
+                    }
+                }
+            }
             renderClassAssignments();
         }
 
         function renderClassAssignments() {
-            const list = document.getElementById('classAssignmentList');
+            const list = els.list();
             const assignments = [...teacherAssignments].sort((a, b) => {
                 const left = `${getAssignmentClassLabel(a)}${getAssignmentTeacherLabel(a)}`;
                 const right = `${getAssignmentClassLabel(b)}${getAssignmentTeacherLabel(b)}`;
@@ -322,10 +366,15 @@
         }
 
         function resetClassAssignmentForm() {
-            classAssignmentForm.reset();
-            classAssignmentEditId.value = '';
-            if (campusRecords.length) classAssignmentCampus.value = campusRecords[0] || '';
-            saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Save Assignment';
+            const form = els.form();
+            const editId = els.editId();
+            const saveBtn = els.saveBtn();
+            const campusSelect = els.campus();
+            form?.reset();
+            if (editId) editId.value = '';
+            if (campusSelect && campusRecords.length) campusSelect.value = campusRecords[0] || '';
+            if (campusSelect) campusSelect.value = campusRecords[0] || campusSelect.value || '';
+            if (saveBtn) saveBtn.innerHTML = '<i data-lucide="save"></i> Save Assignment';
             if (window.lucide?.createIcons) window.lucide.createIcons();
         }
 
@@ -349,13 +398,20 @@
         function editClassAssignment(id) {
             const assignment = resolveAssignmentById(id);
             if (!assignment) return;
-            classAssignmentEditId.value = assignment.id;
-            classAssignmentTeacher.value = assignment.teacherId || assignment.teacherProfileId || assignment.teacherUsername || '';
-            classAssignmentClass.value = getAssignmentClassLabel(assignment) || '';
-            classAssignmentCampus.value = assignment.campusName || '';
-            classAssignmentNote.value = assignment.note || '';
-            saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Update Assignment';
-            classAssignmentForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const editId = els.editId();
+            const teacherSelect = els.teacher();
+            const classSelect = els.classGrade();
+            const campusSelect = els.campus();
+            const noteInput = els.note();
+            const saveBtn = els.saveBtn();
+            const form = els.form();
+            if (editId) editId.value = assignment.id;
+            if (teacherSelect) teacherSelect.value = assignment.teacherId || assignment.teacherProfileId || assignment.teacherUsername || '';
+            if (classSelect) classSelect.value = getAssignmentClassLabel(assignment) || '';
+            if (campusSelect) campusSelect.value = assignment.campusName || '';
+            if (noteInput) noteInput.value = assignment.note || '';
+            if (saveBtn) saveBtn.innerHTML = '<i data-lucide="save"></i> Update Assignment';
+            form?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             if (window.lucide?.createIcons) window.lucide.createIcons();
         }
 
@@ -387,19 +443,25 @@
             teacherAssignments = Array.isArray(result.assignments) ? result.assignments : teacherAssignments;
         }
 
-        classAssignmentForm.addEventListener('submit', async (event) => {
+        const classAssignmentFormEl = els.form();
+        classAssignmentFormEl?.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const selectedTeacher = resolveTeacherFromSelection(classAssignmentTeacher.value);
-            const classGrade = String(classAssignmentClass.value || '').trim();
-            const campusName = String(classAssignmentCampus.value || '').trim();
-            const note = String(classAssignmentNote.value || '').trim();
+            const teacherSelect = els.teacher();
+            const classSelect = els.classGrade();
+            const campusSelect = els.campus();
+            const noteInput = els.note();
+            const editIdInput = els.editId();
+            const selectedTeacher = resolveTeacherFromSelection(teacherSelect?.value || '');
+            const classGrade = String(classSelect?.value || '').trim();
+            const campusName = String(campusSelect?.value || '').trim();
+            const note = String(noteInput?.value || '').trim();
 
             if (!selectedTeacher || !classGrade || !campusName) {
                 showAppAlert('Select a teacher, class, and campus first.', 'Missing Assignment');
                 return;
             }
 
-            const editId = String(classAssignmentEditId.value || '').trim();
+            const editId = String(editIdInput?.value || '').trim();
             const existing = editId
                 ? resolveAssignmentById(editId)
                 : teacherAssignments.find((item) => normalizeValue(getAssignmentClassLabel(item)) === normalizeValue(classGrade));
