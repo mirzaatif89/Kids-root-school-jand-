@@ -1518,8 +1518,8 @@
             position: absolute;
             top: calc(100% + 12px);
             right: 0;
-            width: min(360px, calc(100vw - 32px));
-            max-height: min(470px, calc(100vh - 130px));
+            width: min(400px, calc(100vw - 24px));
+            max-height: min(520px, calc(100vh - 120px));
             overflow: hidden;
             border: 1px solid #dbe3ee;
             border-radius: 18px;
@@ -1539,6 +1539,7 @@
             gap: 0.75rem;
             padding: 14px 14px 10px;
             border-bottom: 1px solid #e2e8f0;
+            background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 1));
         }
 
         .student-notification-head strong {
@@ -1554,16 +1555,17 @@
         }
 
         .student-notification-list {
-            max-height: 390px;
+            max-height: 430px;
             overflow: auto;
-            padding: 8px;
+            padding: 10px;
         }
 
         .student-notification-item {
             display: grid;
             grid-template-columns: 34px 1fr;
             gap: 10px;
-            padding: 11px 9px;
+            align-items: start;
+            padding: 12px 10px;
             border-radius: 12px;
             color: #0f172a;
         }
@@ -1591,10 +1593,13 @@
         .student-notification-title {
             display: flex;
             justify-content: space-between;
+            align-items: flex-start;
             gap: 0.7rem;
             color: #0f172a;
             font-weight: 900;
             line-height: 1.25;
+            min-width: 0;
+            overflow-wrap: anywhere;
         }
 
         .student-notification-time {
@@ -1602,6 +1607,28 @@
             flex: 0 0 auto;
             font-size: 0.72rem;
             font-weight: 800;
+            white-space: nowrap;
+            padding-top: 1px;
+        }
+
+        .student-notification-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 4px;
+        }
+
+        .student-notification-source {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: #ecfeff;
+            color: #0f766e;
+            font-size: 0.7rem;
+            font-weight: 900;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
         }
 
         .student-notification-text {
@@ -1609,6 +1636,12 @@
             color: #475569;
             font-size: 0.82rem;
             line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        .student-notification-item.unread .student-notification-source {
+            background: #ede9fe;
+            color: #6d28d9;
         }
 
         .student-notification-empty {
@@ -4924,6 +4957,8 @@
         }
 
         function getStudentNotificationItems(student = {}) {
+            // Student notifications are synthesized on the client from the latest
+            // live/cached school collections, not from a dedicated notifications API.
             const items = [];
             const latestAttendance = getLatestStudentAttendanceRecord(student);
             if (latestAttendance) {
@@ -5111,6 +5146,9 @@
                         <div class="student-notification-title">
                             <span>${escapeHtml(item.title)}</span>
                             <span class="student-notification-time">${escapeHtml(formatStudentNotificationTime(item.date))}</span>
+                        </div>
+                        <div class="student-notification-meta">
+                            <span class="student-notification-source">${escapeHtml(item.type || 'Update')}</span>
                         </div>
                         <div class="student-notification-text">${escapeHtml(item.message)}</div>
                     </div>
