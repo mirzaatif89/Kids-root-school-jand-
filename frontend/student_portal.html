@@ -2585,9 +2585,6 @@
             <button type="button" class="student-action-btn" data-student-action-target="studentMessagesSection">
                 <i data-lucide="message-circle"></i> Messages
             </button>
-            <button type="button" class="student-action-btn" data-student-action-target="studentComplaintSection">
-                <i data-lucide="message-square"></i> Complain Box
-            </button>
         </section>
 
         <section class="student-portal-ads" id="studentPortalAds" aria-label="School advertisements"></section>
@@ -2881,33 +2878,6 @@
             <h3>Messages</h3>
             <div class="portal-content-list" id="studentMessageList"></div>
             <div class="empty-note" id="studentMessageEmpty">No messages received yet.</div>
-        </section>
-
-        <section class="panel-card student-portal-section complaint-panel-card" id="studentComplaintSection" style="display:none; margin-bottom: 1.25rem;">
-            <h3>Complain Box</h3>
-            <form id="studentComplaintForm">
-                <div class="result-filter-grid complaint-form-grid">
-                    <div class="portal-field">
-                        <label for="studentComplaintSubject">Subject</label>
-                        <input type="text" id="studentComplaintSubject" class="form-control" required placeholder="Complaint subject">
-                    </div>
-                    <div class="portal-field" style="grid-column: 1 / -1;">
-                        <label for="studentComplaintMessage">Complaint</label>
-                        <textarea id="studentComplaintMessage" class="form-control" rows="6" required placeholder="Write your complaint"></textarea>
-                    </div>
-                    <div class="portal-field portal-file-box" style="grid-column: 1 / -1;">
-                        <label for="studentComplaintFile">Attach File</label>
-                        <input type="file" id="studentComplaintFile" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.txt">
-                        <div class="portal-file-help" id="studentComplaintFileName">Optional: attach a screenshot, image, PDF, Word, or text file.</div>
-                    </div>
-                </div>
-                <div class="portal-action-row">
-                    <button type="submit" class="btn btn-primary">Submit Complaint</button>
-                </div>
-            </form>
-            <h4>Complaint History</h4>
-            <div class="portal-content-list" id="studentComplaintHistory"></div>
-            <div class="empty-note" id="studentComplaintEmpty">You have not submitted any complaint yet.</div>
         </section>
 
     </div>
