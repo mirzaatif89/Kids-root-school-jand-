@@ -4823,6 +4823,7 @@
         function getStudentIdentityCandidates(student) {
             return [
                 student?.id,
+                student?.profileId,
                 student?.studentCode,
                 student?.rollNo,
                 loggedInUser?.id
@@ -5271,6 +5272,36 @@
             return normalizeLoose(value).replace(/\bclass\b/g, '').replace(/[^a-z0-9]/g, '');
         }
 
+        function parsePortalDate(value) {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+
+            const isoDate = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (isoDate) {
+                const parsed = new Date(`${isoDate[1]}-${isoDate[2]}-${isoDate[3]}T00:00:00`);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            const slashDate = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+            if (slashDate) {
+                const parsed = new Date(`${slashDate[3]}-${slashDate[2]}-${slashDate[1]}T00:00:00`);
+                return Number.isNaN(parsed.getTime()) ? null : parsed;
+            }
+
+            const parsed = new Date(raw);
+            return Number.isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function isPortalDateOnOrBeforeToday(value) {
+            const parsed = parsePortalDate(value);
+            if (!parsed) return false;
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            parsed.setHours(0, 0, 0, 0);
+            return parsed.getTime() <= today.getTime();
+        }
+
         function getResultRecordDate(record = {}) {
             const rawDate = record.resultDate || record.examDate || record.updatedAt || record.createdAt || '';
             if (!rawDate) return '';
@@ -5296,15 +5327,49 @@
             return record.campusName || record.campus || student.campusName || '';
         }
 
+        function getResultRecordIdentityCandidates(record = {}) {
+            return [
+                record.studentLookupId,
+                record.studentId,
+                record.studentCode,
+                record.studentRollNo,
+                record.rollNo,
+                record.rollNumber,
+                record.id,
+                record.studentName
+            ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+        }
+
+        function doesResultBelongToStudent(record = {}, student = {}) {
+            const studentIdentityCandidates = getStudentIdentityCandidates(student);
+            const recordIdentityCandidates = getResultRecordIdentityCandidates(record);
+            if (recordIdentityCandidates.some((candidate) => studentIdentityCandidates.includes(candidate))) {
+                return true;
+            }
+
+            const studentClass = normalizeResultClass(student.classGrade || student.className || '');
+            const recordClass = normalizeResultClass(getResultRecordClass(record, student));
+            const studentRoll = normalizeLoose(student.rollNo || '');
+            const recordRoll = normalizeLoose(record.rollNo || record.studentRollNo || record.rollNumber || '');
+            const studentCampus = normalizeLoose(student.campusName || student.campus || '');
+            const recordCampus = normalizeLoose(getResultRecordCampus(record, student));
+
+            if (!studentClass || !studentRoll) return false;
+
+            const classMatch = studentClass === recordClass;
+            const rollMatch = studentRoll === recordRoll;
+            const campusMatch = !studentCampus || studentCampus === recordCampus;
+            return Boolean(classMatch && rollMatch && campusMatch);
+        }
+
         function isResultPublishedForStudent(record = {}, student = {}) {
             const recordCampus = normalizeLoose(getResultRecordCampus(record, student));
             const recordClass = normalizeResultClass(getResultRecordClass(record, student));
-            const today = new Date().toISOString().slice(0, 10);
             const schedule = loadResultPublishSchedules().find((item) => (
                 normalizeLoose(item.campusName) === recordCampus &&
                 normalizeResultClass(item.classGrade) === recordClass
             ));
-            return Boolean(schedule?.publishDate && schedule.publishDate <= today);
+            return Boolean(schedule?.publishDate && isPortalDateOnOrBeforeToday(schedule.publishDate));
         }
 
         function getResultRecordRollCandidates(record = {}, student = {}) {
@@ -5329,20 +5394,20 @@
 
         function getFilteredStudentResults(student, filters = {}) {
             const archive = loadResultArchive();
-            const identityCandidates = getStudentIdentityCandidates(student);
             const lookupFilter = normalizeLoose(filters.lookup);
             const dateFilter = String(filters.date || '').trim();
             const classFilter = normalizeLoose(filters.classGrade);
             const rollFilter = normalizeLoose(filters.rollNo);
 
             return archive.filter((record) => {
-                const recordLookup = normalizeLoose(record.studentLookupId);
+                const recordLookupCandidates = getResultRecordIdentityCandidates(record);
+                const lookupCandidates = getStudentIdentityCandidates(student);
                 const recordName = normalizeLoose(record.studentName);
-                const belongsToStudent = identityCandidates.includes(recordLookup);
+                const belongsToStudent = doesResultBelongToStudent(record, student);
 
                 if (!belongsToStudent) return false;
                 if (!isResultPublishedForStudent(record, student)) return false;
-                if (lookupFilter && !identityCandidates.includes(lookupFilter) && recordName !== lookupFilter) return false;
+                if (lookupFilter && !lookupCandidates.includes(lookupFilter) && !recordLookupCandidates.includes(lookupFilter) && recordName !== lookupFilter) return false;
                 if (dateFilter && getResultRecordDate(record) !== dateFilter) return false;
                 if (classFilter && normalizeResultClass(getResultRecordClass(record, student)) !== normalizeResultClass(classFilter)) return false;
                 if (rollFilter && !getResultRecordRollCandidates(record, student).includes(rollFilter)) return false;
@@ -5460,7 +5525,7 @@
             sessionStorage.setItem(STUDENT_RESULT_CACHE_KEY, JSON.stringify(result));
         }
 
-        function loadStudentResultByLookup() {
+        async function loadStudentResultByLookup() {
             const classValue = document.getElementById('studentResultClassFilter')?.value.trim() || '';
             const rollValue = document.getElementById('studentResultRollFilter')?.value.trim() || '';
             const student = JSON.parse(sessionStorage.getItem(STUDENT_PROFILE_CACHE_KEY) || 'null') || getStudentFromLocalFallback();
@@ -5486,10 +5551,23 @@
                 return;
             }
 
-            const matches = getFilteredStudentResults(student, {
+            let matches = getFilteredStudentResults(student, {
                 classGrade: classValue,
                 rollNo: rollValue
             });
+
+            if (!matches.length) {
+                try {
+                    await refreshStudentResultCollections();
+                    matches = getFilteredStudentResults(student, {
+                        classGrade: classValue,
+                        rollNo: rollValue
+                    });
+                } catch (_error) {
+                    // Keep the cached result if a live refresh fails.
+                }
+            }
+
             if (!matches.length) {
                 alert('No published result card was found for this class and roll number.');
                 renderStudentResultHistory(student, {
@@ -6090,6 +6168,10 @@
             renderStudentLeaveHistory(student);
             applyStudentAttendance(student);
             initializeStudentResultLookup(student);
+            renderStudentResultHistory(student, {
+                classGrade: student.classGrade,
+                rollNo: student.rollNo
+            });
 
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
             updateStudentNotifications(student);
