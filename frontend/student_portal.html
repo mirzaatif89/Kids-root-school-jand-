@@ -5254,6 +5254,36 @@
             await Promise.all(loaders);
         }
 
+        async function loadResultCollectionsDirect() {
+            const [archiveRes, scheduleRes] = await Promise.allSettled([
+                fetch(`${API_BASE_URL}/result-archive`, { cache: 'no-store' }),
+                fetch(`${API_BASE_URL}/result-publish-schedules`, { cache: 'no-store' })
+            ]);
+
+            const archive = archiveRes.status === 'fulfilled' && archiveRes.value?.ok
+                ? await archiveRes.value.json().catch(() => null)
+                : null;
+            const schedules = scheduleRes.status === 'fulfilled' && scheduleRes.value?.ok
+                ? await scheduleRes.value.json().catch(() => null)
+                : null;
+
+            const archiveRecords = Array.isArray(archive?.results)
+                ? archive.results
+                : (Array.isArray(archive) ? archive : []);
+            const scheduleRecords = Array.isArray(schedules?.schedules)
+                ? schedules.schedules
+                : (Array.isArray(schedules) ? schedules : []);
+
+            if (archiveRecords.length) {
+                window.__eduCoreServerCollectionCache?.set?.(RESULT_ARCHIVE_KEY, archiveRecords);
+            }
+            if (scheduleRecords.length) {
+                window.__eduCoreServerCollectionCache?.set?.(RESULT_PUBLISH_SCHEDULE_KEY, scheduleRecords);
+            }
+
+            return { archive: archiveRecords, schedules: scheduleRecords };
+        }
+
         function loadResultArchive() {
             const archive = getCachedResultCollection(RESULT_ARCHIVE_KEY);
             return Array.isArray(archive) ? archive : [];
@@ -5607,6 +5637,22 @@
                     });
                 } catch (_error) {
                     // Keep the cached result if a live refresh fails.
+                }
+            }
+
+            if (!matches.length) {
+                try {
+                    const liveCollections = await loadResultCollectionsDirect();
+                    const liveArchive = Array.isArray(liveCollections.archive) ? liveCollections.archive : [];
+                    matches = liveArchive.filter((record) => {
+                        const requestedClass = normalizeResultClass(classValue);
+                        const requestedRoll = normalizeResultRoll(rollValue);
+                        const recordClass = normalizeResultClass(getResultRecordClass(record, student));
+                        const recordRoll = normalizeResultRoll(getResultRecordRoll(record));
+                        return Boolean(requestedClass && requestedRoll && recordClass === requestedClass && recordRoll === requestedRoll && isResultPublishedForStudent(record, student));
+                    }).sort((a, b) => new Date(b.updatedAt || b.resultDate || 0) - new Date(a.updatedAt || a.resultDate || 0));
+                } catch (_error) {
+                    // Ignore direct-load failures and use cached/filtered results below.
                 }
             }
 
