@@ -3048,7 +3048,7 @@
 
         async function loadStudentPortalBanners() {
             try {
-                const response = await fetch(`${API_BASE_URL}/banners`);
+                const response = await fetch(`${API_BASE_URL}/banners`, { cache: 'no-store' });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || data?.success === false) {
                     throw new Error(data?.message || 'Banners could not be loaded.');
@@ -5192,12 +5192,14 @@
                     await refreshStudentDiaryCollection();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
+                    await loadStudentPortalBanners();
                     applyStudentAttendance(student);
                     applyStudentDiary(student);
                     applyStudentCourse(student);
                     applyDateSheet(student);
                     updateStudentNotifications(student);
                 } catch (_error) {
+                    await loadStudentPortalBanners().catch(() => {});
                     applyStudentCourse(student);
                     updateStudentNotifications(student);
                 }
