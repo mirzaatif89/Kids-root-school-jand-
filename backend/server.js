@@ -1787,6 +1787,50 @@ async function getUserMessageProfile(user = {}) {
     const id = String(user.id || '').trim();
     if (!role || !id) return { role, id };
 
+    async function resolveTeacherLikeProfile() {
+        const Teacher = sequelize.models.Teacher;
+        const User = sequelize.models.User;
+        const searchTerms = [...new Set([
+            id,
+            user.profileId,
+            user.employeeCode,
+            user.username,
+            user.email
+        ].map((value) => String(value || '').trim()).filter(Boolean))];
+
+        let teacher = Teacher ? await Teacher.findByPk(id) : null;
+        if (!teacher && Teacher && searchTerms.length) {
+            teacher = await Teacher.findOne({
+                where: {
+                    [Op.or]: [
+                        ...searchTerms.map((term) => ({ profileId: term })),
+                        ...searchTerms.map((term) => ({ employeeCode: term })),
+                        ...searchTerms.map((term) => ({ username: term })),
+                        ...searchTerms.map((term) => ({ email: term }))
+                    ]
+                }
+            });
+        }
+
+        if (!teacher && User && searchTerms.length) {
+            const userRecord = await User.findOne({
+                where: {
+                    role: 'Teacher',
+                    [Op.or]: [
+                        ...searchTerms.map((term) => ({ profileId: term })),
+                        ...searchTerms.map((term) => ({ username: term })),
+                        ...searchTerms.map((term) => ({ email: term }))
+                    ]
+                }
+            });
+            if (userRecord?.profileId && Teacher) {
+                teacher = await Teacher.findByPk(String(userRecord.profileId));
+            }
+        }
+
+        return teacher;
+    }
+
     if (role === 'Student') {
         const student = await sequelize.models.Student.findByPk(id);
         return {
@@ -1800,13 +1844,14 @@ async function getUserMessageProfile(user = {}) {
     }
 
     if (role === 'Teacher') {
-        const teacher = await sequelize.models.Teacher.findByPk(id);
+        const teacher = await resolveTeacherLikeProfile();
         return {
             role,
             id,
             username: user.username || teacher?.username || '',
             fullName: teacher?.fullName || user.fullName || '',
-            campusName: teacher?.campusName || user.campusName || ''
+            campusName: teacher?.campusName || user.campusName || '',
+            employeeCode: teacher?.employeeCode || user.employeeCode || ''
         };
     }
 
@@ -3325,6 +3370,15 @@ registerMobileCollectionRoutes({
     itemKey: 'assignment',
     prefix: 'STUDENT-ASG',
     socketEvent: 'student_assignments_update'
+});
+
+registerMobileCollectionRoutes({
+    route: 'teacher-class-assignments',
+    storeName: 'teacher_class_assignments',
+    recordsKey: 'assignments',
+    itemKey: 'assignment',
+    prefix: 'TCLASS',
+    socketEvent: 'teacher_class_assignments_update'
 });
 
 registerMobileCollectionRoutes({

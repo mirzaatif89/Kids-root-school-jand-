@@ -105,7 +105,7 @@
                         </div>
                         <div>
                             <label for="classAssignmentCampus">Campus</label>
-                            <input type="text" id="classAssignmentCampus" placeholder="Main Campus">
+                            <select id="classAssignmentCampus" required></select>
                         </div>
                         <div>
                             <label for="classAssignmentNote">Note</label>
@@ -126,26 +126,19 @@
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
-        const CLASS_ASSIGNMENT_KEY = 'eduCore_teacher_class_assignments';
-        const DEFAULT_ASSIGNMENT_CLASSES = [
-            'Play Group', 'KG1', 'KG2',
-            'Class One', 'Class Two', 'Class Three', 'Class Four', 'Class Five',
-            'Class Six', 'Class Seven', 'Class Eight', 'Class Nine', 'Class Ten',
-            'Graduate'
-        ];
+        const API_BASE_URL = (() => {
+            const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const backendUrl = isLocalhost
+                ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin)
+                : (window.ENV_BACKEND_URL || window.location.origin);
+            return `${backendUrl}/api`;
+        })();
+        const authToken = sessionStorage.getItem('eduCore_token') || '';
 
-        function assignmentData(key) {
-            try {
-                const stored = JSON.parse(localStorage.getItem(key) || '[]');
-                return Array.isArray(stored) ? stored : [];
-            } catch (_error) {
-                return [];
-            }
-        }
-
-        function saveAssignments(assignments) {
-            localStorage.setItem(CLASS_ASSIGNMENT_KEY, JSON.stringify(assignments));
-        }
+        let teacherAssignments = [];
+        let teacherRecords = [];
+        let classRecords = [];
+        let campusRecords = [];
 
         function escapeAssignmentText(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -157,40 +150,147 @@
             }[char]));
         }
 
-        function collectClassNames() {
-            const classes = assignmentData('eduCore_classes');
-            const students = assignmentData('eduCore_students');
-            return [...new Set([
-                ...DEFAULT_ASSIGNMENT_CLASSES,
-                ...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
-                ...students.map((student) => student?.classGrade)
-            ].map((value) => String(value || '').trim()).filter(Boolean))]
-                .sort(typeof compareStudentClassNames === 'function'
-                    ? compareStudentClassNames
-                    : ((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })));
+        function normalizeValue(value) {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
         }
 
-        function populateClassAssignmentOptions() {
-            const teachers = assignmentData('eduCore_teachers');
-            const classes = collectClassNames();
-            classAssignmentTeacher.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => (
-                `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName || 'Teacher')}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}</option>`
+        function uniqueValues(values = []) {
+            return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))]
+                .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
+        function getTeacherLabel(teacher = {}) {
+            return String(teacher.fullName || teacher.name || teacher.username || teacher.employeeCode || 'Teacher').trim();
+        }
+
+        function getTeacherValue(teacher = {}) {
+            return String(teacher.id || teacher.profileId || teacher.employeeCode || teacher.username || teacher.email || '').trim();
+        }
+
+        function getClassLabel(item = {}) {
+            const name = String(item.name || item.className || item.classGrade || item.title || '').trim();
+            const section = String(item.section || item.group || '').trim();
+            return section ? `${name} (${section})` : name;
+        }
+
+        function getAssignmentClassLabel(assignment = {}) {
+            return String(assignment.classGrade || assignment.className || assignment.class || '').trim();
+        }
+
+        function getAssignmentTeacherLabel(assignment = {}) {
+            return String(assignment.teacherName || assignment.teacherFullName || assignment.teacherUsername || assignment.teacherEmployeeCode || '').trim();
+        }
+
+        async function fetchJson(path, options = {}, errorMessage = 'Request failed.') {
+            const response = await fetch(`${API_BASE_URL}${path}`, {
+                cache: 'no-store',
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result?.success === false) {
+                throw new Error(result?.message || result?.error || errorMessage);
+            }
+            return result;
+        }
+
+        async function loadCampusOptions() {
+            try {
+                campusRecords = await loadRegisteredCampusNames();
+            } catch (_error) {
+                campusRecords = ['Jand Campus', 'Langar Campus', 'Main Campus'];
+            }
+            populateCampusSelect('classAssignmentCampus', campusRecords, campusRecords.length ? 'Select Campus' : 'Add campus in Branch Registration first');
+        }
+
+        async function loadTeacherOptions() {
+            try {
+                const result = await fetchJson('/teachers', {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Teachers could not be loaded.');
+                const records = Array.isArray(result) ? result : (Array.isArray(result.teachers) ? result.teachers : []);
+                const teacherMap = new Map();
+                records.forEach((teacher) => {
+                    const value = getTeacherValue(teacher);
+                    if (!value || teacherMap.has(value.toLowerCase())) return;
+                    teacherMap.set(value.toLowerCase(), {
+                        id: value,
+                        fullName: getTeacherLabel(teacher),
+                        subject: teacher.subject || '',
+                        campusName: teacher.campusName || '',
+                        employeeCode: teacher.employeeCode || '',
+                        username: teacher.username || '',
+                        profileId: teacher.profileId || teacher.id || '',
+                        email: teacher.email || ''
+                    });
+                });
+                teacherRecords = Array.from(teacherMap.values()).sort((left, right) =>
+                    left.fullName.localeCompare(right.fullName, undefined, { numeric: true, sensitivity: 'base' })
+                );
+            } catch (_error) {
+                teacherRecords = [];
+            }
+            const previous = classAssignmentTeacher.value || '';
+            classAssignmentTeacher.innerHTML = '<option value="">Select Teacher</option>' + teacherRecords.map((teacher) => (
+                `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName)}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}${teacher.campusName ? ` (${escapeAssignmentText(teacher.campusName)})` : ''}</option>`
             )).join('');
-            classAssignmentClass.innerHTML = '<option value="">Select Class</option>' + classes.map((className) => (
+            if (previous) classAssignmentTeacher.value = previous;
+        }
+
+        async function loadClassOptions() {
+            const classes = [];
+            try {
+                const result = await fetchJson('/classes', {}, 'Classes could not be loaded.');
+                const records = Array.isArray(result) ? result : (Array.isArray(result.classes) ? result.classes : []);
+                records.forEach((item) => {
+                    const label = getClassLabel(item);
+                    if (label) classes.push(label);
+                });
+            } catch (_error) {
+                // Keep fallback below.
+            }
+
+            if (!classes.length && typeof window.eduCoreGetClassOptions === 'function') {
+                try {
+                    const fallbackClasses = await window.eduCoreGetClassOptions();
+                    fallbackClasses.forEach((item) => classes.push(String(item || '').trim()));
+                } catch (_error) {
+                    // No fallback classes available.
+                }
+            }
+
+            classRecords = uniqueValues(classes);
+            const previous = classAssignmentClass.value || '';
+            classAssignmentClass.innerHTML = '<option value="">Select Class</option>' + classRecords.map((className) => (
                 `<option value="${escapeAssignmentText(className)}">${escapeAssignmentText(className)}</option>`
             )).join('');
+            if (previous) classAssignmentClass.value = previous;
         }
 
-        function assignmentTeacherName(teacherId) {
-            return assignmentData('eduCore_teachers').find((teacher) => String(teacher.id) === String(teacherId))?.fullName || 'Teacher';
+        async function loadTeacherAssignments() {
+            try {
+                const result = await fetchJson('/teacher-class-assignments', {}, 'Assigned classes could not be loaded.');
+                teacherAssignments = Array.isArray(result) ? result : (Array.isArray(result.assignments) ? result.assignments : []);
+            } catch (_error) {
+                teacherAssignments = [];
+            }
+            renderClassAssignments();
         }
 
         function renderClassAssignments() {
             const list = document.getElementById('classAssignmentList');
-            const assignments = assignmentData(CLASS_ASSIGNMENT_KEY)
-                .sort((a, b) => `${a.classGrade || ''}${a.teacherName || ''}`.localeCompare(`${b.classGrade || ''}${b.teacherName || ''}`));
+            const assignments = [...teacherAssignments].sort((a, b) => {
+                const left = `${getAssignmentClassLabel(a)}${getAssignmentTeacherLabel(a)}`;
+                const right = `${getAssignmentClassLabel(b)}${getAssignmentTeacherLabel(b)}`;
+                return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+            });
+
             if (!assignments.length) {
                 list.innerHTML = '<div class="empty-note">No class incharge assignment has been added yet.</div>';
+                if (window.lucide?.createIcons) window.lucide.createIcons();
                 return;
             }
 
@@ -200,8 +300,11 @@
                     <tbody>
                         ${assignments.map((assignment) => `
                             <tr>
-                                <td>${escapeAssignmentText(assignment.classGrade || '-')}</td>
-                                <td>${escapeAssignmentText(assignment.teacherName || assignmentTeacherName(assignment.teacherId))}</td>
+                                <td>${escapeAssignmentText(getAssignmentClassLabel(assignment) || '-')}</td>
+                                <td>
+                                    <div>${escapeAssignmentText(getAssignmentTeacherLabel(assignment) || 'Teacher')}</div>
+                                    ${assignment.teacherSubject ? `<div class="muted">${escapeAssignmentText(assignment.teacherSubject)}</div>` : ''}
+                                </td>
                                 <td>${escapeAssignmentText(assignment.campusName || 'Main Campus')}</td>
                                 <td>${escapeAssignmentText(assignment.note || '-')}</td>
                                 <td>
@@ -215,72 +318,128 @@
                     </tbody>
                 </table>
             `;
-            if (window.lucide) window.lucide.createIcons();
+            if (window.lucide?.createIcons) window.lucide.createIcons();
         }
 
         function resetClassAssignmentForm() {
             classAssignmentForm.reset();
             classAssignmentEditId.value = '';
+            if (campusRecords.length) classAssignmentCampus.value = campusRecords[0] || '';
             saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Save Assignment';
-            if (window.lucide) window.lucide.createIcons();
+            if (window.lucide?.createIcons) window.lucide.createIcons();
+        }
+
+        function resolveTeacherFromSelection(teacherId) {
+            const normalized = normalizeValue(teacherId);
+            return teacherRecords.find((teacher) => {
+                return [
+                    teacher.id,
+                    teacher.profileId,
+                    teacher.employeeCode,
+                    teacher.username,
+                    teacher.email
+                ].map(normalizeValue).includes(normalized);
+            }) || null;
+        }
+
+        function resolveAssignmentById(id) {
+            return teacherAssignments.find((item) => String(item.id) === String(id)) || null;
         }
 
         function editClassAssignment(id) {
-            const assignment = assignmentData(CLASS_ASSIGNMENT_KEY).find((item) => String(item.id) === String(id));
+            const assignment = resolveAssignmentById(id);
             if (!assignment) return;
             classAssignmentEditId.value = assignment.id;
-            classAssignmentTeacher.value = assignment.teacherId || '';
-            classAssignmentClass.value = assignment.classGrade || '';
+            classAssignmentTeacher.value = assignment.teacherId || assignment.teacherProfileId || assignment.teacherUsername || '';
+            classAssignmentClass.value = getAssignmentClassLabel(assignment) || '';
             classAssignmentCampus.value = assignment.campusName || '';
             classAssignmentNote.value = assignment.note || '';
             saveClassAssignmentBtn.innerHTML = '<i data-lucide="save"></i> Update Assignment';
             classAssignmentForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            if (window.lucide) window.lucide.createIcons();
+            if (window.lucide?.createIcons) window.lucide.createIcons();
         }
 
-        function deleteClassAssignment(id) {
-            saveAssignments(assignmentData(CLASS_ASSIGNMENT_KEY).filter((item) => String(item.id) !== String(id)));
-            renderClassAssignments();
+        async function deleteClassAssignment(id) {
+            const confirmDelete = window.showAppConfirm
+                ? await window.showAppConfirm('Delete this assigned class?', 'Delete Assignment')
+                : window.confirm('Delete this assigned class?');
+            if (!confirmDelete) return;
+
+            try {
+                const result = await fetchJson(`/teacher-class-assignments/${encodeURIComponent(id)}`, {
+                    method: 'DELETE',
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Assigned class could not be deleted.');
+                teacherAssignments = Array.isArray(result.assignments) ? result.assignments : teacherAssignments.filter((item) => String(item.id) !== String(id));
+                renderClassAssignments();
+                showSuccessModal('Assignment Deleted', 'The class incharge assignment has been removed.');
+            } catch (error) {
+                showAppAlert(error.message || 'Assigned class could not be deleted.', 'Delete Failed');
+            }
         }
 
-        classAssignmentForm.addEventListener('submit', (event) => {
+        async function saveTeacherAssignmentRecord(assignment) {
+            const result = await fetchJson('/teacher-class-assignments', {
+                method: 'POST',
+                headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+                body: JSON.stringify(assignment)
+            }, 'Assigned class could not be saved.');
+            teacherAssignments = Array.isArray(result.assignments) ? result.assignments : teacherAssignments;
+        }
+
+        classAssignmentForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const teachers = assignmentData('eduCore_teachers');
-            const teacher = teachers.find((item) => String(item.id) === String(classAssignmentTeacher.value));
-            const classGrade = classAssignmentClass.value;
-            if (!teacher || !classGrade) {
-                showAppAlert('Select a teacher and class first.', 'Missing Assignment');
+            const selectedTeacher = resolveTeacherFromSelection(classAssignmentTeacher.value);
+            const classGrade = String(classAssignmentClass.value || '').trim();
+            const campusName = String(classAssignmentCampus.value || '').trim();
+            const note = String(classAssignmentNote.value || '').trim();
+
+            if (!selectedTeacher || !classGrade || !campusName) {
+                showAppAlert('Select a teacher, class, and campus first.', 'Missing Assignment');
                 return;
             }
 
-            const assignments = assignmentData(CLASS_ASSIGNMENT_KEY);
-            const editId = classAssignmentEditId.value;
+            const editId = String(classAssignmentEditId.value || '').trim();
+            const existing = editId
+                ? resolveAssignmentById(editId)
+                : teacherAssignments.find((item) => normalizeValue(getAssignmentClassLabel(item)) === normalizeValue(classGrade));
+
             const assignment = {
-                id: editId || `CLASS-ASG-${Date.now()}`,
-                teacherId: teacher.id,
-                teacherName: teacher.fullName || 'Teacher',
+                id: existing?.id || editId || `TCLASS-${Date.now()}`,
+                teacherId: selectedTeacher.id || selectedTeacher.profileId || selectedTeacher.employeeCode || selectedTeacher.username,
+                teacherProfileId: selectedTeacher.profileId || selectedTeacher.id || '',
+                teacherUsername: selectedTeacher.username || '',
+                teacherEmployeeCode: selectedTeacher.employeeCode || '',
+                teacherName: selectedTeacher.fullName || 'Teacher',
+                teacherSubject: selectedTeacher.subject || '',
                 classGrade,
-                campusName: classAssignmentCampus.value.trim() || teacher.campusName || 'Main Campus',
-                note: classAssignmentNote.value.trim(),
+                campusName,
+                note,
+                createdAt: existing?.createdAt || new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
-            const duplicateIndex = assignments.findIndex((item) => String(item.classGrade || '').toLowerCase() === classGrade.toLowerCase() && String(item.id) !== String(editId));
-            if (duplicateIndex >= 0) {
-                assignments[duplicateIndex] = { ...assignments[duplicateIndex], ...assignment, id: assignments[duplicateIndex].id };
-            } else {
-                const editIndex = assignments.findIndex((item) => String(item.id) === String(editId));
-                if (editIndex >= 0) assignments[editIndex] = assignment;
-                else assignments.push(assignment);
+
+            try {
+                await saveTeacherAssignmentRecord(assignment);
+                await loadTeacherAssignments();
+                resetClassAssignmentForm();
+                showSuccessModal('Class Assigned!', `${assignment.teacherName} is assigned as class incharge for ${assignment.classGrade}.`);
+            } catch (error) {
+                showAppAlert(error.message || 'Assigned class could not be saved.', 'Save Failed');
             }
-            saveAssignments(assignments);
-            resetClassAssignmentForm();
-            renderClassAssignments();
-            showSuccessModal('Class Assigned!', `${assignment.teacherName} is assigned as class incharge for ${assignment.classGrade}.`);
         });
 
-        populateClassAssignmentOptions();
-        renderClassAssignments();
-        if (window.lucide) window.lucide.createIcons();
+        async function initializePage() {
+            await Promise.all([
+                loadCampusOptions(),
+                loadTeacherOptions(),
+                loadClassOptions()
+            ]);
+            await loadTeacherAssignments();
+            if (window.lucide?.createIcons) window.lucide.createIcons();
+        }
+
+        window.addEventListener('load', initializePage);
     </script>
 </body>
 

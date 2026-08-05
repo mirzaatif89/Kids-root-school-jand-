@@ -1396,6 +1396,7 @@
         let currentTeacherProfile = null;
         let remoteTeacherLeaveRequests = null;
         let remoteTeacherSalaryPayments = null;
+        let remoteTeacherClassAssignments = [];
 
         function getServerCollectionRecords(key) {
             const cache = window.__eduCoreServerCollectionCache;
@@ -1795,10 +1796,32 @@
         }
 
         function renderAssignedClasses() {
-            const classes = uniqueClasses();
-            renderPortalList('teacherAssignedClasses', classes, 'No classes have been assigned yet.', (className) => `
+            const teacherCandidates = getTeacherIdentityCandidates(currentTeacherProfile || loggedInUser || {});
+            const classes = Array.isArray(remoteTeacherClassAssignments)
+                ? remoteTeacherClassAssignments.filter((assignment) => {
+                    const assignmentCandidates = [
+                        assignment?.teacherId,
+                        assignment?.teacherProfileId,
+                        assignment?.teacherUsername,
+                        assignment?.teacherEmployeeCode,
+                        assignment?.teacherName,
+                        assignment?.teacherFullName,
+                        assignment?.teacherEmail
+                    ].map(normalizeTeacherText).filter(Boolean);
+                    return assignmentCandidates.some((candidate) => teacherCandidates.includes(candidate));
+                }).sort((a, b) => {
+                    const left = `${a?.classGrade || a?.className || a?.class || ''}${a?.teacherName || ''}`;
+                    const right = `${b?.classGrade || b?.className || b?.class || ''}${b?.teacherName || ''}`;
+                    return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+                })
+                : [];
+            renderPortalList('teacherAssignedClasses', classes, 'No classes have been assigned yet.', (assignment) => `
                 <div class="list-item">
-                    <div class="list-item-top"><span>${escapeHtml(className)}</span><span>Assigned</span></div>
+                    <div class="list-item-top">
+                        <span>${escapeHtml(assignment.classGrade || assignment.className || assignment.class || 'Class')}</span>
+                        <span>${escapeHtml(assignment.campusName || 'Assigned')}</span>
+                    </div>
+                    <div class="muted">${escapeHtml(assignment.teacherName || 'Teacher')}${assignment.note ? ` | ${escapeHtml(assignment.note)}` : ''}</div>
                 </div>
             `);
         }
@@ -2219,6 +2242,10 @@
             ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
         }
 
+        function normalizeTeacherText(value) {
+            return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
         async function loadTeacherDirectoryRecord() {
             try {
                 const response = await fetch(`${API_BASE_URL}/teachers`, {
@@ -2286,6 +2313,22 @@
             }
         }
 
+        async function loadTeacherClassAssignments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teacher-class-assignments`, {
+                    headers: { Authorization: `Bearer ${authToken}` }
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result?.success) {
+                    throw new Error(result?.message || 'Class assignments could not be loaded.');
+                }
+                remoteTeacherClassAssignments = Array.isArray(result.assignments) ? result.assignments : [];
+            } catch (_error) {
+                remoteTeacherClassAssignments = [];
+            }
+            renderAssignedClasses();
+        }
+
         async function loadTeacherProfile() {
             if (!loggedInUser || loggedInUser.role !== 'Teacher' || !authToken) {
                 window.location.replace('/login');
@@ -2301,6 +2344,7 @@
                 applyTeacherData(await enrichTeacherProfile(teacher));
                 await loadTeacherPortalBanners();
                 await loadTeacherMessages();
+                await loadTeacherClassAssignments();
                 await loadTeacherLeaveRequests();
                 await loadTeacherSalaryPayments();
                 await refreshTeacherComplaintCollection();
@@ -2312,6 +2356,7 @@
                     applyTeacherData(fallback);
                     await loadTeacherPortalBanners();
                     await loadTeacherMessages();
+                    await loadTeacherClassAssignments();
                     await loadTeacherLeaveRequests();
                     await loadTeacherSalaryPayments();
                     await refreshTeacherComplaintCollection();
