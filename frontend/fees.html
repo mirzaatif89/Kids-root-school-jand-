@@ -2263,6 +2263,150 @@
             return result;
         }
 
+        function printFeeThermalReceipt(receipt = {}, printWindow = null) {
+            const studentName = String(receipt.studentName || '-').trim();
+            const rollNo = String(receipt.rollNo || '-').trim();
+            const classGrade = String(receipt.classGrade || '-').trim();
+            const paymentDateLabel = String(receipt.paymentDateLabel || receipt.paymentDate || '-').trim();
+            const feeMonthLabel = Array.isArray(receipt.feeMonths)
+                ? receipt.feeMonths.filter(Boolean).join(', ')
+                : String(receipt.feeMonth || '-').trim();
+            const amountLabel = `PKR ${Number(receipt.amount || 0).toLocaleString('en-PK')}`;
+            const remainingLabel = Number(receipt.remainingDue || 0) > 0
+                ? `PKR ${Number(receipt.remainingDue || 0).toLocaleString('en-PK')}`
+                : 'PKR 0';
+            const statusLabel = String(receipt.status || 'Paid').trim();
+            const challanNumber = String(receipt.challanNumber || '-').trim();
+            const sessionLabel = String(receipt.session || '-').trim();
+            const noteLabel = String(receipt.note || '').trim();
+            const sourceLabel = String(receipt.source || 'Manual').trim();
+            const receiptNo = challanNumber;
+            const printedAt = new Date().toLocaleString('en-GB');
+            const schoolName = String(receipt.schoolName || 'Kids Roots Jand').trim();
+            const logoSrc = String(receipt.logoSrc || 'images/logo.png').trim();
+
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <title>Fee Receipt</title>
+                    <style>
+                        @page { margin: 4mm; }
+                        body {
+                            margin: 0;
+                            font-family: Arial, Helvetica, sans-serif;
+                            color: #111827;
+                            background: #ffffff;
+                        }
+                        .receipt {
+                            width: 72mm;
+                            margin: 0 auto;
+                            padding: 3mm 0;
+                        }
+                        .brand {
+                            text-align: center;
+                            border-bottom: 1px dashed #9ca3af;
+                            padding-bottom: 3mm;
+                            margin-bottom: 3mm;
+                        }
+                        .brand img {
+                            width: 18mm;
+                            height: 18mm;
+                            object-fit: contain;
+                            display: block;
+                            margin: 0 auto 2mm;
+                        }
+                        .brand h1 {
+                            margin: 0;
+                            font-size: 13px;
+                            line-height: 1.2;
+                        }
+                        .brand p {
+                            margin: 1mm 0 0;
+                            font-size: 9px;
+                            color: #4b5563;
+                        }
+                        .title {
+                            text-align: center;
+                            font-size: 12px;
+                            font-weight: 700;
+                            margin: 2mm 0 3mm;
+                        }
+                        .row {
+                            display: flex;
+                            justify-content: space-between;
+                            gap: 8px;
+                            font-size: 10px;
+                            line-height: 1.4;
+                            margin: 0 0 1.8mm;
+                        }
+                        .row strong {
+                            font-weight: 700;
+                        }
+                        .line {
+                            border-top: 1px dashed #9ca3af;
+                            margin: 3mm 0;
+                        }
+                        .total {
+                            font-size: 13px;
+                            font-weight: 700;
+                            text-align: center;
+                            margin: 2mm 0 1mm;
+                        }
+                        .footer {
+                            text-align: center;
+                            font-size: 9px;
+                            color: #4b5563;
+                            margin-top: 2mm;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="receipt">
+                        <div class="brand">
+                            <img src="${escapeHtml(logoSrc)}" alt="School Logo">
+                            <h1>${escapeHtml(schoolName)}</h1>
+                            <p>Fee Receipt</p>
+                        </div>
+                        <div class="title">${escapeHtml(String(statusLabel || 'Paid').toUpperCase())}</div>
+                        <div class="row"><strong>Student</strong><span>${escapeHtml(studentName)}</span></div>
+                        <div class="row"><strong>Roll No</strong><span>${escapeHtml(rollNo)}</span></div>
+                        <div class="row"><strong>Class</strong><span>${escapeHtml(classGrade)}</span></div>
+                        <div class="row"><strong>Session</strong><span>${escapeHtml(sessionLabel)}</span></div>
+                        <div class="row"><strong>Fee Month</strong><span>${escapeHtml(feeMonthLabel)}</span></div>
+                        <div class="row"><strong>Payment Date</strong><span>${escapeHtml(paymentDateLabel)}</span></div>
+                        <div class="row"><strong>Amount</strong><span>${escapeHtml(amountLabel)}</span></div>
+                        <div class="row"><strong>Remaining</strong><span>${escapeHtml(remainingLabel)}</span></div>
+                        <div class="row"><strong>Challan</strong><span>${escapeHtml(receiptNo)}</span></div>
+                        <div class="row"><strong>Source</strong><span>${escapeHtml(sourceLabel)}</span></div>
+                        ${noteLabel ? `<div class="row"><strong>Note</strong><span>${escapeHtml(noteLabel)}</span></div>` : ''}
+                        <div class="line"></div>
+                        <div class="footer">Printed: ${escapeHtml(printedAt)}</div>
+                    </div>
+                    <script>
+                        window.onload = () => {
+                            window.focus();
+                            window.print();
+                            window.onafterprint = () => window.close();
+                            setTimeout(() => window.close(), 1200);
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            const activeWindow = printWindow || window.open('', 'eduCoreFeeReceiptPrint', 'width=420,height=700');
+            if (!activeWindow) {
+                alert('Popup blocked. Please allow popups to print the fee receipt.');
+                return false;
+            }
+            activeWindow.document.open();
+            activeWindow.document.write(html);
+            activeWindow.document.close();
+            return true;
+        }
+
         function updateStudentRemainingAmount(studentId, currentRemainingAmount, paidAmount) {
             const students = getData(STORAGE_KEY_STUDENTS);
             const idx = students.findIndex((item) => String(item.id) === String(studentId));
@@ -2359,9 +2503,11 @@
                 months
             );
             if (payment === null) return;
+            const receiptWindow = window.open('', 'eduCoreFeeReceiptPrint', 'width=420,height=700');
 
             try {
                 if (payment.action === 'mark_unpaid' && payment.targetMonth) {
+                    receiptWindow?.close?.();
                     await markStudentMonthUnpaid(studentId, payment.targetMonth);
                     renderMonthlyFeeRecord(studentId);
                     refreshVisibleFeeView();
@@ -2372,7 +2518,7 @@
                 if (payment.targetMonth === '__remaining__') {
                     const lastMonth = months[months.length - 1] || {};
                     const targetMonthName = lastMonth.month || CURRENT_MONTH_NAME;
-                    await saveManualFeePayment(
+                    const result = await saveManualFeePayment(
                         student,
                         targetMonthName,
                         payment.amount,
@@ -2383,6 +2529,19 @@
                     updateStudentRemainingAmount(studentId, studentRemainingCharges, payment.amount);
                     renderMonthlyFeeRecord(studentId);
                     refreshVisibleFeeView();
+                    printFeeThermalReceipt({
+                        studentName: student.fullName,
+                        rollNo: student.rollNo,
+                        classGrade: student.classGrade,
+                        session: student.session || '',
+                        feeMonth: targetMonthName,
+                        paymentDateLabel: result?.payment?.paymentDateLabel || payment.paymentDate,
+                        amount: payment.amount,
+                        remainingDue: Math.max(Number(lastMonth.paidAmount || 0) + studentRemainingCharges - Number(payment.amount || 0), 0),
+                        challanNumber: result?.payment?.challanNumber || `MAN-FEE-${student.id}-${targetMonthName}`,
+                        status: result?.payment?.status || 'Paid',
+                        source: 'Manual'
+                    }, receiptWindow);
                     alert('Payment added successfully.');
                     return;
                 }
@@ -2404,12 +2563,26 @@
                     }
                     renderMonthlyFeeRecord(studentId);
                     refreshVisibleFeeView();
+                    printFeeThermalReceipt({
+                        studentName: student.fullName,
+                        rollNo: student.rollNo,
+                        classGrade: student.classGrade,
+                        session: student.session || '',
+                        feeMonth: targetMonth.month,
+                        paymentDateLabel: result?.payment?.paymentDateLabel || payment.paymentDate,
+                        amount: payment.amount,
+                        remainingDue: Math.max(Number(targetMonth.dueAmount || 0) - Number(payment.amount || 0), 0),
+                        challanNumber: result?.payment?.challanNumber || `MAN-FEE-${student.id}-${targetMonth.month}`,
+                        status: result?.payment?.status || 'Paid',
+                        source: 'Manual'
+                    }, receiptWindow);
                     alert('Payment added successfully.');
                     return;
                 }
 
                 let remainingPayment = Number(payment.amount || 0);
                 let lastPaidMonth = payableMonths[payableMonths.length - 1]?.month || months[months.length - 1]?.month || CURRENT_MONTH_NAME;
+                const printedMonths = [];
 
                 for (let index = 0; index < payableMonths.length; index += 1) {
                     const item = payableMonths[index];
@@ -2418,20 +2591,22 @@
                     const extraRemainingCharges = isLastPayableMonth ? studentRemainingCharges : 0;
                     const amountForMonth = Math.min(remainingPayment, item.remainingAmount + extraRemainingCharges);
                     if (!(amountForMonth > 0)) continue;
-                    await saveManualFeePayment(student, item.month, amountForMonth, payment.paymentDate, item.dueAmount + extraRemainingCharges);
+                    const monthResult = await saveManualFeePayment(student, item.month, amountForMonth, payment.paymentDate, item.dueAmount + extraRemainingCharges);
                     lastPaidMonth = item.month;
                     remainingPayment -= amountForMonth;
+                    printedMonths.push(monthResult?.payment?.feeMonth || item.month);
                 }
 
                 if (remainingPayment > 0 && studentRemainingCharges > 0 && !payableMonths.length) {
                     const targetMonth = months.find((item) => item.month === lastPaidMonth) || months[months.length - 1] || {};
-                    await saveManualFeePayment(
+                    const monthResult = await saveManualFeePayment(
                         student,
                         lastPaidMonth,
                         Math.min(remainingPayment, studentRemainingCharges),
                         payment.paymentDate,
                         Number(targetMonth.paidAmount || 0) + studentRemainingCharges
                     );
+                    printedMonths.push(monthResult?.payment?.feeMonth || lastPaidMonth);
                 }
 
                 await mergeFeePaymentsIntoMonthlyStore();
@@ -2442,8 +2617,22 @@
 
                 renderMonthlyFeeRecord(studentId);
                 refreshVisibleFeeView();
+                printFeeThermalReceipt({
+                    studentName: student.fullName,
+                    rollNo: student.rollNo,
+                    classGrade: student.classGrade,
+                    session: student.session || '',
+                    feeMonth: printedMonths.length ? printedMonths.join(', ') : (payableMonths.map((item) => item.month).join(', ') || lastPaidMonth),
+                    paymentDateLabel: payment.paymentDate,
+                    amount: payment.amount,
+                    remainingDue: Math.max(totalPaymentDue - Number(payment.amount || 0), 0),
+                    challanNumber: `MAN-FEE-${student.id}-${Date.now()}`,
+                    status: 'Paid',
+                    source: 'Manual'
+                }, receiptWindow);
                 alert('Payment added successfully.');
             } catch (error) {
+                receiptWindow?.close?.();
                 alert(error?.message || 'Payment could not be saved.');
             }
         }
@@ -2469,6 +2658,7 @@
 
             const payment = await showManualFeePaymentModal(month, remainingAmount, getSelectedFeePaymentDate(studentId, month), totalFee, studentRemainingCharges);
             if (payment === null) return;
+            const receiptWindow = window.open('', 'eduCoreFeeReceiptPrint', 'width=420,height=700');
 
             try {
                 const result = await saveManualFeePayment(student, month, payment.amount, payment.paymentDate, totalFee + studentRemainingCharges);
@@ -2494,8 +2684,22 @@
                 }
                 renderMonthlyFeeRecord(studentId);
                 refreshVisibleFeeView();
+                printFeeThermalReceipt({
+                    studentName: student.fullName,
+                    rollNo: student.rollNo,
+                    classGrade: student.classGrade,
+                    session: student.session || '',
+                    feeMonth: month,
+                    paymentDateLabel: result?.payment?.paymentDateLabel || payment.paymentDate,
+                    amount: payment.amount,
+                    remainingDue: Math.max(totalFee + studentRemainingCharges - Number(payment.amount || 0), 0),
+                    challanNumber: result?.payment?.challanNumber || `MAN-FEE-${student.id}-${month}`,
+                    status: result?.payment?.status || 'Paid',
+                    source: 'Manual'
+                }, receiptWindow);
                 alert('Payment added successfully.');
             } catch (error) {
+                receiptWindow?.close?.();
                 alert(error?.message || 'Payment could not be saved.');
             }
         }
@@ -2511,8 +2715,11 @@
             const student = students.find((item) => String(item.id) === String(studentId));
             if (!student) return;
 
+            let receiptWindow = null;
+
             try {
                 if (newStatus === 'Paid') {
+                    receiptWindow = window.open('', 'eduCoreFeeReceiptPrint', 'width=420,height=700');
                     const monthlyFee = getFeeStudentMonthlyAmount(student);
                     const fineAmount = getStudentMonthFineAmount(student, month, currentStatus);
                     const totalFee = monthlyFee + fineAmount;
@@ -2545,6 +2752,19 @@
                             throw new Error(result?.message || 'Fee could not be marked paid.');
                         }
                         await mergeFeePaymentsIntoMonthlyStore();
+                        printFeeThermalReceipt({
+                            studentName: student.fullName,
+                            rollNo: student.rollNo,
+                            classGrade: student.classGrade,
+                            session: student.session || '',
+                            feeMonth: month,
+                            paymentDateLabel: result?.payment?.paymentDateLabel || paymentDate || getTodayDateInputValue(),
+                            amount: remainingAmount,
+                            remainingDue: 0,
+                            challanNumber: result?.payment?.challanNumber || `MAN-FEE-${student.id}-${month}`,
+                            status: result?.payment?.status || 'Paid',
+                            source: 'Manual'
+                        }, receiptWindow);
                     }
                 } else {
                     await markStudentMonthUnpaid(studentId, month);
@@ -2566,6 +2786,7 @@
                 renderMonthlyFeeRecord(studentId);
                 refreshVisibleFeeView();
             } catch (error) {
+                receiptWindow?.close?.();
                 alert(error?.message || 'Fee status could not be updated.');
             }
         }

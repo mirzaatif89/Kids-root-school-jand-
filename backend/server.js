@@ -2392,7 +2392,8 @@ app.post('/api/fees/challan-token', async (req, res) => {
             session,
             amount,
             fullAmount,
-            challanNumber
+            challanNumber,
+            paymentDate
         } = req.body || {};
 
         if (!studentId || !feeMonth || !challanNumber) {
@@ -2514,13 +2515,14 @@ app.post('/api/fees/manual-payment', async (req, res) => {
             studentName,
             rollNo,
             classGrade,
-            feeMonth,
-            feeMonths,
-            session,
-            amount,
-            fullAmount,
-            challanNumber
-        } = req.body || {};
+        feeMonth,
+        feeMonths,
+        session,
+        amount,
+        fullAmount,
+        paymentDate,
+        challanNumber
+    } = req.body || {};
 
         if (!studentId) {
             return res.status(400).json({ success: false, message: 'studentId is required.' });
@@ -2559,10 +2561,10 @@ app.post('/api/fees/manual-payment', async (req, res) => {
 
         const feeMonthRecorded = selectedMonths.length ? selectedMonths.join(', ') : 'Dues';
         const safeChallanNumber = String(challanNumber || '').trim() || `MAN-${Date.now()}`;
-
         const existingPayment = await FeePayment.findByPk(safeChallanNumber);
         const alreadyRecorded = existingPayment && ['Paid', 'Partial'].includes(String(existingPayment.status || ''));
-        const paidAt = existingPayment?.paidAt || new Date();
+        const normalizedPaymentDate = String(paymentDate || '').trim();
+        const paidAt = existingPayment?.paidAt || (normalizedPaymentDate ? new Date(`${normalizedPaymentDate}T12:00:00`) : new Date());
         const paymentDateLabel = paidAt.toLocaleDateString('en-GB');
 
         const paymentRow = {
