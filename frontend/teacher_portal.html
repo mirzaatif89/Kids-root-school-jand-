@@ -2218,6 +2218,51 @@
             };
         }
 
+        function getTeacherIdentityCandidates(teacher = {}) {
+            return [
+                teacher?.id,
+                teacher?.profileId,
+                teacher?.employeeCode,
+                teacher?.username,
+                teacher?.email,
+                loggedInUser?.id,
+                loggedInUser?.username,
+                loggedInUser?.email
+            ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+        }
+
+        async function loadTeacherDirectoryRecord() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teachers`, {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                });
+                if (!response.ok) return null;
+                const result = await response.json().catch(() => null);
+                const teachers = Array.isArray(result) ? result : (Array.isArray(result?.teachers) ? result.teachers : []);
+                if (!teachers.length) return null;
+
+                const candidates = getTeacherIdentityCandidates(currentTeacherProfile || loggedInUser || {});
+                const exactMatch = teachers.find((teacher) => {
+                    const teacherCandidates = getTeacherIdentityCandidates(teacher);
+                    return teacherCandidates.some((candidate) => candidates.includes(candidate));
+                });
+
+                return exactMatch || null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        async function enrichTeacherProfile(teacher = {}) {
+            const directoryTeacher = await loadTeacherDirectoryRecord();
+            if (!directoryTeacher) return teacher;
+            return {
+                ...loggedInUser,
+                ...directoryTeacher,
+                ...teacher
+            };
+        }
+
         function renderTeacherMessages(messages = []) {
             const list = document.getElementById('teacherMessageList');
             if (!list) return;
@@ -2265,7 +2310,7 @@
                 });
                 if (!response.ok) throw new Error('Unable to load teacher profile.');
                 const teacher = await response.json();
-                applyTeacherData(teacher);
+                applyTeacherData(await enrichTeacherProfile(teacher));
                 await loadTeacherPortalBanners();
                 await loadTeacherMessages();
                 await loadTeacherLeaveRequests();
@@ -2273,7 +2318,8 @@
                 await refreshTeacherComplaintCollection();
                 renderTeacherComplaints();
             } catch (_error) {
-                const fallback = getTeacherFallback();
+                const directoryTeacher = await loadTeacherDirectoryRecord();
+                const fallback = directoryTeacher || getTeacherFallback();
                 if (fallback) {
                     applyTeacherData(fallback);
                     await loadTeacherPortalBanners();
