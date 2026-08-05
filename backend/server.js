@@ -1360,6 +1360,77 @@ app.delete('/api/result-publish-schedules/:id', async (req, res) => {
     }
 });
 
+function normalizeTeacherSalaryMap(payload = {}) {
+    const raw = payload && typeof payload === 'object' ? payload : {};
+    const source = raw.salaries && typeof raw.salaries === 'object' && !Array.isArray(raw.salaries)
+        ? raw.salaries
+        : raw;
+    const map = {};
+    Object.entries(source).forEach(([key, value]) => {
+        const normalizedKey = String(key || '').trim();
+        if (!normalizedKey || ['id', 'collectionKey', 'createdAt', 'updatedAt', 'salaries'].includes(normalizedKey)) return;
+        map[normalizedKey] = value;
+    });
+    return map;
+}
+
+async function readTeacherSalaryMap() {
+    const model = getPortalCollectionModel();
+    if (!model) return {};
+
+    const row = await model.findOne({
+        where: {
+            collectionKey: 'teacher_salaries',
+            id: 'teacher-salaries-map'
+        }
+    });
+
+    if (!row) return {};
+
+    const payload = formatPortalCollectionRow(row);
+    return normalizeTeacherSalaryMap(payload);
+}
+
+async function writeTeacherSalaryMap(salaries = {}) {
+    const model = getPortalCollectionModel();
+    if (!model) {
+        throw new Error('Portal collection database is not available.');
+    }
+
+    const now = new Date().toISOString();
+    const normalized = normalizeTeacherSalaryMap({ salaries });
+    await model.upsert({
+        id: 'teacher-salaries-map',
+        collectionKey: 'teacher_salaries',
+        payloadJson: JSON.stringify({
+            id: 'teacher-salaries-map',
+            collectionKey: 'teacher_salaries',
+            salaries: normalized,
+            createdAt: now,
+            updatedAt: now
+        })
+    });
+    return normalized;
+}
+
+app.get('/api/teacher-salaries', async (_req, res) => {
+    try {
+        const salaries = await readTeacherSalaryMap();
+        res.json({ success: true, salaries });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Teacher salaries could not be loaded.' });
+    }
+});
+
+app.post('/api/teacher-salaries', async (req, res) => {
+    try {
+        const salaries = await writeTeacherSalaryMap(req.body || {});
+        res.json({ success: true, salaries });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Teacher salaries could not be saved.' });
+    }
+});
+
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 

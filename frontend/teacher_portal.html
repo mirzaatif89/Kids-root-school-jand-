@@ -1404,11 +1404,29 @@
         const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser') || 'null');
         const authToken = sessionStorage.getItem('eduCore_token') || '';
         const COMPLAINT_KEY = 'eduCore_complaints';
-        const TEACHER_LEAVE_KEY = 'eduCore_teacher_leave_requests';
-        const TEACHER_SALARY_KEY = 'eduCore_teacher_salaries';
         const TEACHER_THEME_KEY = 'eduCore_teacher_portal_theme';
         let currentTeacherProfile = null;
         let remoteTeacherLeaveRequests = null;
+        let remoteTeacherSalaryPayments = null;
+
+        function getServerCollectionRecords(key) {
+            const cache = window.__eduCoreServerCollectionCache;
+            if (cache && typeof cache.get === 'function' && cache.has(key)) {
+                return cache.get(key);
+            }
+            return [];
+        }
+
+        async function refreshTeacherComplaintCollection() {
+            try {
+                if (window.eduCoreCollectionApi?.load) {
+                    await window.eduCoreCollectionApi.load(COMPLAINT_KEY, []);
+                }
+            } catch (_error) {
+                // Keep any cached server records if live load fails.
+            }
+            renderTeacherComplaints();
+        }
 
         function getTeacherPortalDismissedBannerIds() {
             try {
@@ -1561,10 +1579,6 @@
             }
         }
 
-        function readLocal(key) {
-            try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_error) { return []; }
-        }
-
         function escapeHtml(value) {
             return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char]));
         }
@@ -1583,8 +1597,9 @@
 
         function getTeacherSalaryPayment(month = monthKey()) {
             const teacherId = getTeacherIdentity();
-            const records = readLocal(TEACHER_SALARY_KEY);
-            const map = records && !Array.isArray(records) ? records : {};
+            const map = remoteTeacherSalaryPayments && typeof remoteTeacherSalaryPayments === 'object' && !Array.isArray(remoteTeacherSalaryPayments)
+                ? remoteTeacherSalaryPayments
+                : {};
             return map[`teacher_${teacherId}_${month}`] || map[`${teacherId}_${month}`] || null;
         }
 
@@ -1616,13 +1631,12 @@
                 });
                 const result = response.ok ? await response.json() : null;
                 if (result?.attendance) {
-                    localStorage.setItem('eduCore_teacher_attendance', JSON.stringify(result.attendance));
                     return result.attendance;
                 }
             } catch (_error) {
-                // Fall back to browser cache below.
+                // Fall back to an empty store below.
             }
-            return readLocal('eduCore_teacher_attendance');
+            return {};
         }
 
         function renderPortalList(hostId, items, emptyText, renderItem) {
@@ -1741,50 +1755,14 @@
 
         function getTeacherLeaveRequests() {
             const teacherId = getTeacherIdentity().toLowerCase();
-            const requests = Array.isArray(remoteTeacherLeaveRequests) ? remoteTeacherLeaveRequests : readLocal(TEACHER_LEAVE_KEY);
+            const requests = Array.isArray(remoteTeacherLeaveRequests) ? remoteTeacherLeaveRequests : [];
             return requests
                 .filter((item) => String(item.applicantId || item.teacherId || '').toLowerCase() === teacherId)
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
         }
 
-        function mergeTeacherLeaveRequests(remote = [], cached = []) {
-            const requests = new Map();
-            [...cached, ...remote].forEach((item) => {
-                if (!item?.id) return;
-                requests.set(String(item.id), { ...(requests.get(String(item.id)) || {}), ...item });
-            });
-            return Array.from(requests.values());
-        }
-
-        async function syncLegacyTeacherLeaveRequests() {
-            const legacyRequests = getTeacherLeaveRequests()
-                .filter((item) => !item.applicantRole && String(item.status || 'Pending') === 'Pending');
-            for (const item of legacyRequests) {
-                if (!item.fromDate || !item.toDate || !item.reason) continue;
-                try {
-                    await fetch(`${API_BASE_URL}/leave-requests`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            Authorization: `Bearer ${authToken}`
-                        },
-                        body: JSON.stringify({
-                            id: item.id,
-                            fromDate: item.fromDate,
-                            toDate: item.toDate,
-                            reason: item.reason
-                        })
-                    });
-                } catch (_error) {
-                    return;
-                }
-            }
-        }
-
         async function loadTeacherLeaveRequests() {
             try {
-                const cachedRequests = readLocal(TEACHER_LEAVE_KEY);
-                await syncLegacyTeacherLeaveRequests();
                 const response = await fetch(`${API_BASE_URL}/leave-requests`, {
                     headers: { Authorization: `Bearer ${authToken}` }
                 });
@@ -1792,12 +1770,27 @@
                 if (!response.ok || !result?.success) {
                     throw new Error(result?.message || 'Leave history could not be loaded.');
                 }
-                remoteTeacherLeaveRequests = mergeTeacherLeaveRequests(result.leaveRequests || [], cachedRequests);
-                localStorage.setItem(TEACHER_LEAVE_KEY, JSON.stringify(remoteTeacherLeaveRequests));
+                remoteTeacherLeaveRequests = Array.isArray(result.leaveRequests) ? result.leaveRequests : [];
             } catch (_error) {
                 remoteTeacherLeaveRequests = null;
             }
             renderTeacherLeaveHistory();
+        }
+
+        async function loadTeacherSalaryPayments() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/teacher-salaries`);
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || result?.success === false) {
+                    throw new Error(result?.message || 'Teacher salary payments could not be loaded.');
+                }
+                remoteTeacherSalaryPayments = result?.salaries && typeof result.salaries === 'object' && !Array.isArray(result.salaries)
+                    ? result.salaries
+                    : {};
+            } catch (_error) {
+                remoteTeacherSalaryPayments = {};
+            }
+            renderSalaryRecord();
         }
 
         function renderTeacherLeaveHistory() {
@@ -2014,15 +2007,6 @@
             });
         }
 
-        function cacheTeacherPortalProfile(teacher) {
-            const teachers = JSON.parse(localStorage.getItem('eduCore_teachers') || '[]');
-            const index = teachers.findIndex((item) => String(item.id) === String(teacher.id));
-            if (index >= 0) {
-                teachers[index] = { ...teachers[index], profileImage: teacher.profileImage || '' };
-                localStorage.setItem('eduCore_teachers', JSON.stringify(teachers));
-            }
-        }
-
         async function updateTeacherPortalPhoto(event) {
             const input = event.target;
             const file = input?.files?.[0];
@@ -2041,7 +2025,6 @@
                 if (!response.ok || !result?.success || !result?.teacher) {
                     throw new Error(result?.message || 'Profile photo could not be saved.');
                 }
-                cacheTeacherPortalProfile(result.teacher);
                 applyTeacherData(result.teacher);
                 await showAppAlert('Your profile photo has been updated.', 'Photo Updated');
             } catch (error) {
@@ -2059,7 +2042,7 @@
             const list = document.getElementById('teacherComplaintHistory');
             if (!list) return;
             const senderId = getTeacherComplaintSenderId();
-            const complaints = readLocal(COMPLAINT_KEY)
+            const complaints = getServerCollectionRecords(COMPLAINT_KEY)
                 .filter((item) => item.senderRole === 'Teacher' && String(item.senderId || '').trim().toLowerCase() === senderId)
                 .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
             if (!complaints.length) {
@@ -2086,7 +2069,7 @@
         }
 
         function downloadTeacherComplaintFile(id) {
-            const item = readLocal(COMPLAINT_KEY).find((complaint) => complaint.id === id);
+            const item = getServerCollectionRecords(COMPLAINT_KEY).find((complaint) => complaint.id === id);
             if (!item?.file?.dataUrl) {
                 showAppAlert('No file is attached to this complaint.', 'File Missing');
                 return;
@@ -2126,7 +2109,12 @@
                 showAppAlert('Complaint file could not be attached.', 'File Error');
                 return;
             }
-            const complaints = readLocal(COMPLAINT_KEY);
+            try {
+                await refreshTeacherComplaintCollection();
+            } catch (_error) {
+                // Use any cached records below.
+            }
+            const complaints = getServerCollectionRecords(COMPLAINT_KEY);
             complaints.push({
                 id: `COMP-${Date.now()}`,
                 senderRole: 'Teacher',
@@ -2144,7 +2132,8 @@
             try {
                 const result = await window.eduCoreCollectionApi.save(COMPLAINT_KEY, complaints);
                 if (!result.success) {
-                    showAppAlert('Complaint saved locally, but server sync failed.', 'Saved Locally');
+                    showAppAlert('Complaint could not be saved on server.', 'Save Failed');
+                    return;
                 }
             } catch (_error) {
                 showAppAlert('Complaint could not be saved.', 'Save Failed');
@@ -2152,7 +2141,7 @@
             }
             event.target.reset();
             updateTeacherComplaintFileLabel();
-            renderTeacherComplaints();
+            await refreshTeacherComplaintCollection();
             showAppAlert('Your complaint has been submitted.', 'Complaint Sent');
         }
 
@@ -2213,8 +2202,7 @@
         }
 
         function getTeacherFallback() {
-            const teachers = JSON.parse(localStorage.getItem('eduCore_teachers') || '[]');
-            return teachers.find((teacher) => String(teacher.id) === String(loggedInUser?.id));
+            return null;
         }
 
         function renderTeacherMessages(messages = []) {
@@ -2268,7 +2256,8 @@
                 await loadTeacherPortalBanners();
                 await loadTeacherMessages();
                 await loadTeacherLeaveRequests();
-                await window.eduCoreCollectionApi.load(COMPLAINT_KEY, readLocal(COMPLAINT_KEY));
+                await loadTeacherSalaryPayments();
+                await refreshTeacherComplaintCollection();
                 renderTeacherComplaints();
             } catch (_error) {
                 const fallback = getTeacherFallback();
@@ -2277,7 +2266,8 @@
                     await loadTeacherPortalBanners();
                     await loadTeacherMessages();
                     await loadTeacherLeaveRequests();
-                    await window.eduCoreCollectionApi.load(COMPLAINT_KEY, readLocal(COMPLAINT_KEY));
+                    await loadTeacherSalaryPayments();
+                    await refreshTeacherComplaintCollection();
                     renderTeacherComplaints();
                     return;
                 }
@@ -2291,6 +2281,9 @@
             loadTeacherProfile();
             loadTeacherPortalBanners();
             window.setInterval(loadTeacherPortalBanners, 60000);
+            window.setInterval(() => {
+                loadTeacherProfile().catch(() => {});
+            }, 45000);
             bindTeacherPortalOptions();
             document.getElementById('teacherPortalPhoto')?.addEventListener('change', updateTeacherPortalPhoto);
             lucide.createIcons();
