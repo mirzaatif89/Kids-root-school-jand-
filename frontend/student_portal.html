@@ -5272,6 +5272,10 @@
             return normalizeLoose(value).replace(/\bclass\b/g, '').replace(/[^a-z0-9]/g, '');
         }
 
+        function normalizeResultRoll(value) {
+            return normalizeLoose(value).replace(/^0+(?=\d)/, '');
+        }
+
         function parsePortalDate(value) {
             const raw = String(value || '').trim();
             if (!raw) return null;
@@ -5327,6 +5331,10 @@
             return record.campusName || record.campus || student.campusName || '';
         }
 
+        function getResultRecordRoll(record = {}) {
+            return record.rollNo || record.studentRollNo || record.rollNumber || '';
+        }
+
         function getResultRecordIdentityCandidates(record = {}) {
             return [
                 record.studentLookupId,
@@ -5349,8 +5357,8 @@
 
             const studentClass = normalizeResultClass(student.classGrade || student.className || '');
             const recordClass = normalizeResultClass(getResultRecordClass(record, student));
-            const studentRoll = normalizeLoose(student.rollNo || '');
-            const recordRoll = normalizeLoose(record.rollNo || record.studentRollNo || record.rollNumber || '');
+            const studentRoll = normalizeResultRoll(student.rollNo || '');
+            const recordRoll = normalizeResultRoll(getResultRecordRoll(record));
             const studentCampus = normalizeLoose(student.campusName || student.campus || '');
             const recordCampus = normalizeLoose(getResultRecordCampus(record, student));
 
@@ -5365,24 +5373,53 @@
         function isResultPublishedForStudent(record = {}, student = {}) {
             const recordCampus = normalizeLoose(getResultRecordCampus(record, student));
             const recordClass = normalizeResultClass(getResultRecordClass(record, student));
-            const schedule = loadResultPublishSchedules().find((item) => (
+            const schedules = loadResultPublishSchedules();
+            const exactSchedule = schedules.find((item) => (
                 normalizeLoose(item.campusName) === recordCampus &&
                 normalizeResultClass(item.classGrade) === recordClass
             ));
-            return Boolean(schedule?.publishDate && isPortalDateOnOrBeforeToday(schedule.publishDate));
+            const classOnlySchedule = exactSchedule || schedules.find((item) => (
+                normalizeResultClass(item.classGrade) === recordClass
+            ));
+            const campusOnlySchedule = classOnlySchedule || schedules.find((item) => (
+                recordCampus && normalizeLoose(item.campusName) === recordCampus
+            ));
+            const schedule = campusOnlySchedule || classOnlySchedule || exactSchedule || null;
+
+            const publishDates = [
+                schedule?.publishDate,
+                record.publishDate,
+                record.portalShowDate,
+                record.visibleOnPortalDate,
+                record.resultDate
+            ].map((value) => String(value || '').trim()).filter(Boolean);
+
+            if (publishDates.some((value) => isPortalDateOnOrBeforeToday(value))) return true;
+
+            const publishFlags = [
+                schedule?.isPublished,
+                schedule?.visibleOnPortal,
+                record.isPublished,
+                record.visibleOnPortal,
+                record.isVisibleOnPortal
+            ].some((value) => value === true || String(value || '').trim().toLowerCase() === 'true');
+
+            return publishFlags;
         }
 
         function getResultRecordRollCandidates(record = {}, student = {}) {
             return [
-                record.rollNo,
-                record.rollNumber,
-                record.studentRollNo,
+                getResultRecordRoll(record),
                 record.studentLookupId,
                 student.rollNo,
                 student.studentCode,
                 student.id,
-                loggedInUser?.id
-            ].map(normalizeLoose).filter(Boolean);
+                loggedInUser?.id,
+                normalizeResultRoll(record.rollNo),
+                normalizeResultRoll(record.studentRollNo),
+                normalizeResultRoll(record.rollNumber),
+                normalizeResultRoll(student.rollNo)
+            ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
         }
 
         function calculateResultPercentage(result = {}) {
@@ -5397,15 +5434,20 @@
             const lookupFilter = normalizeLoose(filters.lookup);
             const dateFilter = String(filters.date || '').trim();
             const classFilter = normalizeLoose(filters.classGrade);
-            const rollFilter = normalizeLoose(filters.rollNo);
+            const rollFilter = normalizeResultRoll(filters.rollNo);
+            const studentRoll = normalizeResultRoll(student?.rollNo || '');
+            const currentClass = normalizeResultClass(student?.classGrade || student?.className || '');
 
             return archive.filter((record) => {
                 const recordLookupCandidates = getResultRecordIdentityCandidates(record);
                 const lookupCandidates = getStudentIdentityCandidates(student);
                 const recordName = normalizeLoose(record.studentName);
                 const belongsToStudent = doesResultBelongToStudent(record, student);
+                const recordClass = normalizeResultClass(getResultRecordClass(record, student));
+                const recordRoll = normalizeResultRoll(getResultRecordRoll(record));
+                const classRollMatch = Boolean(currentClass && studentRoll && recordClass === currentClass && recordRoll === studentRoll);
 
-                if (!belongsToStudent) return false;
+                if (!belongsToStudent && !classRollMatch) return false;
                 if (!isResultPublishedForStudent(record, student)) return false;
                 if (lookupFilter && !lookupCandidates.includes(lookupFilter) && !recordLookupCandidates.includes(lookupFilter) && recordName !== lookupFilter) return false;
                 if (dateFilter && getResultRecordDate(record) !== dateFilter) return false;
@@ -5566,6 +5608,16 @@
                 } catch (_error) {
                     // Keep the cached result if a live refresh fails.
                 }
+            }
+
+            if (!matches.length) {
+                const requestedClass = normalizeResultClass(classValue);
+                const requestedRoll = normalizeResultRoll(rollValue);
+                matches = loadResultArchive().filter((record) => {
+                    const recordClass = normalizeResultClass(getResultRecordClass(record, student));
+                    const recordRoll = normalizeResultRoll(getResultRecordRoll(record));
+                    return Boolean(requestedClass && requestedRoll && recordClass === requestedClass && recordRoll === requestedRoll && isResultPublishedForStudent(record, student));
+                }).sort((a, b) => new Date(b.updatedAt || b.resultDate || 0) - new Date(a.updatedAt || a.resultDate || 0));
             }
 
             if (!matches.length) {
