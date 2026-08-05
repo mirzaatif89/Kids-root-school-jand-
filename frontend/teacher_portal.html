@@ -2202,7 +2202,20 @@
         }
 
         function getTeacherFallback() {
-            return null;
+            if (!loggedInUser || loggedInUser.role !== 'Teacher') return null;
+            return {
+                id: loggedInUser.id || '',
+                profileId: loggedInUser.id || '',
+                fullName: loggedInUser.fullName || loggedInUser.username || 'Teacher',
+                username: loggedInUser.username || '',
+                role: 'Teacher',
+                campusName: loggedInUser.campusName || '',
+                designation: loggedInUser.designation || 'teacher',
+                subject: loggedInUser.subject || '',
+                salary: loggedInUser.salary || '',
+                employeeCode: loggedInUser.employeeCode || loggedInUser.id || '',
+                profileImage: loggedInUser.profileImage || ''
+            };
         }
 
         function renderTeacherMessages(messages = []) {
