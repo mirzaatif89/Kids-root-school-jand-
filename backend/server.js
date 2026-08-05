@@ -1294,6 +1294,72 @@ app.post('/api/date-sheet', async (req, res) => {
     }
 });
 
+async function readResultArchiveRecords() {
+    return readPortalCollectionRecords('result_archive');
+}
+
+async function readResultPublishScheduleRecords() {
+    return readPortalCollectionRecords('result_publish_schedules');
+}
+
+app.get('/api/result-archive', async (_req, res) => {
+    try {
+        const results = await readResultArchiveRecords();
+        res.json({ success: true, results });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result archive could not be loaded.' });
+    }
+});
+
+app.post('/api/result-archive', async (req, res) => {
+    try {
+        const payload = req.body;
+        const items = Array.isArray(payload) ? payload : Array.isArray(payload?.results) ? payload.results : [];
+        const { records } = await upsertPortalCollectionRecords('result_archive', items, 'RESULT');
+        res.json({ success: true, results: records });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result archive could not be saved.' });
+    }
+});
+
+app.delete('/api/result-archive/:id', async (req, res) => {
+    try {
+        const records = await deletePortalCollectionRecord('result_archive', req.params.id);
+        res.json({ success: true, results: records });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result archive could not be deleted.' });
+    }
+});
+
+app.get('/api/result-publish-schedules', async (_req, res) => {
+    try {
+        const schedules = await readResultPublishScheduleRecords();
+        res.json({ success: true, schedules });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result publish schedules could not be loaded.' });
+    }
+});
+
+app.post('/api/result-publish-schedules', async (req, res) => {
+    try {
+        const payload = req.body;
+        const items = Array.isArray(payload) ? payload : Array.isArray(payload?.schedules) ? payload.schedules : [];
+        const { records } = await upsertPortalCollectionRecords('result_publish_schedules', items, 'RESULT-SCHEDULE');
+        res.json({ success: true, schedules: records });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result publish schedules could not be saved.' });
+    }
+});
+
+app.delete('/api/result-publish-schedules/:id', async (req, res) => {
+    try {
+        const records = await deletePortalCollectionRecord('result_publish_schedules', req.params.id);
+        res.json({ success: true, schedules: records });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message || 'Result publish schedule could not be deleted.' });
+    }
+});
+
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 

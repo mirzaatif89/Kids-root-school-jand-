@@ -5165,12 +5165,27 @@
                     STUDENT_LEAVE_KEY,
                     COMPLAINT_KEY,
                     STORAGE_KEY_SPECIAL_NOTICES,
-                    RESULT_ARCHIVE_KEY
+                    RESULT_ARCHIVE_KEY,
+                    RESULT_PUBLISH_SCHEDULE_KEY
                 ];
                 if (refreshKeys.includes(event.key)) {
                     if (event.key === STUDENT_DIARY_KEY) {
                         refreshStudentDiaryCollection()
                             .then(() => applyStudentDiary(getCurrentPortalStudent()))
+                            .catch(() => {});
+                    }
+                    if (event.key === RESULT_ARCHIVE_KEY || event.key === RESULT_PUBLISH_SCHEDULE_KEY) {
+                        refreshStudentResultCollections()
+                            .then(() => {
+                                const currentStudent = getCurrentPortalStudent();
+                                if (currentStudent && Object.keys(currentStudent).length) {
+                                    renderStudentResultHistory(currentStudent, {
+                                        classGrade: currentStudent.classGrade,
+                                        rollNo: currentStudent.rollNo
+                                    });
+                                    applyStudentPerformance(currentStudent);
+                                }
+                            })
                             .catch(() => {});
                     }
                     updateStudentNotifications();
@@ -5180,6 +5195,18 @@
             window.addEventListener('focus', () => {
                 refreshStudentDiaryCollection()
                     .then(() => applyStudentDiary(getCurrentPortalStudent()))
+                    .catch(() => {});
+                refreshStudentResultCollections()
+                    .then(() => {
+                        const currentStudent = getCurrentPortalStudent();
+                        if (currentStudent && Object.keys(currentStudent).length) {
+                            renderStudentResultHistory(currentStudent, {
+                                classGrade: currentStudent.classGrade,
+                                rollNo: currentStudent.rollNo
+                            });
+                            applyStudentPerformance(currentStudent);
+                        }
+                    })
                     .catch(() => {});
             });
         }
@@ -5191,6 +5218,7 @@
                 try {
                     await hydrateStudentPortalCollections();
                     await refreshStudentDiaryCollection();
+                    await refreshStudentResultCollections();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     await loadStudentPortalBanners();
@@ -5201,27 +5229,38 @@
                     updateStudentNotifications(student);
                 } catch (_error) {
                     await loadStudentPortalBanners().catch(() => {});
+                    await refreshStudentResultCollections().catch(() => {});
                     applyStudentCourse(student);
                     updateStudentNotifications(student);
                 }
             }, 45000);
         }
 
-        function loadResultArchive() {
-            try {
-                return JSON.parse(localStorage.getItem(RESULT_ARCHIVE_KEY) || '[]');
-            } catch (error) {
-                return [];
+        function getCachedResultCollection(key) {
+            const cache = window.__eduCoreServerCollectionCache;
+            if (cache && typeof cache.get === 'function' && cache.has(key)) {
+                return cache.get(key);
             }
+            return [];
+        }
+
+        async function refreshStudentResultCollections() {
+            const loaders = [];
+            if (window.eduCoreCollectionApi?.load) {
+                loaders.push(window.eduCoreCollectionApi.load(RESULT_ARCHIVE_KEY, []));
+                loaders.push(window.eduCoreCollectionApi.load(RESULT_PUBLISH_SCHEDULE_KEY, []));
+            }
+            await Promise.all(loaders);
+        }
+
+        function loadResultArchive() {
+            const archive = getCachedResultCollection(RESULT_ARCHIVE_KEY);
+            return Array.isArray(archive) ? archive : [];
         }
 
         function loadResultPublishSchedules() {
-            try {
-                const schedules = JSON.parse(localStorage.getItem(RESULT_PUBLISH_SCHEDULE_KEY) || '[]');
-                return Array.isArray(schedules) ? schedules : [];
-            } catch (error) {
-                return [];
-            }
+            const schedules = getCachedResultCollection(RESULT_PUBLISH_SCHEDULE_KEY);
+            return Array.isArray(schedules) ? schedules : [];
         }
 
         function normalizeLoose(value) {
@@ -6167,6 +6206,7 @@
                 const student = studentResult?.student || studentResult;
                 await hydrateStudentPortalCollections();
                 await refreshStudentDiaryCollection();
+                await refreshStudentResultCollections();
                 await loadStudentAttendanceForPortal();
                 await loadExecutedDateSheet();
                 await mergeStudentFeePaymentsIntoMonthlyStore();
@@ -6181,6 +6221,7 @@
                 if (fallbackStudent) {
                     await hydrateStudentPortalCollections();
                     await refreshStudentDiaryCollection();
+                    await refreshStudentResultCollections();
                     await loadStudentAttendanceForPortal();
                     await loadExecutedDateSheet();
                     await mergeStudentFeePaymentsIntoMonthlyStore();

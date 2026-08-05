@@ -1785,17 +1785,43 @@
             }
         }
 
-        function loadResultArchive() {
-            try {
-                const saved = JSON.parse(localStorage.getItem(RESULT_CARD_ARCHIVE_KEY) || '[]');
-                return Array.isArray(saved) ? saved : [];
-            } catch (error) {
-                return [];
+        function getCachedResultRecords(storageKey) {
+            const cache = window.__eduCoreServerCollectionCache;
+            if (cache && typeof cache.get === 'function' && cache.has(storageKey)) {
+                return cache.get(storageKey);
             }
+            return [];
         }
 
-        function saveResultArchive(records) {
-            localStorage.setItem(RESULT_CARD_ARCHIVE_KEY, JSON.stringify(records));
+        async function preloadResultCollections() {
+            const loaders = [];
+            if (window.eduCoreCollectionApi?.load) {
+                loaders.push(window.eduCoreCollectionApi.load(RESULT_CARD_ARCHIVE_KEY, []));
+                loaders.push(window.eduCoreCollectionApi.load(RESULT_PUBLISH_SCHEDULE_KEY, []));
+            }
+            await Promise.all(loaders);
+        }
+
+        function loadResultArchive() {
+            return Array.isArray(getCachedResultRecords(RESULT_CARD_ARCHIVE_KEY))
+                ? getCachedResultRecords(RESULT_CARD_ARCHIVE_KEY)
+                : [];
+        }
+
+        async function saveResultArchive(records) {
+            const normalized = Array.isArray(records) ? records : [];
+            if (window.eduCoreCollectionApi?.save) {
+                const result = await window.eduCoreCollectionApi.save(RESULT_CARD_ARCHIVE_KEY, normalized);
+                if (result?.success === false) {
+                    throw new Error(result?.error || result?.message || 'Result archive could not be saved.');
+                }
+                return normalized;
+            }
+            const cache = window.__eduCoreServerCollectionCache;
+            if (cache && typeof cache.set === 'function') {
+                cache.set(RESULT_CARD_ARCHIVE_KEY, normalized);
+            }
+            return normalized;
         }
 
         function escapeHtml(value) {
@@ -2103,29 +2129,33 @@
             refreshResultCardPreview();
         }
 
-        function saveCurrentResultToArchive() {
-            const record = getCurrentResultRecord();
-            if (!record.studentName) {
-                alert('Enter or load a student before saving the result card.');
-                return;
+        async function saveCurrentResultToArchive() {
+            try {
+                const record = getCurrentResultRecord();
+                if (!record.studentName) {
+                    alert('Enter or load a student before saving the result card.');
+                    return;
+                }
+
+                const archive = loadResultArchive();
+                const uniqueKey = `${record.studentLookupId || record.studentName}__${record.termTitle || ''}`;
+                const existingIndex = archive.findIndex((item) => `${item.studentLookupId || item.studentName}__${item.termTitle || ''}` === uniqueKey);
+
+                if (existingIndex >= 0) {
+                    archive[existingIndex] = { ...archive[existingIndex], ...record };
+                } else {
+                    archive.unshift(record);
+                }
+
+                await saveResultArchive(archive);
+                populateResultPageSelectors();
+                renderResultHistoryList();
+                toggleExamSection('resultHistoryCard');
+                document.getElementById('resultHistoryCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                alert('Result uploaded and saved successfully.');
+            } catch (error) {
+                alert(error?.message || 'Result could not be saved.');
             }
-
-            const archive = loadResultArchive();
-            const uniqueKey = `${record.studentLookupId || record.studentName}__${record.termTitle || ''}`;
-            const existingIndex = archive.findIndex((item) => `${item.studentLookupId || item.studentName}__${item.termTitle || ''}` === uniqueKey);
-
-            if (existingIndex >= 0) {
-                archive[existingIndex] = { ...archive[existingIndex], ...record };
-            } else {
-                archive.unshift(record);
-            }
-
-            saveResultArchive(archive);
-            populateResultPageSelectors();
-            renderResultHistoryList();
-            toggleExamSection('resultHistoryCard');
-            document.getElementById('resultHistoryCard')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            alert('Result uploaded and saved successfully.');
         }
 
         function loadResultFromArchive(recordId, termTitle) {
@@ -2137,10 +2167,14 @@
             applyResultRecord(record);
         }
 
-        function deleteResultFromArchive(recordId, termTitle) {
-            const archive = loadResultArchive().filter((item) => !(String(item.id) === String(recordId) && String(item.termTitle || '') === String(termTitle || '')));
-            saveResultArchive(archive);
-            renderResultHistoryList();
+        async function deleteResultFromArchive(recordId, termTitle) {
+            try {
+                const archive = loadResultArchive().filter((item) => !(String(item.id) === String(recordId) && String(item.termTitle || '') === String(termTitle || '')));
+                await saveResultArchive(archive);
+                renderResultHistoryList();
+            } catch (error) {
+                alert(error?.message || 'Result could not be deleted.');
+            }
         }
 
         function formatArchiveDate(value) {
@@ -2166,16 +2200,24 @@
         }
 
         function loadResultPublishSchedules() {
-            try {
-                const schedules = JSON.parse(localStorage.getItem(RESULT_PUBLISH_SCHEDULE_KEY) || '[]');
-                return Array.isArray(schedules) ? schedules : [];
-            } catch (error) {
-                return [];
-            }
+            const schedules = getCachedResultRecords(RESULT_PUBLISH_SCHEDULE_KEY);
+            return Array.isArray(schedules) ? schedules : [];
         }
 
-        function saveResultPublishSchedules(schedules) {
-            localStorage.setItem(RESULT_PUBLISH_SCHEDULE_KEY, JSON.stringify(schedules));
+        async function saveResultPublishSchedules(schedules) {
+            const normalized = Array.isArray(schedules) ? schedules : [];
+            if (window.eduCoreCollectionApi?.save) {
+                const result = await window.eduCoreCollectionApi.save(RESULT_PUBLISH_SCHEDULE_KEY, normalized);
+                if (result?.success === false) {
+                    throw new Error(result?.error || result?.message || 'Result publish schedules could not be saved.');
+                }
+                return normalized;
+            }
+            const cache = window.__eduCoreServerCollectionCache;
+            if (cache && typeof cache.set === 'function') {
+                cache.set(RESULT_PUBLISH_SCHEDULE_KEY, normalized);
+            }
+            return normalized;
         }
 
         function getResultScheduleForRecord(record = {}) {
@@ -2209,36 +2251,40 @@
             `).join('') : '<div class="empty-state-note">No portal result schedule has been set yet.</div>';
         }
 
-        function saveResultPortalSchedule() {
-            const campusName = document.getElementById('resultScheduleCampus')?.value.trim() || '';
-            const classGrade = document.getElementById('resultScheduleClass')?.value.trim() || '';
-            const publishDate = document.getElementById('resultPublishDate')?.value || '';
+        async function saveResultPortalSchedule() {
+            try {
+                const campusName = document.getElementById('resultScheduleCampus')?.value.trim() || '';
+                const classGrade = document.getElementById('resultScheduleClass')?.value.trim() || '';
+                const publishDate = document.getElementById('resultPublishDate')?.value || '';
 
-            if (!campusName || !classGrade || !publishDate) {
-                alert('Select campus, class, and portal show date first.');
-                return;
+                if (!campusName || !classGrade || !publishDate) {
+                    alert('Select campus, class, and portal show date first.');
+                    return;
+                }
+
+                const schedules = loadResultPublishSchedules();
+                const existingIndex = schedules.findIndex((item) => (
+                    normalizeResultValue(item.campusName) === normalizeResultValue(campusName) &&
+                    normalizeResultClass(item.classGrade) === normalizeResultClass(classGrade)
+                ));
+                const record = {
+                    id: `${normalizeResultValue(campusName)}__${normalizeResultClass(classGrade)}`,
+                    campusName,
+                    classGrade,
+                    publishDate,
+                    updatedAt: new Date().toISOString()
+                };
+
+                if (existingIndex >= 0) schedules[existingIndex] = { ...schedules[existingIndex], ...record };
+                else schedules.unshift(record);
+
+                await saveResultPublishSchedules(schedules);
+                renderResultScheduleList();
+                renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+                alert('Portal result schedule saved.');
+            } catch (error) {
+                alert(error?.message || 'Portal result schedule could not be saved.');
             }
-
-            const schedules = loadResultPublishSchedules();
-            const existingIndex = schedules.findIndex((item) => (
-                normalizeResultValue(item.campusName) === normalizeResultValue(campusName) &&
-                normalizeResultClass(item.classGrade) === normalizeResultClass(classGrade)
-            ));
-            const record = {
-                id: `${normalizeResultValue(campusName)}__${normalizeResultClass(classGrade)}`,
-                campusName,
-                classGrade,
-                publishDate,
-                updatedAt: new Date().toISOString()
-            };
-
-            if (existingIndex >= 0) schedules[existingIndex] = { ...schedules[existingIndex], ...record };
-            else schedules.unshift(record);
-
-            saveResultPublishSchedules(schedules);
-            renderResultScheduleList();
-            renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
-            alert('Portal result schedule saved.');
         }
 
         function renderResultHistoryList(searchTerm = '') {
@@ -2557,8 +2603,9 @@
             refreshResultCardPreview();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             clearLegacyResultArchive();
+            await preloadResultCollections();
             const initialSectionId = window.location.hash === '#resultHistoryCard' ? 'resultHistoryCard' : 'resultBuilderCard';
             toggleExamSection(initialSectionId);
             const dateSheetState = loadDateSheetState();
@@ -2606,7 +2653,7 @@
                     loadStudentIntoResultCard();
                 }
             });
-            document.getElementById('saveResultCardBtn').addEventListener('click', saveCurrentResultToArchive);
+            document.getElementById('saveResultCardBtn').addEventListener('click', () => { void saveCurrentResultToArchive(); });
             document.getElementById('resultHistorySearch').addEventListener('input', (event) => {
                 renderResultHistoryList(event.target.value);
             });
@@ -2616,14 +2663,19 @@
             document.getElementById('resultHistoryClassFilter')?.addEventListener('change', () => {
                 renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
             });
-            document.getElementById('saveResultScheduleBtn')?.addEventListener('click', saveResultPortalSchedule);
+            document.getElementById('saveResultScheduleBtn')?.addEventListener('click', () => { void saveResultPortalSchedule(); });
             document.getElementById('resultScheduleList')?.addEventListener('click', (event) => {
                 const button = event.target.closest('.result-schedule-delete');
                 if (!button) return;
                 const scheduleId = button.dataset.scheduleId || '';
-                saveResultPublishSchedules(loadResultPublishSchedules().filter((item) => String(item.id) !== String(scheduleId)));
-                renderResultScheduleList();
-                renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+                void saveResultPublishSchedules(loadResultPublishSchedules().filter((item) => String(item.id) !== String(scheduleId)))
+                    .then(() => {
+                        renderResultScheduleList();
+                        renderResultHistoryList(document.getElementById('resultHistorySearch')?.value || '');
+                    })
+                    .catch((error) => {
+                        alert(error?.message || 'Portal result schedule could not be deleted.');
+                    });
             });
             document.getElementById('resultHistoryTableBody').addEventListener('click', (event) => {
                 const button = event.target.closest('.result-history-btn');
@@ -2638,7 +2690,7 @@
                 }
 
                 if (button.dataset.action === 'delete') {
-                    deleteResultFromArchive(recordId, termTitle);
+                    void deleteResultFromArchive(recordId, termTitle);
                 }
             });
             document.getElementById('addSubjectBtn').addEventListener('click', () => {

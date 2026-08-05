@@ -1829,7 +1829,9 @@ const PORTAL_COLLECTION_API_MAP = {
     eduCore_student_quizzes: { route: 'student-quizzes', recordsKey: 'quizzes' },
     eduCore_student_quiz_submissions: { route: 'student-quiz-submissions', recordsKey: 'submissions' },
     eduCore_uploaded_lectures: { route: 'uploaded-lectures', recordsKey: 'lectures' },
-    eduCore_student_schedules: { route: 'student-schedules', recordsKey: 'schedules' }
+    eduCore_student_schedules: { route: 'student-schedules', recordsKey: 'schedules' },
+    APEXIUMS_RESULT_CARD_ARCHIVE_V2: { route: 'result-archive', recordsKey: 'results' },
+    APEXIUMS_RESULT_PUBLISH_SCHEDULE_V1: { route: 'result-publish-schedules', recordsKey: 'schedules' }
 };
 
 window.__eduCoreServerCollectionCache = window.__eduCoreServerCollectionCache || new Map();
