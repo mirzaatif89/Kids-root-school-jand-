@@ -321,7 +321,7 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 14px;
             margin-bottom: 18px;
         }
@@ -1256,7 +1256,11 @@
             </div>
         </section>
 
-        <section class="teacher-portal-ads" id="teacherPortalAds" aria-label="School advertisements"></section>
+        <section class="panel-card teacher-option-panel banner-panel" id="bannerPanel">
+            <h3>Banner</h3>
+            <p class="muted">Active banners uploaded by admin will appear here.</p>
+            <section class="teacher-portal-ads" id="teacherPortalAds" aria-label="School advertisements"></section>
+        </section>
 
         <section class="stats-grid">
             <div class="stat-card">
@@ -1268,16 +1272,16 @@
                 <strong id="salaryStat">PKR 0</strong>
             </div>
             <div class="stat-card">
-                <span class="muted">Assigned Lectures</span>
-                <strong id="lectureCount">0</strong>
-            </div>
-            <div class="stat-card">
                 <span class="muted">Attendance This Month</span>
                 <strong id="attendanceSummary">-</strong>
             </div>
         </section>
 
         <section class="teacher-options" aria-label="Teacher portal options">
+            <button class="teacher-option-btn" type="button" data-teacher-panel="bannerPanel">
+                <i data-lucide="image" width="16"></i>
+                Banner
+            </button>
             <button class="teacher-option-btn" type="button" data-teacher-panel="attendancePanel">
                 <i data-lucide="calendar-check" width="16"></i>
                 Attendance
@@ -1286,29 +1290,13 @@
                 <i data-lucide="wallet" width="16"></i>
                 Salary Record
             </button>
-            <button class="teacher-option-btn" type="button" data-teacher-panel="timeTablePanel">
-                <i data-lucide="clock" width="16"></i>
-                Time Table
-            </button>
-            <button class="teacher-option-btn" type="button" data-teacher-panel="complaintsPanel">
-                <i data-lucide="message-square" width="16"></i>
-                Complains
-            </button>
             <button class="teacher-option-btn" type="button" data-teacher-panel="messagesPanel">
                 <i data-lucide="message-circle" width="16"></i>
                 Messages
             </button>
-            <button class="teacher-option-btn" type="button" data-teacher-panel="leavePanel">
-                <i data-lucide="calendar-minus" width="16"></i>
-                Apply for Leave
-            </button>
             <button class="teacher-option-btn" type="button" data-teacher-panel="classesPanel">
                 <i data-lucide="school" width="16"></i>
                 Assigned Classes
-            </button>
-            <button class="teacher-option-btn" type="button" data-teacher-panel="lecturesPanel">
-                <i data-lucide="presentation" width="16"></i>
-                Assigned Lectures
             </button>
         </section>
 
