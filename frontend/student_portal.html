@@ -6270,6 +6270,16 @@
                 classGrade: student.classGrade,
                 rollNo: student.rollNo
             });
+            void refreshStudentResultCollections()
+                .then(() => loadResultCollectionsDirect())
+                .catch(() => null)
+                .then(() => {
+                    renderStudentResultHistory(student, {
+                        classGrade: student.classGrade,
+                        rollNo: student.rollNo
+                    });
+                })
+                .catch(() => {});
 
             sessionStorage.setItem(STUDENT_PROFILE_CACHE_KEY, JSON.stringify(student));
             updateStudentNotifications(student);
