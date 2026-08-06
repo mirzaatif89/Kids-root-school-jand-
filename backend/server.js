@@ -3093,6 +3093,20 @@ app.get('/api/teachers', async (req, res) => {
     }
 });
 
+app.get('/api/teacher-options', async (req, res) => {
+    if (!sequelize) return res.status(503).json({ error: 'Database offline' });
+
+    try {
+        const teachers = await sequelize.models.Teacher.findAll({
+            attributes: ['id', 'fullName', 'username', 'employeeCode', 'subject', 'campusName'],
+            order: [['fullName', 'ASC']]
+        });
+        res.json({ success: true, teachers });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/staff', async (req, res) => {
     if (!sequelize) return res.status(503).json({ error: 'Database offline' });
 

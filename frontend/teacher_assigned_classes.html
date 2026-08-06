@@ -135,6 +135,11 @@
         })();
         const authToken = sessionStorage.getItem('eduCore_token') || '';
         const LEGACY_CLASS_ASSIGNMENT_KEY = 'eduCore_teacher_class_assignments';
+        const DEFAULT_ASSIGNMENT_CLASSES = [
+            'Play Group', 'Nursery', 'Prep',
+            'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5',
+            'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'
+        ];
 
         let teacherAssignments = [];
         let teacherRecords = [];
@@ -168,6 +173,31 @@
         function uniqueValues(values = []) {
             return [...new Set(values.map((value) => String(value || '').trim()).filter(Boolean))]
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        }
+
+        function getStoredCollectionRecords(key) {
+            try {
+                const cached = window.__eduCoreServerCollectionCache?.get?.(key);
+                if (Array.isArray(cached) && cached.length) return cached;
+            } catch (_error) {
+                // Ignore cache read issues.
+            }
+
+            try {
+                const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+                if (Array.isArray(parsed) && parsed.length) return parsed;
+            } catch (_error) {
+                // Ignore storage parse issues.
+            }
+
+            try {
+                const data = window.getData?.(key);
+                if (Array.isArray(data) && data.length) return data;
+            } catch (_error) {
+                // Ignore local helper issues.
+            }
+
+            return [];
         }
 
         function getLocalCollectionRecords(key) {
@@ -216,25 +246,45 @@
             return uniqueValues(records.map((item) => getClassLabel(item)).filter(Boolean));
         }
 
-        async function collectTeacherSourceRecords() {
-            const sources = [];
+        function renderTeacherOptions(teacherSelect, records, placeholder = 'Select Teacher') {
+            if (!teacherSelect) return;
+            const teachers = Array.isArray(records) ? records : [];
+            if (!teachers.length) {
+                teacherSelect.innerHTML = '<option value="">No teachers found</option>';
+                return;
+            }
 
+            teacherSelect.innerHTML = `<option value="">${escapeAssignmentText(placeholder)}</option>` + teachers.map((teacher) => (
+                `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName)}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}${teacher.campusName ? ` (${escapeAssignmentText(teacher.campusName)})` : ''}</option>`
+            )).join('');
+        }
+
+        async function fetchServerTeachers() {
             try {
                 const result = await fetchJson('/teachers', {
                     headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
                 }, 'Teachers could not be loaded.');
-                const apiTeachers = Array.isArray(result) ? result : (Array.isArray(result.teachers) ? result.teachers : []);
-                sources.push(...apiTeachers);
+
+                console.log('[Teacher Assignment] /api/teachers response:', result);
+                const apiTeachers = Array.isArray(result)
+                    ? result
+                    : (Array.isArray(result.teachers) ? result.teachers : []);
+
+                return normalizeTeacherRecords(apiTeachers);
             } catch (_error) {
-                // Ignore API failures here and use cached/local fallbacks below.
+                console.error('[Teacher Assignment] Failed to load teachers from API.', _error);
+                return [];
             }
+        }
 
-            sources.push(...getLocalCollectionRecords('eduCore_teachers'));
-
-            if (!sources.length && typeof window.getData === 'function') {
-                const localTeachers = window.getData('eduCore_teachers');
-                if (Array.isArray(localTeachers)) sources.push(...localTeachers);
-            }
+        async function collectTeacherSourceRecords() {
+            const sources = [
+                ...await fetchServerTeachers(),
+                ...normalizeTeacherRecords([
+                    ...getLocalCollectionRecords('eduCore_teachers'),
+                    ...getStoredCollectionRecords('eduCore_teachers')
+                ])
+            ];
 
             return normalizeTeacherRecords(sources);
         }
@@ -253,6 +303,7 @@
             }
 
             sources.push(...getLocalCollectionRecords('eduCore_classes'));
+            sources.push(...getStoredCollectionRecords('eduCore_classes'));
 
             if (!sources.length && typeof window.getData === 'function') {
                 const localClasses = window.getData('eduCore_classes');
@@ -269,7 +320,7 @@
             }
 
             if (!sources.length) {
-                return ['Play Group', 'Nursery', 'Prep', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'];
+                return [...DEFAULT_ASSIGNMENT_CLASSES];
             }
 
             return normalizeClassRecords(sources);
@@ -323,17 +374,21 @@
         }
 
         async function loadCampusOptions() {
+            const defaultCampuses = typeof window.getUniqueCampusNames === 'function'
+                ? window.getUniqueCampusNames()
+                : ['Jand Campus', 'Langar Campus', 'Main Campus'];
+
+            campusRecords = Array.isArray(defaultCampuses) && defaultCampuses.length
+                ? defaultCampuses
+                : ['Jand Campus', 'Langar Campus', 'Main Campus'];
+
             try {
                 const serverCampuses = await loadRegisteredCampusNames();
                 campusRecords = Array.isArray(serverCampuses) && serverCampuses.length
                     ? serverCampuses
-                    : (typeof window.getUniqueCampusNames === 'function'
-                        ? window.getUniqueCampusNames()
-                        : ['Jand Campus', 'Langar Campus', 'Main Campus']);
+                    : campusRecords;
             } catch (_error) {
-                campusRecords = typeof window.getUniqueCampusNames === 'function'
-                    ? window.getUniqueCampusNames()
-                    : ['Jand Campus', 'Langar Campus', 'Main Campus'];
+                campusRecords = campusRecords;
             }
             populateCampusSelect('classAssignmentCampus', campusRecords, campusRecords.length ? 'Select Campus' : 'Add campus in Branch Registration first');
             const campusSelect = els.campus();
@@ -345,15 +400,22 @@
         async function loadTeacherOptions() {
             const teacherSelect = els.teacher();
             if (!teacherSelect) return;
+            teacherSelect.innerHTML = '<option value="">Loading teachers...</option>';
+
+            const localTeachers = normalizeTeacherRecords([
+                ...getLocalCollectionRecords('eduCore_teachers'),
+                ...getStoredCollectionRecords('eduCore_teachers')
+            ]);
+
             try {
-                teacherRecords = await collectTeacherSourceRecords();
+                const apiTeachers = await fetchServerTeachers();
+                teacherRecords = normalizeTeacherRecords([...apiTeachers, ...localTeachers]);
             } catch (_error) {
-                teacherRecords = normalizeTeacherRecords(getLocalCollectionRecords('eduCore_teachers'));
+                teacherRecords = localTeachers;
             }
+
             const previous = teacherSelect.value || '';
-            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teacherRecords.map((teacher) => (
-                `<option value="${escapeAssignmentText(teacher.id)}">${escapeAssignmentText(teacher.fullName)}${teacher.subject ? ` - ${escapeAssignmentText(teacher.subject)}` : ''}${teacher.campusName ? ` (${escapeAssignmentText(teacher.campusName)})` : ''}</option>`
-            )).join('');
+            renderTeacherOptions(teacherSelect, teacherRecords);
             if (previous) teacherSelect.value = previous;
         }
 
@@ -361,6 +423,16 @@
             const classSelect = els.classGrade();
             if (!classSelect) return;
             const classes = [];
+
+            const storedClassRecords = getStoredCollectionRecords('eduCore_classes');
+            const storedStudentRecords = getStoredCollectionRecords('eduCore_students');
+
+            uniqueValues([
+                ...DEFAULT_ASSIGNMENT_CLASSES,
+                ...storedClassRecords.map((item) => getClassLabel(item)),
+                ...storedStudentRecords.map((item) => String(item?.classGrade || '').trim())
+            ]).forEach((className) => classes.push(className));
+
             try {
                 const records = await collectClassSourceRecords();
                 records.forEach((item) => {
@@ -582,12 +654,12 @@
         });
 
         async function initializePage() {
-            await Promise.all([
-                loadCampusOptions(),
-                loadTeacherOptions(),
-                loadClassOptions()
+            await Promise.allSettled([
+                loadCampusOptions().catch((error) => console.error('[Teacher Assignment] Campus load failed.', error)),
+                loadTeacherOptions().catch((error) => console.error('[Teacher Assignment] Teacher load failed.', error)),
+                loadClassOptions().catch((error) => console.error('[Teacher Assignment] Class load failed.', error))
             ]);
-            await loadTeacherAssignments();
+            await loadTeacherAssignments().catch((error) => console.error('[Teacher Assignment] Assignment load failed.', error));
             if (window.lucide?.createIcons) window.lucide.createIcons();
         }
 

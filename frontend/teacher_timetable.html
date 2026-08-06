@@ -239,12 +239,64 @@
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
+        const API_BASE_URL = (() => {
+            const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const backendUrl = isLocalhost
+                ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin)
+                : (window.ENV_BACKEND_URL || window.location.origin);
+            return `${backendUrl}/api`;
+        })();
+        const authToken = sessionStorage.getItem('eduCore_token') || '';
+
         function getScheduleData(key) {
             try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_error) { return []; }
         }
 
         function setScheduleData(key, data) {
             localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        async function fetchJson(path, options = {}, errorMessage = 'Request failed.') {
+            const response = await fetch(`${API_BASE_URL}${path}`, {
+                cache: 'no-store',
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result?.success === false) {
+                throw new Error(result?.message || result?.error || errorMessage);
+            }
+            return result;
+        }
+
+        async function loadTeachersFromDb() {
+            const endpoints = ['/teacher-options', '/teachers'];
+            for (const endpoint of endpoints) {
+                try {
+                    const result = await fetchJson(endpoint, {
+                        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                    }, 'Teachers could not be loaded.');
+
+                    console.log(`[Teacher Scheduling] ${endpoint} response:`, result);
+                    const teachers = Array.isArray(result)
+                        ? result
+                        : (Array.isArray(result.teachers) ? result.teachers : []);
+
+                    if (Array.isArray(teachers) && teachers.length) return teachers;
+                } catch (error) {
+                    console.error(`[Teacher Scheduling] Failed to load teachers from ${endpoint}.`, error);
+                }
+            }
+
+            try {
+                const localTeachers = getScheduleData('eduCore_teachers');
+                return Array.isArray(localTeachers) ? localTeachers : [];
+            } catch (_error) {
+                return [];
+            }
         }
 
         function applyTeacherScheduleMode() {
@@ -266,10 +318,12 @@
             }
         }
 
-        function populateTeacherSchedulingOptions() {
+        async function populateTeacherSchedulingOptions() {
             const teacherSelect = document.getElementById('teacherScheduleTeacher');
             const classSelect = document.getElementById('teacherScheduleClass');
-            const teachers = getScheduleData('eduCore_teachers');
+            const localTeachers = getScheduleData('eduCore_teachers');
+            const apiTeachers = await loadTeachersFromDb();
+            const teachers = [...apiTeachers, ...localTeachers];
             const students = getScheduleData('eduCore_students');
             const classes = getScheduleData('eduCore_classes');
             const classNames = [...new Set([
@@ -277,7 +331,7 @@
                 ...students.map((student) => student?.classGrade)
             ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
 
-            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => `<option value="${teacher.id}">${teacher.fullName || 'Teacher'}${teacher.subject ? ` - ${teacher.subject}` : ''}</option>`).join('');
+            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => `<option value="${teacher.id}">${teacher.fullName || teacher.name || teacher.username || 'Teacher'}${teacher.subject ? ` - ${teacher.subject}` : ''}</option>`).join('');
             classSelect.innerHTML = '<option value="">Select Class</option>' + classNames.map((name) => `<option value="${name}">${name}</option>`).join('');
         }
 
@@ -363,7 +417,7 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        document.getElementById('teacherSchedulePageForm').addEventListener('submit', (event) => {
+        document.getElementById('teacherSchedulePageForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const teachers = getScheduleData('eduCore_teachers');
             const teacherId = document.getElementById('teacherScheduleTeacher').value;
@@ -401,12 +455,17 @@
             event.target.reset();
             document.getElementById('teacherScheduleEditId').value = '';
             document.querySelector('#teacherSchedulePageForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';
-            populateTeacherSchedulingOptions();
+            await populateTeacherSchedulingOptions();
             renderTeacherSchedules();
             showSuccessModal(editId ? 'Schedule Updated!' : 'Schedule Saved!', editId ? 'Teacher schedule has been updated successfully.' : 'Teacher schedule has been saved successfully.');
         });
 
-        populateTeacherSchedulingOptions();
+        window.addEventListener('DOMContentLoaded', () => {
+            populateTeacherSchedulingOptions().catch((error) => console.error('[Teacher Scheduling] Initial load failed.', error));
+        });
+        window.addEventListener('load', () => {
+            populateTeacherSchedulingOptions().catch((error) => console.error('[Teacher Scheduling] Load retry failed.', error));
+        });
         applyTeacherScheduleMode();
         renderTeacherSchedules();
         window.addEventListener('hashchange', applyTeacherScheduleMode);
