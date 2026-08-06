@@ -336,14 +336,27 @@
         }
     };
 
-    const rawUser = sessionStorage.getItem('loggedInUser');
-    const authToken = sessionStorage.getItem('eduCore_token');
+    const rawUser = sessionStorage.getItem('loggedInUser') || localStorage.getItem('loggedInUser');
+    const authToken = sessionStorage.getItem('eduCore_token') || localStorage.getItem('eduCore_token');
     let loggedInUser = null;
 
     try {
         loggedInUser = rawUser ? JSON.parse(rawUser) : null;
     } catch (error) {
         loggedInUser = null;
+    }
+
+    if (!sessionStorage.getItem('loggedInUser') && loggedInUser) {
+        sessionStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+    }
+    if (!sessionStorage.getItem('eduCore_token') && authToken) {
+        sessionStorage.setItem('eduCore_token', authToken);
+    }
+    if (!localStorage.getItem('loggedInUser') && loggedInUser) {
+        localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+    }
+    if (!localStorage.getItem('eduCore_token') && authToken) {
+        localStorage.setItem('eduCore_token', authToken);
     }
 
     function normalizeCustomModules(modules = []) {
@@ -1372,5 +1385,7 @@ function logoutUser(event) {
     sessionStorage.removeItem('eduCore_student_profile');
     sessionStorage.removeItem('eduCore_session_id');
     sessionStorage.removeItem('eduCore_permissions_config');
+    localStorage.removeItem('loggedInUser');
+    localStorage.removeItem('eduCore_token');
     window.location.href = '/login';
 }

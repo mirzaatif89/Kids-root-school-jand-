@@ -886,6 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Store JWT and User Info
                     sessionStorage.setItem('eduCore_token', result.token);
                     sessionStorage.setItem('loggedInUser', JSON.stringify(result.user));
+                    localStorage.setItem('eduCore_token', result.token);
+                    localStorage.setItem('loggedInUser', JSON.stringify(result.user));
                     if (result.sessionId) {
                         sessionStorage.setItem('eduCore_session_id', String(result.sessionId));
                     } else {
