@@ -301,9 +301,16 @@
         async function loadTeacherAssignments() {
             try {
                 const result = await fetchJson('/teacher-class-assignments', {}, 'Assigned classes could not be loaded.');
-                teacherAssignments = Array.isArray(result) ? result : (Array.isArray(result.assignments) ? result.assignments : []);
+                teacherAssignments = Array.isArray(result)
+                    ? result
+                    : (Array.isArray(result.assignments)
+                        ? result.assignments
+                        : (Array.isArray(result.records)
+                            ? result.records
+                            : (Array.isArray(result.teacherClassAssignments) ? result.teacherClassAssignments : [])));
             } catch (_error) {
-                teacherAssignments = [];
+                const cachedAssignments = window.__eduCoreServerCollectionCache?.get?.('teacher_class_assignments');
+                teacherAssignments = Array.isArray(cachedAssignments) ? cachedAssignments : [];
             }
             if (!teacherAssignments.length) {
                 const legacyAssignments = readLegacyAssignments();
@@ -440,7 +447,9 @@
                 headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
                 body: JSON.stringify(assignment)
             }, 'Assigned class could not be saved.');
-            teacherAssignments = Array.isArray(result.assignments) ? result.assignments : teacherAssignments;
+            teacherAssignments = Array.isArray(result.assignments)
+                ? result.assignments
+                : (Array.isArray(result.records) ? result.records : teacherAssignments);
         }
 
         const classAssignmentFormEl = els.form();

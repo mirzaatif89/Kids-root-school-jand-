@@ -2275,16 +2275,35 @@
         }
 
         function getTeacherIdentityCandidates(teacher = {}) {
-            return [
+            const values = [
                 teacher?.id,
                 teacher?.profileId,
                 teacher?.employeeCode,
+                teacher?.fullName,
+                teacher?.name,
                 teacher?.username,
                 teacher?.email,
                 loggedInUser?.id,
+                loggedInUser?.profileId,
+                loggedInUser?.employeeCode,
+                loggedInUser?.fullName,
+                loggedInUser?.name,
                 loggedInUser?.username,
                 loggedInUser?.email
-            ].map((value) => String(value || '').trim().toLowerCase()).filter(Boolean);
+            ];
+
+            const candidates = new Set();
+            values.forEach((value) => {
+                const normalized = String(value || '').trim().toLowerCase();
+                if (!normalized) return;
+                candidates.add(normalized);
+                candidates.add(normalized.replace(/^teacher[_\-\s]+/, ''));
+                candidates.add(normalized.replace(/^tch[_\-\s]+/, ''));
+                candidates.add(normalized.replace(/^emp[_\-\s]+/, ''));
+                candidates.add(normalized.replace(/\s+/g, ' '));
+            });
+
+            return Array.from(candidates).filter(Boolean);
         }
 
         function normalizeTeacherText(value) {
@@ -2367,9 +2386,13 @@
                 if (!response.ok || !result?.success) {
                     throw new Error(result?.message || 'Class assignments could not be loaded.');
                 }
-                remoteTeacherClassAssignments = Array.isArray(result.assignments) ? result.assignments : [];
+                const serverAssignments = Array.isArray(result.assignments)
+                    ? result.assignments
+                    : (Array.isArray(result.records) ? result.records : (Array.isArray(result.teacherClassAssignments) ? result.teacherClassAssignments : []));
+                remoteTeacherClassAssignments = serverAssignments;
             } catch (_error) {
-                remoteTeacherClassAssignments = [];
+                const cachedAssignments = window.__eduCoreServerCollectionCache?.get?.('teacher_class_assignments');
+                remoteTeacherClassAssignments = Array.isArray(cachedAssignments) ? cachedAssignments : [];
             }
             renderAssignedClasses();
         }
