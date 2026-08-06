@@ -422,6 +422,29 @@
             font-size: 0.92rem;
         }
 
+        .teacher-banner-strip {
+            margin: 16px 0 18px;
+        }
+
+        .teacher-banner-strip .teacher-portal-ads {
+            margin: 0;
+        }
+
+        .teacher-banner-strip .teacher-portal-ad-card {
+            border: 0;
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .teacher-banner-strip .teacher-portal-ad-card img {
+            border-radius: 22px;
+            box-shadow: 0 16px 38px rgba(15, 23, 42, 0.1);
+        }
+
+        .teacher-banner-strip .teacher-portal-ad-caption {
+            padding: 0.75rem 0.25rem 0;
+        }
+
         .teacher-portal-ad-close {
             position: absolute;
             top: 10px;
@@ -1256,6 +1279,10 @@
             </div>
         </section>
 
+        <section class="teacher-banner-strip" id="teacherBannerStrip" aria-label="School advertisements">
+            <section class="teacher-portal-ads" id="teacherPortalBannerStrip" aria-label="School advertisements"></section>
+        </section>
+
         <section class="panel-card teacher-option-panel banner-panel" id="bannerPanel">
             <h3>Banner</h3>
             <p class="muted">Active banners uploaded by admin will appear here.</p>
@@ -1431,22 +1458,27 @@
         }
 
         function renderTeacherPortalBanners(banners = []) {
-            const container = document.getElementById('teacherPortalAds');
-            if (!container) return;
-
             const dismissedIds = getTeacherPortalDismissedBannerIds();
             const activeBanners = (Array.isArray(banners) ? banners : [])
                 .filter((banner) => banner && banner.isActive !== false && String(banner.imageUrl || '').trim())
                 .filter((banner) => !dismissedIds.has(String(banner.id || banner.imageUrl || '')))
                 .sort((a, b) => Number(a.displayOrder || 0) - Number(b.displayOrder || 0));
 
+            const containers = ['teacherPortalBannerStrip', 'teacherPortalAds']
+                .map((id) => document.getElementById(id))
+                .filter(Boolean);
+
+            if (!containers.length) return;
+
             if (!activeBanners.length) {
-                container.classList.remove('active');
-                container.innerHTML = '';
+                containers.forEach((container) => {
+                    container.classList.remove('active');
+                    container.innerHTML = '';
+                });
                 return;
             }
 
-            container.innerHTML = activeBanners.map((banner) => {
+            const bannerMarkup = activeBanners.map((banner) => {
                 const bannerId = String(banner.id || banner.imageUrl || '').trim();
                 const title = String(banner.title || 'School Announcement').trim();
                 const subtitle = String(banner.subtitle || '').trim();
@@ -1469,17 +1501,20 @@
                 `;
             }).join('');
 
-            container.classList.add('active');
-            container.querySelectorAll('[data-dismiss-teacher-banner]').forEach((button) => {
-                button.addEventListener('click', () => {
-                    const bannerId = String(button.getAttribute('data-dismiss-teacher-banner') || '').trim();
-                    const nextDismissedIds = getTeacherPortalDismissedBannerIds();
-                    if (bannerId) nextDismissedIds.add(bannerId);
-                    saveTeacherPortalDismissedBannerIds(nextDismissedIds);
-                    button.closest('.teacher-portal-ad-card')?.remove();
-                    if (!container.querySelector('.teacher-portal-ad-card')) {
-                        container.classList.remove('active');
-                    }
+            containers.forEach((container) => {
+                container.innerHTML = bannerMarkup;
+                container.classList.add('active');
+                container.querySelectorAll('[data-dismiss-teacher-banner]').forEach((button) => {
+                    button.addEventListener('click', () => {
+                        const bannerId = String(button.getAttribute('data-dismiss-teacher-banner') || '').trim();
+                        const nextDismissedIds = getTeacherPortalDismissedBannerIds();
+                        if (bannerId) nextDismissedIds.add(bannerId);
+                        saveTeacherPortalDismissedBannerIds(nextDismissedIds);
+                        button.closest('.teacher-portal-ad-card')?.remove();
+                        if (!container.querySelector('.teacher-portal-ad-card')) {
+                            container.classList.remove('active');
+                        }
+                    });
                 });
             });
 
