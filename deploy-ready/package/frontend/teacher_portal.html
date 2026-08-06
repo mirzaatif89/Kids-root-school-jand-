@@ -1651,10 +1651,14 @@
         }
 
         function renderAssignedClasses() {
-            const classes = uniqueClasses();
-            renderPortalList('teacherAssignedClasses', classes, 'No classes have been assigned yet.', (className) => `
+            const classes = getSchedule();
+            renderPortalList('teacherAssignedClasses', classes, 'No classes or lectures have been assigned yet.', (item) => `
                 <div class="list-item">
-                    <div class="list-item-top"><span>${escapeHtml(className)}</span><span>Assigned</span></div>
+                    <div class="list-item-top">
+                        <span>${escapeHtml(item.classGrade || item.className || item.class || 'Class')}</span>
+                        <span>${escapeHtml(item.day || item.weekDay || 'Scheduled')}</span>
+                    </div>
+                    <div class="muted">${escapeHtml(item.subject || 'Lecture')} | ${escapeHtml([item.startTime || item.start, item.endTime || item.end].filter(Boolean).join(' - ') || item.time || '-')} | Room: ${escapeHtml(item.room || '-')}${item.note ? ` | ${escapeHtml(item.note)}` : ''}</div>
                 </div>
             `);
         }

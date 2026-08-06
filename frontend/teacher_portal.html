@@ -1833,7 +1833,7 @@
 
         function renderAssignedClasses() {
             const teacherCandidates = getTeacherIdentityCandidates(currentTeacherProfile || loggedInUser || {});
-            const classes = Array.isArray(remoteTeacherClassAssignments)
+            const classAssignments = Array.isArray(remoteTeacherClassAssignments)
                 ? remoteTeacherClassAssignments.filter((assignment) => {
                     const assignmentCandidates = [
                         assignment?.teacherId,
@@ -1851,13 +1851,21 @@
                     return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
                 })
                 : [];
-            renderPortalList('teacherAssignedClasses', classes, 'No classes have been assigned yet.', (assignment) => `
+            const scheduledLectures = getSchedule().map((lecture) => ({
+                ...lecture,
+                isScheduledLecture: true
+            }));
+            const classes = [...scheduledLectures, ...classAssignments];
+            renderPortalList('teacherAssignedClasses', classes, 'No classes or lectures have been assigned yet.', (assignment) => `
                 <div class="list-item">
                     <div class="list-item-top">
                         <span>${escapeHtml(assignment.classGrade || assignment.className || assignment.class || 'Class')}</span>
-                        <span>${escapeHtml(assignment.campusName || 'Assigned')}</span>
+                        <span>${escapeHtml(assignment.isScheduledLecture ? (assignment.day || 'Scheduled') : (assignment.campusName || 'Assigned'))}</span>
                     </div>
-                    <div class="muted">${escapeHtml(assignment.teacherName || 'Teacher')}${assignment.note ? ` | ${escapeHtml(assignment.note)}` : ''}</div>
+                    <div class="muted">${assignment.isScheduledLecture
+                        ? `${escapeHtml(assignment.subject || 'Lecture')} | ${escapeHtml([assignment.startTime || assignment.start, assignment.endTime || assignment.end].filter(Boolean).join(' - ') || assignment.time || '-')} | Room: ${escapeHtml(assignment.room || '-')}${assignment.note ? ` | ${escapeHtml(assignment.note)}` : ''}`
+                        : `${escapeHtml(assignment.teacherName || 'Teacher')}${assignment.note ? ` | ${escapeHtml(assignment.note)}` : ''}`
+                    }</div>
                 </div>
             `);
         }

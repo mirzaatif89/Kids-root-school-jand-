@@ -239,7 +239,7 @@
     <script src="auth.js?v=20260520-sidebar-requested-order"></script>
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
-        const API_BASE_URL = (() => {
+        const TEACHER_SCHEDULE_API_BASE_URL = (() => {
             const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
             const backendUrl = isLocalhost
                 ? (window.location.protocol === 'file:' ? 'http://localhost:3000' : window.location.origin)
@@ -288,7 +288,7 @@
         }
 
         async function fetchJson(path, options = {}, errorMessage = 'Request failed.') {
-            const response = await fetch(`${API_BASE_URL}${path}`, {
+            const response = await fetch(`${TEACHER_SCHEDULE_API_BASE_URL}${path}`, {
                 cache: 'no-store',
                 ...options,
                 headers: {
@@ -483,8 +483,21 @@
             } else {
                 scheduleRows.push(schedule);
             }
-            teacher.schedule = scheduleRows;
+
+            const updatedTeacher = {
+                ...teacher,
+                schedule: scheduleRows
+            };
+            teachers[teachers.findIndex((item) => String(item.id) === String(teacherId))] = updatedTeacher;
             saveTeachers(teachers);
+
+            const syncResult = await syncToSQLDetailed('teachers', [updatedTeacher]);
+            if (!syncResult.success) {
+                showAppAlert(syncResult.error || 'Schedule saved locally, but database sync failed.', 'Database Sync Failed');
+                renderTeacherSchedules();
+                return;
+            }
+
             event.target.reset();
             document.getElementById('teacherScheduleEditId').value = '';
             document.querySelector('#teacherSchedulePageForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';

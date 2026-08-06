@@ -474,8 +474,21 @@
             } else {
                 scheduleRows.push(schedule);
             }
-            teacher.schedule = scheduleRows;
+
+            const updatedTeacher = {
+                ...teacher,
+                schedule: scheduleRows
+            };
+            teachers[teachers.findIndex((item) => String(item.id) === String(teacherId))] = updatedTeacher;
             saveTeachers(teachers);
+
+            const syncResult = await syncToSQLDetailed('teachers', [updatedTeacher]);
+            if (!syncResult.success) {
+                showAppAlert(syncResult.error || 'Schedule saved locally, but database sync failed.', 'Database Sync Failed');
+                renderTeacherSchedules();
+                return;
+            }
+
             event.target.reset();
             document.getElementById('teacherScheduleEditId').value = '';
             document.querySelector('#teacherSchedulePageForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';
