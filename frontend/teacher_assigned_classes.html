@@ -241,10 +241,10 @@
             const teacherSelect = els.teacher();
             if (!teacherSelect) return;
             try {
-                const cachedTeachers = typeof window.getData === 'function' ? window.getData('eduCore_teachers') : [];
-                const records = window.eduCoreCollectionApi?.load
-                    ? await window.eduCoreCollectionApi.load('eduCore_teachers', Array.isArray(cachedTeachers) ? cachedTeachers : [])
-                    : (Array.isArray(cachedTeachers) ? cachedTeachers : []);
+                const result = await fetchJson('/teachers', {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Teachers could not be loaded.');
+                const records = Array.isArray(result) ? result : (Array.isArray(result.teachers) ? result.teachers : []);
                 const teacherMap = new Map();
                 records.forEach((teacher) => {
                     const value = getTeacherValue(teacher);
@@ -288,10 +288,10 @@
             if (!classSelect) return;
             const classes = [];
             try {
-                const cachedClasses = typeof window.getData === 'function' ? window.getData('eduCore_classes') : [];
-                const records = window.eduCoreCollectionApi?.load
-                    ? await window.eduCoreCollectionApi.load('eduCore_classes', Array.isArray(cachedClasses) ? cachedClasses : [])
-                    : (Array.isArray(cachedClasses) ? cachedClasses : []);
+                const result = await fetchJson('/classes', {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Classes could not be loaded.');
+                const records = Array.isArray(result) ? result : (Array.isArray(result.classes) ? result.classes : []);
                 records.forEach((item) => {
                     const label = getClassLabel(item);
                     if (label) classes.push(label);
