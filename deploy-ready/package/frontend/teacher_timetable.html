@@ -240,11 +240,78 @@
     <script src="script.js?v=20260520-sidebar-classes-restore"></script>
     <script>
         function getScheduleData(key) {
+            if (typeof window.getArrayData === 'function') {
+                return window.getArrayData(key);
+            }
+            if (typeof window.getData === 'function') {
+                const data = window.getData(key);
+                return Array.isArray(data) ? data : [];
+            }
             try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_error) { return []; }
         }
 
         function setScheduleData(key, data) {
             localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[char]));
+        }
+
+        function normalizeTeacherRecord(teacher = {}) {
+            const id = String(teacher.id || teacher.profileId || teacher.employeeCode || teacher.username || teacher.email || '').trim();
+            const fullName = String(teacher.fullName || teacher.name || teacher.username || teacher.employeeCode || 'Teacher').trim();
+            const subject = String(teacher.subject || '').trim();
+            const campusName = String(teacher.campusName || '').trim();
+            return {
+                ...teacher,
+                id,
+                fullName,
+                subject,
+                campusName
+            };
+        }
+
+        async function fetchJson(path, options = {}, errorMessage = 'Request failed.') {
+            const response = await fetch(`${API_BASE_URL}${path}`, {
+                cache: 'no-store',
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(options.headers || {})
+                }
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result?.success === false) {
+                throw new Error(result?.message || result?.error || errorMessage);
+            }
+            return result;
+        }
+
+        async function loadTeachersFromDb() {
+            try {
+                const result = await fetchJson('/teachers', {}, 'Teachers could not be loaded.');
+                const teachers = Array.isArray(result) ? result : [];
+                if (teachers.length) {
+                    const normalizedTeachers = teachers.map(normalizeTeacherRecord).filter((teacher) => teacher.id || teacher.fullName);
+                    localStorage.setItem('eduCore_teachers', JSON.stringify(normalizedTeachers));
+                    if (window.__eduCoreServerCollectionCache?.set) {
+                        window.__eduCoreServerCollectionCache.set('eduCore_teachers', normalizedTeachers);
+                    }
+                    return normalizedTeachers;
+                }
+            } catch (error) {
+                console.error('[Teacher Scheduling] Direct teacher load failed.', error);
+            }
+
+            const localTeachers = getScheduleData('eduCore_teachers');
+            return localTeachers.map(normalizeTeacherRecord).filter((teacher) => teacher.id || teacher.fullName);
         }
 
         function applyTeacherScheduleMode() {
@@ -266,19 +333,30 @@
             }
         }
 
-        function populateTeacherSchedulingOptions() {
+        async function populateTeacherSchedulingOptions() {
             const teacherSelect = document.getElementById('teacherScheduleTeacher');
             const classSelect = document.getElementById('teacherScheduleClass');
-            const teachers = getScheduleData('eduCore_teachers');
-            const students = getScheduleData('eduCore_students');
-            const classes = getScheduleData('eduCore_classes');
+            const currentTeacherValue = teacherSelect.value;
+            teacherSelect.innerHTML = '<option value="">Loading teachers...</option>';
+            classSelect.innerHTML = '<option value="">Loading classes...</option>';
+            const teachers = await loadTeachersFromDb();
             const classNames = [...new Set([
-                ...classes.map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
-                ...students.map((student) => student?.classGrade)
+                ...getScheduleData('eduCore_classes').map((item) => item?.section ? `${item.name} (${item.section})` : item?.name),
+                ...getScheduleData('eduCore_students').map((student) => student?.classGrade)
             ].map((value) => String(value || '').trim()).filter(Boolean))].sort();
 
-            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => `<option value="${teacher.id}">${teacher.fullName || 'Teacher'}${teacher.subject ? ` - ${teacher.subject}` : ''}</option>`).join('');
-            classSelect.innerHTML = '<option value="">Select Class</option>' + classNames.map((name) => `<option value="${name}">${name}</option>`).join('');
+            teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teachers.map((teacher) => {
+                const teacherValue = escapeHtml(teacher.id || teacher.employeeCode || teacher.username || teacher.email || teacher.fullName);
+                const teacherName = escapeHtml(teacher.fullName || teacher.name || teacher.username || teacher.employeeCode || 'Teacher');
+                const teacherSubject = teacher.subject ? ` - ${escapeHtml(teacher.subject)}` : '';
+                const teacherCampus = teacher.campusName ? ` (${escapeHtml(teacher.campusName)})` : '';
+                return `<option value="${teacherValue}">${teacherName}${teacherSubject}${teacherCampus}</option>`;
+            }).join('');
+            classSelect.innerHTML = '<option value="">Select Class</option>' + classNames.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+
+            if (currentTeacherValue && Array.from(teacherSelect.options).some((option) => String(option.value) === String(currentTeacherValue))) {
+                teacherSelect.value = currentTeacherValue;
+            }
         }
 
         function getAllTeacherScheduleRows() {
@@ -286,7 +364,7 @@
                 return parseSchedule(teacher.schedule).map((item) => ({
                     ...item,
                     teacherId: teacher.id,
-                    teacherName: teacher.fullName || 'Teacher'
+                    teacherName: teacher.fullName || teacher.name || teacher.username || 'Teacher'
                 }));
             });
         }
@@ -363,7 +441,7 @@
             if (window.lucide) window.lucide.createIcons();
         }
 
-        document.getElementById('teacherSchedulePageForm').addEventListener('submit', (event) => {
+        document.getElementById('teacherSchedulePageForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             const teachers = getScheduleData('eduCore_teachers');
             const teacherId = document.getElementById('teacherScheduleTeacher').value;
@@ -401,14 +479,17 @@
             event.target.reset();
             document.getElementById('teacherScheduleEditId').value = '';
             document.querySelector('#teacherSchedulePageForm button[type="submit"]').innerHTML = '<i data-lucide="save"></i> Save Schedule';
-            populateTeacherSchedulingOptions();
+            await populateTeacherSchedulingOptions();
             renderTeacherSchedules();
             showSuccessModal(editId ? 'Schedule Updated!' : 'Schedule Saved!', editId ? 'Teacher schedule has been updated successfully.' : 'Teacher schedule has been saved successfully.');
         });
 
-        populateTeacherSchedulingOptions();
+        populateTeacherSchedulingOptions().catch((error) => console.error('[Teacher Scheduling] Initial load failed.', error));
         applyTeacherScheduleMode();
         renderTeacherSchedules();
+        window.addEventListener('load', () => {
+            populateTeacherSchedulingOptions().catch((error) => console.error('[Teacher Scheduling] Load retry failed.', error));
+        });
         window.addEventListener('hashchange', applyTeacherScheduleMode);
         if (window.lucide) window.lucide.createIcons();
     </script>
