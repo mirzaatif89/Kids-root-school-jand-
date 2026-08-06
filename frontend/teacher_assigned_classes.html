@@ -170,6 +170,111 @@
                 .sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
         }
 
+        function getLocalCollectionRecords(key) {
+            try {
+                const cached = window.__eduCoreServerCollectionCache?.get?.(key);
+                if (Array.isArray(cached) && cached.length) return cached;
+            } catch (_error) {
+                // Ignore cache read issues.
+            }
+
+            try {
+                const data = window.getData?.(key);
+                if (Array.isArray(data) && data.length) return data;
+            } catch (_error) {
+                // Ignore local storage read issues.
+            }
+
+            return [];
+        }
+
+        function normalizeTeacherRecords(records = []) {
+            const teacherMap = new Map();
+            records.forEach((teacher) => {
+                const value = getTeacherValue(teacher);
+                const label = getTeacherLabel(teacher);
+                if (!value && !label) return;
+                const key = String(value || label).toLowerCase();
+                if (teacherMap.has(key)) return;
+                teacherMap.set(key, {
+                    id: value || label,
+                    fullName: label,
+                    subject: teacher?.subject || '',
+                    campusName: teacher?.campusName || '',
+                    employeeCode: teacher?.employeeCode || '',
+                    username: teacher?.username || '',
+                    profileId: teacher?.profileId || teacher?.id || '',
+                    email: teacher?.email || ''
+                });
+            });
+            return Array.from(teacherMap.values()).sort((left, right) =>
+                String(left.fullName || '').localeCompare(String(right.fullName || ''), undefined, { numeric: true, sensitivity: 'base' })
+            );
+        }
+
+        function normalizeClassRecords(records = []) {
+            return uniqueValues(records.map((item) => getClassLabel(item)).filter(Boolean));
+        }
+
+        async function collectTeacherSourceRecords() {
+            const sources = [];
+
+            try {
+                const result = await fetchJson('/teachers', {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Teachers could not be loaded.');
+                const apiTeachers = Array.isArray(result) ? result : (Array.isArray(result.teachers) ? result.teachers : []);
+                sources.push(...apiTeachers);
+            } catch (_error) {
+                // Ignore API failures here and use cached/local fallbacks below.
+            }
+
+            sources.push(...getLocalCollectionRecords('eduCore_teachers'));
+
+            if (!sources.length && typeof window.getData === 'function') {
+                const localTeachers = window.getData('eduCore_teachers');
+                if (Array.isArray(localTeachers)) sources.push(...localTeachers);
+            }
+
+            return normalizeTeacherRecords(sources);
+        }
+
+        async function collectClassSourceRecords() {
+            const sources = [];
+
+            try {
+                const result = await fetchJson('/classes', {
+                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+                }, 'Classes could not be loaded.');
+                const apiClasses = Array.isArray(result) ? result : (Array.isArray(result.classes) ? result.classes : []);
+                sources.push(...apiClasses);
+            } catch (_error) {
+                // Ignore API failures here and use cached/local fallbacks below.
+            }
+
+            sources.push(...getLocalCollectionRecords('eduCore_classes'));
+
+            if (!sources.length && typeof window.getData === 'function') {
+                const localClasses = window.getData('eduCore_classes');
+                if (Array.isArray(localClasses)) sources.push(...localClasses);
+            }
+
+            if (!sources.length && typeof window.eduCoreGetClassOptions === 'function') {
+                try {
+                    const fallbackClasses = await window.eduCoreGetClassOptions();
+                    return uniqueValues(fallbackClasses);
+                } catch (_error) {
+                    // Ignore fallback failures.
+                }
+            }
+
+            if (!sources.length) {
+                return ['Play Group', 'Nursery', 'Prep', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10'];
+            }
+
+            return normalizeClassRecords(sources);
+        }
+
         function getTeacherLabel(teacher = {}) {
             return String(teacher.fullName || teacher.name || teacher.username || teacher.employeeCode || 'Teacher').trim();
         }
@@ -241,40 +346,9 @@
             const teacherSelect = els.teacher();
             if (!teacherSelect) return;
             try {
-                const result = await fetchJson('/teachers', {
-                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
-                }, 'Teachers could not be loaded.');
-                const records = Array.isArray(result) ? result : (Array.isArray(result.teachers) ? result.teachers : []);
-                const teacherMap = new Map();
-                records.forEach((teacher) => {
-                    const value = getTeacherValue(teacher);
-                    if (!value || teacherMap.has(value.toLowerCase())) return;
-                    teacherMap.set(value.toLowerCase(), {
-                        id: value,
-                        fullName: getTeacherLabel(teacher),
-                        subject: teacher.subject || '',
-                        campusName: teacher.campusName || '',
-                        employeeCode: teacher.employeeCode || '',
-                        username: teacher.username || '',
-                        profileId: teacher.profileId || teacher.id || '',
-                        email: teacher.email || ''
-                    });
-                });
-                teacherRecords = Array.from(teacherMap.values()).sort((left, right) =>
-                    left.fullName.localeCompare(right.fullName, undefined, { numeric: true, sensitivity: 'base' })
-                );
+                teacherRecords = await collectTeacherSourceRecords();
             } catch (_error) {
-                const fallbackTeachers = typeof window.getData === 'function' ? window.getData('eduCore_teachers') : [];
-                teacherRecords = Array.isArray(fallbackTeachers) ? fallbackTeachers.map((teacher) => ({
-                    id: getTeacherValue(teacher),
-                    fullName: getTeacherLabel(teacher),
-                    subject: teacher?.subject || '',
-                    campusName: teacher?.campusName || '',
-                    employeeCode: teacher?.employeeCode || '',
-                    username: teacher?.username || '',
-                    profileId: teacher?.profileId || teacher?.id || '',
-                    email: teacher?.email || ''
-                })).filter((teacher) => teacher.id || teacher.fullName) : [];
+                teacherRecords = normalizeTeacherRecords(getLocalCollectionRecords('eduCore_teachers'));
             }
             const previous = teacherSelect.value || '';
             teacherSelect.innerHTML = '<option value="">Select Teacher</option>' + teacherRecords.map((teacher) => (
@@ -288,42 +362,13 @@
             if (!classSelect) return;
             const classes = [];
             try {
-                const result = await fetchJson('/classes', {
-                    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
-                }, 'Classes could not be loaded.');
-                const records = Array.isArray(result) ? result : (Array.isArray(result.classes) ? result.classes : []);
+                const records = await collectClassSourceRecords();
                 records.forEach((item) => {
-                    const label = getClassLabel(item);
+                    const label = String(item || '').trim();
                     if (label) classes.push(label);
                 });
             } catch (_error) {
                 // Keep fallback below.
-            }
-
-            if (!classes.length && typeof window.eduCoreGetClassOptions === 'function') {
-                try {
-                    const fallbackClasses = await window.eduCoreGetClassOptions();
-                    fallbackClasses.forEach((item) => classes.push(String(item || '').trim()));
-                } catch (_error) {
-                    // No fallback classes available.
-                }
-            }
-
-            if (!classes.length && typeof window.getData === 'function') {
-                try {
-                    const cachedClasses = window.getData('eduCore_classes');
-                    (Array.isArray(cachedClasses) ? cachedClasses : []).forEach((item) => {
-                        const label = getClassLabel(item);
-                        if (label) classes.push(label);
-                    });
-                } catch (_error) {
-                    // Ignore cache fallback errors.
-                }
-            }
-
-            if (!classes.length) {
-                ['Play Group', 'Nursery', 'Prep', 'Class 1', 'Class 2', 'Class 3', 'Class 4', 'Class 5', 'Class 6', 'Class 7', 'Class 8', 'Class 9', 'Class 10']
-                    .forEach((className) => classes.push(className));
             }
 
             classRecords = uniqueValues(classes);
