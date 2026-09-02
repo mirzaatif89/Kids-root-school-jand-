@@ -5023,13 +5023,26 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     await loadFinanceBillsFromServer().catch((error) => {
         console.warn('Finance bills could not be synced for dashboard:', error.message);
     });
-    const allStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    let allStudents = getArrayData(STORAGE_KEY_STUDENTS);
+    try {
+        const studentsResponse = await fetch(`${API_BASE_URL}/students`);
+        const studentsResult = await studentsResponse.json();
+        if (studentsResponse.ok) {
+            const databaseStudents = Array.isArray(studentsResult)
+                ? studentsResult
+                : (Array.isArray(studentsResult?.students) ? studentsResult.students : []);
+            if (databaseStudents.length || Array.isArray(studentsResult)) allStudents = databaseStudents;
+        }
+    } catch (error) {
+        console.warn('Dashboard could not load database students:', error.message);
+    }
     const payments = await fetchFinanceFeePayments();
     const feeSummary = calculateFinanceSummary({
         students: allStudents,
         payments,
         monthKey: getCurrentDashboardFeeMonthKey(),
-        selectedCampus: getSelectedDashboardCampus()
+        selectedCampus: getSelectedDashboardCampus(),
+        useLocalPaymentFallback: false
     });
     const selectedCampus = getSelectedDashboardCampus();
     const campusLabel = selectedCampus === 'all' ? '' : ` in ${selectedCampus}`;
