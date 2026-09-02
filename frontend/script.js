@@ -5319,10 +5319,16 @@ function initializeDashboardHome() {
     dashboardRevenueMonthKey = monthPicker?.value || getCurrentDashboardFeeMonthKey();
     if (monthPicker) {
         monthPicker.value = dashboardRevenueMonthKey;
-        monthPicker.addEventListener('change', () => {
+        const handleRevenueMonthChange = () => {
             dashboardRevenueMonthKey = monthPicker.value || getCurrentDashboardFeeMonthKey();
+            dashboardRevenueRefreshToken++;
+            const selectedMeta = getFinanceMonthMeta(dashboardRevenueMonthKey);
+            const detail = document.getElementById('dashRevenueDetail');
+            if (detail) detail.textContent = `Loading ${selectedMeta.monthName} revenue...`;
             updateDashboardStats();
-        });
+        };
+        monthPicker.addEventListener('change', handleRevenueMonthChange);
+        monthPicker.addEventListener('input', handleRevenueMonthChange);
     }
     populateDashboardCampusFilter().then(updateDashboardStats).catch(() => updateDashboardStats());
     updateDashboardStats();
