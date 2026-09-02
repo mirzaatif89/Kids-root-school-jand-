@@ -37,6 +37,7 @@ let socket;
 let activePortalSessionsCache = [];
 let dashboardActiveSessionsInterval = null;
 let dashboardRevenueMonthKey = '';
+let dashboardRevenueRefreshToken = 0;
 let activeSessionsModalEventsBound = false;
 const DASHBOARD_CAMPUS_FILTER_KEY = 'eduCore_dashboard_campus_filter';
 const GLOBAL_CAMPUS_FILTER_KEY = DASHBOARD_CAMPUS_FILTER_KEY;
@@ -5020,6 +5021,8 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     const amountEl = document.getElementById('dashRevenue');
     const detailEl = document.getElementById('dashRevenueDetail');
     if (!amountEl && !detailEl) return;
+    const refreshToken = ++dashboardRevenueRefreshToken;
+    const requestedMonthKey = dashboardRevenueMonthKey || getCurrentDashboardFeeMonthKey();
 
     await loadFinanceBillsFromServer().catch((error) => {
         console.warn('Finance bills could not be synced for dashboard:', error.message);
@@ -5038,10 +5041,11 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
         console.warn('Dashboard could not load database students:', error.message);
     }
     const payments = await fetchFinanceFeePayments();
+    if (refreshToken !== dashboardRevenueRefreshToken) return;
     const feeSummary = calculateFinanceSummary({
         students: allStudents,
         payments,
-        monthKey: dashboardRevenueMonthKey || getCurrentDashboardFeeMonthKey(),
+        monthKey: requestedMonthKey,
         selectedCampus: getSelectedDashboardCampus(),
         useLocalPaymentFallback: false
     });
