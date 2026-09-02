@@ -5195,6 +5195,8 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     });
     const selectedCampus = getSelectedDashboardCampus();
     const campusLabel = selectedCampus === 'all' ? '' : ` in ${selectedCampus}`;
+    const revenueTitle = document.querySelector('.dashboard-revenue-card .card-title');
+    if (revenueTitle) revenueTitle.textContent = `Revenue — ${feeSummary.month} ${getFinanceMonthMeta(requestedMonthKey).year}`;
 
     if (amountEl) amountEl.innerText = formatDashboardCurrency(feeSummary.collected);
     if (detailEl) {
@@ -5253,9 +5255,19 @@ function updateDashboardStats() {
     const s = getArrayData(STORAGE_KEY_STUDENTS);
     const t = getArrayData(STORAGE_KEY_TEACHERS);
     const staff = getGlobalCampusFilteredRecords(getData(STORAGE_KEY_STAFF));
-    const students = getDashboardCampusFilteredRecords(Array.isArray(s) ? s : []);
-    const teachers = getDashboardCampusFilteredRecords(Array.isArray(t) ? t : []);
-    const staffMembers = getDashboardCampusFilteredRecords(Array.isArray(staff) ? staff : []);
+    const selectedMonthKey = dashboardRevenueMonthKey || getCurrentDashboardFeeMonthKey();
+    const students = getDashboardCampusFilteredRecords(Array.isArray(s) ? s : [])
+        .filter((record) => financeStudentAppliesToMonth(record, selectedMonthKey));
+    const monthEnd = new Date(`${selectedMonthKey}-01T00:00:00`);
+    monthEnd.setMonth(monthEnd.getMonth() + 1, 0);
+    const recordExistsByMonth = (record) => {
+        const date = new Date(record?.createdAt || record?.admissionDate || '');
+        return Number.isNaN(date.getTime()) || date <= monthEnd;
+    };
+    const teachers = getDashboardCampusFilteredRecords(Array.isArray(t) ? t : [])
+        .filter(recordExistsByMonth);
+    const staffMembers = getDashboardCampusFilteredRecords(Array.isArray(staff) ? staff : [])
+        .filter(recordExistsByMonth);
 
     if (document.getElementById('dashStudentCount')) document.getElementById('dashStudentCount').innerText = students.length || '0';
     if (document.getElementById('dashTeacherCount')) document.getElementById('dashTeacherCount').innerText = teachers.length || '0';
