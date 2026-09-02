@@ -904,9 +904,22 @@
             return [];
         }
 
+        async function fetchRevenueStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                const result = await parseJsonResponse(response, 'Students could not be loaded.');
+                if (!response.ok || result?.success === false) throw new Error(result?.message || 'Students could not be loaded.');
+                const students = Array.isArray(result) ? result : (Array.isArray(result?.students) ? result.students : []);
+                if (students.length || Array.isArray(result)) return students;
+            } catch (error) {
+                console.warn('Revenue page could not load database students:', error.message);
+            }
+            return getData(STORAGE_KEY_STUDENTS);
+        }
+
         async function updateRevenueReport() {
             const currentMonthMeta = getMonthMetaFromKey(selectedRevenueMonthKey || getCurrentMonthMeta().monthKey);
-            const allStudents = getData(STORAGE_KEY_STUDENTS);
+            const allStudents = await fetchRevenueStudents();
             const students = getRevenueScopedStudents();
             const monthlyFeesData = JSON.parse(localStorage.getItem(STORAGE_KEY_MONTHLY_FEES)) || {};
             const salarySummary = getMonthlySalarySummary(currentMonthMeta.monthKey);
@@ -939,10 +952,9 @@
                 const fee = (s?.freeStudy === true || s?.freeStudy === 'true' || String(s?.zeroFeeReason || s?.freeStudyReason || '').trim())
                     ? 0
                     : (parseInt(s.monthlyFee) || 0);
-                const isPaidLocally = (monthlyFeesData[s.id] && monthlyFeesData[s.id][currentMonthMeta.monthName] === 'Paid');
                 const collectedAmount = backendCollectedMap.has(s.id)
                     ? backendCollectedMap.get(s.id)
-                    : (isPaidLocally ? fee : 0);
+                    : 0;
 
                 totalExpected += fee;
                 if (collectedAmount > 0) {

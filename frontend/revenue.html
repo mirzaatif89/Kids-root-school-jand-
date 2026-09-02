@@ -913,9 +913,25 @@
             return [];
         }
 
+        async function fetchRevenueStudents() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/students`);
+                const result = await parseJsonResponse(response, 'Students could not be loaded.');
+                if (!response.ok || result?.success === false) throw new Error(result?.message || 'Students could not be loaded.');
+                // /students returns an array; tolerate wrapped responses for hosted variants.
+                const students = Array.isArray(result) ? result : (Array.isArray(result?.students) ? result.students : []);
+                if (students.length || Array.isArray(result)) return students;
+            } catch (error) {
+                console.warn('Revenue page could not load database students:', error.message);
+            }
+            return getData(STORAGE_KEY_STUDENTS);
+        }
+
         async function updateRevenueReport() {
             const currentMonthMeta = getMonthMetaFromKey(selectedRevenueMonthKey || getCurrentMonthMeta().monthKey);
-            const allStudents = getData(STORAGE_KEY_STUDENTS);
+            // Always calculate against the hosted database snapshot. localStorage
+            // is used only if the API is temporarily unavailable.
+            const allStudents = await fetchRevenueStudents();
             const feePayments = getRevenueScopedPayments(await fetchCollectedFeePayments(), allStudents);
             renderDailyFeeCollection(feePayments);
             const monthDisplay = document.getElementById('currentMonthDisplay');
@@ -930,7 +946,8 @@
                     payments: feePayments,
                     monthKey: currentMonthMeta.monthKey,
                     selectedCampus,
-                    classNameResolver: getStandardClassName
+                    classNameResolver: getStandardClassName,
+                    useLocalPaymentFallback: false
                 })
                 : null;
             if (!summary) return;

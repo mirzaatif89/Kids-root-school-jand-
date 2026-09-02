@@ -4774,7 +4774,8 @@ function calculateFinanceSummary({
     payments = [],
     monthKey = getCurrentDashboardFeeMonthKey(),
     selectedCampus = getSelectedDashboardCampus(),
-    classNameResolver = (value) => String(value || 'Unassigned Class').trim() || 'Unassigned Class'
+    classNameResolver = (value) => String(value || 'Unassigned Class').trim() || 'Unassigned Class',
+    useLocalPaymentFallback = true
 } = {}) {
     const monthMeta = getFinanceMonthMeta(monthKey);
     const allStudents = Array.isArray(students) ? students : [];
@@ -4810,7 +4811,7 @@ function calculateFinanceSummary({
         const backendAmount = studentId ? backendCollectedByStudent.get(studentId) : undefined;
         const collectedAmount = backendAmount !== undefined
             ? backendAmount
-            : getFinanceStudentLocalCollected(student, monthMeta);
+            : (useLocalPaymentFallback ? getFinanceStudentLocalCollected(student, monthMeta) : 0);
 
         if (collectedAmount > 0) {
             collected += collectedAmount;
