@@ -36,6 +36,7 @@ const TRANSIENT_HTTP_STATUSES = new Set([403, 408, 429, 500, 502, 503, 504]);
 let socket;
 let activePortalSessionsCache = [];
 let dashboardActiveSessionsInterval = null;
+let dashboardRevenueMonthKey = '';
 let activeSessionsModalEventsBound = false;
 const DASHBOARD_CAMPUS_FILTER_KEY = 'eduCore_dashboard_campus_filter';
 const GLOBAL_CAMPUS_FILTER_KEY = DASHBOARD_CAMPUS_FILTER_KEY;
@@ -5184,7 +5185,7 @@ async function updateDashboardRevenueStats(studentsForDashboard) {
     const feeSummary = calculateFinanceSummary({
         students: allStudents,
         payments,
-        monthKey: getCurrentDashboardFeeMonthKey(),
+        monthKey: dashboardRevenueMonthKey || getCurrentDashboardFeeMonthKey(),
         selectedCampus: getSelectedDashboardCampus(),
         useLocalPaymentFallback: false
     });
@@ -5310,6 +5311,15 @@ function initializeDashboardHome() {
     const dashStudentCount = document.getElementById('dashStudentCount');
     if (!dashStudentCount) return;
 
+    const monthPicker = document.getElementById('dashboardRevenueMonth');
+    dashboardRevenueMonthKey = monthPicker?.value || getCurrentDashboardFeeMonthKey();
+    if (monthPicker) {
+        monthPicker.value = dashboardRevenueMonthKey;
+        monthPicker.addEventListener('change', () => {
+            dashboardRevenueMonthKey = monthPicker.value || getCurrentDashboardFeeMonthKey();
+            updateDashboardStats();
+        });
+    }
     populateDashboardCampusFilter().then(updateDashboardStats).catch(() => updateDashboardStats());
     updateDashboardStats();
     if (!dashboardActiveSessionsInterval) {
